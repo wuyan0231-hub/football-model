@@ -1,0 +1,204 @@
+"""Real local-Git tests; no account, API key, or network access is needed."""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import os
+from pathlib import Path
+import subprocess
+import tempfile
+import unittest
+from unittest.mock import patch
+
+
+SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "cloud_state.py"
+SPEC = importlib.util.spec_from_file_location("football_cloud_state", SCRIPT)
+cloud_state = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(cloud_state)
+
+
+def git(repo: Path, *args: str) -> str:
+    env = os.environ.copy()
+    env.update({
+        "GIT_AUTHOR_NAME": "State Test", "GIT_AUTHOR_EMAIL": "test@example.invalid",
+        "GIT_COMMITTER_NAME": "State Test", "GIT_COMMITTER_EMAIL": "test@example.invalid",
+        "GIT_CONFIG_NOSYSTEM": "1",
+    })
+    result = subprocess.run(
+        ["git", "-C", str(repo), *args], text=True, capture_output=True,
+        env=env, check=True,
+    )
+    return result.stdout.strip()
+
+
+class CloudStateTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory(prefix="football-state-test-")
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.remote = self.root / "remote.git"
+        self.remote.mkdir()
+        git(self.remote, "init", "--bare", "--initial-branch=main")
+        self.repo = self.root / "source"
+        self.repo.mkdir()
+        git(self.repo, "init", "--initial-branch=main")
+        (self.repo / "README.md").write_text("Source code sentinel\n", encoding="utf-8")
+        (self.repo / ".gitignore").write_text("runtime/\n", encoding="utf-8")
+        git(self.repo, "add", "README.md", ".gitignore")
+        git(self.repo, "-c", "commit.gpgsign=false", "commit", "-m", "Source commit")
+        git(self.repo, "remote", "add", "origin", str(self.remote))
+        git(self.repo, "push", "-u", "origin", "main")
+        self.source_sha = git(self.repo, "rev-parse", "HEAD")
+
+    def write_model(self, repo: Path, version: int) -> None:
+        runtime = repo / "runtime"
+        (runtime / "models").mkdir(parents=True, exist_ok=True)
+        (runtime / "reports").mkdir(exist_ok=True)
+        (runtime / "cache").mkdir(exist_ok=True)
+        (runtime / "models" / "epl.json").write_text(
+            json.dumps({"version": version, "parameters": [0.1, 0.2]}), encoding="utf-8",
+        )
+        (runtime / "reports" / "latest.md").write_text(f"Version {version}\n", encoding="utf-8")
+        (runtime / "cache" / "fixtures.json").write_text('{"fixtures": []}', encoding="utf-8")
+
+    def clone(self, name: str) -> Path:
+        destination = self.root / name
+        git(self.root, "clone", "--branch", "main", str(self.remote), str(destination))
+        return destination
+
+    def test_first_save_is_isolated_and_preserves_source_and_local_changes(self) -> None:
+        (self.repo / "README.md").write_text("Uncommitted source work\n", encoding="utf-8")
+        original_status = git(self.repo, "status", "--porcelain")
+        self.assertIsNone(cloud_state.load_state(self.repo))
+        self.write_model(self.repo, 1)
+        commit = cloud_state.save_state(self.repo)
+        self.assertEqual(git(self.remote, "rev-parse", "main"), self.source_sha)
+        self.assertEqual(git(self.repo, "rev-parse", "HEAD"), self.source_sha)
+        self.assertEqual(git(self.repo, "symbolic-ref", "--short", "HEAD"), "main")
+        self.assertEqual(git(self.repo, "status", "--porcelain"), original_status)
+        self.assertEqual((self.repo / "README.md").read_text(), "Uncommitted source work\n")
+        self.assertEqual(git(self.remote, "rev-parse", "model-state"), commit)
+        state_files = git(self.remote, "ls-tree", "-r", "--name-only", "model-state").splitlines()
+        self.assertIn("runtime/models/epl.json", state_files)
+        self.assertNotIn(".gitignore", state_files)
+        # No common ancestor: source history was not copied into state history.
+        with self.assertRaises(subprocess.CalledProcessError):
+            git(self.remote, "merge-base", "main", "model-state")
+
+    def test_restore_cache_models_and_report(self) -> None:
+        cloud_state.load_state(self.repo)
+        self.write_model(self.repo, 1)
+        first = cloud_state.save_state(self.repo)
+        restored = self.clone("restored")
+        self.assertEqual(cloud_state.load_state(restored), first)
+        self.assertEqual(
+            (restored / "runtime/models/epl.json").read_bytes(),
+            (self.repo / "runtime/models/epl.json").read_bytes(),
+        )
+        self.assertTrue((restored / "runtime/cache/fixtures.json").is_file())
+        self.assertTrue((restored / "runtime/reports/latest.md").is_file())
+        self.assertEqual(git(restored, "rev-parse", "HEAD"), self.source_sha)
+
+    def test_second_save_retains_previous_version_and_provenance(self) -> None:
+        cloud_state.load_state(self.repo)
+        self.write_model(self.repo, 1)
+        first = cloud_state.save_state(self.repo)
+        self.write_model(self.repo, 2)
+        second = cloud_state.save_state(self.repo)
+        self.assertNotEqual(first, second)
+        self.assertEqual(git(self.remote, "rev-parse", "model-state^"), first)
+        old = json.loads(git(self.remote, "show", f"{first}:runtime/models/epl.json"))
+        self.assertEqual(old["version"], 1)
+        metadata = json.loads(git(self.remote, "show", "model-state:state_metadata.json"))
+        self.assertEqual(metadata["source_sha"], self.source_sha)
+        self.assertEqual(metadata["previous_state_oid"], first)
+        self.assertEqual(metadata["source_ref"], "refs/heads/main")
+
+    def test_remote_conflict_never_overwrites_newer_state(self) -> None:
+        cloud_state.load_state(self.repo)
+        self.write_model(self.repo, 1)
+        cloud_state.save_state(self.repo)
+        stale = self.clone("stale")
+        cloud_state.load_state(stale)
+        self.write_model(self.repo, 2)
+        current = cloud_state.save_state(self.repo)
+        self.write_model(stale, 99)
+        with self.assertRaisesRegex(cloud_state.StateError, "已变化"):
+            cloud_state.save_state(stale)
+        self.assertEqual(git(self.remote, "rev-parse", "model-state"), current)
+
+    def test_push_race_is_rejected_by_normal_git_push(self) -> None:
+        cloud_state.load_state(self.repo)
+        self.write_model(self.repo, 1)
+        first = cloud_state.save_state(self.repo)
+        stale = self.clone("race")
+        cloud_state.load_state(stale)
+        self.write_model(self.repo, 2)
+        current = cloud_state.save_state(self.repo)
+        self.write_model(stale, 99)
+        # Simulate a remote update immediately after the baseline check.
+        with patch.object(cloud_state, "_remote_oid", return_value=first):
+            with self.assertRaisesRegex(cloud_state.StateError, "push 失败"):
+                cloud_state.save_state(stale)
+        self.assertEqual(git(self.remote, "rev-parse", "model-state"), current)
+        self.assertEqual(git(stale, "rev-parse", "HEAD"), self.source_sha)
+
+    def test_first_save_race_does_not_replace_new_state_branch(self) -> None:
+        cloud_state.load_state(self.repo)
+        other = self.clone("first-race")
+        cloud_state.load_state(other)
+        self.write_model(self.repo, 1)
+        first = cloud_state.save_state(self.repo)
+        self.write_model(other, 99)
+        with self.assertRaisesRegex(cloud_state.StateError, "已变化"):
+            cloud_state.save_state(other)
+        self.assertEqual(git(self.remote, "rev-parse", "model-state"), first)
+
+    def test_restore_refuses_to_overwrite_existing_local_runtime(self) -> None:
+        self.write_model(self.repo, 77)
+        with self.assertRaisesRegex(cloud_state.StateError, "已有内容"):
+            cloud_state.load_state(self.repo)
+        self.assertEqual(json.loads((self.repo / "runtime/models/epl.json").read_text())["version"], 77)
+        with self.assertRaisesRegex(cloud_state.StateError, "尚未成功 load"):
+            cloud_state.save_state(self.repo)
+
+    def test_failed_load_invalidates_previous_save_authorization(self) -> None:
+        cloud_state.load_state(self.repo)
+        self.write_model(self.repo, 1)
+        with self.assertRaises(cloud_state.StateError):
+            cloud_state.load_state(self.repo)
+        with self.assertRaisesRegex(cloud_state.StateError, "尚未成功 load"):
+            cloud_state.save_state(self.repo)
+
+    def test_secrets_and_symlinks_are_not_persisted(self) -> None:
+        cloud_state.load_state(self.repo)
+        self.write_model(self.repo, 1)
+        secret = "test-only-secret-123456"
+        report = self.repo / "runtime/reports/latest.md"
+        report.write_text(secret, encoding="utf-8")
+        with patch.dict(os.environ, {"FOOTBALL_API_KEY": secret}):
+            with self.assertRaisesRegex(cloud_state.StateError, "凭据"):
+                cloud_state.save_state(self.repo)
+        report.write_text("Safe", encoding="utf-8")
+        link = self.repo / "runtime/cache/link.json"
+        link.symlink_to(self.repo / "README.md")
+        with self.assertRaisesRegex(cloud_state.StateError, "符号链接"):
+            cloud_state.save_state(self.repo)
+        self.assertIsNone(cloud_state._remote_oid(self.repo))
+
+    def test_runtime_path_cannot_point_to_source(self) -> None:
+        with self.assertRaisesRegex(cloud_state.StateError, "状态目录必须"):
+            cloud_state.load_state(self.repo, self.repo)
+        self.assertEqual((self.repo / "README.md").read_text(), "Source code sentinel\n")
+
+    def test_empty_state_can_be_saved_and_restored(self) -> None:
+        cloud_state.load_state(self.repo)
+        cloud_state.save_state(self.repo)
+        other = self.clone("empty")
+        cloud_state.load_state(other)
+        self.assertTrue((other / "runtime/state_manifest.json").is_file())
+
+
+if __name__ == "__main__":
+    unittest.main()
