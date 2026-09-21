@@ -1,6 +1,6 @@
 # 足球模型自动训练入门包 v0.1
 
-本包是可运行的基础程序源码，不附带任何真实球队参数。你的 GitHub 已连接，私人仓库 [wuyan0231-hub/football-model](https://github.com/wuyan0231-hub/football-model) 已创建，代码正在部署，尚未确认全部上传成功。尚未进行真实API验收、真实球队训练或启用定时任务。合成数据仅用于检查程序。
+本包是可运行的基础程序源码，不附带任何真实球队参数。你的 GitHub 已连接，私人仓库 [wuyan0231-hub/football-model](https://github.com/wuyan0231-hub/football-model) 已创建，16个程序包文件已上传至main分支；Actions已识别“足球模型：数据检查与自动训练”工作流入口，目前运行次数为0。仓库尚未配置密钥，尚未进行真实API验收、真实球队训练或启用定时任务。合成数据仅用于检查程序。
 
 你不需要编辑球队评分。账户接入后，程序取得实际赛果并拟合参数；没有有效数据、球队不认识或训练失败时会明确报错。
 
@@ -26,16 +26,16 @@
 
 ## 最少需要你操作的部分
 
-1. **已完成：GitHub 账户连接及私人仓库创建。** 程序正在部署到 [football-model](https://github.com/wuyan0231-hub/football-model)，不需要你再次创建仓库。后续如需登录或授权，由你在网站安全界面完成。
+1. **已完成：GitHub 账户连接、私人仓库创建及程序上传。** [football-model](https://github.com/wuyan0231-hub/football-model) 已显示工作流入口，不需要你再次创建仓库或上传程序。后续如需登录或授权，由你在网站安全界面完成。
 2. **待确认：API-Football 账户。** 如果尚未注册，创建 [API-Football 免费账户](https://dashboard.api-football.com/register)。先用免费方案检查，不先购买。
 3. 在 API-Football 的 Account → My Access 获取密钥，不贴进聊天。
-4. 在私人 GitHub 仓库的 Settings → Secrets and variables → Actions → Secrets → New repository secret 添加：名称 `FOOTBALL_API_KEY`，值为你的真实密钥。
-5. 等程序上传成功且密钥配置完成后，从 Actions 运行“足球模型：数据检查与自动训练”，先选 `mode=audit`、`league=epl`。这次真实API检查目前尚未执行。
+4. **待完成：数据接口密钥配置。** 仓库目前没有Secrets。在私人 GitHub 仓库的 Settings → Secrets and variables → Actions → Secrets → New repository secret 添加：名称 `FOOTBALL_API_KEY`，值为你的真实密钥。
+5. 程序上传已完成；等密钥配置完成后，从 Actions 运行“足球模型：数据检查与自动训练”，先选 `mode=audit`、`league=epl`。这次真实API检查目前尚未执行。
 6. 打开运行页面的中文报告。若过去赛季因免费权限缺失，先检查具体原因，可明确缩短 `config.json` 的 `history_seasons` 再试，不要把下载失败当作完整训练。
 7. 数据合格后，选 `mode=train`，先 `league=epl`；首次真实拟合与验证检查完成后，再 `league=all`。
 8. 首轮运行通过后，设置仓库 Variables 中的 `ENABLE_SCHEDULE` 为 `true`。默认日程为UTC 01:17，即北京时间09:17；GitHub日程可能延迟，不能用于秒级临场刷新。
 
-私人仓库创建已完成；第5步之后的按钮仍依赖工作流代码成功上传，不能把仓库创建视为程序部署或训练已经完成。
+私人仓库、程序上传及工作流入口识别已完成；工作流仍未运行，不能把代码上传成功视为真实数据检查或训练已经完成。
 
 日常使用只需查看报告；异常时会明确显示未完成。暂停日程时把 `ENABLE_SCHEDULE` 改为 `false`。本包提供定时配置，下载本包不会创建或启用任何云端任务。
 
