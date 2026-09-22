@@ -1,6 +1,6 @@
 # 足球模型运行报告
 
-生成时间：2026-09-22T14:47:11.525001Z（UTC）
+生成时间：2026-09-22T14:49:50.256594Z（UTC）
 程序版本：0.1.0；运行模式：train。
 
 本程序生成探索性历史比分基线。没有球员/伤停、xG、战术、赛程特征，也没有经过验证的收益优势。
@@ -8,7 +8,7 @@
 
 |赛事|状态|可用90分钟赛果|训练参数变化|说明|
 |---|---|---:|---|---|
-|美职联MLS|探索性基线|1449|完成新拟合|未含阵容伤停、xG与赛程；未证实预测或收益优势。|
+|日职联J1|探索性基线|660|完成新拟合|未含阵容伤停、xG与赛程；未证实预测或收益优势。|
 
 本次接口请求次数：2。
 
@@ -24,11 +24,11 @@
 - 新队或与训练队伍缺少连接的队伍不出数值；陈旧模型不自动发布新预测。
 - 单项失败会保留旧模型文件，但本次不会把旧文件伪装为新训练，也不会用失败的数据生成预测。
 
-## 美职联MLS
+## 日职联J1
 
-- 2026：返回510场，抓取时间2026-09-22T14:47:18.200595Z；接口返回成功；完整性尚需核验。
-- 2025：返回540场，抓取时间2026-09-22T14:05:06.973247Z；接口返回成功；完整性尚需核验。
-- 2024：返回526场，抓取时间2026-09-22T14:05:13.469650Z；接口返回成功；完整性尚需核验。
+- 2027：返回380场，抓取时间2026-09-22T14:49:57.058037Z；接口返回成功；完整性尚需核验。
+- 2026：返回200场，抓取时间2026-09-22T14:04:14.956805Z；接口返回成功；完整性尚需核验。
+- 2025：返回380场，抓取时间2026-09-22T14:04:21.456874Z；接口返回成功；完整性尚需核验。
 
 验证结果（完整字段见同名JSON）：
 
@@ -39,57 +39,51 @@
   "is_rolling_backtest": false,
   "minimum_test_matches": 40,
   "meets_minimum_supported_test_matches": true,
-  "evaluation_data_cutoff": "2026-09-22T14:47:11.525001Z",
+  "evaluation_data_cutoff": "2026-09-22T14:49:50.256594Z",
   "split": {
     "method": "chronological_fixed_model_holdout",
     "grouped_by": "kickoff_utc_calendar_date",
-    "train_cutoff": "2026-04-12T00:00:00Z",
-    "train_last_kickoff": "2026-04-11T18:30:00Z",
-    "test_start": "2026-04-12T00:30:00Z",
-    "test_end": "2026-09-20T23:00:00Z",
-    "training_count": 1154,
-    "testing_count": 290,
+    "train_cutoff": "2026-05-09T00:00:00Z",
+    "train_last_kickoff": "2026-05-06T10:00:00Z",
+    "test_start": "2026-05-09T05:00:00Z",
+    "test_end": "2026-09-20T08:00:00Z",
+    "training_count": 529,
+    "testing_count": 131,
     "result_availability_delay_hours": 4,
-    "embargoed_count": 5,
-    "embargoed_match_ids": [
-      1490198,
-      1490199,
-      1490200,
-      1490201,
-      1490202
-    ]
+    "embargoed_count": 0,
+    "embargoed_match_ids": []
   },
   "coverage": {
-    "total": 290,
-    "scored": 290,
+    "total": 131,
+    "scored": 131,
     "excluded": 0,
     "ratio": 1.0,
     "exclusions": []
   },
   "model_metrics": {
-    "n": 290,
-    "log_loss": 1.1095161647769527,
-    "brier_score": 0.6724355809217112,
+    "n": 131,
+    "log_loss": 1.0202667445398814,
+    "brier_score": 0.6094659391605004,
     "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
     "log_loss_probability_floor": 1e-15
   },
   "baseline_metrics": {
-    "n": 290,
-    "log_loss": 1.0866601996410565,
-    "brier_score": 0.6578372691468235,
+    "n": 131,
+    "log_loss": 1.0774177336320996,
+    "brier_score": 0.6528705420344714,
     "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
     "log_loss_probability_floor": 1e-15
   },
   "baseline": {
     "name": "training_league_home_away_mean_poisson",
-    "home_rate": 1.7128627111303594,
-    "away_rate": 1.354265915980944,
+    "home_rate": 1.3342776203966005,
+    "away_rate": 1.1170915958451368,
     "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
     "same_scored_matches_as_model": true
   },
   "comparison": {
-    "model_minus_baseline_log_loss": 0.02285596513589616,
-    "model_minus_baseline_brier_score": 0.014598311774887684,
+    "model_minus_baseline_log_loss": -0.05715098909221816,
+    "model_minus_baseline_brier_score": -0.043404602873970966,
     "lower_is_better": true
   },
   "warnings": [
