@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "program_version": "0.1.0",
-  "model_id": "bundesliga_2-20260922T135902719327Z",
+  "model_id": "bundesliga_2-20260922T153858469514Z",
   "competition": {
     "key": "bundesliga_2",
     "label": "德乙",
@@ -9,9 +9,9 @@
     "country": "Germany",
     "mode": "domestic_baseline"
   },
-  "data_fingerprint": "6aaaf9858324606c2d6fdb499bef2fb1a5d917399364c6d601f0187cc58f05bd",
-  "trained_at": "2026-09-22T13:59:02.719327Z",
-  "source": "API-Football FT score.fulltime",
+  "data_fingerprint": "f9dd14374d504be7fb62798e29ab09995956a65f13c07dffbf5d2775087af0a4",
+  "trained_at": "2026-09-22T15:38:58.469514Z",
+  "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
   "maturity": "exploratory_baseline",
   "lineup_effects": "未量化",
   "ev": "未量化",
@@ -21,210 +21,210 @@
     "fit_status": "converged",
     "trained": true,
     "validated_for_production": false,
-    "training_cutoff": "2026-09-22T13:59:02.719327Z",
+    "training_cutoff": "2026-09-22T15:38:58.469514Z",
     "last_match_kickoff": "2026-09-20T11:30:00Z",
     "last_result_assumed_available_at": "2026-09-20T15:30:00Z",
-    "n_matches": 669,
+    "n_matches": 670,
     "n_teams": 29,
-    "min_team_matches": 1,
+    "min_team_matches": 2,
     "low_sample_team_threshold": 5,
     "low_sample_team_ids": [
       1621,
       1639
     ],
     "excluded_after_cutoff_or_availability_delay": 0,
-    "training_data_sha256": "3eadf1dfa7c284b87227f1d58b6d15c66b73518953e4961252b67a9fd183124d",
+    "training_data_sha256": "3f4dd984089764c8feaac0cea3dc8964af632ad6deadd300f373227e8d718f37",
     "half_life_days": 180.0,
     "ridge": 3.0,
-    "effective_sample_size": 390.3530320375944,
-    "intercept": 0.2892890341278753,
-    "home_advantage": 0.22168510770219055,
+    "effective_sample_size": 390.8779925979116,
+    "intercept": 0.28805524544316685,
+    "home_advantage": 0.22059452234078905,
     "team_parameters": {
       "158": {
         "name": "Fortuna Düsseldorf",
-        "attack": -0.22990793833264248,
-        "defence": -0.03707156150227473,
+        "attack": -0.23073836958634114,
+        "defence": -0.039786083026890164,
         "training_matches": 68
       },
       "159": {
         "name": "Hertha BSC",
-        "attack": 0.1311125783657841,
-        "defence": 0.08801651518126413,
+        "attack": 0.1301334484383072,
+        "defence": 0.08504748227380618,
         "training_matches": 74
       },
       "161": {
         "name": "VfL Wolfsburg",
-        "attack": 0.4169530833725996,
-        "defence": 0.08153321006139444,
+        "attack": 0.41650939969642786,
+        "defence": 0.07976471419156099,
         "training_matches": 6
       },
       "166": {
         "name": "Hannover 96",
-        "attack": 0.011519658583863633,
-        "defence": 0.13987676829770992,
+        "attack": 0.010736257895574796,
+        "defence": 0.13728218171016038,
         "training_matches": 74
       },
       "171": {
         "name": "1. FC Nürnberg",
-        "attack": 0.16228495479643096,
-        "defence": 0.12558727459182856,
+        "attack": 0.16141258192547275,
+        "defence": 0.12293197544949498,
         "training_matches": 74
       },
       "174": {
         "name": "FC Schalke 04",
-        "attack": -0.011904697973192872,
-        "defence": 0.2237400458991945,
+        "attack": -0.01274532705617802,
+        "defence": 0.22109894437569952,
         "training_matches": 68
       },
       "175": {
         "name": "Hamburger SV",
-        "attack": 0.31309482780284437,
-        "defence": 0.06761790950961424,
+        "attack": 0.31249311863927753,
+        "defence": 0.06584591890398117,
         "training_matches": 34
       },
       "176": {
         "name": "VfL Bochum",
-        "attack": -0.15945265553735566,
-        "defence": 0.14242373645801273,
+        "attack": -0.16038548162748495,
+        "defence": 0.13954903831722806,
         "training_matches": 40
       },
       "177": {
         "name": "SSV Jahn Regensburg",
-        "attack": -0.32629525087336386,
-        "defence": -0.1904905139628244,
+        "attack": -0.32669986867118916,
+        "defence": -0.19246099513971135,
         "training_matches": 34
       },
       "178": {
         "name": "SpVgg Greuther Fürth",
-        "attack": -0.06529390078691635,
-        "defence": -0.11675194230417892,
+        "attack": -0.06595739122053214,
+        "defence": -0.11933343211202196,
         "training_matches": 76
       },
       "179": {
         "name": "1. FC Magdeburg",
-        "attack": 0.12284526620932873,
-        "defence": -0.06942554235223534,
+        "attack": 0.12191966785788605,
+        "defence": -0.07226291937339797,
         "training_matches": 74
       },
       "180": {
         "name": "1. FC Heidenheim",
-        "attack": 0.2867155260518749,
-        "defence": -0.1987197679756228,
+        "attack": 0.28597277263849014,
+        "defence": -0.20078950106596527,
         "training_matches": 6
       },
       "181": {
         "name": "SV Darmstadt 98",
-        "attack": -0.04319607663398225,
-        "defence": -0.07954748992914185,
+        "attack": -0.04400163380674899,
+        "defence": -0.08218911122601769,
         "training_matches": 74
       },
       "183": {
         "name": "Dynamo Dresden",
-        "attack": 0.02834947528932757,
-        "defence": -0.11466239485002576,
+        "attack": 0.027402247507927795,
+        "defence": -0.1176913881261874,
         "training_matches": 40
       },
       "185": {
         "name": "SC Paderborn 07",
-        "attack": 0.1449681659870074,
-        "defence": 0.03311910450941093,
+        "attack": 0.14410854193781575,
+        "defence": 0.03047204430687244,
         "training_matches": 68
       },
       "186": {
         "name": "FC St. Pauli",
-        "attack": -0.10545734442982242,
-        "defence": 0.17837296279561865,
+        "attack": -0.1058547841942629,
+        "defence": 0.17658976766469225,
         "training_matches": 6
       },
       "188": {
         "name": "Arminia Bielefeld",
-        "attack": 0.03997025346357219,
-        "defence": -0.07601265721182968,
+        "attack": 0.03924040971530809,
+        "defence": -0.07857037456024565,
         "training_matches": 40
       },
       "191": {
         "name": "Holstein Kiel",
-        "attack": -0.1556164193850747,
-        "defence": 0.021647295764738242,
+        "attack": -0.15642929137583536,
+        "defence": 0.018992787582990157,
         "training_matches": 40
       },
       "192": {
         "name": "1. FC Köln",
-        "attack": -0.004680232869393346,
-        "defence": 0.2058485123730112,
+        "attack": -0.00517982344990476,
+        "defence": 0.2041852126523618,
         "training_matches": 34
       },
       "744": {
         "name": "Eintracht Braunschweig",
-        "attack": -0.12153491745198564,
-        "defence": -0.1311703997521027,
-        "training_matches": 75
+        "attack": -0.1289939297398543,
+        "defence": -0.1356688821573433,
+        "training_matches": 76
       },
       "745": {
         "name": "1. FC Kaiserslautern",
-        "attack": -0.11115598744365562,
-        "defence": 0.17933986980462885,
+        "attack": -0.11203332004717301,
+        "defence": 0.17648220544377935,
         "training_matches": 74
       },
       "785": {
         "name": "Karlsruher SC",
-        "attack": -0.039101673983273896,
-        "defence": -0.19205989674203136,
+        "attack": -0.03978558527026996,
+        "defence": -0.19462102877803056,
         "training_matches": 74
       },
       "1313": {
         "name": "Preußen Münster",
-        "attack": -0.2580311459075188,
-        "defence": -0.12750506378471188,
+        "attack": -0.2588319295154537,
+        "defence": -0.13021123485718208,
         "training_matches": 68
       },
       "1320": {
         "name": "Energie Cottbus",
-        "attack": 0.35692313266419307,
-        "defence": -0.22613723942247352,
+        "attack": 0.35648326475776015,
+        "defence": -0.22809056369528866,
         "training_matches": 6
       },
       "1324": {
         "name": "VfL Osnabrück",
-        "attack": -0.02740115516568952,
-        "defence": -0.18890037171498092,
+        "attack": -0.028294227793495844,
+        "defence": -0.1916388687279388,
         "training_matches": 6
       },
       "1621": {
         "name": "Rot-Weiß Essen",
-        "attack": -0.3099366299603431,
-        "defence": 0.10738559343953687,
+        "attack": -0.3101280691901691,
+        "defence": 0.10649954068228476,
         "training_matches": 2
       },
       "1639": {
         "name": "FC Saarbrücken",
-        "attack": -0.08896216303131496,
-        "defence": -0.03938438206669145,
-        "training_matches": 1
+        "attack": -0.062250146892373175,
+        "defence": 0.029627103620053885,
+        "training_matches": 2
       },
       "1652": {
         "name": "SSV Ulm 1846",
-        "attack": -0.17476779118524102,
-        "defence": 0.005158633056046238,
+        "attack": -0.1752062195584279,
+        "defence": 0.00336096271413743,
         "training_matches": 34
       },
       "1660": {
         "name": "SV Elversberg",
-        "attack": 0.21795905836394014,
-        "defence": 0.18817179182911575,
+        "attack": 0.21710368798544627,
+        "defence": 0.18558450295711734,
         "training_matches": 68
       }
     },
     "graph_connected": true,
     "constraints": {
-      "attack_sum": 1.6653345369377348e-16,
-      "defence_sum": -2.7755575615628914e-17
+      "attack_sum": 0.0,
+      "defence_sum": -1.1102230246251565e-16
     },
     "optimizer": {
       "success": true,
       "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
       "iterations": 31,
-      "objective": 590.0503690656515,
+      "objective": 590.3433536425908,
       "parameter_at_bound": false
     },
     "warnings": [
@@ -240,7 +240,7 @@
     "is_rolling_backtest": false,
     "minimum_test_matches": 40,
     "meets_minimum_supported_test_matches": true,
-    "evaluation_data_cutoff": "2026-09-22T13:59:02.719327Z",
+    "evaluation_data_cutoff": "2026-09-22T15:38:58.469514Z",
     "split": {
       "method": "chronological_fixed_model_holdout",
       "grouped_by": "kickoff_utc_calendar_date",
@@ -248,7 +248,7 @@
       "train_last_kickoff": "2026-03-13T17:30:00Z",
       "test_start": "2026-03-14T12:00:00Z",
       "test_end": "2026-09-20T11:30:00Z",
-      "training_count": 534,
+      "training_count": 535,
       "testing_count": 135,
       "result_availability_delay_hours": 4,
       "embargoed_count": 0,
@@ -376,28 +376,28 @@
     },
     "model_metrics": {
       "n": 107,
-      "log_loss": 1.0373890274138287,
-      "brier_score": 0.6243100635560455,
+      "log_loss": 1.0376294980687204,
+      "brier_score": 0.6244869348794504,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
     "baseline_metrics": {
       "n": 107,
-      "log_loss": 1.0572039214252986,
-      "brier_score": 0.6378411681179919,
+      "log_loss": 1.0574800174485997,
+      "brier_score": 0.638048727621463,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
     "baseline": {
       "name": "training_league_home_away_mean_poisson",
-      "home_rate": 1.5949485500467726,
-      "away_rate": 1.3666978484565013,
+      "home_rate": 1.591970121381886,
+      "away_rate": 1.3678804855275444,
       "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
       "same_scored_matches_as_model": true
     },
     "comparison": {
-      "model_minus_baseline_log_loss": -0.019814894011469963,
-      "model_minus_baseline_brier_score": -0.013531104561946394,
+      "model_minus_baseline_log_loss": -0.01985051937987925,
+      "model_minus_baseline_brier_score": -0.013561792742012635,
       "lower_is_better": true
     },
     "warnings": [
@@ -427,7 +427,7 @@
         "odds": true
       },
       "fixtures": 306,
-      "fetched_at": "2026-09-22T14:01:06.453241Z",
+      "fetched_at": "2026-09-22T15:39:05.245388Z",
       "from_cache": false,
       "status_counts": {
         "FT": 54,
@@ -454,7 +454,7 @@
       },
       "fixtures": 308,
       "fetched_at": "2026-09-22T14:01:12.945466Z",
-      "from_cache": false,
+      "from_cache": true,
       "status_counts": {
         "FT": 308
       }
@@ -479,7 +479,7 @@
       },
       "fixtures": 308,
       "fetched_at": "2026-09-22T14:01:19.447203Z",
-      "from_cache": false,
+      "from_cache": true,
       "status_counts": {
         "FT": 307,
         "AET": 1
