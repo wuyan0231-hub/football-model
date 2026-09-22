@@ -320,9 +320,10 @@ def _fixture_identity(item: dict) -> tuple[dict, datetime]:
 
 
 def normalize_fixtures(fixtures: list, asof: datetime | str) -> list[dict]:
-    """Only FT with explicit 90-minute fulltime scores, four-hour completion buffer.
+    """Finished FT/AET/PEN with explicit regulation scores and a four-hour buffer.
 
-    AET/PEN are intentionally excluded in this starter even if fulltime exists.
+    fulltime includes stoppage time, but never extra time or a penalty shootout.
+    Elapsed minutes and the eventual winner do not identify regulation scores.
     Historical asof uses eventual results from a current API download: it is not
     proof that corrected provider records were available at that historical time.
     """
@@ -332,17 +333,27 @@ def normalize_fixtures(fixtures: list, asof: datetime | str) -> list[dict]:
         status = item["fixture"].get("status")
         if not isinstance(status, dict):
             raise DataError("fixture.status 结构缺失")
-        if status.get("short") != "FT":
+        short_status = status.get("short")
+        if short_status not in ("FT", "AET", "PEN"):
             continue
         row, kickoff = _fixture_identity(item)
         if kickoff + timedelta(hours=4) > cutoff:
             continue
+        context = f"match_id={row['match_id']} status={short_status}"
         try:
             score = item["score"]["fulltime"]
             row["home_goals"] = _integer(score.get("home"), "fulltime.home")
             row["away_goals"] = _integer(score.get("away"), "fulltime.away")
+        except DataError as exc:
+            raise DataError(f"{context} 常规时间比分无效：{exc}；不得用其他比分替代") from None
         except (KeyError, TypeError, AttributeError):
-            raise DataError("FT 比赛缺少 score.fulltime；不得用其他比分替代") from None
+            raise DataError(f"{context} 缺少有效 score.fulltime；不得用其他比分替代") from None
+        halftime = item["score"].get("halftime")
+        if isinstance(halftime, dict):
+            for side in ("home", "away"):
+                half_goals = halftime.get(side)
+                if type(half_goals) is int and half_goals >= 0 and half_goals > row[f"{side}_goals"]:
+                    raise DataError(f"{context} score.halftime.{side} 大于 score.fulltime.{side}；比分矛盾")
         rows.append(row)
     return sorted(rows, key=lambda row: (row["kickoff"], row["match_id"]))
 

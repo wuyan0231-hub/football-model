@@ -183,27 +183,93 @@ class DataTests(unittest.TestCase):
         with self.assertRaisesRegex(APIError, "匹配 2 项"):
             self.client(Mock(return_value=Response(envelope([item, item])))).resolve_league({"name": "X", "country": "Y"})
 
-    def test_only_ft_and_fulltime_goals_are_used(self):
+    def test_finished_statuses_use_only_fulltime_and_keep_completion_buffer(self):
         fixtures = [fixture(), fixture(2, "AET"), fixture(3, "PEN"), fixture(4, "NS"),
                     fixture(5, "FT", NOW + timedelta(days=1)), fixture(6, "FT", NOW - timedelta(hours=3))]
         rows = normalize_fixtures(fixtures, NOW)
-        self.assertEqual(len(rows), 1)
-        self.assertEqual((rows[0]["home_goals"], rows[0]["away_goals"]), (2, 1))
+        self.assertEqual([row["match_id"] for row in rows], [1, 2, 3])
+        self.assertTrue(all((row["home_goals"], row["away_goals"]) == (2, 1) for row in rows))
 
-    def test_null_negative_and_string_goals_are_rejected(self):
-        for bad in (None, -1, "2", True, 1.5):
-            with self.subTest(bad=bad):
-                item = fixture()
-                item["score"]["fulltime"]["home"] = bad
-                with self.assertRaises(DataError):
+    def test_direct_shootout_elapsed_120_keeps_regulation_draw(self):
+        item = fixture(8, "PEN")
+        item["fixture"]["status"]["elapsed"] = 120
+        item["score"]["fulltime"] = {"home": 1, "away": 1}
+        item["score"]["penalty"] = {"home": 1, "away": 4}
+        item["teams"]["away"]["winner"] = True
+        row = normalize_fixtures([item], NOW)[0]
+        self.assertEqual((row["home_goals"], row["away_goals"]), (1, 1))
+
+    def test_extra_time_goals_never_enter_regulation_score(self):
+        item = fixture(9, "AET")
+        item["score"]["fulltime"] = {"home": 0, "away": 0}
+        item["score"]["extratime"] = {"home": 2, "away": 1}
+        item["goals"] = {"home": 2, "away": 1}
+        row = normalize_fixtures([item], NOW)[0]
+        self.assertEqual((row["home_goals"], row["away_goals"]), (0, 0))
+
+    def test_two_leg_deciders_need_not_be_drawn_in_regulation(self):
+        for status in ("AET", "PEN"):
+            with self.subTest(status=status):
+                item = fixture(10, status)
+                item["fixture"]["status"]["elapsed"] = None
+                row = normalize_fixtures([item], NOW)[0]
+                self.assertEqual((row["home_goals"], row["away_goals"]), (2, 1))
+
+    def test_missing_regulation_score_never_falls_back(self):
+        for status in ("FT", "AET", "PEN"):
+            for bad_score in ({}, {"fulltime": None}, {"fulltime": []}):
+                with self.subTest(status=status, bad_score=bad_score):
+                    item = fixture(12, status)
+                    item["score"] = {**bad_score, "extratime": {"home": 2, "away": 1},
+                                     "penalty": {"home": 4, "away": 3}}
+                    with self.assertRaisesRegex(DataError, f"match_id=12 status={status}.*fulltime"):
+                        normalize_fixtures([item], NOW)
+
+    def test_incomplete_statuses_are_excluded_even_with_scores(self):
+        statuses = ("NS", "1H", "HT", "2H", "ET", "P", "BT", "LIVE", "SUSP", "INT",
+                    "PST", "CANC", "ABD", "AWD", "WO")
+        items = [fixture(i + 1, status) for i, status in enumerate(statuses)]
+        self.assertEqual(normalize_fixtures(items, NOW), [])
+
+    def test_all_finished_statuses_observe_four_hour_cutoff(self):
+        for status in ("FT", "AET", "PEN"):
+            with self.subTest(status=status):
+                recent = fixture(14, status, NOW - timedelta(hours=4) + timedelta(seconds=1))
+                boundary = fixture(15, status, NOW - timedelta(hours=4))
+                self.assertEqual(normalize_fixtures([recent], NOW), [])
+                self.assertEqual([r["match_id"] for r in normalize_fixtures([boundary], NOW)], [15])
+
+    def test_halftime_cannot_exceed_regulation_score(self):
+        for status in ("FT", "AET", "PEN"):
+            with self.subTest(status=status):
+                item = fixture(16, status)
+                item["score"]["halftime"] = {"home": 3, "away": 0}
+                with self.assertRaisesRegex(DataError, f"match_id=16 status={status}.*halftime.home"):
                     normalize_fixtures([item], NOW)
 
+    def test_missing_halftime_does_not_block_explicit_regulation_score(self):
+        item = fixture(17, "PEN")
+        item["score"]["halftime"] = {"home": None, "away": None}
+        self.assertEqual(len(normalize_fixtures([item], NOW)), 1)
+
+    def test_null_negative_and_string_goals_are_rejected(self):
+        for status in ("FT", "AET", "PEN"):
+            for side in ("home", "away"):
+                for bad in (None, -1, "2", True, 1.5):
+                    with self.subTest(status=status, side=side, bad=bad):
+                        item = fixture(18, status)
+                        item["score"]["fulltime"][side] = bad
+                        with self.assertRaisesRegex(DataError, f"match_id=18 status={status}.*fulltime.{side}"):
+                            normalize_fixtures([item], NOW)
+
     def test_duplicate_identical_deduplicated_but_conflict_fails(self):
-        one, two = fixture(), fixture()
-        self.assertEqual(len(normalize_fixtures([one, two], NOW)), 1)
-        two["score"]["fulltime"]["home"] = 3
-        with self.assertRaisesRegex(DataError, "冲突"):
-            normalize_fixtures([one, two], NOW)
+        for status in ("FT", "AET", "PEN"):
+            with self.subTest(status=status):
+                one, two = fixture(19, status), fixture(19, status)
+                self.assertEqual(len(normalize_fixtures([one, two], NOW)), 1)
+                two["score"]["fulltime"]["home"] = 3
+                with self.assertRaisesRegex(DataError, "match_id=19.*冲突"):
+                    normalize_fixtures([one, two], NOW)
 
     def test_missing_or_wrong_id_type_and_timezone_rejected(self):
         for bad in (None, "1", True, -1):

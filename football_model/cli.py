@@ -190,7 +190,7 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
                 raise ValueError("拟合参数触及预设优化边界，须检查数据；本次不发布新模型。")
             bundle = {"schema_version": 1, "program_version": __version__, "model_id": f"{key}-{run_id}",
                       "competition": competition, "data_fingerprint": fingerprint,
-                      "trained_at": iso(now), "source": "API-Football FT score.fulltime",
+                      "trained_at": iso(now), "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
                       "maturity": "exploratory_baseline", "lineup_effects": "未量化", "ev": "未量化",
                       "model": fitted, "validation": evaluation["report"],
                       "source_seasons": result["seasons"]}

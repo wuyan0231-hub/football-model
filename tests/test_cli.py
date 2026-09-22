@@ -103,6 +103,25 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(report["competitions"][0]["status"], "仅审计")
             self.assertFalse((Path(tmp)/"models").exists())
 
+    def test_missing_regulation_score_retains_model_without_new_forecast(self):
+        client = FakeClient()
+        invalid = client.fixtures[0]
+        invalid["fixture"]["status"]["short"] = "AET"
+        invalid["score"]["fulltime"] = {"home": None, "away": None}
+        invalid["score"]["extratime"] = {"home": 2, "away": 1}
+        invalid["goals"] = {"home": 2, "away": 1}
+        with tempfile.TemporaryDirectory() as tmp:
+            model_path = Path(tmp)/"models/epl.json"
+            model_path.parent.mkdir()
+            model_path.write_text('{"sentinel":"existing model"}', encoding="utf-8")
+            code, report = run_pipeline(BASE_CONFIG, tmp, "train", now=NOW, client=client)
+            self.assertEqual(code, 1)
+            item = report["competitions"][0]
+            self.assertEqual(item["status"], "未完成")
+            self.assertIn("match_id=1 status=AET", item["detail"])
+            self.assertEqual(json.loads(model_path.read_text())["sentinel"], "existing model")
+            self.assertFalse((Path(tmp)/"predictions").exists())
+
     def test_audit_does_not_train(self):
         with tempfile.TemporaryDirectory() as tmp:
             code, report = run_pipeline(BASE_CONFIG, tmp, "audit", now=NOW, client=FakeClient())
