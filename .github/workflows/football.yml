@@ -11,11 +11,11 @@ on:
         default: audit
         options: [audit, train]
       league:
-        description: epl 先检查英超；all 检查已配置赛事
+        description: 选择单个赛事；ucl 仅审计；all 批量运行
         type: choice
         required: true
         default: epl
-        options: [epl, all]
+        options: [epl, laliga, bundesliga, serie_a, ligue_1, bundesliga_2, ligue_2, ucl, allsvenskan, eredivisie, primeira, brazil_a, j1, k1, mls, all]
   schedule:
     # UTC 01:17 = 北京时间 09:17。GitHub 可能延迟执行。
     - cron: '17 1 * * *'
