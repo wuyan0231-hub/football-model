@@ -106,6 +106,9 @@ def markdown_report(report: dict) -> str:
                  "- 单项失败会保留旧模型文件，但本次不会把旧文件伪装为新训练，也不会用失败的数据生成预测。", ""])
     if report.get("fatal_error"):
         rows.extend(["## 本次未完成", "", report["fatal_error"], ""])
+    if report.get("integration_error"):
+        rows.extend(["## 模型接入索引失败", "", report["integration_error"],
+                     "", "本次任务标为失败，旧接入索引已失效；不能据旧索引声称已取得最新预测。", ""])
     for item in report["competitions"]:
         rows.extend([f"## {item['label']}", ""])
         for season in item.get("seasons", []):
@@ -244,6 +247,7 @@ def run_pipeline(config, runtime, mode="audit", league="epl", now=None, client=N
         raise ValueError("history_seasons 必须为 1 到 10。")
     report = {"generated_at": iso(now), "run_id": run_id, "mode": mode,
               "program_version": __version__, "source_commit": os.environ.get("GITHUB_SHA"),
+              "requested_competitions": [c["key"] for c in chosen],
               "competitions": [], "api_requests": 0}
     exit_code = 0
     try:
@@ -260,6 +264,34 @@ def run_pipeline(config, runtime, mode="audit", league="epl", now=None, client=N
         exit_code = 2
     report["api_requests"] = getattr(client, "requests_made", 0)
     report["exit_code"] = exit_code
+    # Index all saved league runs, not only this run's possibly single-league
+    # report. This access layer never changes fitting or validation inputs.
+    from .integration import build_index
+    try:
+        build_index(runtime, config, current_report=report)
+        report["integration_index"] = {"status": "updated", "path": "runtime/integration/index.json"}
+    except (ValueError, KeyError, TypeError, RuntimeError, OSError) as exc:
+        report["integration_index"] = {"status": "failed", "detail": safe_error(exc)}
+        report["integration_error"] = safe_error(exc)
+        exit_code = max(exit_code, 1)
+        report["exit_code"] = exit_code
+        invalid_index = runtime / "integration" / "index.json"
+        try:
+            atomic_json(invalid_index, {"schema_version": 1, "status": "failed", "run_id": run_id,
+                        "generated_at": iso(now), "reason": safe_error(exc), "competitions": []})
+        except OSError:
+            invalid_index.unlink(missing_ok=True)
+        invalid_markdown = runtime / "integration" / "index.md"
+        try:
+            invalid_markdown.parent.mkdir(parents=True, exist_ok=True)
+            invalid_markdown.write_text(
+                f"# 模型接入索引失败\n\n运行ID：{run_id}\n\n时间：{iso(now)}\n\n"
+                f"原因：{safe_error(exc)}\n\n旧索引已失效，不能据此调用旧预测。\n",
+                encoding="utf-8",
+            )
+        except OSError:
+            invalid_markdown.unlink(missing_ok=True)
+        print(f"模型接入索引更新失败：{safe_error(exc)}", flush=True)
     atomic_json(runtime / "reports" / "history" / f"{run_id}.json", report)
     atomic_json(runtime / "reports" / "latest.json", report)
     markdown = markdown_report(report)
