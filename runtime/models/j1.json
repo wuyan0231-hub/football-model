@@ -1,0 +1,337 @@
+{
+  "schema_version": 1,
+  "program_version": "0.1.0",
+  "model_id": "j1-20260922T135902719327Z",
+  "competition": {
+    "key": "j1",
+    "label": "日职联J1",
+    "name": "J1 League",
+    "country": "Japan",
+    "mode": "domestic_baseline"
+  },
+  "data_fingerprint": "52d077e8ea63172201cbd985ed5afd08ce9ad20b454787bce3b7d49177114e09",
+  "trained_at": "2026-09-22T13:59:02.719327Z",
+  "source": "API-Football FT score.fulltime",
+  "maturity": "exploratory_baseline",
+  "lineup_effects": "未量化",
+  "ev": "未量化",
+  "model": {
+    "model_version": "independent_poisson_time_decay_l2_v1",
+    "model_scope": "baseline_unadjusted_lineup",
+    "fit_status": "converged",
+    "trained": true,
+    "validated_for_production": false,
+    "training_cutoff": "2026-09-22T13:59:02.719327Z",
+    "last_match_kickoff": "2026-09-20T08:00:00Z",
+    "last_result_assumed_available_at": "2026-09-20T12:00:00Z",
+    "n_matches": 608,
+    "n_teams": 23,
+    "min_team_matches": 20,
+    "low_sample_team_threshold": 5,
+    "low_sample_team_ids": [],
+    "excluded_after_cutoff_or_availability_delay": 0,
+    "training_data_sha256": "ee6c5f646ed298408228897ce35c554ece902db2804ae74083fee035d4282655",
+    "half_life_days": 180.0,
+    "ridge": 3.0,
+    "effective_sample_size": 395.95400132811665,
+    "intercept": 0.19264157244084465,
+    "home_advantage": 0.14372505510350114,
+    "team_parameters": {
+      "281": {
+        "name": "Kashiwa Reysol",
+        "attack": 0.2271452963310559,
+        "defence": 0.07825616681965841,
+        "training_matches": 65
+      },
+      "282": {
+        "name": "Sanfrecce Hiroshima",
+        "attack": 0.25264363094610565,
+        "defence": 0.4142176042738552,
+        "training_matches": 62
+      },
+      "283": {
+        "name": "Shimizu S-pulse",
+        "attack": -0.3218278656056304,
+        "defence": 0.07536115838075873,
+        "training_matches": 58
+      },
+      "284": {
+        "name": "Shonan Bellmare",
+        "attack": -0.16246789257516675,
+        "defence": -0.18958581895718324,
+        "training_matches": 38
+      },
+      "285": {
+        "name": "V-varen Nagasaki",
+        "attack": -0.13292607770987633,
+        "defence": -0.1288576293268841,
+        "training_matches": 26
+      },
+      "287": {
+        "name": "Urawa",
+        "attack": 0.16974176722109816,
+        "defence": -0.028379658666880764,
+        "training_matches": 62
+      },
+      "288": {
+        "name": "Nagoya Grampus",
+        "attack": 0.07823189296880119,
+        "defence": -0.1842701093872715,
+        "training_matches": 60
+      },
+      "289": {
+        "name": "Vissel Kobe",
+        "attack": 0.12472851324432344,
+        "defence": 0.3564186219214384,
+        "training_matches": 60
+      },
+      "290": {
+        "name": "Kashima",
+        "attack": 0.27189955850726244,
+        "defence": 0.16766759598715977,
+        "training_matches": 62
+      },
+      "291": {
+        "name": "Cerezo Osaka",
+        "attack": 0.18929224700857614,
+        "defence": -0.09727569925383028,
+        "training_matches": 60
+      },
+      "292": {
+        "name": "FC Tokyo",
+        "attack": 0.1603442656204528,
+        "defence": 0.16279944141928832,
+        "training_matches": 60
+      },
+      "293": {
+        "name": "Gamba Osaka",
+        "attack": 0.07155356393409561,
+        "defence": -0.10676094383231088,
+        "training_matches": 58
+      },
+      "294": {
+        "name": "Kawasaki Frontale",
+        "attack": 0.23223675716029682,
+        "defence": -0.12593741440019843,
+        "training_matches": 62
+      },
+      "296": {
+        "name": "Yokohama F. Marinos",
+        "attack": 0.20237028912499017,
+        "defence": 0.07716225050432092,
+        "training_matches": 64
+      },
+      "301": {
+        "name": "JEF United Chiba",
+        "attack": -0.13322854679163484,
+        "defence": -0.3467763774481006,
+        "training_matches": 25
+      },
+      "302": {
+        "name": "Kyoto Sanga",
+        "attack": 0.05819976566426331,
+        "defence": -0.13300347103362337,
+        "training_matches": 61
+      },
+      "303": {
+        "name": "Machida Zelvia",
+        "attack": 0.2718373678571172,
+        "defence": 0.2236471563548855,
+        "training_matches": 57
+      },
+      "305": {
+        "name": "Mito Hollyhock",
+        "attack": -0.20194961299910788,
+        "defence": -0.16475887309672232,
+        "training_matches": 20
+      },
+      "306": {
+        "name": "Tokyo Verdy",
+        "attack": -0.4755350451068202,
+        "defence": -0.021629422232190408,
+        "training_matches": 62
+      },
+      "307": {
+        "name": "Yokohama FC",
+        "attack": -0.34987812011626934,
+        "defence": 0.11134152113451047,
+        "training_matches": 38
+      },
+      "310": {
+        "name": "Fagiano Okayama",
+        "attack": -0.04962496845091122,
+        "defence": 0.057842913210666036,
+        "training_matches": 60
+      },
+      "311": {
+        "name": "Albirex Niigata",
+        "attack": -0.21246322546346164,
+        "defence": -0.22930621362573417,
+        "training_matches": 38
+      },
+      "316": {
+        "name": "Avispa Fukuoka",
+        "attack": -0.27032356076956027,
+        "defence": 0.03182720125438837,
+        "training_matches": 58
+      }
+    },
+    "graph_connected": true,
+    "constraints": {
+      "attack_sum": 1.6653345369377348e-16,
+      "defence_sum": 2.7755575615628914e-17
+    },
+    "optimizer": {
+      "success": true,
+      "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+      "iterations": 24,
+      "objective": 648.9275719833071,
+      "parameter_at_bound": false
+    },
+    "warnings": [
+      "仅为球队比分基线，未量化伤停、预计阵容、球员、xG、天气及赛程因素。",
+      "已拟合不代表已通过有效性验证；参数须通过实际运行程序才能更新。",
+      "输入须由上游核准为常规时间终场比分，不能包含加时或点球大战。"
+    ]
+  },
+  "validation": {
+    "validation_status": "exploratory_single_fixed_holdout",
+    "deployment_approved": false,
+    "is_rolling_backtest": false,
+    "minimum_test_matches": 40,
+    "meets_minimum_supported_test_matches": true,
+    "evaluation_data_cutoff": "2026-09-22T13:59:02.719327Z",
+    "split": {
+      "method": "chronological_fixed_model_holdout",
+      "grouped_by": "kickoff_utc_calendar_date",
+      "train_cutoff": "2026-05-10T00:00:00Z",
+      "train_last_kickoff": "2026-05-09T07:00:00Z",
+      "test_start": "2026-05-10T05:00:00Z",
+      "test_end": "2026-09-20T08:00:00Z",
+      "training_count": 486,
+      "testing_count": 122,
+      "result_availability_delay_hours": 4,
+      "embargoed_count": 0,
+      "embargoed_match_ids": []
+    },
+    "coverage": {
+      "total": 122,
+      "scored": 122,
+      "excluded": 0,
+      "ratio": 1.0,
+      "exclusions": []
+    },
+    "model_metrics": {
+      "n": 122,
+      "log_loss": 1.004257139319615,
+      "brier_score": 0.5954383386699638,
+      "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+      "log_loss_probability_floor": 1e-15
+    },
+    "baseline_metrics": {
+      "n": 122,
+      "log_loss": 1.0646654255665948,
+      "brier_score": 0.6445463214920983,
+      "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+      "log_loss_probability_floor": 1e-15
+    },
+    "baseline": {
+      "name": "training_league_home_away_mean_poisson",
+      "home_rate": 1.3617677286742036,
+      "away_rate": 1.129496402877698,
+      "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
+      "same_scored_matches_as_model": true
+    },
+    "comparison": {
+      "model_minus_baseline_log_loss": -0.060408286246979914,
+      "model_minus_baseline_brier_score": -0.04910798282213458,
+      "lower_is_better": true
+    },
+    "warnings": [
+      "单次固定模型留出验证仅为探索性检查，不是滚动回测，也不构成上线或盈利证明。",
+      "不含赔率、投注收益、阵容修正或提前十小时伤停历史快照验证。",
+      "超参数为显式默认值，不能根据本留出期反复挑选参数后再声称独立验证。",
+      "未知球队比赛单独列为未覆盖，指标只针对 model_metrics.n 场已覆盖比赛。"
+    ]
+  },
+  "source_seasons": [
+    {
+      "year": 2027,
+      "coverage_flags": {
+        "fixtures": {
+          "events": true,
+          "lineups": true,
+          "statistics_fixtures": true,
+          "statistics_players": true
+        },
+        "standings": true,
+        "players": true,
+        "top_scorers": true,
+        "top_assists": true,
+        "top_cards": true,
+        "injuries": false,
+        "predictions": true,
+        "odds": true
+      },
+      "fixtures": 380,
+      "fetched_at": "2026-09-22T14:04:08.488543Z",
+      "from_cache": false,
+      "status_counts": {
+        "FT": 80,
+        "NS": 300
+      }
+    },
+    {
+      "year": 2026,
+      "coverage_flags": {
+        "fixtures": {
+          "events": true,
+          "lineups": true,
+          "statistics_fixtures": true,
+          "statistics_players": true
+        },
+        "standings": true,
+        "players": true,
+        "top_scorers": true,
+        "top_assists": true,
+        "top_cards": true,
+        "injuries": false,
+        "predictions": true,
+        "odds": false
+      },
+      "fixtures": 200,
+      "fetched_at": "2026-09-22T14:04:14.956805Z",
+      "from_cache": false,
+      "status_counts": {
+        "FT": 148,
+        "PEN": 51,
+        "AET": 1
+      }
+    },
+    {
+      "year": 2025,
+      "coverage_flags": {
+        "fixtures": {
+          "events": true,
+          "lineups": true,
+          "statistics_fixtures": true,
+          "statistics_players": true
+        },
+        "standings": true,
+        "players": true,
+        "top_scorers": true,
+        "top_assists": true,
+        "top_cards": true,
+        "injuries": true,
+        "predictions": true,
+        "odds": false
+      },
+      "fixtures": 380,
+      "fetched_at": "2026-09-22T14:04:21.456874Z",
+      "from_cache": false,
+      "status_counts": {
+        "FT": 380
+      }
+    }
+  ]
+}
