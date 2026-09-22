@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-09-22T15:38:58.469514Z",
-  "run_id": "20260922T153858469514Z",
+  "generated_at": "2026-09-22T15:40:15.767203Z",
+  "run_id": "20260922T154015767203Z",
   "mode": "train",
   "program_version": "0.1.0",
   "source_commit": "873a69547945ba10423df9aedd002503a63f6603",
   "competitions": [
     {
-      "key": "bundesliga_2",
-      "label": "德乙",
+      "key": "ligue_2",
+      "label": "法乙",
       "status": "探索性基线",
       "seasons": [
         {
@@ -29,11 +29,11 @@
             "odds": true
           },
           "fixtures": 306,
-          "fetched_at": "2026-09-22T15:39:05.245388Z",
+          "fetched_at": "2026-09-22T15:40:22.494634Z",
           "from_cache": false,
           "status_counts": {
-            "FT": 54,
-            "NS": 252
+            "FT": 63,
+            "NS": 243
           }
         },
         {
@@ -54,11 +54,13 @@
             "predictions": true,
             "odds": false
           },
-          "fixtures": 308,
-          "fetched_at": "2026-09-22T14:01:12.945466Z",
+          "fixtures": 310,
+          "fetched_at": "2026-09-22T14:01:38.944353Z",
           "from_cache": true,
           "status_counts": {
-            "FT": 308
+            "FT": 308,
+            "PEN": 1,
+            "AWD": 1
           }
         },
         {
@@ -79,12 +81,11 @@
             "predictions": true,
             "odds": false
           },
-          "fixtures": 308,
-          "fetched_at": "2026-09-22T14:01:19.447203Z",
+          "fixtures": 310,
+          "fetched_at": "2026-09-22T14:01:45.455887Z",
           "from_cache": true,
           "status_counts": {
-            "FT": 307,
-            "AET": 1
+            "FT": 310
           }
         }
       ],
@@ -94,175 +95,151 @@
       "xg_model": "未实现",
       "return_advantage": "未经验证",
       "ev": "未量化",
-      "provider_league_id": 79,
-      "eligible_matches": 670,
+      "provider_league_id": 62,
+      "eligible_matches": 682,
       "missing_seasons": [],
-      "last_match_kickoff": "2026-09-20T11:30:00Z",
-      "observed_at": "2026-09-22T15:38:58.469514Z",
+      "last_match_kickoff": "2026-09-19T18:00:00Z",
+      "observed_at": "2026-09-22T15:40:15.767203Z",
       "validation": {
         "validation_status": "exploratory_single_fixed_holdout",
         "deployment_approved": false,
         "is_rolling_backtest": false,
         "minimum_test_matches": 40,
         "meets_minimum_supported_test_matches": true,
-        "evaluation_data_cutoff": "2026-09-22T15:38:58.469514Z",
+        "evaluation_data_cutoff": "2026-09-22T15:40:15.767203Z",
         "split": {
           "method": "chronological_fixed_model_holdout",
           "grouped_by": "kickoff_utc_calendar_date",
           "train_cutoff": "2026-03-14T00:00:00Z",
-          "train_last_kickoff": "2026-03-13T17:30:00Z",
-          "test_start": "2026-03-14T12:00:00Z",
-          "test_end": "2026-09-20T11:30:00Z",
-          "training_count": 535,
-          "testing_count": 135,
+          "train_last_kickoff": "2026-03-13T19:00:00Z",
+          "test_start": "2026-03-14T13:00:00Z",
+          "test_end": "2026-09-19T18:00:00Z",
+          "training_count": 548,
+          "testing_count": 134,
           "result_availability_delay_hours": 4,
           "embargoed_count": 0,
           "embargoed_match_ids": []
         },
         "coverage": {
-          "total": 135,
-          "scored": 107,
-          "excluded": 28,
-          "ratio": 0.7925925925925926,
+          "total": 134,
+          "scored": 112,
+          "excluded": 22,
+          "ratio": 0.835820895522388,
           "exclusions": [
             {
-              "match_id": 1545405,
-              "reason": "未知球队 ID：[1621]；缺少训练数据，当前模型不支持。"
+              "match_id": 1545224,
+              "reason": "未知球队 ID：[3221]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1545406,
-              "reason": "未知球队 ID：[1621]；缺少训练数据，当前模型不支持。"
+              "match_id": 1545225,
+              "reason": "未知球队 ID：[3221]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1576137,
-              "reason": "未知球队 ID：[180, 1324]；缺少训练数据，当前模型不支持。"
+              "match_id": 1552427,
+              "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1576142,
-              "reason": "未知球队 ID：[161]；缺少训练数据，当前模型不支持。"
+              "match_id": 1552428,
+              "reason": "未知球队 ID：[83]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1576135,
-              "reason": "未知球队 ID：[1320]；缺少训练数据，当前模型不支持。"
+              "match_id": 1552431,
+              "reason": "未知球队 ID：[115]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1576141,
-              "reason": "未知球队 ID：[186]；缺少训练数据，当前模型不支持。"
+              "match_id": 1552433,
+              "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1576148,
-              "reason": "未知球队 ID：[186]；缺少训练数据，当前模型不支持。"
+              "match_id": 1552436,
+              "reason": "未知球队 ID：[83]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1576147,
-              "reason": "未知球队 ID：[180]；缺少训练数据，当前模型不支持。"
+              "match_id": 1552438,
+              "reason": "未知球队 ID：[115]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1576151,
-              "reason": "未知球队 ID：[1324]；缺少训练数据，当前模型不支持。"
+              "match_id": 1552442,
+              "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1576143,
-              "reason": "未知球队 ID：[1320]；缺少训练数据，当前模型不支持。"
+              "match_id": 1552448,
+              "reason": "未知球队 ID：[115]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1576146,
-              "reason": "未知球队 ID：[161]；缺少训练数据，当前模型不支持。"
+              "match_id": 1552445,
+              "reason": "未知球队 ID：[83]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1576152,
-              "reason": "未知球队 ID：[1324]；缺少训练数据，当前模型不支持。"
+              "match_id": 1552451,
+              "reason": "未知球队 ID：[115]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1576154,
-              "reason": "未知球队 ID：[1320]；缺少训练数据，当前模型不支持。"
+              "match_id": 1552453,
+              "reason": "未知球队 ID：[83]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1576156,
-              "reason": "未知球队 ID：[180]；缺少训练数据，当前模型不支持。"
+              "match_id": 1552452,
+              "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1576157,
-              "reason": "未知球队 ID：[161]；缺少训练数据，当前模型不支持。"
+              "match_id": 1552459,
+              "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1576160,
-              "reason": "未知球队 ID：[186]；缺少训练数据，当前模型不支持。"
+              "match_id": 1552465,
+              "reason": "未知球队 ID：[115]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1576161,
-              "reason": "未知球队 ID：[186]；缺少训练数据，当前模型不支持。"
+              "match_id": 1552464,
+              "reason": "未知球队 ID：[83]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1576169,
-              "reason": "未知球队 ID：[161, 1320]；缺少训练数据，当前模型不支持。"
+              "match_id": 1552469,
+              "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1576162,
-              "reason": "未知球队 ID：[180]；缺少训练数据，当前模型不支持。"
+              "match_id": 1552476,
+              "reason": "未知球队 ID：[115, 83]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1576168,
-              "reason": "未知球队 ID：[1324]；缺少训练数据，当前模型不支持。"
+              "match_id": 1552477,
+              "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1576177,
-              "reason": "未知球队 ID：[186, 161]；缺少训练数据，当前模型不支持。"
+              "match_id": 1552481,
+              "reason": "未知球队 ID：[115]；缺少训练数据，当前模型不支持。"
             },
             {
-              "match_id": 1576173,
-              "reason": "未知球队 ID：[180]；缺少训练数据，当前模型不支持。"
-            },
-            {
-              "match_id": 1576174,
-              "reason": "未知球队 ID：[1320]；缺少训练数据，当前模型不支持。"
-            },
-            {
-              "match_id": 1576178,
-              "reason": "未知球队 ID：[1324]；缺少训练数据，当前模型不支持。"
-            },
-            {
-              "match_id": 1576187,
-              "reason": "未知球队 ID：[161]；缺少训练数据，当前模型不支持。"
-            },
-            {
-              "match_id": 1576183,
-              "reason": "未知球队 ID：[1324]；缺少训练数据，当前模型不支持。"
-            },
-            {
-              "match_id": 1576179,
-              "reason": "未知球队 ID：[180]；缺少训练数据，当前模型不支持。"
-            },
-            {
-              "match_id": 1576180,
-              "reason": "未知球队 ID：[1320, 186]；缺少训练数据，当前模型不支持。"
+              "match_id": 1552478,
+              "reason": "未知球队 ID：[83]；缺少训练数据，当前模型不支持。"
             }
           ]
         },
         "model_metrics": {
-          "n": 107,
-          "log_loss": 1.0376294980687204,
-          "brier_score": 0.6244869348794504,
+          "n": 112,
+          "log_loss": 1.081221321498157,
+          "brier_score": 0.6566574432166199,
           "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
           "log_loss_probability_floor": 1e-15
         },
         "baseline_metrics": {
-          "n": 107,
-          "log_loss": 1.0574800174485997,
-          "brier_score": 0.638048727621463,
+          "n": 112,
+          "log_loss": 1.106153416900453,
+          "brier_score": 0.6714635672591954,
           "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
           "log_loss_probability_floor": 1e-15
         },
         "baseline": {
           "name": "training_league_home_away_mean_poisson",
-          "home_rate": 1.591970121381886,
-          "away_rate": 1.3678804855275444,
+          "home_rate": 1.3956244302643572,
+          "away_rate": 1.1276207839562442,
           "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
           "same_scored_matches_as_model": true
         },
         "comparison": {
-          "model_minus_baseline_log_loss": -0.01985051937987925,
-          "model_minus_baseline_brier_score": -0.013561792742012635,
+          "model_minus_baseline_log_loss": -0.024932095402296017,
+          "model_minus_baseline_brier_score": -0.01480612404257553,
           "lower_is_better": true
         },
         "warnings": [
@@ -272,8 +249,8 @@
           "未知球队比赛单独列为未覆盖，指标只针对 model_metrics.n 场已覆盖比赛。"
         ]
       },
-      "model_id": "bundesliga_2-20260922T153858469514Z",
-      "trained_at": "2026-09-22T15:38:58.469514Z",
+      "model_id": "ligue_2-20260922T154015767203Z",
+      "trained_at": "2026-09-22T15:40:15.767203Z",
       "detail": "未含阵容伤停、xG与赛程；未证实预测或收益优势。",
       "forecast_count": 0,
       "unsupported_forecasts": 0
