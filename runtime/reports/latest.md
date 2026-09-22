@@ -1,6 +1,6 @@
 # 足球模型运行报告
 
-生成时间：2026-09-22T15:40:15.767203Z（UTC）
+生成时间：2026-09-22T15:41:39.511754Z（UTC）
 程序版本：0.1.0；运行模式：train。
 
 本程序生成探索性历史比分基线。没有球员/伤停、xG、战术、赛程特征，也没有经过验证的收益优势。
@@ -8,7 +8,7 @@
 
 |赛事|状态|可用90分钟赛果|训练参数变化|说明|
 |---|---|---:|---|---|
-|法乙|探索性基线|682|完成新拟合|未含阵容伤停、xG与赛程；未证实预测或收益优势。|
+|荷甲|探索性基线|693|完成新拟合|未含阵容伤停、xG与赛程；未证实预测或收益优势。|
 
 本次接口请求次数：2。
 
@@ -24,11 +24,11 @@
 - 新队或与训练队伍缺少连接的队伍不出数值；陈旧模型不自动发布新预测。
 - 单项失败会保留旧模型文件，但本次不会把旧文件伪装为新训练，也不会用失败的数据生成预测。
 
-## 法乙
+## 荷甲
 
-- 2026：返回306场，抓取时间2026-09-22T15:40:22.494634Z；接口返回成功；完整性尚需核验。
-- 2025：返回310场，抓取时间2026-09-22T14:01:38.944353Z；接口返回成功；完整性尚需核验。
-- 2024：返回310场，抓取时间2026-09-22T14:01:45.455887Z；接口返回成功；完整性尚需核验。
+- 2026：返回306场，抓取时间2026-09-22T15:41:46.171086Z；接口返回成功；完整性尚需核验。
+- 2025：返回309场，抓取时间2026-09-22T14:02:56.950299Z；接口返回成功；完整性尚需核验。
+- 2024：返回321场，抓取时间2026-09-22T14:03:03.469952Z；接口返回成功；完整性尚需核验。
 
 验证结果（完整字段见同名JSON）：
 
@@ -39,140 +39,51 @@
   "is_rolling_backtest": false,
   "minimum_test_matches": 40,
   "meets_minimum_supported_test_matches": true,
-  "evaluation_data_cutoff": "2026-09-22T15:40:15.767203Z",
+  "evaluation_data_cutoff": "2026-09-22T15:41:39.511754Z",
   "split": {
     "method": "chronological_fixed_model_holdout",
     "grouped_by": "kickoff_utc_calendar_date",
-    "train_cutoff": "2026-03-14T00:00:00Z",
-    "train_last_kickoff": "2026-03-13T19:00:00Z",
-    "test_start": "2026-03-14T13:00:00Z",
-    "test_end": "2026-09-19T18:00:00Z",
-    "training_count": 548,
-    "testing_count": 134,
+    "train_cutoff": "2026-03-13T00:00:00Z",
+    "train_last_kickoff": "2026-03-08T19:00:00Z",
+    "test_start": "2026-03-13T19:00:00Z",
+    "test_end": "2026-09-20T14:45:00Z",
+    "training_count": 555,
+    "testing_count": 138,
     "result_availability_delay_hours": 4,
     "embargoed_count": 0,
     "embargoed_match_ids": []
   },
   "coverage": {
-    "total": 134,
-    "scored": 112,
-    "excluded": 22,
-    "ratio": 0.835820895522388,
-    "exclusions": [
-      {
-        "match_id": 1545224,
-        "reason": "未知球队 ID：[3221]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1545225,
-        "reason": "未知球队 ID：[3221]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1552427,
-        "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1552428,
-        "reason": "未知球队 ID：[83]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1552431,
-        "reason": "未知球队 ID：[115]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1552433,
-        "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1552436,
-        "reason": "未知球队 ID：[83]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1552438,
-        "reason": "未知球队 ID：[115]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1552442,
-        "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1552448,
-        "reason": "未知球队 ID：[115]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1552445,
-        "reason": "未知球队 ID：[83]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1552451,
-        "reason": "未知球队 ID：[115]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1552453,
-        "reason": "未知球队 ID：[83]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1552452,
-        "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1552459,
-        "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1552465,
-        "reason": "未知球队 ID：[115]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1552464,
-        "reason": "未知球队 ID：[83]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1552469,
-        "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1552476,
-        "reason": "未知球队 ID：[115, 83]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1552477,
-        "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1552481,
-        "reason": "未知球队 ID：[115]；缺少训练数据，当前模型不支持。"
-      },
-      {
-        "match_id": 1552478,
-        "reason": "未知球队 ID：[83]；缺少训练数据，当前模型不支持。"
-      }
-    ]
+    "total": 138,
+    "scored": 138,
+    "excluded": 0,
+    "ratio": 1.0,
+    "exclusions": []
   },
   "model_metrics": {
-    "n": 112,
-    "log_loss": 1.081221321498157,
-    "brier_score": 0.6566574432166199,
+    "n": 138,
+    "log_loss": 0.9936391564620336,
+    "brier_score": 0.5913301927912854,
     "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
     "log_loss_probability_floor": 1e-15
   },
   "baseline_metrics": {
-    "n": 112,
-    "log_loss": 1.106153416900453,
-    "brier_score": 0.6714635672591954,
+    "n": 138,
+    "log_loss": 1.1028697761100887,
+    "brier_score": 0.670495801984243,
     "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
     "log_loss_probability_floor": 1e-15
   },
   "baseline": {
     "name": "training_league_home_away_mean_poisson",
-    "home_rate": 1.3956244302643572,
-    "away_rate": 1.1276207839562442,
+    "home_rate": 1.7236723672367236,
+    "away_rate": 1.342034203420342,
     "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
     "same_scored_matches_as_model": true
   },
   "comparison": {
-    "model_minus_baseline_log_loss": -0.024932095402296017,
-    "model_minus_baseline_brier_score": -0.01480612404257553,
+    "model_minus_baseline_log_loss": -0.10923061964805514,
+    "model_minus_baseline_brier_score": -0.07916560919295756,
     "lower_is_better": true
   },
   "warnings": [
