@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "program_version": "0.1.0",
-  "model_id": "k1-20260922T135902719327Z",
+  "model_id": "k1-20260922T154327774824Z",
   "competition": {
     "key": "k1",
     "label": "韩国K1",
@@ -9,9 +9,9 @@
     "country": "South-Korea",
     "mode": "domestic_baseline"
   },
-  "data_fingerprint": "600ff122181f4f49a108a031ec10094b256c7a571c4de658a429377d008938df",
-  "trained_at": "2026-09-22T13:59:02.719327Z",
-  "source": "API-Football FT score.fulltime",
+  "data_fingerprint": "b356b4318bc7b242bbff26a0c742cd1fc700bcc5521f41a099c604cafed124a7",
+  "trained_at": "2026-09-22T15:43:27.774824Z",
+  "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
   "maturity": "exploratory_baseline",
   "lineup_effects": "未量化",
   "ev": "未量化",
@@ -21,12 +21,12 @@
     "fit_status": "converged",
     "trained": true,
     "validated_for_production": false,
-    "training_cutoff": "2026-09-22T13:59:02.719327Z",
+    "training_cutoff": "2026-09-22T15:43:27.774824Z",
     "last_match_kickoff": "2026-09-20T10:00:00Z",
     "last_result_assumed_available_at": "2026-09-20T14:00:00Z",
-    "n_matches": 642,
+    "n_matches": 643,
     "n_teams": 17,
-    "min_team_matches": 1,
+    "min_team_matches": 2,
     "low_sample_team_threshold": 5,
     "low_sample_team_ids": [
       2749,
@@ -34,126 +34,126 @@
       2765
     ],
     "excluded_after_cutoff_or_availability_delay": 0,
-    "training_data_sha256": "00f09e13cd736adf121000317f1c65bfbff689aa577e3a28c307b6db3af3160d",
+    "training_data_sha256": "9d3a183232d44704324f3b589699fab7b3929d612923ef3cfba931c512271dae",
     "half_life_days": 180.0,
     "ridge": 3.0,
-    "effective_sample_size": 314.99829982862497,
-    "intercept": 0.22981909941823336,
-    "home_advantage": 0.0019253854947861237,
+    "effective_sample_size": 315.2548506994692,
+    "intercept": 0.2295600085081298,
+    "home_advantage": 0.002414769248962718,
     "team_parameters": {
       "2745": {
         "name": "Bucheon FC 1995",
-        "attack": -0.07722319436634473,
-        "defence": -0.0645259121583873,
+        "attack": -0.07644682462726475,
+        "defence": -0.06373280656532562,
         "training_matches": 32
       },
       "2746": {
         "name": "Gangwon FC",
-        "attack": -0.03534882822853009,
-        "defence": 0.1829795776313954,
+        "attack": -0.03442446425700398,
+        "defence": 0.1838823183527939,
         "training_matches": 105
       },
       "2747": {
         "name": "Daegu FC",
-        "attack": 0.028068541911541095,
-        "defence": -0.2266235636707534,
-        "training_matches": 77
+        "attack": 0.032030702701832975,
+        "defence": -0.22305123749114936,
+        "training_matches": 78
       },
       "2748": {
         "name": "FC Anyang",
-        "attack": 0.038112329639356644,
-        "defence": -0.18506221117545998,
+        "attack": 0.03904336914699469,
+        "defence": -0.1841379384398196,
         "training_matches": 68
       },
       "2749": {
         "name": "Seoul E-Land FC",
-        "attack": 0.0012845981961716359,
-        "defence": -0.03132552969096823,
+        "attack": 0.001328902523123844,
+        "defence": -0.03125666402326369,
         "training_matches": 2
       },
       "2750": {
         "name": "Daejeon Citizen",
-        "attack": 0.261151792973838,
-        "defence": 0.0032695801303453684,
+        "attack": 0.2620810266475992,
+        "defence": 0.004179354359152881,
         "training_matches": 106
       },
       "2753": {
         "name": "Asan Mugunghwa",
-        "attack": 0.06008883588087502,
-        "defence": -0.042705976682727784,
-        "training_matches": 1
+        "attack": 0.04405180796840153,
+        "defence": -0.05826574064916794,
+        "training_matches": 2
       },
       "2756": {
         "name": "Suwon City FC",
-        "attack": 0.05879928839177627,
-        "defence": -0.18065265155071777,
+        "attack": 0.05977454925042478,
+        "defence": -0.17965005954659458,
         "training_matches": 78
       },
       "2759": {
         "name": "Gwangju FC",
-        "attack": -0.3097970436047001,
-        "defence": -0.2765122541989409,
+        "attack": -0.3088845971221905,
+        "defence": -0.27557037865730505,
         "training_matches": 106
       },
       "2761": {
         "name": "Jeju United FC",
-        "attack": -0.06524750551005147,
-        "defence": 0.16917923330880727,
+        "attack": -0.06432302410681337,
+        "defence": 0.17006581272185647,
         "training_matches": 108
       },
       "2762": {
         "name": "Jeonbuk Motors",
-        "attack": 0.08195971007254194,
-        "defence": 0.2565854169446054,
+        "attack": 0.08286727111408,
+        "defence": 0.2574531043338715,
         "training_matches": 108
       },
       "2763": {
         "name": "Incheon United",
-        "attack": -0.042747315346897394,
-        "defence": 0.13156855621708458,
+        "attack": -0.041901122966424245,
+        "defence": 0.13239249531203062,
         "training_matches": 67
       },
       "2764": {
         "name": "Pohang Steelers",
-        "attack": -0.19434920646970696,
-        "defence": 0.08568281922066222,
+        "attack": -0.1934243130938555,
+        "defence": 0.08660071715975229,
         "training_matches": 106
       },
       "2765": {
         "name": "Suwon Bluewings",
-        "attack": -0.19082335196659628,
-        "defence": -0.0555914670120828,
+        "attack": -0.19066271319668648,
+        "defence": -0.055373967801216985,
         "training_matches": 2
       },
       "2766": {
         "name": "FC Seoul",
-        "attack": 0.3122025082494505,
-        "defence": 0.1841483670621428,
+        "attack": 0.31314814464806573,
+        "defence": 0.18504366730552685,
         "training_matches": 106
       },
       "2767": {
         "name": "Ulsan Hyundai FC",
-        "attack": 0.11687850471551489,
-        "defence": -0.019575712634748887,
+        "attack": 0.11783252439611537,
+        "defence": -0.01864357916184867,
         "training_matches": 106
       },
       "2768": {
         "name": "Gimcheon Sangmu FC",
-        "attack": -0.04300966453823893,
-        "defence": 0.06916172825974404,
+        "attack": -0.04209123902639913,
+        "defence": 0.07006490279070698,
         "training_matches": 106
       }
     },
     "graph_connected": true,
     "constraints": {
-      "attack_sum": -2.7755575615628914e-17,
-      "defence_sum": 4.163336342344337e-17
+      "attack_sum": 3.469446951953614e-17,
+      "defence_sum": -2.7755575615628914e-17
     },
     "optimizer": {
       "success": true,
       "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
-      "iterations": 27,
-      "objective": 503.6649914416766,
+      "iterations": 25,
+      "objective": 503.7281351493395,
       "parameter_at_bound": false
     },
     "warnings": [
@@ -169,7 +169,7 @@
     "is_rolling_backtest": false,
     "minimum_test_matches": 40,
     "meets_minimum_supported_test_matches": true,
-    "evaluation_data_cutoff": "2026-09-22T13:59:02.719327Z",
+    "evaluation_data_cutoff": "2026-09-22T15:43:27.774824Z",
     "split": {
       "method": "chronological_fixed_model_holdout",
       "grouped_by": "kickoff_utc_calendar_date",
@@ -177,7 +177,7 @@
       "train_last_kickoff": "2026-04-21T10:30:00Z",
       "test_start": "2026-04-22T10:30:00Z",
       "test_end": "2026-09-20T10:00:00Z",
-      "training_count": 514,
+      "training_count": 515,
       "testing_count": 128,
       "result_availability_delay_hours": 4,
       "embargoed_count": 0,
@@ -192,28 +192,28 @@
     },
     "model_metrics": {
       "n": 128,
-      "log_loss": 1.0811768718029224,
-      "brier_score": 0.6547198576387225,
+      "log_loss": 1.0812713257851452,
+      "brier_score": 0.6547854171811053,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
     "baseline_metrics": {
       "n": 128,
-      "log_loss": 1.1199532416645872,
-      "brier_score": 0.6817329822813649,
+      "log_loss": 1.1201180935037098,
+      "brier_score": 0.6818557537145226,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
     "baseline": {
       "name": "training_league_home_away_mean_poisson",
-      "home_rate": 1.3828960155490768,
-      "away_rate": 1.1671525753158407,
+      "home_rate": 1.3840931134820562,
+      "away_rate": 1.1668283220174587,
       "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
       "same_scored_matches_as_model": true
     },
     "comparison": {
-      "model_minus_baseline_log_loss": -0.03877636986166477,
-      "model_minus_baseline_brier_score": -0.027013124642642383,
+      "model_minus_baseline_log_loss": -0.038846767718564656,
+      "model_minus_baseline_brier_score": -0.027070336533417283,
       "lower_is_better": true
     },
     "warnings": [
@@ -243,7 +243,7 @@
         "odds": true
       },
       "fixtures": 198,
-      "fetched_at": "2026-09-22T14:04:34.469553Z",
+      "fetched_at": "2026-09-22T15:43:34.419493Z",
       "from_cache": false,
       "status_counts": {
         "FT": 179,
@@ -270,7 +270,7 @@
       },
       "fixtures": 232,
       "fetched_at": "2026-09-22T14:04:40.944386Z",
-      "from_cache": false,
+      "from_cache": true,
       "status_counts": {
         "FT": 232
       }
@@ -295,7 +295,7 @@
       },
       "fixtures": 232,
       "fetched_at": "2026-09-22T14:04:47.452404Z",
-      "from_cache": false,
+      "from_cache": true,
       "status_counts": {
         "FT": 231,
         "AET": 1
