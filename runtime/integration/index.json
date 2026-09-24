@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "status": "ready",
-  "generated_at": "2026-09-24T01:31:30.646269Z",
-  "source_commit": "af1218d86d698959f051fc0b93c34d298e55e54f",
-  "history_reports": 14,
+  "generated_at": "2026-09-24T15:54:31.047524Z",
+  "source_commit": "53f9daf0dc4c32134c518bdf899fe73142263733",
+  "history_reports": 15,
   "competitions": [
     {
       "key": "epl",
@@ -782,6 +782,30 @@
       "forecast_count": 16,
       "unsupported_forecasts": 0,
       "status": "available"
+    },
+    {
+      "key": "unl",
+      "label": "欧洲国家联赛",
+      "mode": "audit_only",
+      "latest_attempt": {
+        "run_id": "20260924T155404875926Z",
+        "generated_at": "2026-09-24T15:54:04.875926Z",
+        "mode": "audit",
+        "status": "仅审计",
+        "detail": "此赛事先完成独立数据审计，再决定训练适用范围。",
+        "model_id": null,
+        "trained_at": null,
+        "source_commit": "53f9daf0dc4c32134c518bdf899fe73142263733",
+        "report_file": "runtime/reports/history/20260924T155404875926Z.json",
+        "forecast_count": null,
+        "unsupported_forecasts": null
+      },
+      "latest_train_attempt": null,
+      "latest_successful_forecast": null,
+      "current_model_file": null,
+      "current_model_id": null,
+      "usable_saved_forecasts": false,
+      "status": "audit_only"
     }
   ],
   "usage": "索引仅标识已保存结果；单场仍须核查截点、赛程、场地和适用性。无自动质量验收。"
