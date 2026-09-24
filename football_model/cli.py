@@ -171,7 +171,7 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
         if failed_seasons:
             raise ValueError(f"这些已请求赛季未完整取得：{failed_seasons}。本次不训练；核对套餐或明确缩短训练窗口。")
         if competition["mode"] == "audit_only":
-            result.update(status="仅审计", detail="欧冠跨联赛模型尚未实现；不会拼接国内参数生成欧冠概率。")
+            result.update(status="仅审计", detail=("欧冠跨联赛模型尚未实现；不会拼接国内参数生成欧冠概率。" if key == "ucl" else "此赛事先完成独立数据审计，再决定训练适用范围。"))
             return result
         if mode == "audit":
             result.update(status="已取得数据", detail="已检查接口与基本字段；尚未执行训练或准确性验证。")
