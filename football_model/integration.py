@@ -273,8 +273,11 @@ def match_packet(runtime, config, league, match_id, as_of=None, state_commit=Non
     model_path = runtime / "models" / f"{league}.json"
     bundle = _read(model_path)
     competition = next(c for c in config["competitions"] if c["key"] == league)
-    if bundle.get("competition") != competition or competition["mode"] != "domestic_baseline" or row.get("competition") != league:
+    if bundle.get("competition") != competition or competition["mode"] not in {"domestic_baseline", "national_baseline"} or row.get("competition") != league:
         raise IntegrationError("联赛模型、配置或预测目标不一致。")
+    national = competition["mode"] == "national_baseline"
+    if national and league != "unl":
+        raise IntegrationError("国家队适配尚未覆盖该赛事。")
     if row.get("model_id") != bundle.get("model_id") or row.get("model_id") != attempt["model_id"]:
         raise IntegrationError("预测与当前模型ID不一致。")
     model = bundle["model"]
@@ -307,10 +310,19 @@ def match_packet(runtime, config, league, match_id, as_of=None, state_commit=Non
     if home_id == away_id or any(not isinstance(row.get(k), str) or not row[k].strip() for k in ("home_name", "away_name")):
         raise IntegrationError("主客队身份无效。")
     prediction = row.get("prediction")
-    if not isinstance(prediction, dict) or prediction.get("neutral") is not False:
+    if national:
+        from .nations import validate_nations_forecast
+        try:
+            validate_nations_forecast(row)
+        except (ValueError, KeyError, TypeError) as exc:
+            raise IntegrationError("欧国联场地证据无效或与当前登记表不一致。") from exc
+        if not isinstance(prediction, dict) or prediction.get("neutral") is not row["neutral"]:
+            raise IntegrationError("欧国联场地标记与预测不一致。")
+    elif not isinstance(prediction, dict) or prediction.get("neutral") is not False:
         raise IntegrationError("当前已保存预测应为名义主客基线；中立场须另核验后产生新记录。")
     try:
-        recomputed = score_distribution(model, home_id, away_id, row["kickoff"])
+        recomputed = score_distribution(model, home_id, away_id, row["kickoff"],
+                                        **({"neutral": row["neutral"]} if national else {}))
         matrix = np.asarray(prediction.get("score_matrix"), dtype=float)
     except (ValueError, KeyError, TypeError, OverflowError) as exc:
         raise IntegrationError("原函数无法复算本场，或比分矩阵无效。") from exc
@@ -324,7 +336,8 @@ def match_packet(runtime, config, league, match_id, as_of=None, state_commit=Non
         "schema_version": 1, "packet_type": "saved_exploratory_forecast_for_framework",
         "created_at": iso(datetime.now(UTC)), "analysis_as_of": iso(now),
         "status": "baseline_verified_external_checks_pending", "competition": competition,
-        "fixture": {k: row[k] for k in ("match_id", "kickoff", "home_id", "away_id", "home_name", "away_name")},
+        "fixture": {k: row[k] for k in ("match_id", "kickoff", "home_id", "away_id", "home_name", "away_name") +
+                    (("neutral", "venue_evidence") if national else ())},
         "provenance": {"model_id": bundle["model_id"], "model_file": f"runtime/models/{league}.json",
                        "model_file_sha256": _sha(model_path), "prediction_file": attempt["prediction_file"],
                        "prediction_file_sha256": _sha(prediction_path), "report_file": attempt["report_file"],

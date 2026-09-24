@@ -80,6 +80,11 @@ def input_fingerprint(matches: list, settings: dict, competition: dict) -> str:
     source = hashlib.sha256(Path(__file__).with_name("model.py").read_bytes()).hexdigest()
     payload = {"version": __version__, "source": source, "competition": competition,
                "settings": settings, "matches": matches}
+    if competition.get("mode") == "national_baseline":
+        # Isolate the new normalization policy; domestic fingerprints are unchanged.
+        payload["national_sources"] = {
+            name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
+            for name in ("nations.py", "nations_venues.json")}
     return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
@@ -101,7 +106,7 @@ def markdown_report(report: dict) -> str:
                  "- 训练窗口、半衰期、正则强度采用预先固定默认值，尚未调优；不能据反复查看同一留出集声称独立验收。",
                  "- 历史数据可能包含事后修订；无原始发布时间快照，历史检查不是严格还原当时供应商资料。",
                  "- 正式预测文件保存数据截点、模型版本和未覆盖因素；阵容影响未量化，EV未量化。",
-                 "- 中立场/特殊场地和赛制尚未自动识别，预测仅为按名义主客生成的条件基线，使用前必须核实。",
+                 "- 国内联赛仍按名义主客生成条件基线；欧国联按精确场地登记表分类，未知场地不出数值。实际场地和特殊赛制仍须核实。",
                  "- 新队或与训练队伍缺少连接的队伍不出数值；陈旧模型不自动发布新预测。",
                  "- 单项失败会保留旧模型文件，但本次不会把旧文件伪装为新训练，也不会用失败的数据生成预测。", ""])
     if report.get("fatal_error"):
@@ -124,6 +129,7 @@ def markdown_report(report: dict) -> str:
 
 def process_competition(client, competition, settings, runtime, now, mode, run_id):
     key = competition["key"]
+    national = competition.get("mode") == "national_baseline"
     result = {"key": key, "label": competition["label"], "status": "待检查", "seasons": [],
               "configured": True, "model_change": "未训练", "lineup_model": "未实现",
               "xg_model": "未实现", "return_advantage": "未经验证", "ev": "未量化"}
@@ -160,7 +166,16 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
                 entry["error"] = safe_error(exc)
                 failed_seasons.append(season["year"])
             result["seasons"].append(entry)
-        matches = normalize_fixtures(raw, iso(now))
+        if national:
+            if key != "unl" or league["id"] != 5:
+                raise ValueError("国家队适配仅适用于已核实的欧国联赛事ID 5。")
+            from .nations import prepare_nations
+            matches, national_upcoming, national_audit = prepare_nations(
+                raw, iso(now), days=settings["forecast_days"])
+            result["national_audit"] = national_audit
+            atomic_json(runtime / "audits" / key / f"{run_id}.json", national_audit)
+        else:
+            matches = normalize_fixtures(raw, iso(now))
         result["eligible_matches"] = len(matches)
         result["missing_seasons"] = failed_seasons
         result["last_match_kickoff"] = max((x["kickoff"] for x in matches), default=None)
@@ -181,7 +196,11 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
         fingerprint = input_fingerprint(matches, knobs, competition)
         model_path = runtime / "models" / f"{key}.json"
         old = json.loads(model_path.read_text(encoding="utf-8")) if model_path.exists() else None
-        if old and old.get("data_fingerprint") == fingerprint:
+        refresh_national_window = bool(national and old and national_upcoming and
+            max((now - parse_date(old["trained_at"])).total_seconds(),
+                max((parse_date(row["kickoff"]) - parse_date(old["trained_at"])).total_seconds()
+                    for row in national_upcoming)) > settings["max_model_age_days"] * 86400)
+        if old and old.get("data_fingerprint") == fingerprint and not refresh_national_window:
             bundle = old
             result["model_change"] = "数据未变，沿用参数"
         else:
@@ -197,11 +216,14 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
                       "maturity": "exploratory_baseline", "lineup_effects": "未量化", "ev": "未量化",
                       "model": fitted, "validation": evaluation["report"],
                       "source_seasons": result["seasons"]}
+            if national:
+                bundle["national_audit"] = national_audit
+                bundle["venue_policy"] = "Exact provider venue and association registry; third-country neutral; unknown excluded."
             # Save immutable version first; latest changes only after a successful complete fit.
             atomic_json(runtime / "model_history" / key / f"{run_id}.json", bundle)
             atomic_json(runtime / "validation" / key / f"{run_id}.json", evaluation)
             atomic_json(model_path, bundle)
-            result["model_change"] = "完成新拟合"
+            result["model_change"] = "按真实当前截点重拟合欧国联窗口" if refresh_national_window else "完成新拟合"
         result["validation"] = bundle["validation"]
         result["model_id"] = bundle["model_id"]
         result["trained_at"] = bundle["trained_at"]
@@ -210,7 +232,7 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
         if age > settings["max_model_age_days"]:
             result.update(status="模型陈旧", detail="没有新赛果可更新且旧模型超过有效期；本次不发布预测。")
             return result
-        upcoming = normalize_upcoming(newest_raw, iso(now), days=settings["forecast_days"])
+        upcoming = national_upcoming if national else normalize_upcoming(newest_raw, iso(now), days=settings["forecast_days"])
         forecasts = []
         for fixture in upcoming:
             row = {**fixture, "competition": key, "generated_at": iso(now), "model_id": bundle["model_id"],
@@ -218,16 +240,28 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
                    "lineup_adjustment": "未量化", "ev": "未量化", "venue_status": "名义主客；实际场地未核实",
                    "usage": "探索性条件基线；不能据此宣称已纳入本场全部信息"}
             try:
+                if national:
+                    row["venue_status"] = "供应商场地及归属登记表分类；本场仍须核对最新场地"
+                    if fixture.get("venue_error"):
+                        raise ValueError(fixture["venue_error"])
                 if (parse_date(fixture["kickoff"]) - parse_date(bundle["trained_at"])).total_seconds() / 86400 > settings["max_model_age_days"]:
                     raise ValueError("预计开赛时模型将超过配置的有效天数；请临近比赛后重新更新。")
-                row["prediction"] = score_distribution(bundle["model"], fixture["home_id"],
-                                                         fixture["away_id"], fixture["kickoff"])
+                if national:
+                    row["prediction"] = score_distribution(bundle["model"], fixture["home_id"],
+                        fixture["away_id"], fixture["kickoff"], neutral=fixture["neutral"])
+                else:
+                    row["prediction"] = score_distribution(bundle["model"], fixture["home_id"],
+                                                             fixture["away_id"], fixture["kickoff"])
                 row["status"] = "exploratory_baseline"
             except (ValueError, KeyError, TypeError) as exc:
                 row.update(status="unsupported", reason=safe_error(exc))
             forecasts.append(row)
         result["forecast_count"] = sum(row["status"] == "exploratory_baseline" for row in forecasts)
         result["unsupported_forecasts"] = sum(row["status"] == "unsupported" for row in forecasts)
+        if national:
+            result["detail"] += (f" 场地筛选：{national_audit['eligible_regulation']}场常规赛果中"
+                f"纳入{national_audit['admitted']}场、排除{national_audit['excluded']}场；"
+                f"未来7天可用预测{result['forecast_count']}场，不支持{result['unsupported_forecasts']}场。")
         atomic_json(runtime / "predictions" / run_id / f"{key}.json", forecasts)
     except (APIError, ValueError, KeyError, TypeError, RuntimeError, OSError) as exc:
         result.update(status="未完成", detail=safe_error(exc))
