@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-09-24T15:54:04.875926Z",
-  "run_id": "20260924T155404875926Z",
-  "mode": "audit",
+  "generated_at": "2026-09-24T16:07:24.628668Z",
+  "run_id": "20260924T160724628668Z",
+  "mode": "train",
   "program_version": "0.1.0",
-  "source_commit": "53f9daf0dc4c32134c518bdf899fe73142263733",
+  "source_commit": "b3b39f61bf530a4613c92285de765e41b8edc5fe",
   "requested_competitions": [
     "unl"
   ],
@@ -11,7 +11,7 @@
     {
       "key": "unl",
       "label": "欧洲国家联赛",
-      "status": "仅审计",
+      "status": "探索性基线",
       "seasons": [
         {
           "year": 2026,
@@ -32,10 +32,11 @@
             "odds": true
           },
           "fixtures": 156,
-          "fetched_at": "2026-09-24T15:54:18.046403Z",
+          "fetched_at": "2026-09-24T16:07:31.474820Z",
           "from_cache": false,
           "status_counts": {
-            "NS": 156
+            "1H": 1,
+            "NS": 155
           }
         },
         {
@@ -58,7 +59,7 @@
           },
           "fixtures": 188,
           "fetched_at": "2026-09-24T15:54:24.558896Z",
-          "from_cache": false,
+          "from_cache": true,
           "status_counts": {
             "FT": 183,
             "AET": 2,
@@ -85,7 +86,7 @@
           },
           "fixtures": 168,
           "fetched_at": "2026-09-24T15:54:31.022018Z",
-          "from_cache": false,
+          "from_cache": true,
           "status_counts": {
             "CANC": 6,
             "FT": 160,
@@ -95,20 +96,605 @@
         }
       ],
       "configured": true,
-      "model_change": "未训练",
+      "model_change": "完成新拟合",
       "lineup_model": "未实现",
       "xg_model": "未实现",
       "return_advantage": "未经验证",
       "ev": "未量化",
       "provider_league_id": 5,
-      "eligible_matches": 350,
+      "national_audit": {
+        "scope": "uefa_nations_league_only",
+        "provider_league_id": 5,
+        "registry_sha256": "a7b182df306f7555c4e13647f165ae4a4f5b3b52109dc41e08a1718bd088ad71",
+        "raw_records": 512,
+        "unique_raw_fixtures": 512,
+        "duplicate_records": 0,
+        "raw_status_counts": {
+          "1H": 1,
+          "AET": 3,
+          "CANC": 6,
+          "FT": 343,
+          "NS": 155,
+          "PEN": 4
+        },
+        "eligible_regulation": 350,
+        "admitted": 349,
+        "excluded": 1,
+        "neutral": 23,
+        "exclusions": [
+          {
+            "match_id": 1316569,
+            "season": 2024,
+            "stage": "Play-offs C/D",
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。",
+            "venue": {
+              "id": null,
+              "name": null,
+              "city": null
+            }
+          }
+        ],
+        "by_season": {
+          "2022": {
+            "eligible_regulation": 162,
+            "admitted": 162,
+            "excluded": 0,
+            "neutral": 9
+          },
+          "2024": {
+            "eligible_regulation": 188,
+            "admitted": 187,
+            "excluded": 1,
+            "neutral": 14
+          }
+        },
+        "by_stage": {
+          "League A - 1": {
+            "eligible_regulation": 16,
+            "admitted": 16,
+            "excluded": 0,
+            "neutral": 1
+          },
+          "League C - 1": {
+            "eligible_regulation": 16,
+            "admitted": 16,
+            "excluded": 0,
+            "neutral": 2
+          },
+          "League D - 1": {
+            "eligible_regulation": 5,
+            "admitted": 5,
+            "excluded": 0,
+            "neutral": 0
+          },
+          "League B - 1": {
+            "eligible_regulation": 15,
+            "admitted": 15,
+            "excluded": 0,
+            "neutral": 1
+          },
+          "League D - 2": {
+            "eligible_regulation": 5,
+            "admitted": 5,
+            "excluded": 0,
+            "neutral": 0
+          },
+          "League C - 2": {
+            "eligible_regulation": 16,
+            "admitted": 16,
+            "excluded": 0,
+            "neutral": 1
+          },
+          "League A - 2": {
+            "eligible_regulation": 16,
+            "admitted": 16,
+            "excluded": 0,
+            "neutral": 1
+          },
+          "League B - 2": {
+            "eligible_regulation": 15,
+            "admitted": 15,
+            "excluded": 0,
+            "neutral": 0
+          },
+          "League A - 3": {
+            "eligible_regulation": 16,
+            "admitted": 16,
+            "excluded": 0,
+            "neutral": 1
+          },
+          "League B - 3": {
+            "eligible_regulation": 15,
+            "admitted": 15,
+            "excluded": 0,
+            "neutral": 2
+          },
+          "League C - 3": {
+            "eligible_regulation": 16,
+            "admitted": 16,
+            "excluded": 0,
+            "neutral": 2
+          },
+          "League D - 3": {
+            "eligible_regulation": 5,
+            "admitted": 5,
+            "excluded": 0,
+            "neutral": 0
+          },
+          "League C - 4": {
+            "eligible_regulation": 16,
+            "admitted": 16,
+            "excluded": 0,
+            "neutral": 1
+          },
+          "League B - 4": {
+            "eligible_regulation": 15,
+            "admitted": 15,
+            "excluded": 0,
+            "neutral": 2
+          },
+          "League A - 4": {
+            "eligible_regulation": 16,
+            "admitted": 16,
+            "excluded": 0,
+            "neutral": 0
+          },
+          "League D - 4": {
+            "eligible_regulation": 5,
+            "admitted": 5,
+            "excluded": 0,
+            "neutral": 0
+          },
+          "League C - 5": {
+            "eligible_regulation": 16,
+            "admitted": 16,
+            "excluded": 0,
+            "neutral": 0
+          },
+          "League D - 5": {
+            "eligible_regulation": 5,
+            "admitted": 5,
+            "excluded": 0,
+            "neutral": 0
+          },
+          "League A - 5": {
+            "eligible_regulation": 16,
+            "admitted": 16,
+            "excluded": 0,
+            "neutral": 0
+          },
+          "League B - 5": {
+            "eligible_regulation": 15,
+            "admitted": 15,
+            "excluded": 0,
+            "neutral": 0
+          },
+          "League D - 6": {
+            "eligible_regulation": 5,
+            "admitted": 5,
+            "excluded": 0,
+            "neutral": 0
+          },
+          "League C - 6": {
+            "eligible_regulation": 16,
+            "admitted": 16,
+            "excluded": 0,
+            "neutral": 1
+          },
+          "League A - 6": {
+            "eligible_regulation": 16,
+            "admitted": 16,
+            "excluded": 0,
+            "neutral": 1
+          },
+          "League B - 6": {
+            "eligible_regulation": 15,
+            "admitted": 15,
+            "excluded": 0,
+            "neutral": 1
+          },
+          "Semi-finals": {
+            "eligible_regulation": 4,
+            "admitted": 4,
+            "excluded": 0,
+            "neutral": 2
+          },
+          "3rd Place Final": {
+            "eligible_regulation": 2,
+            "admitted": 2,
+            "excluded": 0,
+            "neutral": 0
+          },
+          "Final": {
+            "eligible_regulation": 2,
+            "admitted": 2,
+            "excluded": 0,
+            "neutral": 2
+          },
+          "Relegation Play-out": {
+            "eligible_regulation": 2,
+            "admitted": 2,
+            "excluded": 0,
+            "neutral": 0
+          },
+          "Play-offs A/B": {
+            "eligible_regulation": 8,
+            "admitted": 8,
+            "excluded": 0,
+            "neutral": 1
+          },
+          "Play-offs B/C": {
+            "eligible_regulation": 8,
+            "admitted": 8,
+            "excluded": 0,
+            "neutral": 1
+          },
+          "Quarter-finals": {
+            "eligible_regulation": 8,
+            "admitted": 8,
+            "excluded": 0,
+            "neutral": 0
+          },
+          "Play-offs C/D": {
+            "eligible_regulation": 4,
+            "admitted": 3,
+            "excluded": 1,
+            "neutral": 0
+          }
+        },
+        "upcoming_total": 52,
+        "upcoming_supported_venue": 0,
+        "upcoming_unsupported_venue": 52,
+        "upcoming_venue_errors": [
+          {
+            "match_id": 1528862,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528863,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528864,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528865,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528878,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528879,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528880,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528881,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1545602,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528882,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528883,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528884,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528885,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528886,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528887,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1545658,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528888,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528889,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528890,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1545603,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528891,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528892,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528893,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528894,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1545656,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528895,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528896,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528897,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528898,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1545604,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528899,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528900,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528901,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528902,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528903,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1545605,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528904,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528905,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528906,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528907,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528908,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528912,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528914,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528909,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528910,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528911,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528913,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528915,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1545606,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1545651,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1545661,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          },
+          {
+            "match_id": 1528916,
+            "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+          }
+        ],
+        "training_graph": {
+          "connected": true,
+          "component_count": 1,
+          "components": [
+            [
+              1,
+              2,
+              3,
+              5,
+              9,
+              10,
+              14,
+              15,
+              18,
+              21,
+              24,
+              25,
+              27,
+              767,
+              768,
+              769,
+              770,
+              771,
+              772,
+              773,
+              774,
+              775,
+              776,
+              777,
+              778,
+              1090,
+              1091,
+              1092,
+              1093,
+              1094,
+              1095,
+              1096,
+              1097,
+              1098,
+              1099,
+              1100,
+              1101,
+              1102,
+              1103,
+              1104,
+              1105,
+              1106,
+              1107,
+              1108,
+              1109,
+              1110,
+              1111,
+              1112,
+              1113,
+              1114,
+              1115,
+              1116,
+              1117,
+              1118
+            ]
+          ]
+        },
+        "limitations": [
+          "场地位置按已审核精确登记表分类，不量化球迷、旅行或特殊主场环境。",
+          "完整训练对阵图检查不代替留出切分训练图检查；原训练保护仍适用。",
+          "仅90分钟加伤停补时；阵容、伤停、xG与战术均未量化。"
+        ]
+      },
+      "eligible_matches": 349,
       "missing_seasons": [],
       "last_match_kickoff": "2026-03-31T16:00:00Z",
-      "observed_at": "2026-09-24T15:54:04.875926Z",
-      "detail": "此赛事先完成独立数据审计，再决定训练适用范围。"
+      "observed_at": "2026-09-24T16:07:24.628668Z",
+      "validation": {
+        "validation_status": "exploratory_single_fixed_holdout",
+        "deployment_approved": false,
+        "is_rolling_backtest": false,
+        "minimum_test_matches": 40,
+        "meets_minimum_supported_test_matches": true,
+        "evaluation_data_cutoff": "2026-09-24T16:07:24.628668Z",
+        "split": {
+          "method": "chronological_fixed_model_holdout",
+          "grouped_by": "kickoff_utc_calendar_date",
+          "train_cutoff": "2024-11-16T00:00:00Z",
+          "train_last_kickoff": "2024-11-15T19:45:00Z",
+          "test_start": "2024-11-16T14:00:00Z",
+          "test_end": "2026-03-31T16:00:00Z",
+          "training_count": 283,
+          "testing_count": 66,
+          "result_availability_delay_hours": 4,
+          "embargoed_count": 0,
+          "embargoed_match_ids": []
+        },
+        "coverage": {
+          "total": 66,
+          "scored": 66,
+          "excluded": 0,
+          "ratio": 1.0,
+          "exclusions": []
+        },
+        "model_metrics": {
+          "n": 66,
+          "log_loss": 1.0193969221551993,
+          "brier_score": 0.6157497191735957,
+          "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+          "log_loss_probability_floor": 1e-15
+        },
+        "baseline_metrics": {
+          "n": 66,
+          "log_loss": 1.0824162804716364,
+          "brier_score": 0.6551804187292826,
+          "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+          "log_loss_probability_floor": 1e-15
+        },
+        "baseline": {
+          "name": "training_league_home_away_mean_poisson",
+          "home_rate": 1.4162257495590829,
+          "away_rate": 1.17989417989418,
+          "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
+          "same_scored_matches_as_model": true
+        },
+        "comparison": {
+          "model_minus_baseline_log_loss": -0.06301935831643712,
+          "model_minus_baseline_brier_score": -0.0394306995556869,
+          "lower_is_better": true
+        },
+        "warnings": [
+          "单次固定模型留出验证仅为探索性检查，不是滚动回测，也不构成上线或盈利证明。",
+          "不含赔率、投注收益、阵容修正或提前十小时伤停历史快照验证。",
+          "超参数为显式默认值，不能根据本留出期反复挑选参数后再声称独立验证。",
+          "未知球队比赛单独列为未覆盖，指标只针对 model_metrics.n 场已覆盖比赛。"
+        ]
+      },
+      "model_id": "unl-20260924T160724628668Z",
+      "trained_at": "2026-09-24T16:07:24.628668Z",
+      "detail": "未含阵容伤停、xG与赛程；未证实预测或收益优势。 场地筛选：350场常规赛果中纳入349场、排除1场；未来7天可用预测0场，不支持52场。",
+      "forecast_count": 0,
+      "unsupported_forecasts": 52
     }
   ],
-  "api_requests": 5,
+  "api_requests": 2,
   "exit_code": 0,
   "integration_index": {
     "status": "updated",
