@@ -1,16 +1,16 @@
 # 足球模型运行报告
 
-生成时间：2026-09-26T14:28:58.662456Z（UTC）
-程序版本：0.1.0；运行模式：audit。
+生成时间：2026-09-26T14:31:12.836087Z（UTC）
+程序版本：0.1.0；运行模式：train。
 
 本程序生成探索性历史比分基线。没有球员/伤停、xG、战术、赛程特征，也没有经过验证的收益优势。
 数据来源 API-Football；基本面训练不读取赔率或供应商预测。欧冠只做数据审计。
 
 |赛事|状态|可用90分钟赛果|训练参数变化|说明|
 |---|---|---:|---|---|
-|墨西超Liga MX|已取得数据|758|未训练|已检查接口与基本字段；尚未执行训练或准确性验证。|
+|墨西超Liga MX|探索性基线|758|完成新拟合|未含阵容伤停、xG与赛程；未证实预测或收益优势。|
 
-本次接口请求次数：5。
+本次接口请求次数：2。
 
 ## 怎样阅读
 
@@ -26,6 +26,114 @@
 
 ## 墨西超Liga MX
 
-- 2026：返回153场，抓取时间2026-09-26T14:29:11.871770Z；接口返回成功；完整性尚需核验。
+- 2026：返回153场，抓取时间2026-09-26T14:31:19.841385Z；接口返回成功；完整性尚需核验。
 - 2025：返回337场，抓取时间2026-09-26T14:29:18.383370Z；接口返回成功；完整性尚需核验。
 - 2024：返回340场，抓取时间2026-09-26T14:29:24.866747Z；接口返回成功；完整性尚需核验。
+
+验证结果（完整字段见同名JSON）：
+
+```json
+{
+  "validation_status": "exploratory_single_fixed_holdout",
+  "deployment_approved": false,
+  "is_rolling_backtest": false,
+  "minimum_test_matches": 40,
+  "meets_minimum_supported_test_matches": true,
+  "evaluation_data_cutoff": "2026-09-26T14:31:12.836087Z",
+  "split": {
+    "method": "chronological_fixed_model_holdout",
+    "grouped_by": "kickoff_utc_calendar_date",
+    "train_cutoff": "2026-03-16T00:00:00Z",
+    "train_last_kickoff": "2026-03-15T03:10:00Z",
+    "test_start": "2026-03-16T01:00:00Z",
+    "test_end": "2026-09-26T03:00:00Z",
+    "training_count": 605,
+    "testing_count": 152,
+    "result_availability_delay_hours": 4,
+    "embargoed_count": 1,
+    "embargoed_match_ids": [
+      1492554
+    ]
+  },
+  "coverage": {
+    "total": 152,
+    "scored": 142,
+    "excluded": 10,
+    "ratio": 0.9342105263157895,
+    "exclusions": [
+      {
+        "match_id": 1550894,
+        "reason": "未知球队 ID：[2312]；缺少训练数据，当前模型不支持。"
+      },
+      {
+        "match_id": 1550907,
+        "reason": "未知球队 ID：[2312]；缺少训练数据，当前模型不支持。"
+      },
+      {
+        "match_id": 1550918,
+        "reason": "未知球队 ID：[2312]；缺少训练数据，当前模型不支持。"
+      },
+      {
+        "match_id": 1550921,
+        "reason": "未知球队 ID：[2312]；缺少训练数据，当前模型不支持。"
+      },
+      {
+        "match_id": 1550936,
+        "reason": "未知球队 ID：[2312]；缺少训练数据，当前模型不支持。"
+      },
+      {
+        "match_id": 1550939,
+        "reason": "未知球队 ID：[2312]；缺少训练数据，当前模型不支持。"
+      },
+      {
+        "match_id": 1550954,
+        "reason": "未知球队 ID：[2312]；缺少训练数据，当前模型不支持。"
+      },
+      {
+        "match_id": 1550959,
+        "reason": "未知球队 ID：[2312]；缺少训练数据，当前模型不支持。"
+      },
+      {
+        "match_id": 1550966,
+        "reason": "未知球队 ID：[2312]；缺少训练数据，当前模型不支持。"
+      },
+      {
+        "match_id": 1550975,
+        "reason": "未知球队 ID：[2312]；缺少训练数据，当前模型不支持。"
+      }
+    ]
+  },
+  "model_metrics": {
+    "n": 142,
+    "log_loss": 1.0904008673740886,
+    "brier_score": 0.6577018764922816,
+    "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+    "log_loss_probability_floor": 1e-15
+  },
+  "baseline_metrics": {
+    "n": 142,
+    "log_loss": 1.071542704481391,
+    "brier_score": 0.6483891319098473,
+    "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+    "log_loss_probability_floor": 1e-15
+  },
+  "baseline": {
+    "name": "training_league_home_away_mean_poisson",
+    "home_rate": 1.634186622625929,
+    "away_rate": 1.194880264244426,
+    "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
+    "same_scored_matches_as_model": true
+  },
+  "comparison": {
+    "model_minus_baseline_log_loss": 0.018858162892697594,
+    "model_minus_baseline_brier_score": 0.009312744582434362,
+    "lower_is_better": true
+  },
+  "warnings": [
+    "单次固定模型留出验证仅为探索性检查，不是滚动回测，也不构成上线或盈利证明。",
+    "不含赔率、投注收益、阵容修正或提前十小时伤停历史快照验证。",
+    "超参数为显式默认值，不能根据本留出期反复挑选参数后再声称独立验证。",
+    "未知球队比赛单独列为未覆盖，指标只针对 model_metrics.n 场已覆盖比赛。"
+  ]
+}
+```
