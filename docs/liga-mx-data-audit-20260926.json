@@ -1,0 +1,1235 @@
+{
+  "audit_schema_version": 1,
+  "audit_scope": "Read-only cached API-Football Liga MX source and normalized data reconciliation; no external score or venue confirmation performed.",
+  "observed_at": "2026-09-26T14:28:58.662456Z",
+  "source_commit": "70a057d5358b91da955e30ea56ef6f498285b708",
+  "provider_league_id": 262,
+  "raw_fixture_count": 830,
+  "eligible_match_count": 758,
+  "sources": [
+    {
+      "path": "runtime/cache/api_cache/0885e16aa53d760960a3691147de96556ca38a0deacc0991453bb65380111343.json",
+      "sha256": "5baafaa4f9d438d77120f3741d1a5639e7b4438c45357ff63e9bfd7e2d459755",
+      "season": 2025,
+      "fetched_at": "2026-09-26T14:29:18.383370Z",
+      "result_count": 337,
+      "paging": {
+        "current": 1,
+        "total": 1
+      }
+    },
+    {
+      "path": "runtime/cache/api_cache/859d215d923728435fdea99d8f88ec3466b59362f1887095b3047682fd52ce0b.json",
+      "sha256": "9bc0611f4b75231268b9612b44b79461574321aa0ceb8eeede431c499814cdcd",
+      "season": 2024,
+      "fetched_at": "2026-09-26T14:29:24.866747Z",
+      "result_count": 340,
+      "paging": {
+        "current": 1,
+        "total": 1
+      }
+    },
+    {
+      "path": "runtime/cache/api_cache/b82ef7870fd8231fdae36644f3e2d1bc06cbb6ade8c5a9403a4c18f8d3bce378.json",
+      "sha256": "2f9ed16eeab2f9f9e787f9008e87c68a9f9f56465a92d9b9c1d794dcdee2fb70",
+      "season": 2026,
+      "fetched_at": "2026-09-26T14:29:11.871770Z",
+      "result_count": 153,
+      "paging": {
+        "current": 1,
+        "total": 1
+      }
+    }
+  ],
+  "normalized_source_sha256": "67a3245b649e41a338ada8599654714411aa077b9df66c49177ab4790e9e4924",
+  "checks": {
+    "all_league_id_262": true,
+    "all_country_mexico": true,
+    "all_league_name_liga_mx": true,
+    "season_matches_requested_cache": true,
+    "no_duplicate_fixture_ids": true,
+    "no_duplicate_normalized_ids": true,
+    "exact_normalized_match_with_independently_built_rows": true,
+    "exact_normalized_match_with_current_normalizer": true,
+    "all_pen_aet_use_fulltime": true,
+    "future_all_in_2026": true,
+    "future_all_team_ids_seen_in_final_training_data": true,
+    "all_dates_match_timestamps": true,
+    "all_halftime_scores_not_above_fulltime": true
+  },
+  "seasons": [
+    {
+      "season": 2024,
+      "provider_season_start": "2024-07-05",
+      "provider_season_end": "2025-05-24",
+      "fixture_count": 340,
+      "eligible_matches": 340,
+      "status_counts": {
+        "FT": 338,
+        "PEN": 2
+      },
+      "first_kickoff": "2024-07-05T22:45:00+00:00",
+      "last_kickoff": "2025-05-26T01:00:00+00:00",
+      "rounds": {
+        "Apertura": {
+          "regular_rounds": {
+            "1": 9,
+            "2": 9,
+            "3": 9,
+            "4": 9,
+            "5": 9,
+            "6": 9,
+            "7": 9,
+            "8": 9,
+            "9": 9,
+            "10": 9,
+            "11": 9,
+            "12": 9,
+            "13": 9,
+            "14": 9,
+            "15": 9,
+            "16": 9,
+            "17": 9
+          },
+          "regular_fixture_count": 153,
+          "other_rounds": {
+            "Apertura - Final": 2,
+            "Apertura - Play-offs": 1,
+            "Apertura - Quarter-finals": 8,
+            "Apertura - Reclasificación": 2,
+            "Apertura - Semi-finals": 4
+          }
+        },
+        "Clausura": {
+          "regular_rounds": {
+            "1": 9,
+            "2": 9,
+            "3": 9,
+            "4": 9,
+            "5": 9,
+            "6": 9,
+            "7": 9,
+            "8": 9,
+            "9": 9,
+            "10": 9,
+            "11": 9,
+            "12": 9,
+            "13": 9,
+            "14": 9,
+            "15": 9,
+            "16": 9,
+            "17": 9
+          },
+          "regular_fixture_count": 153,
+          "other_rounds": {
+            "Clausura - Final": 2,
+            "Clausura - Play-offs": 1,
+            "Clausura - Quarter-finals": 8,
+            "Clausura - Reclasificacion": 2,
+            "Clausura - Semi-finals": 4
+          }
+        }
+      },
+      "teams": [
+        {
+          "id": 2278,
+          "names": [
+            "Guadalajara Chivas"
+          ],
+          "eligible_match_appearances": 35
+        },
+        {
+          "id": 2279,
+          "names": [
+            "Tigres UANL"
+          ],
+          "eligible_match_appearances": 40
+        },
+        {
+          "id": 2280,
+          "names": [
+            "Club Tijuana"
+          ],
+          "eligible_match_appearances": 38
+        },
+        {
+          "id": 2281,
+          "names": [
+            "Toluca"
+          ],
+          "eligible_match_appearances": 42
+        },
+        {
+          "id": 2282,
+          "names": [
+            "Monterrey"
+          ],
+          "eligible_match_appearances": 44
+        },
+        {
+          "id": 2283,
+          "names": [
+            "Atlas"
+          ],
+          "eligible_match_appearances": 36
+        },
+        {
+          "id": 2285,
+          "names": [
+            "Santos Laguna"
+          ],
+          "eligible_match_appearances": 34
+        },
+        {
+          "id": 2286,
+          "names": [
+            "U.N.A.M. - Pumas"
+          ],
+          "eligible_match_appearances": 38
+        },
+        {
+          "id": 2287,
+          "names": [
+            "Club America"
+          ],
+          "eligible_match_appearances": 47
+        },
+        {
+          "id": 2288,
+          "names": [
+            "Necaxa"
+          ],
+          "eligible_match_appearances": 36
+        },
+        {
+          "id": 2289,
+          "names": [
+            "Leon"
+          ],
+          "eligible_match_appearances": 36
+        },
+        {
+          "id": 2290,
+          "names": [
+            "Club Queretaro"
+          ],
+          "eligible_match_appearances": 34
+        },
+        {
+          "id": 2291,
+          "names": [
+            "Puebla"
+          ],
+          "eligible_match_appearances": 34
+        },
+        {
+          "id": 2292,
+          "names": [
+            "CF Pachuca"
+          ],
+          "eligible_match_appearances": 37
+        },
+        {
+          "id": 2295,
+          "names": [
+            "Cruz Azul"
+          ],
+          "eligible_match_appearances": 42
+        },
+        {
+          "id": 2298,
+          "names": [
+            "FC Juarez"
+          ],
+          "eligible_match_appearances": 35
+        },
+        {
+          "id": 2314,
+          "names": [
+            "Atletico San Luis"
+          ],
+          "eligible_match_appearances": 38
+        },
+        {
+          "id": 14002,
+          "names": [
+            "Mazatlán"
+          ],
+          "eligible_match_appearances": 34
+        }
+      ],
+      "venue_missing": {
+        "id": {
+          "count": 65,
+          "match_ids": [
+            1206007,
+            1206010,
+            1206017,
+            1206028,
+            1206037,
+            1206038,
+            1206045,
+            1206043,
+            1206055,
+            1206060,
+            1206064,
+            1206068,
+            1206077,
+            1206081,
+            1206086,
+            1206095,
+            1206098,
+            1206110,
+            1206118,
+            1206122,
+            1206123,
+            1206124,
+            1206138,
+            1206139,
+            1206142,
+            1315386,
+            1315384,
+            1323489,
+            1323786,
+            1323493,
+            1323502,
+            1323503,
+            1323507,
+            1323512,
+            1323510,
+            1323515,
+            1323530,
+            1323529,
+            1323532,
+            1323788,
+            1323538,
+            1323544,
+            1323790,
+            1323549,
+            1323553,
+            1323561,
+            1323792,
+            1323567,
+            1323570,
+            1323578,
+            1323579,
+            1323793,
+            1323794,
+            1323602,
+            1323603,
+            1323605,
+            1323611,
+            1323795,
+            1323796,
+            1323623,
+            1372465,
+            1372466,
+            1372468,
+            1375216,
+            1375218
+          ]
+        },
+        "name": {
+          "count": 0,
+          "match_ids": []
+        },
+        "city": {
+          "count": 0,
+          "match_ids": []
+        }
+      }
+    },
+    {
+      "season": 2025,
+      "provider_season_start": "2025-07-12",
+      "provider_season_end": "2026-05-24",
+      "fixture_count": 337,
+      "eligible_matches": 337,
+      "status_counts": {
+        "FT": 336,
+        "PEN": 1
+      },
+      "first_kickoff": "2025-07-12T01:00:00+00:00",
+      "last_kickoff": "2026-05-25T01:00:00+00:00",
+      "rounds": {
+        "Apertura": {
+          "regular_rounds": {
+            "1": 9,
+            "2": 9,
+            "3": 9,
+            "4": 9,
+            "5": 9,
+            "6": 9,
+            "7": 9,
+            "8": 9,
+            "9": 9,
+            "10": 9,
+            "11": 9,
+            "12": 9,
+            "13": 9,
+            "14": 9,
+            "15": 9,
+            "16": 9,
+            "17": 9
+          },
+          "regular_fixture_count": 153,
+          "other_rounds": {
+            "Apertura - Final": 2,
+            "Apertura - Play-In Final": 1,
+            "Apertura - Play-In Semi-finals": 2,
+            "Apertura - Quarter-finals": 8,
+            "Apertura - Semi-finals": 4
+          }
+        },
+        "Clausura": {
+          "regular_rounds": {
+            "1": 9,
+            "2": 9,
+            "3": 9,
+            "4": 9,
+            "5": 9,
+            "6": 9,
+            "7": 9,
+            "8": 9,
+            "9": 9,
+            "10": 9,
+            "11": 9,
+            "12": 9,
+            "13": 9,
+            "14": 9,
+            "15": 9,
+            "16": 9,
+            "17": 9
+          },
+          "regular_fixture_count": 153,
+          "other_rounds": {
+            "Clausura - Final": 2,
+            "Clausura - Quarter-finals": 8,
+            "Clausura - Semi-finals": 4
+          }
+        }
+      },
+      "teams": [
+        {
+          "id": 2278,
+          "names": [
+            "Guadalajara Chivas"
+          ],
+          "eligible_match_appearances": 40
+        },
+        {
+          "id": 2279,
+          "names": [
+            "Tigres UANL"
+          ],
+          "eligible_match_appearances": 42
+        },
+        {
+          "id": 2280,
+          "names": [
+            "Club Tijuana"
+          ],
+          "eligible_match_appearances": 37
+        },
+        {
+          "id": 2281,
+          "names": [
+            "Toluca"
+          ],
+          "eligible_match_appearances": 42
+        },
+        {
+          "id": 2282,
+          "names": [
+            "Monterrey"
+          ],
+          "eligible_match_appearances": 38
+        },
+        {
+          "id": 2283,
+          "names": [
+            "Atlas"
+          ],
+          "eligible_match_appearances": 36
+        },
+        {
+          "id": 2285,
+          "names": [
+            "Santos Laguna"
+          ],
+          "eligible_match_appearances": 34
+        },
+        {
+          "id": 2286,
+          "names": [
+            "U.N.A.M. - Pumas"
+          ],
+          "eligible_match_appearances": 41
+        },
+        {
+          "id": 2287,
+          "names": [
+            "Club America"
+          ],
+          "eligible_match_appearances": 38
+        },
+        {
+          "id": 2288,
+          "names": [
+            "Necaxa"
+          ],
+          "eligible_match_appearances": 34
+        },
+        {
+          "id": 2289,
+          "names": [
+            "Leon"
+          ],
+          "eligible_match_appearances": 34
+        },
+        {
+          "id": 2290,
+          "names": [
+            "Club Queretaro"
+          ],
+          "eligible_match_appearances": 34
+        },
+        {
+          "id": 2291,
+          "names": [
+            "Puebla"
+          ],
+          "eligible_match_appearances": 34
+        },
+        {
+          "id": 2292,
+          "names": [
+            "CF Pachuca"
+          ],
+          "eligible_match_appearances": 40
+        },
+        {
+          "id": 2295,
+          "names": [
+            "Cruz Azul"
+          ],
+          "eligible_match_appearances": 44
+        },
+        {
+          "id": 2298,
+          "names": [
+            "FC Juarez"
+          ],
+          "eligible_match_appearances": 38
+        },
+        {
+          "id": 2314,
+          "names": [
+            "Atletico San Luis"
+          ],
+          "eligible_match_appearances": 34
+        },
+        {
+          "id": 14002,
+          "names": [
+            "Mazatlán"
+          ],
+          "eligible_match_appearances": 34
+        }
+      ],
+      "venue_missing": {
+        "id": {
+          "count": 183,
+          "match_ids": [
+            1379486,
+            1379487,
+            1379488,
+            1379489,
+            1379492,
+            1379495,
+            1379494,
+            1379497,
+            1379499,
+            1379502,
+            1379506,
+            1379503,
+            1379507,
+            1379508,
+            1379511,
+            1379513,
+            1379514,
+            1379521,
+            1379520,
+            1379522,
+            1379523,
+            1379524,
+            1379526,
+            1379529,
+            1379530,
+            1379531,
+            1379532,
+            1379534,
+            1379537,
+            1379540,
+            1379541,
+            1379546,
+            1379548,
+            1379543,
+            1379550,
+            1379551,
+            1379553,
+            1379557,
+            1379559,
+            1379560,
+            1379564,
+            1379566,
+            1379567,
+            1379569,
+            1379574,
+            1379575,
+            1379576,
+            1379577,
+            1379583,
+            1379585,
+            1379584,
+            1379586,
+            1379587,
+            1379591,
+            1379590,
+            1379595,
+            1379596,
+            1379598,
+            1379601,
+            1379603,
+            1379602,
+            1379606,
+            1379609,
+            1379610,
+            1379612,
+            1379615,
+            1379617,
+            1379620,
+            1379621,
+            1379622,
+            1379623,
+            1379624,
+            1379629,
+            1379630,
+            1379632,
+            1485998,
+            1486000,
+            1486001,
+            1488195,
+            1487901,
+            1486002,
+            1488773,
+            1488770,
+            1488772,
+            1488771,
+            1489446,
+            1489447,
+            1491793,
+            1491796,
+            1491795,
+            1491797,
+            1491798,
+            1491799,
+            1491801,
+            1491803,
+            1491806,
+            1491805,
+            1491807,
+            1491808,
+            1491812,
+            1491814,
+            1491815,
+            1491817,
+            1492492,
+            1492496,
+            1492498,
+            1492495,
+            1492494,
+            1492497,
+            1492500,
+            1492504,
+            1492503,
+            1492506,
+            1492507,
+            1492510,
+            1492513,
+            1492511,
+            1492512,
+            1492516,
+            1492517,
+            1492520,
+            1492522,
+            1492523,
+            1492527,
+            1492531,
+            1492530,
+            1492533,
+            1492532,
+            1492534,
+            1492535,
+            1492537,
+            1492538,
+            1492539,
+            1492542,
+            1492550,
+            1492547,
+            1492549,
+            1492551,
+            1492556,
+            1492559,
+            1492558,
+            1492560,
+            1492554,
+            1492561,
+            1492566,
+            1492567,
+            1492568,
+            1492565,
+            1492574,
+            1492578,
+            1492575,
+            1492524,
+            1492583,
+            1492582,
+            1492585,
+            1492586,
+            1492587,
+            1492588,
+            1492589,
+            1492592,
+            1492594,
+            1492596,
+            1492595,
+            1492599,
+            1492598,
+            1492601,
+            1492600,
+            1492603,
+            1492609,
+            1492608,
+            1492611,
+            1492612,
+            1492615,
+            1542912,
+            1542914,
+            1542915,
+            1542917,
+            1542918,
+            1542919,
+            1544854,
+            1544856,
+            1545452,
+            1545451
+          ]
+        },
+        "name": {
+          "count": 0,
+          "match_ids": []
+        },
+        "city": {
+          "count": 4,
+          "match_ids": [
+            1491796,
+            1491812,
+            1492549,
+            1492566
+          ]
+        }
+      }
+    },
+    {
+      "season": 2026,
+      "provider_season_start": "2026-07-17",
+      "provider_season_end": "2026-11-23",
+      "fixture_count": 153,
+      "eligible_matches": 81,
+      "status_counts": {
+        "FT": 81,
+        "NS": 72
+      },
+      "first_kickoff": "2026-07-17T01:00:00+00:00",
+      "last_kickoff": "2026-11-23T01:00:00+00:00",
+      "rounds": {
+        "Apertura": {
+          "regular_rounds": {
+            "1": 9,
+            "2": 9,
+            "3": 9,
+            "4": 9,
+            "5": 9,
+            "6": 9,
+            "7": 9,
+            "8": 9,
+            "9": 9,
+            "10": 9,
+            "11": 9,
+            "12": 9,
+            "13": 9,
+            "14": 9,
+            "15": 9,
+            "16": 9,
+            "17": 9
+          },
+          "regular_fixture_count": 153,
+          "other_rounds": {}
+        },
+        "Clausura": {
+          "regular_rounds": {
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+            "7": 0,
+            "8": 0,
+            "9": 0,
+            "10": 0,
+            "11": 0,
+            "12": 0,
+            "13": 0,
+            "14": 0,
+            "15": 0,
+            "16": 0,
+            "17": 0
+          },
+          "regular_fixture_count": 0,
+          "other_rounds": {}
+        }
+      },
+      "teams": [
+        {
+          "id": 2278,
+          "names": [
+            "Guadalajara Chivas"
+          ],
+          "eligible_match_appearances": 9
+        },
+        {
+          "id": 2279,
+          "names": [
+            "Tigres UANL"
+          ],
+          "eligible_match_appearances": 9
+        },
+        {
+          "id": 2280,
+          "names": [
+            "Club Tijuana"
+          ],
+          "eligible_match_appearances": 9
+        },
+        {
+          "id": 2281,
+          "names": [
+            "Toluca"
+          ],
+          "eligible_match_appearances": 9
+        },
+        {
+          "id": 2282,
+          "names": [
+            "Monterrey"
+          ],
+          "eligible_match_appearances": 9
+        },
+        {
+          "id": 2283,
+          "names": [
+            "Atlas"
+          ],
+          "eligible_match_appearances": 10
+        },
+        {
+          "id": 2285,
+          "names": [
+            "Santos Laguna"
+          ],
+          "eligible_match_appearances": 9
+        },
+        {
+          "id": 2286,
+          "names": [
+            "U.N.A.M. - Pumas"
+          ],
+          "eligible_match_appearances": 9
+        },
+        {
+          "id": 2287,
+          "names": [
+            "Club America"
+          ],
+          "eligible_match_appearances": 8
+        },
+        {
+          "id": 2288,
+          "names": [
+            "Necaxa"
+          ],
+          "eligible_match_appearances": 9
+        },
+        {
+          "id": 2289,
+          "names": [
+            "Leon"
+          ],
+          "eligible_match_appearances": 9
+        },
+        {
+          "id": 2290,
+          "names": [
+            "Club Queretaro"
+          ],
+          "eligible_match_appearances": 8
+        },
+        {
+          "id": 2291,
+          "names": [
+            "Puebla"
+          ],
+          "eligible_match_appearances": 9
+        },
+        {
+          "id": 2292,
+          "names": [
+            "CF Pachuca"
+          ],
+          "eligible_match_appearances": 9
+        },
+        {
+          "id": 2295,
+          "names": [
+            "Cruz Azul"
+          ],
+          "eligible_match_appearances": 9
+        },
+        {
+          "id": 2298,
+          "names": [
+            "FC Juarez"
+          ],
+          "eligible_match_appearances": 9
+        },
+        {
+          "id": 2312,
+          "names": [
+            "Atlante FC"
+          ],
+          "eligible_match_appearances": 10
+        },
+        {
+          "id": 2314,
+          "names": [
+            "Atletico San Luis"
+          ],
+          "eligible_match_appearances": 9
+        }
+      ],
+      "venue_missing": {
+        "id": {
+          "count": 55,
+          "match_ids": [
+            1550897,
+            1550896,
+            1550899,
+            1550901,
+            1550902,
+            1550904,
+            1550905,
+            1550913,
+            1550915,
+            1550917,
+            1550920,
+            1550922,
+            1550924,
+            1550936,
+            1550934,
+            1550933,
+            1550937,
+            1550938,
+            1550946,
+            1550947,
+            1550950,
+            1550953,
+            1550955,
+            1550962,
+            1550965,
+            1550964,
+            1550960,
+            1550969,
+            1550982,
+            1550985,
+            1550986,
+            1550990,
+            1550992,
+            1550999,
+            1550998,
+            1551001,
+            1551002,
+            1551005,
+            1551008,
+            1551013,
+            1551014,
+            1551015,
+            1551018,
+            1551020,
+            1551025,
+            1551029,
+            1551033,
+            1551034,
+            1551035,
+            1551036,
+            1551037,
+            1550951,
+            1551043,
+            1551044,
+            1551046
+          ]
+        },
+        "name": {
+          "count": 0,
+          "match_ids": []
+        },
+        "city": {
+          "count": 0,
+          "match_ids": []
+        }
+      }
+    }
+  ],
+  "penalty_or_extra_time_records": [
+    {
+      "match_id": 1315387,
+      "season": 2024,
+      "round": "Apertura - Reclasificación",
+      "kickoff": "2024-11-22T03:00:00+00:00",
+      "status": "PEN",
+      "home": "Club Tijuana",
+      "away": "Club America",
+      "score": {
+        "halftime": {
+          "home": 1,
+          "away": 0
+        },
+        "fulltime": {
+          "home": 2,
+          "away": 2
+        },
+        "extratime": {
+          "home": 0,
+          "away": 0
+        },
+        "penalty": {
+          "home": 2,
+          "away": 3
+        }
+      },
+      "normalized_goals": {
+        "home": 2,
+        "away": 2
+      }
+    },
+    {
+      "match_id": 1372470,
+      "season": 2024,
+      "round": "Clausura - Reclasificacion",
+      "kickoff": "2025-04-28T00:00:00+00:00",
+      "status": "PEN",
+      "home": "FC Juarez",
+      "away": "U.N.A.M. - Pumas",
+      "score": {
+        "halftime": {
+          "home": 1,
+          "away": 1
+        },
+        "fulltime": {
+          "home": 1,
+          "away": 1
+        },
+        "extratime": {
+          "home": 0,
+          "away": 0
+        },
+        "penalty": {
+          "home": 1,
+          "away": 2
+        }
+      },
+      "normalized_goals": {
+        "home": 1,
+        "away": 1
+      }
+    },
+    {
+      "match_id": 1489447,
+      "season": 2025,
+      "round": "Apertura - Final",
+      "kickoff": "2025-12-15T01:00:00+00:00",
+      "status": "PEN",
+      "home": "Toluca",
+      "away": "Tigres UANL",
+      "score": {
+        "halftime": {
+          "home": 1,
+          "away": 1
+        },
+        "fulltime": {
+          "home": 2,
+          "away": 1
+        },
+        "extratime": {
+          "home": null,
+          "away": null
+        },
+        "penalty": {
+          "home": 9,
+          "away": 8
+        }
+      },
+      "normalized_goals": {
+        "home": 2,
+        "away": 1
+      }
+    }
+  ],
+  "team_identity": {
+    "distinct_ids": 19,
+    "names_with_multiple_ids": {},
+    "ids_with_multiple_names": {},
+    "new_ids_2026_vs_2025": [
+      2312
+    ],
+    "absent_ids_2026_vs_2025": [
+      14002
+    ],
+    "new_team": {
+      "id": 2312,
+      "name": "Atlante FC",
+      "eligible_matches": 10
+    },
+    "policy": "Keep provider team IDs distinct. Atlante FC 2312 is not merged with Mazatlán 14002; this audit makes no franchise continuity claim."
+  },
+  "future_7_days": {
+    "window_end": "2026-10-03T14:28:58.662456Z",
+    "count": 7,
+    "fixtures": [
+      {
+        "match_id": 1550980,
+        "kickoff": "2026-09-26T22:50:00Z",
+        "home_id": 2295,
+        "away_id": 2281,
+        "home_name": "Cruz Azul",
+        "away_name": "Toluca",
+        "season": 2026,
+        "round": "Apertura - 10",
+        "venue": {
+          "id": 22432,
+          "name": "Estadio Banorte",
+          "city": "Mexico City"
+        }
+      },
+      {
+        "match_id": 1550977,
+        "kickoff": "2026-09-26T23:07:00Z",
+        "home_id": 2278,
+        "away_id": 2290,
+        "home_name": "Guadalajara Chivas",
+        "away_name": "Club Queretaro",
+        "season": 2026,
+        "round": "Apertura - 10",
+        "venue": {
+          "id": 1076,
+          "name": "Estadio Akron",
+          "city": "Guadalajara"
+        }
+      },
+      {
+        "match_id": 1550978,
+        "kickoff": "2026-09-27T03:05:00Z",
+        "home_id": 2285,
+        "away_id": 2292,
+        "home_name": "Santos Laguna",
+        "away_name": "CF Pachuca",
+        "season": 2026,
+        "round": "Apertura - 10",
+        "venue": {
+          "id": 20475,
+          "name": "Estadio TSM Corona",
+          "city": "Torreon"
+        }
+      },
+      {
+        "match_id": 1550979,
+        "kickoff": "2026-09-27T03:10:00Z",
+        "home_id": 2279,
+        "away_id": 2291,
+        "home_name": "Tigres UANL",
+        "away_name": "Puebla",
+        "season": 2026,
+        "round": "Apertura - 10",
+        "venue": {
+          "id": 1087,
+          "name": "Estadio Universitario",
+          "city": "Monterey"
+        }
+      },
+      {
+        "match_id": 1550981,
+        "kickoff": "2026-09-27T18:00:00Z",
+        "home_id": 2286,
+        "away_id": 2314,
+        "home_name": "U.N.A.M. - Pumas",
+        "away_name": "Atletico San Luis",
+        "season": 2026,
+        "round": "Apertura - 10",
+        "venue": {
+          "id": 1083,
+          "name": "Estadio Olímpico Universitario",
+          "city": "Mexico City"
+        }
+      },
+      {
+        "match_id": 1550982,
+        "kickoff": "2026-09-28T01:00:00Z",
+        "home_id": 2289,
+        "away_id": 2298,
+        "home_name": "Leon",
+        "away_name": "FC Juarez",
+        "season": 2026,
+        "round": "Apertura - 10",
+        "venue": {
+          "id": null,
+          "name": "Estadio León",
+          "city": "Leon"
+        }
+      },
+      {
+        "match_id": 1550983,
+        "kickoff": "2026-09-28T03:10:00Z",
+        "home_id": 2288,
+        "away_id": 2287,
+        "home_name": "Necaxa",
+        "away_name": "Club America",
+        "season": 2026,
+        "round": "Apertura - 10",
+        "venue": {
+          "id": 20474,
+          "name": "Estadio Victoria",
+          "city": "Aguascalientes"
+        }
+      }
+    ]
+  },
+  "limitations": [
+    "2026 provider season currently contains Apertura only; Clausura 2027 and knockout fixtures are not present in this snapshot. This is not evidence those later stages will not occur.",
+    "Venue ID missing in 303 raw fixtures (2024:65, 2025:183, 2026:55); all venue names are present, 4 historical 2025 fixtures lack city. Upcoming Leon–FC Juarez 1550982 has venue name and city but no venue ID. Domestic baseline is conditional on nominal home field; actual venue and neutrality still require match-level confirmation.",
+    "Provider season metadata end dates differ from final fixture dates: 2024 metadata 2025-05-24 vs fixture 2025-05-26 UTC; 2025 metadata 2026-05-24 vs fixture 2026-05-25 UTC. Fixture dates and explicit season IDs govern samples.",
+    "Atlante FC has only 10 eligible matches, all from 2026; preserve newcomer uncertainty. Historical validation may exclude its fixtures if absent from the fixed training segment.",
+    "PEN status indicates eventual shootout and does not force 90-minute draw: Toluca–Tigres 1489447 is fulltime 2–1 in source. All three PEN records retain only explicit fulltime goals; shootout scores are excluded.",
+    "Cache reconciliation establishes internal consistency, not independent primary-source confirmation of every historical score, venue or competition rule."
+  ]
+}
