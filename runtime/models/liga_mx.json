@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "program_version": "0.1.0",
-  "model_id": "liga_mx-20260926T143112836087Z",
+  "model_id": "liga_mx-20260928T012941903322Z",
   "competition": {
     "key": "liga_mx",
     "label": "墨西超Liga MX",
@@ -9,8 +9,8 @@
     "country": "Mexico",
     "mode": "domestic_baseline"
   },
-  "data_fingerprint": "35ce8ae4109d38a01ae6a2b068ffee39d3acff77a63c7663962d7447a52a5b62",
-  "trained_at": "2026-09-26T14:31:12.836087Z",
+  "data_fingerprint": "571525ad07287307e975cec7c61d0b61cea1bb7219da1be8066876844ebd7c42",
+  "trained_at": "2026-09-28T01:29:41.903322Z",
   "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
   "maturity": "exploratory_baseline",
   "lineup_effects": "未量化",
@@ -21,147 +21,147 @@
     "fit_status": "converged",
     "trained": true,
     "validated_for_production": false,
-    "training_cutoff": "2026-09-26T14:31:12.836087Z",
-    "last_match_kickoff": "2026-09-26T03:00:00Z",
-    "last_result_assumed_available_at": "2026-09-26T07:00:00Z",
-    "n_matches": 758,
+    "training_cutoff": "2026-09-28T01:29:41.903322Z",
+    "last_match_kickoff": "2026-09-27T18:00:00Z",
+    "last_result_assumed_available_at": "2026-09-27T22:00:00Z",
+    "n_matches": 763,
     "n_teams": 19,
     "min_team_matches": 10,
     "low_sample_team_threshold": 5,
     "low_sample_team_ids": [],
     "excluded_after_cutoff_or_availability_delay": 0,
-    "training_data_sha256": "821b4d2c669c2b11ec5c11340e2e5debabce3c18d3664f3f0f3030445ab32fd1",
+    "training_data_sha256": "87285717f2f2c9f465333deefedaa13fd517b436dda51728490fc31424d8bf05",
     "half_life_days": 180.0,
     "ridge": 3.0,
-    "effective_sample_size": 429.315422168341,
-    "intercept": 0.18093293999570323,
-    "home_advantage": 0.278346834017729,
+    "effective_sample_size": 429.9570814594954,
+    "intercept": 0.1894725565580447,
+    "home_advantage": 0.26577645707573055,
     "team_parameters": {
       "2278": {
         "name": "Guadalajara Chivas",
-        "attack": 0.22625941615916587,
-        "defence": 0.23778312980810262,
-        "training_matches": 84
+        "attack": 0.18909057077868663,
+        "defence": 0.2067828275949123,
+        "training_matches": 85
       },
       "2279": {
         "name": "Tigres UANL",
-        "attack": 0.0164668647284203,
-        "defence": 0.2023669975354744,
-        "training_matches": 91
+        "attack": -0.0028267207485236337,
+        "defence": 0.2268808475660166,
+        "training_matches": 92
       },
       "2280": {
         "name": "Club Tijuana",
-        "attack": 0.052313037645459165,
-        "defence": 0.022590021158025914,
+        "attack": 0.051593220320285224,
+        "defence": 0.023536399284257308,
         "training_matches": 84
       },
       "2281": {
         "name": "Toluca",
-        "attack": 0.2747878889595014,
-        "defence": 0.23478583242165,
-        "training_matches": 93
+        "attack": 0.306200618429229,
+        "defence": 0.18980779195845998,
+        "training_matches": 94
       },
       "2282": {
         "name": "Monterrey",
-        "attack": 0.11828182142703446,
-        "defence": -0.07455905099013428,
+        "attack": 0.11723380609734127,
+        "defence": -0.06972901017495568,
         "training_matches": 91
       },
       "2283": {
         "name": "Atlas",
-        "attack": -0.06357087192223695,
-        "defence": -0.06960140560988745,
+        "attack": -0.06585753399123728,
+        "defence": -0.06371969313534144,
         "training_matches": 82
       },
       "2285": {
         "name": "Santos Laguna",
-        "attack": -0.19128922684944352,
-        "defence": -0.2225714092952444,
-        "training_matches": 77
+        "attack": -0.1955414293300415,
+        "defence": -0.18736847114875155,
+        "training_matches": 78
       },
       "2286": {
         "name": "U.N.A.M. - Pumas",
-        "attack": 0.10619277469303043,
-        "defence": 0.0831294008309391,
-        "training_matches": 88
+        "attack": 0.10506235405461038,
+        "defence": 0.03690024119113608,
+        "training_matches": 89
       },
       "2287": {
         "name": "Club America",
-        "attack": 0.1861839124487123,
-        "defence": 0.21323434957975637,
+        "attack": 0.18332833944868887,
+        "defence": 0.21718470487277808,
         "training_matches": 93
       },
       "2288": {
         "name": "Necaxa",
-        "attack": -0.10168481074120585,
-        "defence": -0.15504276942975936,
+        "attack": -0.10413473443564761,
+        "defence": -0.1502778047631196,
         "training_matches": 79
       },
       "2289": {
         "name": "Leon",
-        "attack": -0.10678457414023436,
-        "defence": -0.08151436342243909,
+        "attack": -0.10712348363635357,
+        "defence": -0.0778877652921035,
         "training_matches": 79
       },
       "2290": {
         "name": "Club Queretaro",
-        "attack": -0.16559413610402532,
-        "defence": 0.11567029109908854,
-        "training_matches": 76
+        "attack": -0.12944662898824086,
+        "defence": 0.16919562310242342,
+        "training_matches": 77
       },
       "2291": {
         "name": "Puebla",
-        "attack": -0.27689278152463304,
-        "defence": -0.0973348874442497,
-        "training_matches": 77
+        "attack": -0.3063147841699344,
+        "defence": -0.07808991127226565,
+        "training_matches": 78
       },
       "2292": {
         "name": "CF Pachuca",
-        "attack": 0.04447135482930956,
-        "defence": 0.21518469315284985,
-        "training_matches": 86
+        "attack": 0.0032715860448577325,
+        "defence": 0.22133142783363366,
+        "training_matches": 87
       },
       "2295": {
         "name": "Cruz Azul",
-        "attack": 0.21076832494294334,
-        "defence": 0.13471168547531887,
-        "training_matches": 95
+        "attack": 0.23691504832963262,
+        "defence": 0.09371808003984176,
+        "training_matches": 96
       },
       "2298": {
         "name": "FC Juarez",
-        "attack": -0.10845341364328771,
-        "defence": -0.3056938571702185,
+        "attack": -0.10966188861446254,
+        "defence": -0.3053668054095187,
         "training_matches": 82
       },
       "2312": {
         "name": "Atlante FC",
-        "attack": -0.0696461071344729,
-        "defence": -0.04474686541472945,
+        "attack": -0.07093564939468085,
+        "defence": -0.04533498028296814,
         "training_matches": 10
       },
       "2314": {
         "name": "Atletico San Luis",
-        "attack": -0.02545704263816861,
-        "defence": -0.14064497564967815,
-        "training_matches": 81
+        "attack": 0.02596640289379459,
+        "defence": -0.14244406273432744,
+        "training_matches": 82
       },
       "14002": {
         "name": "Mazatlán",
-        "attack": -0.1263524311358685,
-        "defence": -0.2677468166348653,
+        "attack": -0.12681909308800407,
+        "defence": -0.26511943923010745,
         "training_matches": 68
       }
     },
     "graph_connected": true,
     "constraints": {
-      "attack_sum": 8.326672684688674e-17,
-      "defence_sum": -1.6653345369377348e-16
+      "attack_sum": 5.551115123125783e-17,
+      "defence_sum": 5.551115123125783e-17
     },
     "optimizer": {
       "success": true,
       "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
       "iterations": 20,
-      "objective": 641.9056442123428,
+      "objective": 654.2466583901605,
       "parameter_at_bound": false
     },
     "warnings": [
@@ -176,20 +176,20 @@
     "is_rolling_backtest": false,
     "minimum_test_matches": 40,
     "meets_minimum_supported_test_matches": true,
-    "evaluation_data_cutoff": "2026-09-26T14:31:12.836087Z",
+    "evaluation_data_cutoff": "2026-09-28T01:29:41.903322Z",
     "split": {
       "method": "chronological_fixed_model_holdout",
       "grouped_by": "kickoff_utc_calendar_date",
-      "train_cutoff": "2026-03-16T00:00:00Z",
-      "train_last_kickoff": "2026-03-15T03:10:00Z",
-      "test_start": "2026-03-16T01:00:00Z",
-      "test_end": "2026-09-26T03:00:00Z",
-      "training_count": 605,
+      "train_cutoff": "2026-03-22T00:00:00Z",
+      "train_last_kickoff": "2026-03-21T03:06:00Z",
+      "test_start": "2026-03-22T01:00:00Z",
+      "test_end": "2026-09-27T18:00:00Z",
+      "training_count": 610,
       "testing_count": 152,
       "result_availability_delay_hours": 4,
       "embargoed_count": 1,
       "embargoed_match_ids": [
-        1492554
+        1492564
       ]
     },
     "coverage": {
@@ -242,28 +242,28 @@
     },
     "model_metrics": {
       "n": 142,
-      "log_loss": 1.0904008673740886,
-      "brier_score": 0.6577018764922816,
+      "log_loss": 1.1080896157607665,
+      "brier_score": 0.6687938862375847,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
     "baseline_metrics": {
       "n": 142,
-      "log_loss": 1.071542704481391,
-      "brier_score": 0.6483891319098473,
+      "log_loss": 1.0750694950030615,
+      "brier_score": 0.6511670877110479,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
     "baseline": {
       "name": "training_league_home_away_mean_poisson",
-      "home_rate": 1.634186622625929,
-      "away_rate": 1.194880264244426,
+      "home_rate": 1.6388206388206388,
+      "away_rate": 1.1867321867321867,
       "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
       "same_scored_matches_as_model": true
     },
     "comparison": {
-      "model_minus_baseline_log_loss": 0.018858162892697594,
-      "model_minus_baseline_brier_score": 0.009312744582434362,
+      "model_minus_baseline_log_loss": 0.033020120757704996,
+      "model_minus_baseline_brier_score": 0.017626798526536813,
       "lower_is_better": true
     },
     "warnings": [
@@ -293,11 +293,12 @@
         "odds": true
       },
       "fixtures": 153,
-      "fetched_at": "2026-09-26T14:31:19.841385Z",
+      "fetched_at": "2026-09-28T01:33:23.062349Z",
       "from_cache": false,
       "status_counts": {
-        "FT": 81,
-        "NS": 72
+        "1H": 1,
+        "FT": 86,
+        "NS": 66
       }
     },
     {

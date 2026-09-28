@@ -1,6 +1,6 @@
 # 足球模型运行报告
 
-生成时间：2026-09-27T01:28:39.434705Z（UTC）
+生成时间：2026-09-28T01:29:41.903322Z（UTC）
 程序版本：0.1.0；运行模式：train。
 
 本程序生成探索性历史比分基线。没有球员/伤停、xG、战术、赛程特征，也没有经过验证的收益优势。
@@ -21,12 +21,12 @@
 |葡超|探索性基线|678|数据未变，沿用参数|未含阵容伤停、xG与赛程；未证实预测或收益优势。|
 |巴西甲|探索性基线|1037|数据未变，沿用参数|未含阵容伤停、xG与赛程；未证实预测或收益优势。|
 |日职联J1|探索性基线|660|数据未变，沿用参数|未含阵容伤停、xG与赛程；未证实预测或收益优势。|
-|韩国K1|探索性基线|643|数据未变，沿用参数|未含阵容伤停、xG与赛程；未证实预测或收益优势。|
-|美职联MLS|探索性基线|1450|数据未变，沿用参数|未含阵容伤停、xG与赛程；未证实预测或收益优势。|
-|欧洲国家联赛|探索性基线|354|数据未变，沿用参数|未含阵容伤停、xG与赛程；未证实预测或收益优势。 场地筛选：376场常规赛果中纳入354场、排除22场；未来7天可用预测0场，不支持52场。|
-|墨西超Liga MX|探索性基线|758|数据未变，沿用参数|未含阵容伤停、xG与赛程；未证实预测或收益优势。|
+|韩国K1|探索性基线|644|完成新拟合|未含阵容伤停、xG与赛程；未证实预测或收益优势。|
+|美职联MLS|探索性基线|1463|完成新拟合|未含阵容伤停、xG与赛程；未证实预测或收益优势。|
+|欧洲国家联赛|探索性基线|356|完成新拟合|未含阵容伤停、xG与赛程；未证实预测或收益优势。 场地筛选：384场常规赛果中纳入356场、排除28场；未来7天可用预测2场，不支持50场。|
+|墨西超Liga MX|探索性基线|763|完成新拟合|未含阵容伤停、xG与赛程；未证实预测或收益优势。|
 
-本次接口请求次数：34。
+本次接口请求次数：35。
 
 ## 怎样阅读
 
@@ -42,7 +42,7 @@
 
 ## 英超
 
-- 2026：返回380场，抓取时间2026-09-27T01:28:52.611952Z；接口返回成功；完整性尚需核验。
+- 2026：返回380场，抓取时间2026-09-28T01:29:55.077497Z；接口返回成功；完整性尚需核验。
 - 2025：返回380场，抓取时间2026-09-22T11:58:10.276009Z；接口返回成功；完整性尚需核验。
 - 2024：返回380场，抓取时间2026-09-22T11:38:33.467033Z；接口返回成功；完整性尚需核验。
 
@@ -150,7 +150,7 @@
 
 ## 西甲
 
-- 2026：返回380场，抓取时间2026-09-27T01:29:05.607590Z；接口返回成功；完整性尚需核验。
+- 2026：返回380场，抓取时间2026-09-28T01:30:08.200857Z；接口返回成功；完整性尚需核验。
 - 2025：返回380场，抓取时间2026-09-22T13:59:28.951268Z；接口返回成功；完整性尚需核验。
 - 2024：返回380场，抓取时间2026-09-22T13:59:35.448239Z；接口返回成功；完整性尚需核验。
 
@@ -302,7 +302,7 @@
 
 ## 德甲
 
-- 2026：返回306场，抓取时间2026-09-27T01:29:18.611464Z；接口返回成功；完整性尚需核验。
+- 2026：返回306场，抓取时间2026-09-28T01:30:21.066731Z；接口返回成功；完整性尚需核验。
 - 2025：返回308场，抓取时间2026-09-22T13:59:54.947765Z；接口返回成功；完整性尚需核验。
 - 2024：返回308场，抓取时间2026-09-22T14:00:01.629102Z；接口返回成功；完整性尚需核验。
 
@@ -414,7 +414,7 @@
 
 ## 意甲
 
-- 2026：返回380场，抓取时间2026-09-27T01:29:31.605968Z；接口返回成功；完整性尚需核验。
+- 2026：返回380场，抓取时间2026-09-28T01:30:34.075856Z；接口返回成功；完整性尚需核验。
 - 2025：返回380场，抓取时间2026-09-22T14:00:20.957204Z；接口返回成功；完整性尚需核验。
 - 2024：返回380场，抓取时间2026-09-22T14:00:27.467801Z；接口返回成功；完整性尚需核验。
 
@@ -506,7 +506,7 @@
 
 ## 法甲
 
-- 2026：返回306场，抓取时间2026-09-27T01:29:44.611848Z；接口返回成功；完整性尚需核验。
+- 2026：返回306场，抓取时间2026-09-28T01:30:47.080156Z；接口返回成功；完整性尚需核验。
 - 2025：返回308场，抓取时间2026-09-22T14:00:46.950462Z；接口返回成功；完整性尚需核验。
 - 2024：返回308场，抓取时间2026-09-22T14:00:53.448928Z；接口返回成功；完整性尚需核验。
 
@@ -620,7 +620,7 @@
 
 ## 德乙
 
-- 2026：返回306场，抓取时间2026-09-27T01:29:57.605675Z；接口返回成功；完整性尚需核验。
+- 2026：返回306场，抓取时间2026-09-28T01:31:00.062026Z；接口返回成功；完整性尚需核验。
 - 2025：返回308场，抓取时间2026-09-22T14:01:12.945466Z；接口返回成功；完整性尚需核验。
 - 2024：返回308场，抓取时间2026-09-22T14:01:19.447203Z；接口返回成功；完整性尚需核验。
 
@@ -804,7 +804,7 @@
 
 ## 法乙
 
-- 2026：返回306场，抓取时间2026-09-27T01:30:11.231808Z；接口返回成功；完整性尚需核验。
+- 2026：返回306场，抓取时间2026-09-28T01:31:13.066044Z；接口返回成功；完整性尚需核验。
 - 2025：返回310场，抓取时间2026-09-22T14:01:38.944353Z；接口返回成功；完整性尚需核验。
 - 2024：返回310场，抓取时间2026-09-22T14:01:45.455887Z；接口返回成功；完整性尚需核验。
 
@@ -964,12 +964,12 @@
 
 ## 欧冠
 
-- 2026：返回234场，抓取时间2026-09-27T01:30:23.721356Z；接口返回成功；完整性尚需核验。
+- 2026：返回234场，抓取时间2026-09-28T01:31:26.063176Z；接口返回成功；完整性尚需核验。
 - 2025：返回281场，抓取时间2026-09-22T14:02:04.941878Z；接口返回成功；完整性尚需核验。
 - 2024：返回279场，抓取时间2026-09-22T14:02:11.462560Z；接口返回成功；完整性尚需核验。
 ## 瑞典超
 
-- 2026：返回240场，抓取时间2026-09-27T01:30:36.610619Z；接口返回成功；完整性尚需核验。
+- 2026：返回240场，抓取时间2026-09-28T01:31:39.066946Z；接口返回成功；完整性尚需核验。
 - 2025：返回242场，抓取时间2026-09-22T14:02:30.943424Z；接口返回成功；完整性尚需核验。
 - 2024：返回242场，抓取时间2026-09-22T14:02:37.465529Z；接口返回成功；完整性尚需核验。
 
@@ -1040,7 +1040,7 @@
 
 ## 荷甲
 
-- 2026：返回306场，抓取时间2026-09-27T01:30:49.607157Z；接口返回成功；完整性尚需核验。
+- 2026：返回306场，抓取时间2026-09-28T01:31:52.066838Z；接口返回成功；完整性尚需核验。
 - 2025：返回309场，抓取时间2026-09-22T14:02:56.950299Z；接口返回成功；完整性尚需核验。
 - 2024：返回321场，抓取时间2026-09-22T14:03:03.469952Z；接口返回成功；完整性尚需核验。
 
@@ -1111,7 +1111,7 @@
 
 ## 葡超
 
-- 2026：返回306场，抓取时间2026-09-27T01:31:02.612974Z；接口返回成功；完整性尚需核验。
+- 2026：返回306场，抓取时间2026-09-28T01:32:05.064692Z；接口返回成功；完整性尚需核验。
 - 2025：返回308场，抓取时间2026-09-22T14:03:22.971087Z；接口返回成功；完整性尚需核验。
 - 2024：返回308场，抓取时间2026-09-22T14:03:29.450629Z；接口返回成功；完整性尚需核验。
 
@@ -1245,7 +1245,7 @@
 
 ## 巴西甲
 
-- 2026：返回380场，抓取时间2026-09-27T01:31:15.616665Z；接口返回成功；完整性尚需核验。
+- 2026：返回380场，抓取时间2026-09-28T01:32:18.071184Z；接口返回成功；完整性尚需核验。
 - 2025：返回380场，抓取时间2026-09-22T14:03:48.953631Z；接口返回成功；完整性尚需核验。
 - 2024：返回380场，抓取时间2026-09-22T14:03:55.458079Z；接口返回成功；完整性尚需核验。
 
@@ -1318,7 +1318,7 @@
 
 ## 日职联J1
 
-- 2027：返回380场，抓取时间2026-09-27T01:31:28.616119Z；接口返回成功；完整性尚需核验。
+- 2027：返回380场，抓取时间2026-09-28T01:32:31.073165Z；接口返回成功；完整性尚需核验。
 - 2026：返回200场，抓取时间2026-09-22T14:04:14.956805Z；接口返回成功；完整性尚需核验。
 - 2025：返回380场，抓取时间2026-09-22T14:04:21.456874Z；接口返回成功；完整性尚需核验。
 
@@ -1389,7 +1389,7 @@
 
 ## 韩国K1
 
-- 2026：返回198场，抓取时间2026-09-27T01:31:41.609853Z；接口返回成功；完整性尚需核验。
+- 2026：返回198场，抓取时间2026-09-28T01:32:44.060874Z；接口返回成功；完整性尚需核验。
 - 2025：返回232场，抓取时间2026-09-22T14:04:40.944386Z；接口返回成功；完整性尚需核验。
 - 2024：返回232场，抓取时间2026-09-22T14:04:47.452404Z；接口返回成功；完整性尚需核验。
 
@@ -1402,38 +1402,38 @@
   "is_rolling_backtest": false,
   "minimum_test_matches": 40,
   "meets_minimum_supported_test_matches": true,
-  "evaluation_data_cutoff": "2026-09-22T15:43:27.774824Z",
+  "evaluation_data_cutoff": "2026-09-28T01:29:41.903322Z",
   "split": {
     "method": "chronological_fixed_model_holdout",
     "grouped_by": "kickoff_utc_calendar_date",
     "train_cutoff": "2026-04-22T00:00:00Z",
     "train_last_kickoff": "2026-04-21T10:30:00Z",
     "test_start": "2026-04-22T10:30:00Z",
-    "test_end": "2026-09-20T10:00:00Z",
+    "test_end": "2026-09-27T10:00:00Z",
     "training_count": 515,
-    "testing_count": 128,
+    "testing_count": 129,
     "result_availability_delay_hours": 4,
     "embargoed_count": 0,
     "embargoed_match_ids": []
   },
   "coverage": {
-    "total": 128,
-    "scored": 128,
+    "total": 129,
+    "scored": 129,
     "excluded": 0,
     "ratio": 1.0,
     "exclusions": []
   },
   "model_metrics": {
-    "n": 128,
-    "log_loss": 1.0812713257851452,
-    "brier_score": 0.6547854171811053,
+    "n": 129,
+    "log_loss": 1.0835530808425042,
+    "brier_score": 0.6564374537592588,
     "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
     "log_loss_probability_floor": 1e-15
   },
   "baseline_metrics": {
-    "n": 128,
-    "log_loss": 1.1201180935037098,
-    "brier_score": 0.6818557537145226,
+    "n": 129,
+    "log_loss": 1.1217305548410492,
+    "brier_score": 0.6828928672699479,
     "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
     "log_loss_probability_floor": 1e-15
   },
@@ -1445,8 +1445,8 @@
     "same_scored_matches_as_model": true
   },
   "comparison": {
-    "model_minus_baseline_log_loss": -0.038846767718564656,
-    "model_minus_baseline_brier_score": -0.027070336533417283,
+    "model_minus_baseline_log_loss": -0.038177473998544986,
+    "model_minus_baseline_brier_score": -0.02645541351068914,
     "lower_is_better": true
   },
   "warnings": [
@@ -1460,7 +1460,7 @@
 
 ## 美职联MLS
 
-- 2026：返回510场，抓取时间2026-09-27T01:31:54.628259Z；接口返回成功；完整性尚需核验。
+- 2026：返回510场，抓取时间2026-09-28T01:32:57.080543Z；接口返回成功；完整性尚需核验。
 - 2025：返回540场，抓取时间2026-09-22T14:05:06.973247Z；接口返回成功；完整性尚需核验。
 - 2024：返回526场，抓取时间2026-09-22T14:05:13.469650Z；接口返回成功；完整性尚需核验。
 
@@ -1473,57 +1473,59 @@
   "is_rolling_backtest": false,
   "minimum_test_matches": 40,
   "meets_minimum_supported_test_matches": true,
-  "evaluation_data_cutoff": "2026-09-25T01:27:11.915231Z",
+  "evaluation_data_cutoff": "2026-09-28T01:29:41.903322Z",
   "split": {
     "method": "chronological_fixed_model_holdout",
     "grouped_by": "kickoff_utc_calendar_date",
-    "train_cutoff": "2026-04-12T00:00:00Z",
-    "train_last_kickoff": "2026-04-11T18:30:00Z",
-    "test_start": "2026-04-12T00:30:00Z",
-    "test_end": "2026-09-24T01:30:00Z",
-    "training_count": 1154,
-    "testing_count": 291,
+    "train_cutoff": "2026-04-19T00:00:00Z",
+    "train_last_kickoff": "2026-04-18T18:30:00Z",
+    "test_start": "2026-04-19T00:30:00Z",
+    "test_end": "2026-09-27T02:30:00Z",
+    "training_count": 1168,
+    "testing_count": 288,
     "result_availability_delay_hours": 4,
-    "embargoed_count": 5,
+    "embargoed_count": 7,
     "embargoed_match_ids": [
-      1490198,
-      1490199,
-      1490200,
-      1490201,
-      1490202
+      1490213,
+      1490214,
+      1490215,
+      1490216,
+      1490217,
+      1490218,
+      1490219
     ]
   },
   "coverage": {
-    "total": 291,
-    "scored": 291,
+    "total": 288,
+    "scored": 288,
     "excluded": 0,
     "ratio": 1.0,
     "exclusions": []
   },
   "model_metrics": {
-    "n": 291,
-    "log_loss": 1.107685979650311,
-    "brier_score": 0.6711179210244053,
+    "n": 288,
+    "log_loss": 1.10788632817581,
+    "brier_score": 0.6709896092377281,
     "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
     "log_loss_probability_floor": 1e-15
   },
   "baseline_metrics": {
-    "n": 291,
-    "log_loss": 1.0855962906206766,
-    "brier_score": 0.6570891761156975,
+    "n": 288,
+    "log_loss": 1.0784751813748628,
+    "brier_score": 0.6519496581617634,
     "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
     "log_loss_probability_floor": 1e-15
   },
   "baseline": {
     "name": "training_league_home_away_mean_poisson",
-    "home_rate": 1.7128627111303594,
-    "away_rate": 1.354265915980944,
+    "home_rate": 1.7171587505348738,
+    "away_rate": 1.3534445870774496,
     "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
     "same_scored_matches_as_model": true
   },
   "comparison": {
-    "model_minus_baseline_log_loss": 0.022089689029634263,
-    "model_minus_baseline_brier_score": 0.014028744908707758,
+    "model_minus_baseline_log_loss": 0.029411146800947252,
+    "model_minus_baseline_brier_score": 0.01903995107596468,
     "lower_is_better": true
   },
   "warnings": [
@@ -1537,7 +1539,7 @@
 
 ## 欧洲国家联赛
 
-- 2026：返回156场，抓取时间2026-09-27T01:32:07.606378Z；接口返回成功；完整性尚需核验。
+- 2026：返回156场，抓取时间2026-09-28T01:33:10.065661Z；接口返回成功；完整性尚需核验。
 - 2024：返回188场，抓取时间2026-09-24T15:54:24.558896Z；接口返回成功；完整性尚需核验。
 - 2022：返回168场，抓取时间2026-09-24T15:54:31.022018Z；接口返回成功；完整性尚需核验。
 
@@ -1550,38 +1552,38 @@
   "is_rolling_backtest": false,
   "minimum_test_matches": 40,
   "meets_minimum_supported_test_matches": true,
-  "evaluation_data_cutoff": "2026-09-26T01:27:33.486280Z",
+  "evaluation_data_cutoff": "2026-09-28T01:29:41.903322Z",
   "split": {
     "method": "chronological_fixed_model_holdout",
     "grouped_by": "kickoff_utc_calendar_date",
     "train_cutoff": "2024-11-16T00:00:00Z",
     "train_last_kickoff": "2024-11-15T19:45:00Z",
     "test_start": "2024-11-16T14:00:00Z",
-    "test_end": "2026-09-25T16:00:00Z",
+    "test_end": "2026-09-27T18:45:00Z",
     "training_count": 283,
-    "testing_count": 71,
+    "testing_count": 73,
     "result_availability_delay_hours": 4,
     "embargoed_count": 0,
     "embargoed_match_ids": []
   },
   "coverage": {
-    "total": 71,
-    "scored": 71,
+    "total": 73,
+    "scored": 73,
     "excluded": 0,
     "ratio": 1.0,
     "exclusions": []
   },
   "model_metrics": {
-    "n": 71,
-    "log_loss": 1.0220593372121116,
-    "brier_score": 0.6165461910691269,
+    "n": 73,
+    "log_loss": 1.021292190514349,
+    "brier_score": 0.6161189180209642,
     "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
     "log_loss_probability_floor": 1e-15
   },
   "baseline_metrics": {
-    "n": 71,
-    "log_loss": 1.0861105429244138,
-    "brier_score": 0.6580610197648641,
+    "n": 73,
+    "log_loss": 1.0859296751991134,
+    "brier_score": 0.6581722204328202,
     "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
     "log_loss_probability_floor": 1e-15
   },
@@ -1593,8 +1595,8 @@
     "same_scored_matches_as_model": true
   },
   "comparison": {
-    "model_minus_baseline_log_loss": -0.06405120571230216,
-    "model_minus_baseline_brier_score": -0.041514828695737194,
+    "model_minus_baseline_log_loss": -0.06463748468476438,
+    "model_minus_baseline_brier_score": -0.04205330241185601,
     "lower_is_better": true
   },
   "warnings": [
@@ -1608,7 +1610,7 @@
 
 ## 墨西超Liga MX
 
-- 2026：返回153场，抓取时间2026-09-27T01:32:14.187890Z；接口返回成功；完整性尚需核验。
+- 2026：返回153场，抓取时间2026-09-28T01:33:23.062349Z；接口返回成功；完整性尚需核验。
 - 2025：返回337场，抓取时间2026-09-26T14:29:18.383370Z；接口返回成功；完整性尚需核验。
 - 2024：返回340场，抓取时间2026-09-26T14:29:24.866747Z；接口返回成功；完整性尚需核验。
 
@@ -1621,20 +1623,20 @@
   "is_rolling_backtest": false,
   "minimum_test_matches": 40,
   "meets_minimum_supported_test_matches": true,
-  "evaluation_data_cutoff": "2026-09-26T14:31:12.836087Z",
+  "evaluation_data_cutoff": "2026-09-28T01:29:41.903322Z",
   "split": {
     "method": "chronological_fixed_model_holdout",
     "grouped_by": "kickoff_utc_calendar_date",
-    "train_cutoff": "2026-03-16T00:00:00Z",
-    "train_last_kickoff": "2026-03-15T03:10:00Z",
-    "test_start": "2026-03-16T01:00:00Z",
-    "test_end": "2026-09-26T03:00:00Z",
-    "training_count": 605,
+    "train_cutoff": "2026-03-22T00:00:00Z",
+    "train_last_kickoff": "2026-03-21T03:06:00Z",
+    "test_start": "2026-03-22T01:00:00Z",
+    "test_end": "2026-09-27T18:00:00Z",
+    "training_count": 610,
     "testing_count": 152,
     "result_availability_delay_hours": 4,
     "embargoed_count": 1,
     "embargoed_match_ids": [
-      1492554
+      1492564
     ]
   },
   "coverage": {
@@ -1687,28 +1689,28 @@
   },
   "model_metrics": {
     "n": 142,
-    "log_loss": 1.0904008673740886,
-    "brier_score": 0.6577018764922816,
+    "log_loss": 1.1080896157607665,
+    "brier_score": 0.6687938862375847,
     "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
     "log_loss_probability_floor": 1e-15
   },
   "baseline_metrics": {
     "n": 142,
-    "log_loss": 1.071542704481391,
-    "brier_score": 0.6483891319098473,
+    "log_loss": 1.0750694950030615,
+    "brier_score": 0.6511670877110479,
     "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
     "log_loss_probability_floor": 1e-15
   },
   "baseline": {
     "name": "training_league_home_away_mean_poisson",
-    "home_rate": 1.634186622625929,
-    "away_rate": 1.194880264244426,
+    "home_rate": 1.6388206388206388,
+    "away_rate": 1.1867321867321867,
     "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
     "same_scored_matches_as_model": true
   },
   "comparison": {
-    "model_minus_baseline_log_loss": 0.018858162892697594,
-    "model_minus_baseline_brier_score": 0.009312744582434362,
+    "model_minus_baseline_log_loss": 0.033020120757704996,
+    "model_minus_baseline_brier_score": 0.017626798526536813,
     "lower_is_better": true
   },
   "warnings": [
