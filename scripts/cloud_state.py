@@ -3,6 +3,12 @@
 Run ``load`` before the application and ``save`` afterwards. Both commands use
 the existing checkout's origin credentials; neither prints credentials nor
 embeds them in a URL. A remote state change after load causes save to fail.
+
+The complete runtime tree is persisted, including the mutable venue registry
+at ``registries/nations_venues.json``, its content-addressed JSON snapshots under
+``registries/nations_venues/``, and unknown-venue audits under ``audits/unl/``.
+Snapshot integrity is checked by the registry resolver and forecast reader;
+these files receive the same path, type, size and credential checks as models.
 """
 
 from __future__ import annotations
@@ -163,6 +169,8 @@ def load_state(repo: Path, runtime: Path = Path("runtime")) -> str | None:
             _validate_tree(tree)
             # Validation precedes all destination writes. A partial local copy
             # still has no marker and therefore cannot be pushed by save.
+            # Copy the whole tree: restoring only models/reports would lose
+            # venue evidence and the immutable snapshot used by old forecasts.
             shutil.copytree(tree / "runtime", runtime, dirs_exist_ok=True)
     else:
         runtime.mkdir(exist_ok=True)
@@ -203,6 +211,8 @@ def save_state(repo: Path, runtime: Path = Path("runtime")) -> str:
         if oid is not None:
             _validate_tree(tree)
             shutil.rmtree(tree / "runtime")
+        # Registries, digest-named venue snapshots and audits are runtime state
+        # too. Do not replace this with the shorter Actions artifact path list.
         shutil.copytree(runtime, tree / "runtime")
         # Empty directories do not survive Git. A tiny manifest guarantees a
         # restorable runtime even if the first run found no accessible data.

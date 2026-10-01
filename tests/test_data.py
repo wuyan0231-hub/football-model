@@ -161,6 +161,33 @@ class DataTests(unittest.TestCase):
         client.fetch_fixtures(39, 2025, current=False, force=True)
         self.assertEqual(opener.call_count, 2)
 
+    def test_venue_queries_use_shared_budget_cache_and_exact_parameters(self):
+        record = {"id": 780, "name": "Toumba Stadium", "city": "Thessaloniki", "country": "Greece"}
+        opener = Mock(side_effect=lambda *a, **k: Response(envelope([record])))
+        client = self.client(opener, max_requests=2)
+        first = client.fetch_venues(venue_id=780)
+        self.assertEqual(opener.call_args.args[0].full_url,
+                         "https://v3.football.api-sports.io/venues?id=780")
+        self.assertFalse(first["from_cache"])
+        cached = client.fetch_venues(venue_id=780)
+        self.assertTrue(cached["from_cache"])
+        self.assertEqual(cached["fetched_at"], first["fetched_at"])
+        client.fetch_venues(name="Toumba Stadium")
+        self.assertEqual(opener.call_args.args[0].full_url,
+                         "https://v3.football.api-sports.io/venues?name=Toumba+Stadium")
+        with self.assertRaisesRegex(APIError, "请求上限"):
+            client.fetch_venues(venue_id=781)
+        self.assertEqual(opener.call_count, 2)
+
+    def test_venue_invalid_queries_do_not_send_requests(self):
+        opener = Mock()
+        client = self.client(opener)
+        for kwargs in ({}, {"venue_id": 0}, {"venue_id": True}, {"name": " "},
+                       {"venue_id": 780, "name": "Toumba Stadium"}):
+            with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
+                client.fetch_venues(**kwargs)
+        opener.assert_not_called()
+
     def test_partial_pagination_is_rejected(self):
         payload = envelope([])
         payload["paging"]["total"] = 2

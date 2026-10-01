@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -100,6 +101,61 @@ class CloudStateTests(unittest.TestCase):
         self.assertTrue((restored / "runtime/reports/latest.md").is_file())
         self.assertEqual(git(restored, "rev-parse", "HEAD"), self.source_sha)
 
+    def test_venue_registry_snapshots_and_unknown_audits_survive_cloud_runs(self) -> None:
+        def register(repo: Path, revision: int) -> tuple[Path, bytes]:
+            registry = {"schema_version": 1, "revision": revision, "venues": [
+                {"venue_id": revision, "name": f"Registered stadium {revision}",
+                 "city": "Test city", "country": "Test country"},
+            ]}
+            canonical = json.dumps(registry, sort_keys=True, ensure_ascii=False,
+                                   separators=(",", ":")).encode("utf-8")
+            digest = hashlib.sha256(canonical).hexdigest()
+            directory = repo / "runtime/registries/nations_venues"
+            directory.mkdir(parents=True, exist_ok=True)
+            snapshot = directory / f"{digest}.json"
+            snapshot.write_bytes(canonical)
+            current = repo / "runtime/registries/nations_venues.json"
+            current.write_text(json.dumps(registry, indent=2) + "\n", encoding="utf-8")
+            audits = repo / "runtime/audits/unl"
+            audits.mkdir(parents=True, exist_ok=True)
+            (audits / f"run-{revision}-venues.json").write_text(
+                json.dumps({"unknown_venues": [{"match_id": 1000 + revision,
+                                               "reason": "country_unverified"}]}),
+                encoding="utf-8",
+            )
+            return snapshot.relative_to(repo), canonical
+
+        cloud_state.load_state(self.repo)
+        first_snapshot, first_content = register(self.repo, 1)
+        first = cloud_state.save_state(self.repo)
+
+        # A fresh checkout simulates the next scheduled run, not an in-memory
+        # copy of the writer. The saved evidence must precede new registrations.
+        next_run = self.clone("venues-next-run")
+        self.assertEqual(cloud_state.load_state(next_run), first)
+        self.assertEqual((next_run / first_snapshot).read_bytes(), first_content)
+        self.assertTrue((next_run / "runtime/audits/unl/run-1-venues.json").is_file())
+        second_snapshot, second_content = register(next_run, 2)
+        second = cloud_state.save_state(next_run)
+
+        restored = self.clone("venues-restored")
+        self.assertEqual(cloud_state.load_state(restored), second)
+        self.assertEqual((restored / first_snapshot).read_bytes(), first_content)
+        self.assertEqual((restored / second_snapshot).read_bytes(), second_content)
+        current = json.loads((restored / "runtime/registries/nations_venues.json").read_text())
+        self.assertEqual(current["revision"], 2)
+        for revision in (1, 2):
+            self.assertEqual(
+                (restored / f"runtime/audits/unl/run-{revision}-venues.json").read_bytes(),
+                (next_run / f"runtime/audits/unl/run-{revision}-venues.json").read_bytes(),
+            )
+        # Previous Git commits remain usable for the original registry too.
+        original = json.loads(git(self.remote, "show",
+                                  f"{first}:runtime/registries/nations_venues.json"))
+        self.assertEqual(original["revision"], 1)
+        self.assertEqual(git(self.remote, "rev-parse", "model-state^"), first)
+        self.assertEqual(git(restored, "rev-parse", "HEAD"), self.source_sha)
+
     def test_second_save_retains_previous_version_and_provenance(self) -> None:
         cloud_state.load_state(self.repo)
         self.write_model(self.repo, 1)
@@ -184,6 +240,29 @@ class CloudStateTests(unittest.TestCase):
         link = self.repo / "runtime/cache/link.json"
         link.symlink_to(self.repo / "README.md")
         with self.assertRaisesRegex(cloud_state.StateError, "符号链接"):
+            cloud_state.save_state(self.repo)
+        self.assertIsNone(cloud_state._remote_oid(self.repo))
+
+    def test_venue_registry_files_keep_credential_and_path_checks(self) -> None:
+        cloud_state.load_state(self.repo)
+        registries = self.repo / "runtime/registries"
+        snapshots = registries / "nations_venues"
+        snapshots.mkdir(parents=True)
+        current = registries / "nations_venues.json"
+        secret = "test-only-venue-secret-123456"
+        current.write_text(json.dumps({"evidence": secret}), encoding="utf-8")
+        with patch.dict(os.environ, {"FOOTBALL_API_KEY": secret}):
+            with self.assertRaisesRegex(cloud_state.StateError, "凭据"):
+                cloud_state.save_state(self.repo)
+        current.write_text('{"venues": []}', encoding="utf-8")
+        link = snapshots / ("a" * 64 + ".json")
+        link.symlink_to(self.repo / "README.md")
+        with self.assertRaisesRegex(cloud_state.StateError, "符号链接"):
+            cloud_state.save_state(self.repo)
+        link.unlink()
+        hidden = snapshots / ".credentials.json"
+        hidden.write_text("{}", encoding="utf-8")
+        with self.assertRaisesRegex(cloud_state.StateError, "隐藏"):
             cloud_state.save_state(self.repo)
         self.assertIsNone(cloud_state._remote_oid(self.repo))
 

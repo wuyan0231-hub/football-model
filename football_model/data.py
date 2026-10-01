@@ -139,7 +139,7 @@ class APIClient:
         self.requests_made += 1
 
     def _request(self, endpoint: str, params: dict[str, Any]) -> dict:
-        if endpoint not in {"/status", "/leagues", "/fixtures"}:
+        if endpoint not in {"/status", "/leagues", "/fixtures", "/venues"}:
             raise APIError("此客户端不允许该 endpoint")
         url = BASE_URL + endpoint
         if params:
@@ -279,6 +279,24 @@ class APIClient:
         age = 7 * 86400 if max_age_seconds is None else max_age_seconds
         return self._cached_request("/fixtures", {"league": league_id, "season": season},
                                     force=bypass, max_age_seconds=age)
+
+    def fetch_venues(self, *, venue_id: int | None = None, name: str | None = None,
+                     force: bool = False) -> dict:
+        """Retrieve country evidence; registration checks exact identities separately.
+
+        Venue lookup shares the existing request/retry budget and redacted cache.
+        A name query is only a candidate search, never an association inference.
+        """
+        if (venue_id is None) == (name is None):
+            raise ValueError("场地查询须提供且仅提供 venue_id 或 name。")
+        if venue_id is not None:
+            params = {"id": _integer(venue_id, "venue_id", 1)}
+        else:
+            if not isinstance(name, str) or not name.strip():
+                raise ValueError("场地查询名称不能为空。")
+            params = {"name": name}
+        return self._cached_request("/venues", params, force=force,
+                                    max_age_seconds=7 * 86400)
 
 
 def _unique_fixtures(fixtures: list) -> list[dict]:
