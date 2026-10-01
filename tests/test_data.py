@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import Mock, patch
 from urllib.error import HTTPError, URLError
 
-from football_model.data import APIClient, APIError, DataError, normalize_fixtures, normalize_upcoming
+from football_model.data import APIClient, APIError, DataError, RequestBudgetError, normalize_fixtures, normalize_upcoming
 
 
 NOW = datetime(2026, 9, 21, 12, tzinfo=timezone.utc)
@@ -105,6 +105,135 @@ class DataTests(unittest.TestCase):
         with self.assertRaisesRegex(APIError, "剩余额度"):
             client.fetch_fixtures(39, 2026)
         self.assertEqual(opener.call_count, 1)
+
+    def test_optional_scope_preserves_run_and_known_daily_allowance(self):
+        for budget in ("run", "daily"):
+            with self.subTest(budget=budget):
+                opener = Mock(side_effect=lambda *a, **k: Response(envelope([])))
+                client = self.client(opener, max_requests=80)
+                client.requests_made = 79 if budget == "run" else 3
+                client.daily_remaining = None if budget == "run" else 1
+                original_used = client.requests_made
+                with client.reserve_requests(1):
+                    with self.assertRaisesRegex(RequestBudgetError, "预留"):
+                        client.fetch_venues(venue_id=780)
+                opener.assert_not_called()
+                self.assertEqual(client.requests_made, original_used)
+                # The scope must restore the original limits even on failure.
+                client.fetch_fixtures(39, 2026)
+                self.assertEqual(opener.call_count, 1)
+                self.assertEqual(client.requests_made, original_used + 1)
+                self.assertEqual(client.max_requests, 80)
+
+    def test_optional_scope_cache_hit_works_at_reserved_limits(self):
+        record = {"id": 780, "name": "Toumba Stadium", "city": "Thessaloniki", "country": "Greece"}
+        opener = Mock(side_effect=lambda *a, **k: Response(envelope([record])))
+        client = self.client(opener, max_requests=2)
+        original = client.fetch_venues(venue_id=780)
+        client.daily_remaining = 1
+        with client.reserve_requests(1):
+            cached = client.fetch_venues(venue_id=780)
+            self.assertTrue(cached["from_cache"])
+            self.assertEqual(cached["fetched_at"], original["fetched_at"])
+            with self.assertRaises(RequestBudgetError):
+                client.fetch_venues(venue_id=781)
+        self.assertEqual(client.requests_made, 1)
+        self.assertEqual(client.daily_remaining, 1)
+        self.assertEqual(opener.call_count, 1)
+        client.fetch_fixtures(39, 2026)
+        self.assertEqual(client.requests_made, 2)
+        self.assertEqual(client.daily_remaining, 0)
+        # Even an exhausted network budget must not hide valid cached evidence.
+        with client.reserve_requests(1):
+            self.assertTrue(client.fetch_venues(venue_id=780)["from_cache"])
+        self.assertEqual(opener.call_count, 2)
+
+    def test_known_daily_allowance_counts_headerless_failed_attempts(self):
+        opener = Mock(side_effect=[URLError("synthetic timeout"), Response(envelope([]))])
+        client = self.client(opener)
+        client.daily_remaining = 2
+        with client.reserve_requests(1):
+            with self.assertRaisesRegex(RequestBudgetError, "今日已知.*预留"):
+                client.fetch_venues(venue_id=780)
+        self.assertEqual(opener.call_count, 1)
+        self.assertEqual(client.requests_made, 1)
+        self.assertEqual(client.daily_remaining, 1)
+        self.assertIsNone(client.daily_remaining_reported)
+        client.fetch_fixtures(39, 2026)
+        self.assertEqual(opener.call_count, 2)
+        self.assertEqual(client.daily_remaining, 0)
+
+    def test_unknown_daily_allowance_is_protected_after_retry_header(self):
+        headers = Message()
+        headers["x-ratelimit-requests-remaining"] = "1"
+        opener = Mock(side_effect=[HTTPError("https://v3.football.api-sports.io/venues", 500,
+                                           "synthetic failure", headers, None),
+                                   Response(envelope([]), {"x-ratelimit-requests-remaining": "0"})])
+        client = self.client(opener)
+        self.assertIsNone(client.daily_remaining)
+        with client.reserve_requests(1):
+            with self.assertRaisesRegex(RequestBudgetError, "今日已知.*预留"):
+                client.fetch_venues(venue_id=780)
+        self.assertEqual(opener.call_count, 1)
+        self.assertEqual(client.requests_made, 1)
+        self.assertEqual(client.daily_remaining, 1)
+        self.assertEqual(client.daily_remaining_reported, 1)
+        client.fetch_fixtures(39, 2026)
+        self.assertEqual(opener.call_count, 2)
+        self.assertEqual(client.daily_remaining, 0)
+        self.assertEqual(client.daily_remaining_reported, 0)
+
+    def test_unknown_daily_allowance_stays_unknown_without_headers(self):
+        opener = Mock(side_effect=URLError("synthetic timeout"))
+        client = self.client(opener, max_requests=2)
+        with client.reserve_requests(1):
+            with self.assertRaisesRegex(RequestBudgetError, "本次运行.*预留"):
+                client.fetch_venues(venue_id=780)
+        self.assertEqual(opener.call_count, 1)
+        self.assertIsNone(client.daily_remaining)
+        self.assertIsNone(client.daily_remaining_reported)
+
+    def test_daily_header_updates_conservative_attempt_estimate(self):
+        opener = Mock(side_effect=[Response(envelope([]), {"x-ratelimit-requests-remaining": "4"}),
+                                   Response(envelope([]))])
+        client = self.client(opener)
+        client.daily_remaining = 2
+        with client.reserve_requests(1):
+            client.fetch_venues(venue_id=780)
+            # A genuine provider header is authoritative, not minus one twice.
+            self.assertEqual(client.daily_remaining, 4)
+            self.assertEqual(client.daily_remaining_reported, 4)
+            client.fetch_venues(venue_id=781)
+            self.assertEqual(client.daily_remaining, 3)
+            self.assertEqual(client.daily_remaining_reported, 4)
+        self.assertEqual(opener.call_count, 2)
+
+    def test_nested_reservation_cannot_release_outer_allowance(self):
+        opener = Mock(side_effect=lambda *a, **k: Response(envelope([])))
+        client = self.client(opener, max_requests=4)
+        client.requests_made = 2
+        with client.reserve_requests(2):
+            with client.reserve_requests(0):
+                with self.assertRaises(RequestBudgetError):
+                    client.fetch_venues(venue_id=780)
+            with client.reserve_requests(3):
+                with self.assertRaises(RequestBudgetError):
+                    client.fetch_venues(venue_id=780)
+            with self.assertRaises(RequestBudgetError):
+                client.fetch_venues(venue_id=780)
+        opener.assert_not_called()
+        client.fetch_fixtures(39, 2026)
+        self.assertEqual(opener.call_count, 1)
+
+    def test_invalid_reservation_never_changes_request_budget(self):
+        opener = Mock()
+        client = self.client(opener)
+        for reserve in (-1, True, 1.5, None):
+            with self.subTest(reserve=reserve), self.assertRaises(ValueError):
+                with client.reserve_requests(reserve):
+                    client.fetch_venues(venue_id=780)
+        opener.assert_not_called()
+        self.assertEqual(client.requests_made, 0)
 
     def test_minute_limit_header_causes_wait_before_next_call(self):
         opener = Mock(side_effect=[Response(envelope([]), {"X-RateLimit-Remaining": "0"}),

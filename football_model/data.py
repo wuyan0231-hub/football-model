@@ -12,6 +12,7 @@ client collects scores only; coverage flags do not implement a lineup model.
 from __future__ import annotations
 
 import copy
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
@@ -29,6 +30,10 @@ BASE_URL = "https://v3.football.api-sports.io"
 
 class APIError(RuntimeError):
     """Actionable, credential-redacted provider or request-budget error."""
+
+
+class RequestBudgetError(APIError):
+    """An HTTP attempt was refused to preserve a known request budget."""
 
 
 class DataError(ValueError):
@@ -69,6 +74,10 @@ class APIClient:
     the account's total daily quota: response headers impose that second limit.
     Current-season fetches bypass disk cache by default. Historical cache hits
     keep their original fetched_at and are never relabelled as fresh downloads.
+    Optional lookups can reserve requests for later required work. The known
+    daily balance is conservatively reduced for every network attempt, including
+    failures without headers; daily_remaining_reported retains the last actual
+    response-header value. An unknown daily balance stays None.
     """
 
     def __init__(self, data_dir: str | Path, max_requests: int = 80,
@@ -91,6 +100,7 @@ class APIClient:
         self.min_interval = float(min_interval)
         self.requests_made = 0
         self.daily_remaining: int | None = None
+        self.daily_remaining_reported: int | None = None
         self.minute_remaining: int | None = None
         self._opener = opener or build_opener(_NoRedirect()).open
         self._sleep = sleep or time.sleep
@@ -98,6 +108,25 @@ class APIClient:
         self._monotonic = monotonic or time.monotonic
         self._last_request: float | None = None
         self._wait_until: float = 0
+        self._reserved_requests = 0
+
+    @contextmanager
+    def reserve_requests(self, requests: int):
+        """Protect run and known daily quotas during optional network work.
+
+        Entering this scope does not check or consume quota: cached results can
+        still be returned when no optional network allowance remains. Nested
+        scopes retain the larger reservation, then restore the previous scope.
+        Required requests outside the scope can use the protected allowance.
+        """
+        if type(requests) is not int or requests < 0:
+            raise ValueError("reserve_requests 必须是非负整数")
+        previous = self._reserved_requests
+        self._reserved_requests = max(previous, requests)
+        try:
+            yield
+        finally:
+            self._reserved_requests = previous
 
     def _redact(self, value: Any) -> str:
         text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
@@ -120,16 +149,26 @@ class APIClient:
                 val = int(lowered[field])
                 if val >= 0:
                     setattr(self, attr, val)
+                    if attr == "daily_remaining":
+                        self.daily_remaining_reported = val
             except (KeyError, TypeError, ValueError):
                 pass
         if self.minute_remaining == 0:
             self._wait_until = self._monotonic() + 60
 
-    def _before_request(self) -> None:
+    def _check_request_budget(self) -> None:
         if self.requests_made >= self.max_requests:
-            raise APIError(f"达到本次运行请求上限 {self.max_requests}；停止下载，未完成部分不可当作成功")
+            raise RequestBudgetError(f"达到本次运行请求上限 {self.max_requests}；停止下载，未完成部分不可当作成功")
         if self.daily_remaining == 0:
-            raise APIError("接口返回今日剩余额度为 0；停止下载，请等待额度恢复")
+            raise RequestBudgetError("今日剩余额度为 0（供应商回报或已知余额按请求保守扣减）；停止下载，请等待额度恢复")
+        reserve = self._reserved_requests
+        if reserve and self.requests_made >= self.max_requests - reserve:
+            raise RequestBudgetError(f"本次运行请求预算需预留 {reserve} 次供后续下载；可选查询延后")
+        if reserve and self.daily_remaining is not None and self.daily_remaining <= reserve:
+            raise RequestBudgetError(f"今日已知请求余额需预留 {reserve} 次供后续下载；可选查询延后")
+
+    def _before_request(self) -> None:
+        self._check_request_budget()
         now = self._monotonic()
         wait = max(0.0, self._wait_until - now)
         if self._last_request is not None:
@@ -137,6 +176,10 @@ class APIClient:
         self._pause(wait)
         self._last_request = self._monotonic()
         self.requests_made += 1
+        if self.daily_remaining is not None:
+            # An attempt may reach the provider even if the response is lost.
+            # Do not keep spending a stale header balance on subsequent retries.
+            self.daily_remaining -= 1
 
     def _request(self, endpoint: str, params: dict[str, Any]) -> dict:
         if endpoint not in {"/status", "/leagues", "/fixtures", "/venues"}:
@@ -178,6 +221,7 @@ class APIClient:
                     raise APIError(f"API-Football HTTP {code}；请检查账户权限或稍后重试") from None
                 if self.daily_remaining == 0:
                     raise APIError("API-Football 今日额度耗尽；停止重试") from None
+                self._check_request_budget()
                 wait = 60.0 if code == 429 else float(2 ** (attempt + 1))
                 retry_after = exc.headers.get("Retry-After") if exc.headers else None
                 if retry_after is not None:
@@ -191,6 +235,7 @@ class APIClient:
                 if attempt >= self.max_retries:
                     # Do not expose raw exception text: it may contain headers.
                     raise APIError("连接 API-Football 失败或超时；已停止有限重试") from None
+                self._check_request_budget()
                 self._pause(float(2 ** (attempt + 1)))
         raise APIError("请求未完成")
 

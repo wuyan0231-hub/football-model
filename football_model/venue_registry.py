@@ -7,16 +7,18 @@ unique exact name/city result; neither path infers geography from the home team.
 from __future__ import annotations
 
 import copy
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import json
 from pathlib import Path, PurePosixPath
 import re
 
 from . import nations
-from .data import APIError, DataError, _iso, _utc, normalize_fixtures, normalize_upcoming
+from .data import APIError, DataError, RequestBudgetError, _iso, _utc, normalize_fixtures, normalize_upcoming
 
 
 CURRENT_PATH = Path("registries/nations_venues.json")
+RETRY_PATH = Path("registries/nations_venue_retry.json")
 SNAPSHOT_DIRECTORY = PurePosixPath("registries/nations_venues")
 _ID_METHOD = "api_football_venue_id_city_country"
 _NAME_METHOD = "api_football_exact_name_city_country"
@@ -150,6 +152,71 @@ def _atomic_json(path, value):
     temporary.replace(path)
 
 
+def _query_params(venue):
+    return {"id": venue["id"]} if _positive_id(venue["id"]) else {"name": venue["name"]}
+
+
+def _query_key(params):
+    return json.dumps(params, sort_keys=True, ensure_ascii=False)
+
+
+def _read_retry_state(path):
+    """Scheduling state is separate from the registry and prediction digest."""
+    if not path.exists():
+        return {"schema_version": 1, "run": 0, "next_order": 0, "queries": {}}
+    try:
+        state = json.loads(path.read_text(encoding="utf-8"))
+        if (not isinstance(state, dict) or state.get("schema_version") != 1
+                or type(state.get("run")) is not int or state["run"] < 0
+                or type(state.get("next_order")) is not int or state["next_order"] < 0
+                or not isinstance(state.get("queries"), dict)):
+            raise ValueError("invalid retry state")
+        orders = set()
+        for key, entry in state["queries"].items():
+            params = json.loads(key)
+            valid_params = isinstance(params, dict) and (
+                set(params) == {"id"} and _positive_id(params["id"])
+                or set(params) == {"name"} and isinstance(params["name"], str) and params["name"].strip())
+            if not valid_params or _query_key(params) != key or not isinstance(entry, dict):
+                raise ValueError("invalid retry query")
+            if any(type(entry.get(field)) is not int for field in
+                   ("first_seen_run", "first_seen_order", "last_attempt_run", "attempts")):
+                raise ValueError("invalid retry counters")
+            if (not 1 <= entry["first_seen_run"] <= state["run"]
+                    or not 1 <= entry["first_seen_order"] <= state["next_order"]
+                    or entry["first_seen_order"] in orders
+                    or not 0 <= entry["last_attempt_run"] <= state["run"]
+                    or entry["attempts"] < 0
+                    or (entry["attempts"] == 0) != (entry["last_attempt_run"] == 0)
+                    or entry["attempts"] > state["run"]):
+                raise ValueError("inconsistent retry counters")
+            orders.add(entry["first_seen_order"])
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        raise DataError("场地查询重试队列缺失字段或损坏，不能静默重置调度记录。") from exc
+    return state
+
+
+@contextmanager
+def _reserve_query_budget(client, reserve_requests):
+    guard = getattr(client, "reserve_requests", None)
+    if callable(guard):
+        # APIClient checks both budgets on each network attempt, after trying
+        # the cache. Do not turn a low balance into a cache-read rejection.
+        with guard(reserve_requests):
+            yield
+        return
+    # Compatibility for clients without the actual per-attempt guard. Their
+    # run limit remains protected; the caller also checks known daily balance.
+    maximum = getattr(client, "max_requests", None)
+    if type(maximum) is int:
+        client.max_requests = maximum - reserve_requests
+    try:
+        yield
+    finally:
+        if type(maximum) is int:
+            client.max_requests = maximum
+
+
 def _freeze(runtime, registry, base):
     digest = _validate_registry(registry, base)
     relative = SNAPSHOT_DIRECTORY / f"{digest}.json"
@@ -231,8 +298,12 @@ def resolve_venues(raw, client, runtime, asof, days=7, *, max_lookups=24, reserv
     current = runtime / CURRENT_PATH
     registry = _read_registry(current, base) if current.exists() else copy.deepcopy(base)
     teams, known, _ = nations._registry(registry)
+    retry_state = _read_retry_state(runtime / RETRY_PATH)
+    retry_state["run"] += 1
+    retry_run = retry_state["run"]
     groups = {}
     known_keys = set()
+    future_ids = {row["match_id"] for row in upcoming}
     for row in upcoming + list(reversed(historical)):
         venue = _observed(originals[row["match_id"]]["fixture"].get("venue"))
         key = nations._venue_key(venue)
@@ -240,56 +311,98 @@ def resolve_venues(raw, client, runtime, asof, days=7, *, max_lookups=24, reserv
             known_keys.add(key)
             continue
         identity = json.dumps(venue, sort_keys=True, ensure_ascii=False)
-        group = groups.setdefault(identity, {"venue": venue, "match_ids": []})
+        group = groups.setdefault(identity, {"venue": venue, "match_ids": [],
+                                             "priority": 0 if row["match_id"] in future_ids else 1})
         if row["match_id"] not in group["match_ids"]:
             group["match_ids"].append(row["match_id"])
     audit = {"schema_version": 1, "scope": "provider_backed_automatic_venue_registry",
              "added": [], "pending": [], "queries": [], "max_lookups": max_lookups,
              "reserve_requests": reserve_requests}
     lookup_results = {}
+    attempted_queries = set()
+    budget_deferred_queries = set()
     deferred = 0
 
-    def pending(group, code, reason):
-        audit["pending"].append({**copy.deepcopy(group), "reason_code": code, "reason": reason})
-
     for group in groups.values():
+        venue = group["venue"]
+        if _complete_strings(venue) and (venue["id"] is None or type(venue["id"]) is int and venue["id"] >= 0):
+            key = _query_key(_query_params(venue))
+            if key not in retry_state["queries"]:
+                retry_state["next_order"] += 1
+                retry_state["queries"][key] = {"first_seen_run": retry_run,
+                    "first_seen_order": retry_state["next_order"], "last_attempt_run": 0, "attempts": 0}
+
+    def scheduling_order(group):
+        venue = group["venue"]
+        if not _complete_strings(venue) or not (venue["id"] is None or type(venue["id"]) is int and venue["id"] >= 0):
+            return (-1, 0, group["priority"], 0)
+        entry = retry_state["queries"][_query_key(_query_params(venue))]
+        # Older unattempted deferred queries precede repeated failures, across
+        # both future and historical classes. In the same attempt/batch future
+        # fixtures retain their original kickoff order. Newly arriving work
+        # cannot continually displace an older unattempted batch.
+        return (entry["attempts"], entry["first_seen_run"], group["priority"], entry["first_seen_order"])
+
+    def mark_attempt(key):
+        if key not in attempted_queries:
+            entry = retry_state["queries"][key]
+            entry["attempts"] += 1
+            entry["last_attempt_run"] = retry_run
+            attempted_queries.add(key)
+
+    def pending(group, code, reason):
+        audit["pending"].append({"venue": copy.deepcopy(group["venue"]),
+            "match_ids": copy.deepcopy(group["match_ids"]), "reason_code": code, "reason": reason})
+
+    for group in sorted(groups.values(), key=scheduling_order):
         venue = group["venue"]
         if not _complete_strings(venue) or not (venue["id"] is None or type(venue["id"]) is int and venue["id"] >= 0):
             pending(group, "incomplete_fixture_venue", "场地ID、名称或城市缺失/无效，无法安全发现。")
             continue
-        params = {"id": venue["id"]} if _positive_id(venue["id"]) else {"name": venue["name"]}
-        query_key = json.dumps(params, sort_keys=True, ensure_ascii=False)
+        params = _query_params(venue)
+        query_key = _query_key(params)
         if query_key not in lookup_results:
-            if len(lookup_results) >= max_lookups:
+            if len(attempted_queries) >= max_lookups:
                 deferred += 1
                 pending(group, "lookup_budget_deferred", "本次唯一场馆查询已达上限，保留后续查询。")
                 continue
             maximum, used = getattr(client, "max_requests", None), getattr(client, "requests_made", None)
-            if (type(maximum) is int and type(used) is int and used >= maximum - reserve_requests) or getattr(client, "daily_remaining", None) == 0:
+            daily = getattr(client, "daily_remaining", None)
+            guarded = callable(getattr(client, "reserve_requests", None))
+            if not guarded and ((type(maximum) is int and type(used) is int and used >= maximum - reserve_requests)
+                                or type(daily) is int and daily <= reserve_requests):
                 deferred += 1
                 pending(group, "request_budget_deferred", "请求预算需保留后续赛事下载，场馆查询延后。")
                 continue
             try:
-                # Every retry calls APIClient._before_request. Lower its
-                # actual limit for this optional operation so retries cannot
-                # consume the budget reserved for later competitions.
-                protected_maximum = maximum - reserve_requests if type(maximum) is int else None
-                if protected_maximum is not None:
-                    client.max_requests = protected_maximum
-                try:
+                with _reserve_query_budget(client, reserve_requests):
                     envelope = client.fetch_venues(venue_id=venue["id"]) if "id" in params else client.fetch_venues(name=venue["name"])
-                finally:
-                    if protected_maximum is not None:
-                        client.max_requests = maximum
                 lookup_results[query_key] = envelope
+                mark_attempt(query_key)
                 audit["queries"].append({"params": params, "status": "received",
                     "fetched_at": envelope.get("fetched_at") if isinstance(envelope, dict) else None,
                     "from_cache": envelope.get("from_cache") if isinstance(envelope, dict) else None})
+            except RequestBudgetError:
+                lookup_results[query_key] = None
+                budget_deferred_queries.add(query_key)
+                current_used = getattr(client, "requests_made", None)
+                # A guard before the first HTTP attempt is truly deferred.
+                # A network failure followed by a protected retry has already
+                # used a turn and must not displace untouched deferred work.
+                if type(used) is int and type(current_used) is int and current_used > used:
+                    mark_attempt(query_key)
+                    audit["queries"].append({"params": params, "status": "request_budget_deferred",
+                                             "request_attempts": current_used - used})
             except APIError:
                 # APIError may carry provider text; keep a safe constant and
                 # leave known venues usable instead of recording credentials.
                 lookup_results[query_key] = None
+                mark_attempt(query_key)
                 audit["queries"].append({"params": params, "status": "api_error"})
+        if query_key in budget_deferred_queries:
+            deferred += 1
+            pending(group, "request_budget_deferred", "请求预算需保留后续赛事下载，场馆查询延后。")
+            continue
         envelope = lookup_results[query_key]
         if envelope is None:
             pending(group, "api_error", "场馆API查询失败，未自动登记。")
@@ -316,9 +429,11 @@ def resolve_venues(raw, client, runtime, asof, days=7, *, max_lookups=24, reserv
         registry["venues"].append(entry)
         audit["added"].append({"match_ids": group["match_ids"], "entry": copy.deepcopy(entry)})
     snapshot, digest = _freeze(runtime, registry, base)
+    _atomic_json(runtime / RETRY_PATH, retry_state)
     audit.update(registry_snapshot=snapshot, registry_sha256=digest,
+                 retry_state_path=RETRY_PATH.as_posix(), retry_run=retry_run,
                  counts={"candidate_tuples": len(groups), "known_tuples": len(known_keys),
-                         "queried": len(lookup_results), "added": len(audit["added"]),
+                         "queried": len(attempted_queries), "added": len(audit["added"]),
                          "pending": len(audit["pending"]), "deferred": deferred})
     return registry, audit
 

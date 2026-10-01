@@ -156,6 +156,49 @@ class CloudStateTests(unittest.TestCase):
         self.assertEqual(git(self.remote, "rev-parse", "model-state^"), first)
         self.assertEqual(git(restored, "rev-parse", "HEAD"), self.source_sha)
 
+    def test_deferred_venue_progress_survives_fresh_cloud_checkout(self) -> None:
+        from datetime import timedelta
+        from football_model.venue_registry import resolve_venues
+        from tests.test_venue_registry import NOW, VenueClient, fixture
+
+        venues = [{"id": 980001 + i, "name": f"Cloud queue ground {i}",
+                   "city": "London"} for i in range(25)]
+        raw = [fixture(500001 + i, venue, status="FT",
+                       when=NOW - timedelta(days=i + 1))
+               for i, venue in enumerate(venues)]
+
+        def response(venue_id=None, name=None):
+            i = venue_id - 980001
+            return [{**venues[i], "country": "England" if i == 24 else "United Kingdom"}]
+
+        cloud_state.load_state(self.repo)
+        first_client = VenueClient(response=response)
+        _, first_audit = resolve_venues(raw, first_client, self.repo / "runtime", NOW)
+        self.assertEqual(len(first_client.calls), 24)
+        self.assertEqual(first_audit["added"], [])
+        self.assertTrue(any(item["venue"]["id"] == 980025 and
+                            item["reason_code"] == "lookup_budget_deferred"
+                            for item in first_audit["pending"]))
+        first = cloud_state.save_state(self.repo)
+
+        # The next scheduled job has a fresh checkout and client; its only
+        # knowledge of earlier attempts comes from the persisted runtime.
+        next_run = self.clone("venue-queue-next-run")
+        self.assertEqual(cloud_state.load_state(next_run), first)
+        second_client = VenueClient(response=response)
+        registry, second_audit = resolve_venues(raw, second_client,
+                                               next_run / "runtime", NOW)
+        self.assertEqual(second_client.calls[0]["venue_id"], 980025)
+        self.assertEqual(len(second_audit["added"]), 1)
+        self.assertTrue(any(item["id"] == 980025 for item in registry["venues"]))
+        self.assertTrue((next_run / "runtime" / first_audit["registry_snapshot"]).is_file())
+        second = cloud_state.save_state(next_run)
+        restored = self.clone("venue-queue-restored")
+        self.assertEqual(cloud_state.load_state(restored), second)
+        registered = json.loads((restored / "runtime/registries/nations_venues.json").read_text())
+        self.assertTrue(any(item["id"] == 980025 for item in registered["venues"]))
+        self.assertEqual(git(restored, "rev-parse", "HEAD"), self.source_sha)
+
     def test_second_save_retains_previous_version_and_provenance(self) -> None:
         cloud_state.load_state(self.repo)
         self.write_model(self.repo, 1)

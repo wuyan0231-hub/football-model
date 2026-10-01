@@ -271,6 +271,8 @@ class VenueRegistryTests(unittest.TestCase):
             registry, audit = self.resolve([fixture(venue=NEW_VENUE)], client,
                                            reserve_requests=1)
             self.assertEqual(client.requests_made, 1)
+            retry = json.loads((self.runtime / audit["retry_state_path"]).read_text())
+            self.assertEqual(retry["queries"][json.dumps({"id": NEW_VENUE["id"]})]["attempts"], 1)
             self.assertEqual(client.max_requests, 2)
             self.assertEqual(len(audit["pending"]), 1)
             self.assertNotIn("synthetic-unit-test-secret", json.dumps(audit))
@@ -280,6 +282,129 @@ class VenueRegistryTests(unittest.TestCase):
             client.fetch_fixtures(39, 2026)
             self.assertEqual(client.requests_made, 2)
             self.assertEqual(opener.call_count, 2)
+
+    def test_deferred_history_is_queried_next_run_after_unresolvable_first_batch(self):
+        venues = [{"id": 980001 + i, "name": f"Unresolved Ground {i}", "city": "London"}
+                  for i in range(25)]
+        raw = [fixture(500001 + i, venue, status="FT", when=NOW - timedelta(days=i + 1))
+               for i, venue in enumerate(venues)]
+
+        def response(venue_id=None, name=None):
+            i = venue_id - 980001
+            return [provider_venue(venues[i], country="England" if i == 24 else "United Kingdom")]
+
+        first = VenueClient(response=response)
+        _, first_audit = self.resolve(raw, first)
+        self.assertEqual([call["venue_id"] for call in first.calls], list(range(980001, 980025)))
+        self.assertEqual(first_audit["added"], [])
+        self.assertEqual(first_audit["pending"][-1]["reason_code"], "lookup_budget_deferred")
+        # A fresh client reads the saved scheduler rather than retaining any
+        # in-process cursor. The formerly deferred stadium now gets evidence.
+        second = VenueClient(response=response)
+        registry, second_audit = self.resolve(raw, second)
+        self.assertEqual(second.calls[0]["venue_id"], venues[-1]["id"])
+        self.assertEqual(second_audit["counts"]["added"], 1)
+        entry = second_audit["added"][0]["entry"]
+        self.assertEqual(entry["verification"]["provider_record"]["country"], "England")
+        self.assertIn(entry, registry["venues"])
+
+    def test_future_overflow_cannot_permanently_displace_untouched_history(self):
+        future = [{"id": 981001 + i, "name": f"Unknown Future {i}", "city": "London"}
+                  for i in range(25)]
+        historic = {"id": 982001, "name": "Verifiable Historic Ground", "city": "London"}
+        raw = [fixture(510001 + i, venue, when=NOW + timedelta(hours=1, minutes=i))
+               for i, venue in enumerate(future)]
+        raw.append(fixture(510100, historic, status="FT"))
+        by_id = {venue["id"]: venue for venue in future + [historic]}
+
+        def response(venue_id=None, name=None):
+            return [provider_venue(by_id[venue_id], country="England" if venue_id == historic["id"]
+                                   else "United Kingdom")]
+
+        first = VenueClient(response=response)
+        _, initial = self.resolve(raw, first)
+        self.assertEqual([call["venue_id"] for call in first.calls], [v["id"] for v in future[:24]])
+        self.assertEqual(initial["counts"]["added"], 0)
+        second = VenueClient(response=response)
+        _, advanced = self.resolve(raw, second)
+        self.assertEqual([call["venue_id"] for call in second.calls[:2]],
+                         [future[-1]["id"], historic["id"]])
+        self.assertEqual(advanced["added"][0]["entry"]["id"], historic["id"])
+
+    def test_retry_progress_changes_neither_registry_digest_nor_frozen_evidence(self):
+        venues = [{"id": 983001 + i, "name": f"Pending Ground {i}", "city": "London"}
+                  for i in range(26)]
+        raw = [fixture(520001 + i, venue, status="FT", when=NOW - timedelta(days=i + 1))
+               for i, venue in enumerate(venues)]
+        by_id = {venue["id"]: venue for venue in venues}
+        response = lambda venue_id=None, name=None: [provider_venue(by_id[venue_id], country="United Kingdom")]
+        _, first = self.resolve(raw, VenueClient(response=response))
+        snapshot = self.runtime / first["registry_snapshot"]
+        original_bytes = snapshot.read_bytes()
+        initial_queue = (self.runtime / first["retry_state_path"]).read_bytes()
+        second_client = VenueClient(response=response)
+        _, second = self.resolve(raw, second_client)
+        self.assertEqual([call["venue_id"] for call in second_client.calls[:2]],
+                         [venues[24]["id"], venues[25]["id"]])
+        self.assertNotEqual((self.runtime / second["retry_state_path"]).read_bytes(), initial_queue)
+        self.assertEqual(second["registry_sha256"], first["registry_sha256"])
+        self.assertEqual(second["registry_snapshot"], first["registry_snapshot"])
+        self.assertEqual(snapshot.read_bytes(), original_bytes)
+
+    def test_budget_deferred_query_has_no_attempt_and_remains_first_next_run(self):
+        later = {**NEW_VENUE, "id": 984001, "name": "Later Pending Ground"}
+        raw = [fixture(1, NEW_VENUE), fixture(2, later, when=NOW + timedelta(days=2))]
+        blocked = VenueClient(max_requests=0)
+        _, audit = self.resolve(raw, blocked)
+        state = json.loads((self.runtime / audit["retry_state_path"]).read_text())
+        self.assertEqual(blocked.calls, [])
+        self.assertEqual(audit["counts"]["queried"], 0)
+        self.assertTrue(all(q["attempts"] == q["last_attempt_run"] == 0 for q in state["queries"].values()))
+        allowed = VenueClient()
+        _, next_audit = self.resolve(raw, allowed, max_lookups=1)
+        self.assertEqual(allowed.calls[0]["venue_id"], NEW_VENUE["id"])
+        self.assertEqual(next_audit["counts"]["added"], 1)
+
+    def test_same_query_aliases_share_one_persisted_attempt_and_rotate_together(self):
+        alias = {**NEW_VENUE, "name": "Alternate Fixture Name"}
+        later = {**NEW_VENUE, "id": 985001, "name": "Deferred Other Venue"}
+        raw = [fixture(1, NEW_VENUE), fixture(2, alias), fixture(3, later)]
+        by_id = {NEW_VENUE["id"]: NEW_VENUE, later["id"]: later}
+        response = lambda venue_id=None, name=None: [provider_venue(by_id[venue_id], country="United Kingdom")]
+        first_client = VenueClient(response=response)
+        _, audit = self.resolve(raw, first_client, max_lookups=1)
+        state = json.loads((self.runtime / audit["retry_state_path"]).read_text())
+        self.assertEqual(len(first_client.calls), 1)
+        self.assertEqual(len(state["queries"]), 2)
+        self.assertEqual(state["queries"][json.dumps({"id": NEW_VENUE["id"]})]["attempts"], 1)
+        second_client = VenueClient(response=response)
+        self.resolve(raw, second_client, max_lookups=1)
+        self.assertEqual(second_client.calls[0]["venue_id"], later["id"])
+
+    def test_newly_arriving_future_does_not_reset_older_deferred_batch(self):
+        old = {**NEW_VENUE, "id": 986001, "name": "Previously Deferred History"}
+        raw = [fixture(1, NEW_VENUE), fixture(2, old, status="FT")]
+        by_id = {NEW_VENUE["id"]: NEW_VENUE, old["id"]: old}
+        response = lambda venue_id=None, name=None: [provider_venue(by_id[venue_id], country="United Kingdom")]
+        self.resolve(raw, VenueClient(response=response), max_lookups=1)
+        newest = {**NEW_VENUE, "id": 986002, "name": "Newly Arriving Future"}
+        by_id[newest["id"]] = newest
+        second = VenueClient(response=response)
+        self.resolve([fixture(3, newest)] + raw, second, max_lookups=1)
+        self.assertEqual(second.calls[0]["venue_id"], old["id"])
+
+    def test_invalid_retry_queue_is_not_silently_reset(self):
+        raw = [fixture(venue=NEW_VENUE)]
+        self.resolve(raw, VenueClient(error=APIError("synthetic failure")))
+        path = self.runtime / "registries/nations_venue_retry.json"
+        saved = json.loads(path.read_text())
+        saved["queries"][json.dumps({"id": NEW_VENUE["id"]})]["attempts"] = -1
+        path.write_text(json.dumps(saved))
+        client = VenueClient()
+        with self.assertRaises(DataError):
+            self.resolve(raw, client)
+        self.assertEqual(client.calls, [])
+        self.assertEqual(json.loads(path.read_text()), saved)
 
     def test_conflicting_fixture_identity_fails_without_registration(self):
         original = fixture(1, NEW_VENUE)
