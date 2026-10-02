@@ -310,11 +310,22 @@ def match_packet(runtime, config, league, match_id, as_of=None, state_commit=Non
     if home_id == away_id or any(not isinstance(row.get(k), str) or not row[k].strip() for k in ("home_name", "away_name")):
         raise IntegrationError("主客队身份无效。")
     prediction = row.get("prediction")
+    venue_registry_provenance = {}
     if national:
         from .nations import validate_nations_forecast
+        from .venue_registry import load_forecast_registry
         try:
-            validate_nations_forecast(row)
-        except (ValueError, KeyError, TypeError) as exc:
+            registry = load_forecast_registry(runtime, row)
+            validate_nations_forecast(row, registry=registry)
+            if registry is not None:
+                registry_path = runtime / "registries" / "nations_venues" / (
+                    row["venue_evidence"]["registry_sha256"] + ".json")
+                venue_registry_provenance = {
+                    "venue_registry_snapshot": row["registry_snapshot"],
+                    "venue_registry_file_sha256": _sha(registry_path),
+                    "venue_registry_digest": row["venue_evidence"]["registry_sha256"],
+                }
+        except (ValueError, KeyError, TypeError, OSError) as exc:
             raise IntegrationError("欧国联场地证据无效或与当前登记表不一致。") from exc
         if not isinstance(prediction, dict) or prediction.get("neutral") is not row["neutral"]:
             raise IntegrationError("欧国联场地标记与预测不一致。")
@@ -346,7 +357,8 @@ def match_packet(runtime, config, league, match_id, as_of=None, state_commit=Non
                        "trained_at": bundle["trained_at"], "training_cutoff": model["training_cutoff"],
                        "training_data_sha256": model["training_data_sha256"],
                        "data_observed_at": row["data_observed_at"], "forecast_generated_at": row["generated_at"],
-                       "read_and_recomputed": True, "fit_performed": False},
+                       "read_and_recomputed": True, "fit_performed": False,
+                       **venue_registry_provenance},
         "latest_league_attempt": latest,
         "prediction": prediction, "validation": validation,
         "external_checks": {"current_fixture_status_and_kickoff": "pending", "actual_venue_and_neutral_status": "pending",

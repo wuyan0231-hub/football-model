@@ -269,5 +269,82 @@ class NationalPipelineTests(unittest.TestCase):
         self.assertEqual(input_fingerprint(matches, knobs, competition), original)
 
 
+class AutomaticallyRegisteredVenueClient(NationalClient):
+    """A new future venue has no matching training fixture; provider verifies it."""
+    NEW_GROUND = {"id": 910123, "name": "Synthetic Unseen National Ground", "city": "London"}
+
+    def __init__(self, now=NOW):
+        super().__init__(now)
+        self.venue_calls = []
+        self.fixtures.append(fixture(2003, now + timedelta(days=2), TEAMS[0], TEAMS[1],
+                                     (None, None), self.NEW_GROUND, "NS"))
+
+    def fetch_venues(self, *, venue_id=None, name=None, **kwargs):
+        self.requests_made += 1
+        self.venue_calls.append((venue_id, name))
+        return {"response": [{**self.NEW_GROUND, "country": "England"}],
+                "fetched_at": iso(self.now), "from_cache": False, "endpoint": "/venues",
+                "params": {"id": venue_id} if venue_id is not None else {"name": name}}
+
+
+class AutomaticallyRegisteredVenuePipelineTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.runtime = Path(self.temp.name) / "runtime"
+        self.client = AutomaticallyRegisteredVenueClient()
+        code, self.report = run_pipeline(CONFIG, self.runtime, "train", league="unl",
+                                         now=NOW, client=self.client)
+        self.assertEqual(code, 0, self.report)
+
+    def read(self, path):
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def packet(self):
+        return match_packet(self.runtime, CONFIG, "unl", 2003,
+                            as_of=iso(NOW + timedelta(hours=1)))
+
+    def test_new_stadium_absent_from_training_produces_verified_baseline(self):
+        item = self.report["competitions"][0]
+        bundle = self.read(self.runtime / "models" / "unl.json")
+        rows = self.read(self.runtime / "predictions" / self.report["run_id"] / "unl.json")
+        row = next(row for row in rows if row["match_id"] == 2003)
+        self.assertEqual(item["eligible_matches"], 180)
+        self.assertEqual((item["forecast_count"], item["unsupported_forecasts"]), (3, 1))
+        self.assertEqual(bundle["model"]["n_matches"], 180)
+        self.assertEqual(self.client.venue_calls, [(910123, None)])
+        self.assertEqual(row["status"], "exploratory_baseline")
+        self.assertEqual(row["venue_evidence"]["venue"], self.client.NEW_GROUND)
+        self.assertFalse(row["neutral"])
+        self.assertTrue((self.runtime / row["registry_snapshot"]).is_file())
+        packet = self.packet()
+        actual = score_distribution(bundle["model"], 10, 767, row["kickoff"], neutral=False)
+        self.assertEqual(packet["prediction"], actual)
+        self.assertTrue(packet["provenance"]["read_and_recomputed"])
+        self.assertFalse(packet["provenance"]["fit_performed"])
+
+    def test_saved_forecast_uses_its_snapshot_after_registry_grows(self):
+        from football_model.venue_registry import resolve_venues
+        before = self.packet()
+        other = {"id": 910124, "name": "Synthetic Second Unseen Ground", "city": "London"}
+
+        class AdditionalVenueClient:
+            requests_made = 0
+
+            def fetch_venues(self, **kwargs):
+                self.requests_made += 1
+                return {"response": [{**other, "country": "England"}],
+                        "fetched_at": iso(NOW), "from_cache": False, "endpoint": "/venues",
+                        "params": {"id": 910124}}
+
+        new_raw = [fixture(2004, NOW + timedelta(days=3), TEAMS[0], TEAMS[1],
+                           (None, None), other, "NS")]
+        _, audit = resolve_venues(new_raw, AdditionalVenueClient(), self.runtime, NOW)
+        self.assertEqual(len(audit["added"]), 1)
+        after = self.packet()
+        self.assertEqual(before["prediction"], after["prediction"])
+        self.assertTrue(after["provenance"]["read_and_recomputed"])
+
+
 if __name__ == "__main__":
     unittest.main()

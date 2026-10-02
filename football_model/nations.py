@@ -1,7 +1,7 @@
 """Isolated UEFA Nations League venue adapter; no fitting or parameter changes.
 
-The registry records exact observed provider identities and independently
-reviewed football-association venue locations. Unknown locations never imply a
+The registry records exact observed provider identities and reviewed or
+provider-verified football-association venue locations. Unknown locations never imply a
 home advantage. A venue in the nominal away association is deliberately not
 represented by this baseline, which cannot apply home advantage to that side.
 """
@@ -24,7 +24,9 @@ def _venue_key(venue):
     if not isinstance(venue, dict):
         return None
     vid, name, city = venue.get("id"), venue.get("name"), venue.get("city")
-    if vid is not None and (type(vid) is not int or vid <= 0):
+    # The provider also uses 0 for an unknown ID. Keep that raw identity;
+    # it can only classify after a name/city lookup has verified a registry entry.
+    if vid is not None and (type(vid) is not int or vid < 0):
         return None
     if not isinstance(name, str) or not name.strip() or not isinstance(city, str) or not city.strip():
         return None

@@ -2,6 +2,16 @@ name: 足球模型：数据检查与自动训练
 
 # This file configures a workflow; it does not deploy or enable it by itself.
 on:
+  # Recheck a venue-adapter release immediately; the daily all-league run stays unchanged.
+  push:
+    branches: [main]
+    paths:
+      - 'football_model/venue_registry.py'
+      - 'football_model/nations.py'
+      - 'football_model/nations_venues.json'
+      - 'football_model/data.py'
+      - 'football_model/cli.py'
+      - 'football_model/integration.py'
   workflow_dispatch:
     inputs:
       mode:
@@ -33,13 +43,13 @@ jobs:
     # Data/licensing and model state are intended for this private repository.
     if: >-
       github.event.repository.private == true &&
-      (github.event_name == 'workflow_dispatch' || vars.ENABLE_SCHEDULE == 'true')
+      (github.event_name == 'workflow_dispatch' || github.event_name == 'push' || vars.ENABLE_SCHEDULE == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
       PYTHONUNBUFFERED: '1'
-      MODE: ${{ github.event_name == 'schedule' && 'train' || inputs.mode }}
-      LEAGUE: ${{ github.event_name == 'schedule' && 'all' || inputs.league }}
+      MODE: ${{ github.event_name != 'workflow_dispatch' && 'train' || inputs.mode }}
+      LEAGUE: ${{ github.event_name == 'schedule' && 'all' || github.event_name == 'push' && 'unl' || inputs.league }}
     steps:
       - name: 读取程序
         uses: actions/checkout@v7
@@ -56,6 +66,10 @@ jobs:
 
       - name: 安装依赖
         run: python -m pip install -r requirements.txt
+
+      - name: 检查场地适配发布
+        if: ${{ github.event_name == 'push' }}
+        run: python -m unittest discover -s tests -v
 
       - name: 恢复上次模型与缓存
         id: restore
@@ -104,6 +118,8 @@ jobs:
             runtime/reports/
             runtime/predictions/
             runtime/models/
+            runtime/registries/
+            runtime/audits/unl/
           if-no-files-found: warn
           retention-days: 14
           include-hidden-files: false

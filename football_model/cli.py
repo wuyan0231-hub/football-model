@@ -127,7 +127,8 @@ def markdown_report(report: dict) -> str:
     return "\n".join(rows)
 
 
-def process_competition(client, competition, settings, runtime, now, mode, run_id):
+def process_competition(client, competition, settings, runtime, now, mode, run_id,
+                        venue_reserve_requests=0):
     key = competition["key"]
     national = competition.get("mode") == "national_baseline"
     result = {"key": key, "label": competition["label"], "status": "待检查", "seasons": [],
@@ -170,8 +171,15 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
             if key != "unl" or league["id"] != 5:
                 raise ValueError("国家队适配仅适用于已核实的欧国联赛事ID 5。")
             from .nations import prepare_nations
+            from .venue_registry import resolve_venues
+            venue_registry, venue_registration = resolve_venues(
+                raw, client, runtime, iso(now), days=settings["forecast_days"],
+                reserve_requests=venue_reserve_requests)
+            result["venue_registration"] = venue_registration
+            atomic_json(runtime / "audits" / key / f"{run_id}-venues.json", venue_registration)
             matches, national_upcoming, national_audit = prepare_nations(
-                raw, iso(now), days=settings["forecast_days"])
+                raw, iso(now), days=settings["forecast_days"], registry=venue_registry)
+            national_audit["registry_snapshot"] = venue_registration["registry_snapshot"]
             result["national_audit"] = national_audit
             atomic_json(runtime / "audits" / key / f"{run_id}.json", national_audit)
         else:
@@ -242,6 +250,7 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
             try:
                 if national:
                     row["venue_status"] = "供应商场地及归属登记表分类；本场仍须核对最新场地"
+                    row["registry_snapshot"] = venue_registration["registry_snapshot"]
                     if fixture.get("venue_error"):
                         raise ValueError(fixture["venue_error"])
                 if (parse_date(fixture["kickoff"]) - parse_date(bundle["trained_at"])).total_seconds() / 86400 > settings["max_model_age_days"]:
@@ -287,8 +296,12 @@ def run_pipeline(config, runtime, mode="audit", league="epl", now=None, client=N
     try:
         client = client or APIClient(runtime / "cache", max_requests=config["max_requests_per_run"])
         client.status()  # Confirm key validity first; do not save account identifiers or credentials.
-        for competition in chosen:
-            item = process_competition(client, competition, config, runtime, now, mode, run_id)
+        for position, competition in enumerate(chosen):
+            # Venue enrichment must not consume the ordinary data-fetch budget
+            # reserved for later competitions in the same all-league run.
+            reserve = (len(chosen) - position - 1) * (1 + config["history_seasons"])
+            item = process_competition(client, competition, config, runtime, now, mode,
+                                       run_id, venue_reserve_requests=reserve)
             report["competitions"].append(item)
             print(f"{item['label']}：{item['status']}；{item.get('eligible_matches', 0)}场可用赛果。", flush=True)
             if item["status"] == "未完成":
