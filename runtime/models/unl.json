@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "program_version": "0.1.0",
-  "model_id": "unl-20261002T052229677848Z",
+  "model_id": "unl-20261003T013044865986Z",
   "competition": {
     "key": "unl",
     "label": "欧洲国家联赛",
@@ -9,8 +9,8 @@
     "country": "World",
     "mode": "national_baseline"
   },
-  "data_fingerprint": "2bae4dcda87aea26c9405e6acc5a02e8b8d418fb31277300ca9106ccd106350c",
-  "trained_at": "2026-10-02T05:22:29.677848Z",
+  "data_fingerprint": "8eeaf3b84ac244656c80381edb9e5d621db4db6c81652aa5d68fd674036a180d",
+  "trained_at": "2026-10-03T01:30:44.865986Z",
   "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
   "maturity": "exploratory_baseline",
   "lineup_effects": "未量化",
@@ -21,357 +21,357 @@
     "fit_status": "converged",
     "trained": true,
     "validated_for_production": false,
-    "training_cutoff": "2026-10-02T05:22:29.677848Z",
-    "last_match_kickoff": "2026-10-01T18:45:00Z",
-    "last_result_assumed_available_at": "2026-10-01T22:45:00Z",
-    "n_matches": 361,
+    "training_cutoff": "2026-10-03T01:30:44.865986Z",
+    "last_match_kickoff": "2026-10-02T18:45:00Z",
+    "last_result_assumed_available_at": "2026-10-02T22:45:00Z",
+    "n_matches": 377,
     "n_teams": 54,
     "min_team_matches": 8,
     "low_sample_team_threshold": 5,
     "low_sample_team_ids": [],
     "excluded_after_cutoff_or_availability_delay": 0,
-    "training_data_sha256": "ce9f2de9da95c709dfe1f9f1abed40e8b09069be1839f9421f87e5b41d9bc93c",
+    "training_data_sha256": "22d1640d691549187adede210cb3587d8a3d1edcc264efd42b914b319788facd",
     "half_life_days": 180.0,
     "ridge": 3.0,
-    "effective_sample_size": 54.838254544154466,
-    "intercept": 0.19725895038368568,
-    "home_advantage": 0.014624773936514613,
+    "effective_sample_size": 63.35513232020664,
+    "intercept": 0.14129694475397606,
+    "home_advantage": 0.04122774631964393,
     "team_parameters": {
       "1": {
         "name": "Belgium",
-        "attack": 0.03216116954450489,
-        "defence": -0.058201228441056886,
+        "attack": 0.031061366211046767,
+        "defence": -0.05841801395841327,
         "training_matches": 14
       },
       "2": {
         "name": "France",
-        "attack": 0.17401454050810256,
-        "defence": -0.043535739426839734,
-        "training_matches": 16
+        "attack": 0.12136966406712857,
+        "defence": 0.08818498064031229,
+        "training_matches": 17
       },
       "3": {
         "name": "Croatia",
-        "attack": -0.011075744225950167,
-        "defence": 0.02931289993107658,
+        "attack": -0.004137648006437683,
+        "defence": 0.0051191447172751845,
         "training_matches": 16
       },
       "5": {
         "name": "Sweden",
-        "attack": 0.20833145620775295,
-        "defence": 0.05083917216367565,
-        "training_matches": 12
+        "attack": 0.32300721885733513,
+        "defence": 0.11810502601389594,
+        "training_matches": 15
       },
       "9": {
         "name": "Spain",
-        "attack": 0.297635430712202,
-        "defence": -0.08248265325270392,
+        "attack": 0.3196684581641269,
+        "defence": -0.08478877764611667,
         "training_matches": 18
       },
       "10": {
         "name": "England",
-        "attack": 0.1646853291627073,
-        "defence": 0.09383542637891486,
+        "attack": 0.17854758549001773,
+        "defence": 0.08896496723420824,
         "training_matches": 12
       },
       "14": {
         "name": "Serbia",
-        "attack": -0.058017903764359786,
-        "defence": 0.11678972505186493,
+        "attack": -0.04565190733556627,
+        "defence": 0.12014383362216818,
         "training_matches": 14
       },
       "15": {
         "name": "Switzerland",
-        "attack": 0.26698309611664334,
-        "defence": 0.1449676216896298,
-        "training_matches": 13
+        "attack": 0.4549765130209416,
+        "defence": 0.2678425662010444,
+        "training_matches": 14
       },
       "18": {
         "name": "Iceland",
-        "attack": 0.049252186065114396,
-        "defence": -0.18498263104402057,
+        "attack": 0.03428428497084344,
+        "defence": -0.1820913650452146,
         "training_matches": 12
       },
       "21": {
         "name": "Denmark",
-        "attack": 0.11856203099887101,
-        "defence": -0.18526936124655657,
+        "attack": 0.13568503326372788,
+        "defence": -0.1878207801142876,
         "training_matches": 15
       },
       "24": {
         "name": "Poland",
-        "attack": 0.033111573648347756,
-        "defence": -0.15765657739815375,
-        "training_matches": 12
+        "attack": 0.022021904420928697,
+        "defence": -0.3521055221921873,
+        "training_matches": 13
       },
       "25": {
         "name": "Germany",
-        "attack": 0.0994923132610895,
-        "defence": 0.030007698073129044,
-        "training_matches": 17
+        "attack": -0.026720233599946255,
+        "defence": 0.06136324765296003,
+        "training_matches": 18
       },
       "27": {
         "name": "Portugal",
-        "attack": 0.1931790804505004,
-        "defence": 0.13719993751398335,
+        "attack": 0.2039206264744964,
+        "defence": 0.11676510702335517,
         "training_matches": 17
       },
       "767": {
         "name": "Wales",
-        "attack": 0.02482823258037768,
-        "defence": 0.06428771206525813,
+        "attack": 0.006007983224933895,
+        "defence": 0.06697195095137169,
         "training_matches": 12
       },
       "768": {
         "name": "Italy",
-        "attack": 0.13097608858009488,
-        "defence": -0.08886683175132438,
-        "training_matches": 16
+        "attack": 0.39430444018768385,
+        "defence": 0.03538548291178551,
+        "training_matches": 18
       },
       "769": {
         "name": "Hungary",
-        "attack": -0.28232229297230554,
-        "defence": -0.1186222680069925,
-        "training_matches": 15
+        "attack": -0.2752022772197885,
+        "defence": 0.00504317241919996,
+        "training_matches": 16
       },
       "770": {
         "name": "Czechia",
-        "attack": 0.04682601649220112,
-        "defence": -0.02161489389006677,
+        "attack": 0.03992519014682175,
+        "defence": -0.03539491992179998,
         "training_matches": 12
       },
       "771": {
         "name": "Northern Ireland",
-        "attack": 0.0818263247647103,
-        "defence": 0.2918969923133387,
-        "training_matches": 13
+        "attack": 0.38897162979986066,
+        "defence": 0.3993864410569389,
+        "training_matches": 14
       },
       "772": {
         "name": "Ukraine",
-        "attack": -0.20056909400354025,
-        "defence": 0.3215313462369152,
-        "training_matches": 16
+        "attack": -0.2688138325239381,
+        "defence": 0.017860965604793593,
+        "training_matches": 17
       },
       "773": {
         "name": "Slovakia",
-        "attack": -0.0373701956208366,
-        "defence": 0.110295077322645,
-        "training_matches": 14
+        "attack": 0.13918911921861973,
+        "defence": 0.3122762250209081,
+        "training_matches": 15
       },
       "774": {
         "name": "Romania",
-        "attack": 0.2010581756453878,
-        "defence": 0.0723768570059488,
-        "training_matches": 12
+        "attack": 0.1527269992749501,
+        "defence": -0.019330882773144122,
+        "training_matches": 13
       },
       "775": {
         "name": "Austria",
-        "attack": 0.19570915248472046,
-        "defence": -0.03368912019322424,
+        "attack": 0.21094531618161916,
+        "defence": -0.03933819656767207,
         "training_matches": 15
       },
       "776": {
         "name": "Rep. Of Ireland",
-        "attack": 0.3318476148147008,
-        "defence": -0.001056257053058854,
+        "attack": 0.36618137604439843,
+        "defence": -0.02915466877762724,
         "training_matches": 16
       },
       "777": {
         "name": "Türkiye",
-        "attack": 0.12107584084925312,
-        "defence": 0.046421362591428886,
-        "training_matches": 14
+        "attack": 0.07305552561495725,
+        "defence": -0.35214129201272676,
+        "training_matches": 15
       },
       "778": {
         "name": "Albania",
-        "attack": -0.04481798597853649,
-        "defence": 0.009439245422939141,
+        "attack": -0.0519021059322229,
+        "defence": -0.004512529213032323,
         "training_matches": 10
       },
       "1090": {
         "name": "Norway",
-        "attack": 0.2951096485138051,
-        "defence": -0.16867266422416127,
+        "attack": 0.30990088485246836,
+        "defence": -0.19388630729020476,
         "training_matches": 14
       },
       "1091": {
         "name": "Slovenia",
-        "attack": -0.0930960682038936,
-        "defence": 0.05508366260067663,
-        "training_matches": 14
+        "attack": -0.17540504522185485,
+        "defence": 0.36313856970585634,
+        "training_matches": 16
       },
       "1092": {
         "name": "Latvia",
-        "attack": -0.09397382077232243,
-        "defence": 0.06043439688480648,
-        "training_matches": 13
+        "attack": -0.3635318854210019,
+        "defence": -0.062339110738894865,
+        "training_matches": 14
       },
       "1093": {
         "name": "Gibraltar",
-        "attack": -0.1857934452172866,
-        "defence": 0.035476575526598934,
+        "attack": -0.19069932822003297,
+        "defence": -0.005353636486369258,
         "training_matches": 13
       },
       "1094": {
         "name": "Armenia",
-        "attack": -0.028089666545506924,
-        "defence": -0.2627685149811465,
-        "training_matches": 14
+        "attack": 0.18326736883952524,
+        "defence": -0.3004976637872367,
+        "training_matches": 16
       },
       "1095": {
         "name": "Kazakhstan",
-        "attack": -0.14070522349300493,
-        "defence": -0.12232516374213478,
-        "training_matches": 12
+        "attack": -0.15589666713671269,
+        "defence": -0.2861886174594893,
+        "training_matches": 13
       },
       "1096": {
         "name": "Azerbaijan",
-        "attack": -0.07611374525326851,
-        "defence": -0.16719145104119795,
+        "attack": -0.05304716721166628,
+        "defence": -0.16583639845813125,
         "training_matches": 12
       },
       "1097": {
         "name": "Lithuania",
-        "attack": 0.0644813285424971,
-        "defence": 0.1693419281813996,
+        "attack": 0.07611228236545312,
+        "defence": 0.15877155201076962,
         "training_matches": 15
       },
       "1098": {
         "name": "Faroe Islands",
-        "attack": -0.06263352835500523,
-        "defence": 0.01309247150529813,
+        "attack": -0.0674679975363193,
+        "defence": 0.005864970932252156,
         "training_matches": 12
       },
       "1099": {
         "name": "Finland",
-        "attack": -0.08970333882642445,
-        "defence": -0.064038333049679,
+        "attack": -0.07914776336119665,
+        "defence": -0.06907448728059502,
         "training_matches": 12
       },
       "1100": {
         "name": "Belarus",
-        "attack": -0.06128548506459325,
-        "defence": 0.062177668808975316,
+        "attack": -0.04463748036107646,
+        "defence": 0.06727214672168737,
         "training_matches": 12
       },
       "1101": {
         "name": "Estonia",
-        "attack": -0.07758110547839106,
-        "defence": -0.015698804722474858,
-        "training_matches": 10
+        "attack": -0.2729589342616649,
+        "defence": 0.20684185472802585,
+        "training_matches": 11
       },
       "1102": {
         "name": "Luxembourg",
-        "attack": 0.17539705727809882,
-        "defence": 0.24825475345433753,
+        "attack": 0.19659139996286995,
+        "defence": 0.24414189278249976,
         "training_matches": 14
       },
       "1103": {
         "name": "Bulgaria",
-        "attack": -0.06186129202852592,
-        "defence": 0.009981844017579672,
-        "training_matches": 14
+        "attack": -0.26204767916883037,
+        "defence": 0.20218966829426305,
+        "training_matches": 15
       },
       "1104": {
         "name": "Georgia",
-        "attack": -0.2039980320179889,
-        "defence": 0.26721131377776963,
-        "training_matches": 16
+        "attack": -0.3871081708556144,
+        "defence": 0.25161256975498575,
+        "training_matches": 17
       },
       "1105": {
         "name": "FYR Macedonia",
-        "attack": -0.20967227160202018,
-        "defence": -0.1919916940504824,
-        "training_matches": 13
+        "attack": -0.3213889037456639,
+        "defence": -0.267642492789739,
+        "training_matches": 14
       },
       "1106": {
         "name": "Cyprus",
-        "attack": -0.04055465486030976,
-        "defence": -0.1368130061702794,
+        "attack": -0.03993187468999759,
+        "defence": -0.14440650752533188,
         "training_matches": 12
       },
       "1107": {
         "name": "Liechtenstein",
-        "attack": -0.2748129454118822,
-        "defence": -0.17024263613370846,
+        "attack": -0.26964600832587865,
+        "defence": -0.18700916510295307,
         "training_matches": 11
       },
       "1108": {
         "name": "Scotland",
-        "attack": -0.0413655947571344,
-        "defence": -0.0012319677577089705,
-        "training_matches": 14
+        "attack": -0.3612975482033958,
+        "defence": -0.03518502516927669,
+        "training_matches": 16
       },
       "1109": {
         "name": "Montenegro",
-        "attack": -0.06178212536521501,
-        "defence": -0.01700893645230748,
-        "training_matches": 12
+        "attack": 0.21664392296800988,
+        "defence": -0.12814363694931669,
+        "training_matches": 13
       },
       "1110": {
         "name": "Andorra",
-        "attack": -0.1606969300873381,
-        "defence": -0.18464288985096958,
+        "attack": -0.15833447673002765,
+        "defence": -0.20113238581816598,
         "training_matches": 11
       },
       "1111": {
         "name": "Kosovo",
-        "attack": -0.18402961447877222,
-        "defence": 0.20189846781065887,
+        "attack": -0.1697639323690508,
+        "defence": 0.187327203762783,
         "training_matches": 15
       },
       "1112": {
         "name": "Malta",
-        "attack": -0.11147483233336654,
-        "defence": -0.13446704790039393,
+        "attack": -0.09722701283277417,
+        "defence": -0.14885745569228967,
         "training_matches": 11
       },
       "1113": {
         "name": "Bosnia & Herzegovina",
-        "attack": -0.06522891030849558,
-        "defence": -0.1832056325054018,
-        "training_matches": 12
+        "attack": -0.05766712297385886,
+        "defence": -0.017050896894782685,
+        "training_matches": 13
       },
       "1114": {
         "name": "Moldova",
-        "attack": -0.015092430326548108,
-        "defence": 0.06338264512681328,
-        "training_matches": 10
+        "attack": -0.07067454710490115,
+        "defence": -0.06671734416953722,
+        "training_matches": 12
       },
       "1115": {
         "name": "San Marino",
-        "attack": -0.0040075027043916705,
-        "defence": 0.010547499073619638,
+        "attack": -0.0019290534419320383,
+        "defence": 0.006853977093803964,
         "training_matches": 8
       },
       "1116": {
         "name": "Israel",
-        "attack": -0.45882972118668636,
-        "defence": -0.08297063653131968,
+        "attack": -0.43914863576592345,
+        "defence": -0.0934484787598112,
         "training_matches": 12
       },
       "1117": {
         "name": "Greece",
-        "attack": 0.07455346072526141,
-        "defence": 0.11410922873504045,
-        "training_matches": 14
+        "attack": 0.04488827535205095,
+        "defence": 0.32186505439819696,
+        "training_matches": 15
       },
       "1118": {
         "name": "Netherlands",
-        "attack": 0.055458353296956066,
-        "defence": 0.04905341155304206,
+        "attack": 0.08813087058245898,
+        "defence": -0.0014260126609937907,
         "training_matches": 17
       }
     },
     "graph_connected": true,
     "constraints": {
-      "attack_sum": 1.3183898417423734e-16,
-      "defence_sum": -1.3877787807814457e-17
+      "attack_sum": -9.71445146547012e-17,
+      "defence_sum": 5.659535340374333e-17
     },
     "optimizer": {
       "success": true,
       "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
-      "iterations": 14,
-      "objective": 74.41792567665203,
+      "iterations": 19,
+      "objective": 112.79565522256425,
       "parameter_at_bound": false
     },
     "warnings": [
@@ -386,51 +386,51 @@
     "is_rolling_backtest": false,
     "minimum_test_matches": 40,
     "meets_minimum_supported_test_matches": true,
-    "evaluation_data_cutoff": "2026-10-02T05:22:29.677848Z",
+    "evaluation_data_cutoff": "2026-10-03T01:30:44.865986Z",
     "split": {
       "method": "chronological_fixed_model_holdout",
       "grouped_by": "kickoff_utc_calendar_date",
-      "train_cutoff": "2024-11-17T00:00:00Z",
-      "train_last_kickoff": "2024-11-16T19:45:00Z",
-      "test_start": "2024-11-17T14:00:00Z",
-      "test_end": "2026-10-01T18:45:00Z",
-      "training_count": 292,
-      "testing_count": 69,
+      "train_cutoff": "2024-11-18T00:00:00Z",
+      "train_last_kickoff": "2024-11-17T19:45:00Z",
+      "test_start": "2024-11-18T19:45:00Z",
+      "test_end": "2026-10-02T18:45:00Z",
+      "training_count": 300,
+      "testing_count": 77,
       "result_availability_delay_hours": 4,
       "embargoed_count": 0,
       "embargoed_match_ids": []
     },
     "coverage": {
-      "total": 69,
-      "scored": 69,
+      "total": 77,
+      "scored": 77,
       "excluded": 0,
       "ratio": 1.0,
       "exclusions": []
     },
     "model_metrics": {
-      "n": 69,
-      "log_loss": 1.1008118127720814,
-      "brier_score": 0.667538575147761,
+      "n": 77,
+      "log_loss": 1.140870419092078,
+      "brier_score": 0.6933910099400099,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
     "baseline_metrics": {
-      "n": 69,
-      "log_loss": 1.0929686570198487,
-      "brier_score": 0.6632295080135456,
+      "n": 77,
+      "log_loss": 1.0957388256520453,
+      "brier_score": 0.6650002887226739,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
     "baseline": {
       "name": "training_league_home_away_mean_poisson",
-      "home_rate": 1.4205128205128206,
-      "away_rate": 1.1606837606837608,
+      "home_rate": 1.43261231281198,
+      "away_rate": 1.156405990016639,
       "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
       "same_scored_matches_as_model": true
     },
     "comparison": {
-      "model_minus_baseline_log_loss": 0.007843155752232711,
-      "model_minus_baseline_brier_score": 0.004309067134215416,
+      "model_minus_baseline_log_loss": 0.0451315934400327,
+      "model_minus_baseline_brier_score": 0.02839072121733599,
       "lower_is_better": true
     },
     "warnings": [
@@ -460,11 +460,11 @@
         "odds": true
       },
       "fixtures": 156,
-      "fetched_at": "2026-10-02T05:22:36.319897Z",
+      "fetched_at": "2026-10-03T01:32:29.115110Z",
       "from_cache": false,
       "status_counts": {
-        "FT": 60,
-        "NS": 96
+        "FT": 70,
+        "NS": 86
       }
     },
     {
@@ -526,21 +526,21 @@
   "national_audit": {
     "scope": "uefa_nations_league_only",
     "provider_league_id": 5,
-    "registry_sha256": "c11176720b5050ab87ff384a24ded81adccf15a75e08ccd1f2a32062c1e75fe8",
+    "registry_sha256": "8506cb7ed22c20c7a3470e08bdd63de55bed767330ae93fe508450ecd77dedf1",
     "raw_records": 512,
     "unique_raw_fixtures": 512,
     "duplicate_records": 0,
     "raw_status_counts": {
       "AET": 3,
       "CANC": 6,
-      "FT": 403,
-      "NS": 96,
+      "FT": 413,
+      "NS": 86,
       "PEN": 4
     },
-    "eligible_regulation": 410,
-    "admitted": 361,
-    "excluded": 49,
-    "neutral": 25,
+    "eligible_regulation": 420,
+    "admitted": 377,
+    "excluded": 43,
+    "neutral": 26,
     "exclusions": [
       {
         "match_id": 1316569,
@@ -598,17 +598,6 @@
         }
       },
       {
-        "match_id": 1545602,
-        "season": 2026,
-        "stage": "League C - 1",
-        "reason": "场地ID、名称与城市的精确组合未登记核实。",
-        "venue": {
-          "id": 121,
-          "name": "Vazgen Sargsyan Republican Stadium",
-          "city": "Yerevan"
-        }
-      },
-      {
         "match_id": 1528882,
         "season": 2026,
         "stage": "League A - 1",
@@ -642,17 +631,6 @@
         }
       },
       {
-        "match_id": 1528886,
-        "season": 2026,
-        "stage": "League B - 1",
-        "reason": "场地ID、名称与城市的精确组合未登记核实。",
-        "venue": {
-          "id": 1501,
-          "name": "Strawberry Arena",
-          "city": "Solna"
-        }
-      },
-      {
         "match_id": 1528887,
         "season": 2026,
         "stage": "League C - 1",
@@ -661,17 +639,6 @@
           "id": 1095,
           "name": "Stadion pod Goricom",
           "city": "Podgorica"
-        }
-      },
-      {
-        "match_id": 1545658,
-        "season": 2026,
-        "stage": "League B - 1",
-        "reason": "场地ID、名称与城市的精确组合未登记核实。",
-        "venue": {
-          "id": 1442,
-          "name": "Stožice Stadium",
-          "city": "Ljubljana"
         }
       },
       {
@@ -752,17 +719,6 @@
         }
       },
       {
-        "match_id": 1528894,
-        "season": 2026,
-        "stage": "League C - 1",
-        "reason": "场地ID、名称与城市的精确组合未登记核实。",
-        "venue": {
-          "id": 22674,
-          "name": "Štadión Tatran",
-          "city": "Prešov"
-        }
-      },
-      {
         "match_id": 1528895,
         "season": 2026,
         "stage": "League D - 2",
@@ -818,28 +774,6 @@
         }
       },
       {
-        "match_id": 1528899,
-        "season": 2026,
-        "stage": "League A - 2",
-        "reason": "场地ID、名称与城市的精确组合未登记核实。",
-        "venue": {
-          "id": 698,
-          "name": "WWK Arena",
-          "city": "Augsburg"
-        }
-      },
-      {
-        "match_id": 1528903,
-        "season": 2026,
-        "stage": "League C - 2",
-        "reason": "场地ID、名称与城市的精确组合未登记核实。",
-        "venue": {
-          "id": 121,
-          "name": "Vazgen Sargsyan Republican Stadium",
-          "city": "Yerevan"
-        }
-      },
-      {
         "match_id": 1545605,
         "season": 2026,
         "stage": "League C - 2",
@@ -862,17 +796,6 @@
         }
       },
       {
-        "match_id": 1528905,
-        "season": 2026,
-        "stage": "League A - 2",
-        "reason": "场地ID、名称与城市的精确组合未登记核实。",
-        "venue": {
-          "id": 20424,
-          "name": "Bursa Büyükşehir Stadyumu",
-          "city": "Bursa"
-        }
-      },
-      {
         "match_id": 1528906,
         "season": 2026,
         "stage": "League B - 2",
@@ -881,17 +804,6 @@
           "id": 1971,
           "name": "Puskás Aréna",
           "city": "Budapest"
-        }
-      },
-      {
-        "match_id": 1528907,
-        "season": 2026,
-        "stage": "League B - 2",
-        "reason": "场地ID、名称与城市的精确组合未登记核实。",
-        "venue": {
-          "id": 1501,
-          "name": "Strawberry Arena",
-          "city": "Solna"
         }
       },
       {
@@ -972,17 +884,6 @@
         }
       },
       {
-        "match_id": 1528915,
-        "season": 2026,
-        "stage": "League C - 2",
-        "reason": "场地ID、名称与城市的精确组合未登记核实。",
-        "venue": {
-          "id": 19922,
-          "name": "Hristo Botev Stadium",
-          "city": "Plovdiv"
-        }
-      },
-      {
         "match_id": 1545606,
         "season": 2026,
         "stage": "League C - 2",
@@ -991,28 +892,6 @@
           "id": 0,
           "name": "Stade de Luxembourg",
           "city": "Luxembourg"
-        }
-      },
-      {
-        "match_id": 1545651,
-        "season": 2026,
-        "stage": "League B - 2",
-        "reason": "场地ID、名称与城市的精确组合未登记核实。",
-        "venue": {
-          "id": 2617,
-          "name": "Hampden Park Stadium",
-          "city": "Glasgow"
-        }
-      },
-      {
-        "match_id": 1545661,
-        "season": 2026,
-        "stage": "League B - 2",
-        "reason": "场地ID、名称与城市的精确组合未登记核实。",
-        "venue": {
-          "id": 1442,
-          "name": "Stožice Stadium",
-          "city": "Ljubljana"
         }
       },
       {
@@ -1080,6 +959,61 @@
           "name": "Ta'Qali National Stadium",
           "city": "Takali"
         }
+      },
+      {
+        "match_id": 1528930,
+        "season": 2026,
+        "stage": "League C - 3",
+        "reason": "场地ID、名称与城市的精确组合未登记核实。",
+        "venue": {
+          "id": 0,
+          "name": "GSP Stadium",
+          "city": "Nicosia"
+        }
+      },
+      {
+        "match_id": 1545608,
+        "season": 2026,
+        "stage": "League C - 3",
+        "reason": "场地ID、名称与城市的精确组合未登记核实。",
+        "venue": {
+          "id": 2611,
+          "name": "Skonto",
+          "city": "Riga"
+        }
+      },
+      {
+        "match_id": 1528925,
+        "season": 2026,
+        "stage": "League A - 3",
+        "reason": "场地ID、名称与城市的精确组合未登记核实。",
+        "venue": {
+          "id": 192,
+          "name": "Stade Maurice Dufrasne",
+          "city": "Liege"
+        }
+      },
+      {
+        "match_id": 1528928,
+        "season": 2026,
+        "stage": "League B - 3",
+        "reason": "场地ID、名称与城市的精确组合未登记核实。",
+        "venue": {
+          "id": 0,
+          "name": "National Stadium Warsaw",
+          "city": "Warsaw"
+        }
+      },
+      {
+        "match_id": 1528931,
+        "season": 2026,
+        "stage": "League C - 3",
+        "reason": "场地ID、名称与城市的精确组合未登记核实。",
+        "venue": {
+          "id": 0,
+          "name": "Torsvollur",
+          "city": "Torshavn"
+        }
       }
     ],
     "by_season": {
@@ -1096,10 +1030,10 @@
         "neutral": 14
       },
       "2026": {
-        "eligible_regulation": 60,
-        "admitted": 12,
-        "excluded": 48,
-        "neutral": 2
+        "eligible_regulation": 70,
+        "admitted": 28,
+        "excluded": 42,
+        "neutral": 3
       }
     },
     "by_stage": {
@@ -1111,8 +1045,8 @@
       },
       "League C - 1": {
         "eligible_regulation": 24,
-        "admitted": 16,
-        "excluded": 8,
+        "admitted": 18,
+        "excluded": 6,
         "neutral": 2
       },
       "League D - 1": {
@@ -1123,8 +1057,8 @@
       },
       "League B - 1": {
         "eligible_regulation": 23,
-        "admitted": 18,
-        "excluded": 5,
+        "admitted": 20,
+        "excluded": 3,
         "neutral": 1
       },
       "League D - 2": {
@@ -1135,38 +1069,38 @@
       },
       "League C - 2": {
         "eligible_regulation": 24,
-        "admitted": 16,
-        "excluded": 8,
+        "admitted": 18,
+        "excluded": 6,
         "neutral": 1
       },
       "League A - 2": {
         "eligible_regulation": 24,
-        "admitted": 17,
-        "excluded": 7,
+        "admitted": 19,
+        "excluded": 5,
         "neutral": 1
       },
       "League B - 2": {
         "eligible_regulation": 23,
-        "admitted": 17,
-        "excluded": 6,
+        "admitted": 20,
+        "excluded": 3,
         "neutral": 1
       },
       "League A - 3": {
-        "eligible_regulation": 20,
-        "admitted": 16,
-        "excluded": 4,
+        "eligible_regulation": 22,
+        "admitted": 17,
+        "excluded": 5,
         "neutral": 1
       },
       "League B - 3": {
-        "eligible_regulation": 17,
-        "admitted": 17,
-        "excluded": 0,
-        "neutral": 3
+        "eligible_regulation": 21,
+        "admitted": 20,
+        "excluded": 1,
+        "neutral": 4
       },
       "League C - 3": {
-        "eligible_regulation": 16,
-        "admitted": 16,
-        "excluded": 0,
+        "eligible_regulation": 20,
+        "admitted": 17,
+        "excluded": 3,
         "neutral": 2
       },
       "League D - 3": {
@@ -1296,30 +1230,10 @@
         "neutral": 0
       }
     },
-    "upcoming_total": 44,
+    "upcoming_total": 34,
     "upcoming_supported_venue": 13,
-    "upcoming_unsupported_venue": 31,
+    "upcoming_unsupported_venue": 21,
     "upcoming_venue_errors": [
-      {
-        "match_id": 1528930,
-        "reason": "场地ID、名称与城市的精确组合未登记核实。"
-      },
-      {
-        "match_id": 1545608,
-        "reason": "场地ID、名称与城市的精确组合未登记核实。"
-      },
-      {
-        "match_id": 1528925,
-        "reason": "场地ID、名称与城市的精确组合未登记核实。"
-      },
-      {
-        "match_id": 1528928,
-        "reason": "场地ID、名称与城市的精确组合未登记核实。"
-      },
-      {
-        "match_id": 1528931,
-        "reason": "场地ID、名称与城市的精确组合未登记核实。"
-      },
       {
         "match_id": 1528932,
         "reason": "场地ID、名称与城市的精确组合未登记核实。"
@@ -1354,35 +1268,15 @@
       },
       {
         "match_id": 1545611,
-        "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
-      },
-      {
-        "match_id": 1528944,
-        "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
-      },
-      {
-        "match_id": 1528945,
-        "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
-      },
-      {
-        "match_id": 1528946,
-        "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
-      },
-      {
-        "match_id": 1528947,
-        "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
-      },
-      {
-        "match_id": 1528948,
-        "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+        "reason": "场地ID、名称与城市的精确组合未登记核实。"
       },
       {
         "match_id": 1528949,
-        "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+        "reason": "场地ID、名称与城市的精确组合未登记核实。"
       },
       {
         "match_id": 1528950,
-        "reason": "场地ID/名称/城市缺失或无效，不能推定为主场。"
+        "reason": "场地ID、名称与城市的精确组合未登记核实。"
       },
       {
         "match_id": 1528951,
@@ -1492,7 +1386,7 @@
       "完整训练对阵图检查不代替留出切分训练图检查；原训练保护仍适用。",
       "仅90分钟加伤停补时；阵容、伤停、xG与战术均未量化。"
     ],
-    "registry_snapshot": "registries/nations_venues/c11176720b5050ab87ff384a24ded81adccf15a75e08ccd1f2a32062c1e75fe8.json"
+    "registry_snapshot": "registries/nations_venues/8506cb7ed22c20c7a3470e08bdd63de55bed767330ae93fe508450ecd77dedf1.json"
   },
   "venue_policy": "Exact provider venue and association registry; third-country neutral; unknown excluded."
 }
