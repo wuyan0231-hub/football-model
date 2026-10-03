@@ -35,6 +35,11 @@ def git(repo: Path, *args: str) -> str:
 
 class CloudStateTests(unittest.TestCase):
     def setUp(self) -> None:
+        # The fixtures below use a local main branch, independent of the PR
+        # ref of the CI job running this test suite.
+        environment = patch.dict(os.environ, {"GITHUB_REF": ""})
+        environment.start()
+        self.addCleanup(environment.stop)
         self.temp = tempfile.TemporaryDirectory(prefix="football-state-test-")
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
@@ -213,6 +218,15 @@ class CloudStateTests(unittest.TestCase):
         self.assertEqual(metadata["source_sha"], self.source_sha)
         self.assertEqual(metadata["previous_state_oid"], first)
         self.assertEqual(metadata["source_ref"], "refs/heads/main")
+
+    def test_state_metadata_preserves_explicit_ci_ref(self) -> None:
+        with patch.dict(os.environ, {"GITHUB_REF": "refs/pull/42/merge"}):
+            cloud_state.load_state(self.repo)
+            self.write_model(self.repo, 1)
+            cloud_state.save_state(self.repo)
+        metadata = json.loads(git(self.remote, "show", "model-state:state_metadata.json"))
+        self.assertEqual(metadata["source_ref"], "refs/pull/42/merge")
+        self.assertEqual(metadata["source_sha"], self.source_sha)
 
     def test_remote_conflict_never_overwrites_newer_state(self) -> None:
         cloud_state.load_state(self.repo)

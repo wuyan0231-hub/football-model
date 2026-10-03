@@ -1,7 +1,8 @@
 """Bounded provider-backed Nations League venue discovery and frozen registries.
 
 Fixture tuples remain unchanged. Positive provider IDs can verify a name alias
-only when the independently returned city agrees exactly. Missing IDs require a
+when the independently returned city agrees exactly or a narrowly reviewed
+same-stadium city spelling is supported by frozen evidence. Missing IDs require a
 unique exact name/city result; neither path infers geography from the home team.
 """
 from __future__ import annotations
@@ -20,6 +21,7 @@ from .data import APIError, DataError, RequestBudgetError, _iso, _utc, normalize
 CURRENT_PATH = Path("registries/nations_venues.json")
 RETRY_PATH = Path("registries/nations_venue_retry.json")
 SNAPSHOT_DIRECTORY = PurePosixPath("registries/nations_venues")
+CITY_ALIASES_PATH = Path(__file__).with_name("nations_venue_city_aliases.json")
 _ID_METHOD = "api_football_venue_id_city_country"
 _NAME_METHOD = "api_football_exact_name_city_country"
 _COUNTRY_ALIASES = {
@@ -55,6 +57,60 @@ def _complete_strings(venue):
         isinstance(venue.get(key), str) and venue[key].strip() for key in ("name", "city"))
 
 
+def _city_alias_rules():
+    try:
+        catalog = json.loads(CITY_ALIASES_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise DataError("已审核场地城市别名表缺失或损坏。") from exc
+    if not isinstance(catalog, dict) or catalog.get("schema_version") != 1 or not isinstance(catalog.get("aliases"), list):
+        raise DataError("场地城市别名表版本或结构无效。")
+    ids = set()
+    for rule in catalog["aliases"]:
+        if (not isinstance(rule, dict) or not isinstance(rule.get("rule_id"), str)
+                or not rule["rule_id"] or rule["rule_id"] in ids
+                or not _positive_id(rule.get("provider_id"))
+                or not isinstance(rule.get("association"), str)
+                or not _complete_strings(rule.get("fixture_venue"))
+                or not _complete_strings(rule.get("provider_venue"))
+                or rule["fixture_venue"].get("id") != rule["provider_id"]
+                or rule["provider_venue"].get("id") != rule["provider_id"]
+                or not isinstance(rule.get("sources"), list) or not rule["sources"]):
+            raise DataError("场地城市别名缺少唯一审核编号、精确身份或独立来源。")
+        reviewed = _utc(rule.get("reviewed_at"))
+        for source in rule["sources"]:
+            if (not isinstance(source, dict) or not isinstance(source.get("url"), str)
+                    or not source["url"].startswith("https://")
+                    or not isinstance(source.get("statement"), str) or not source["statement"].strip()
+                    or not isinstance(source.get("source_sha256"), str)
+                    or re.fullmatch(r"[0-9a-f]{64}", source["source_sha256"]) is None
+                    or _utc(source.get("fetched_at")) > reviewed):
+                raise DataError("场地城市别名独立来源或审核时间无效。")
+        ids.add(rule["rule_id"])
+    return catalog["aliases"]
+
+
+def _city_alias(venue, provider, association):
+    if not _positive_id(venue.get("id")) or provider.get("id") != venue["id"]:
+        return None
+    for rule in _city_alias_rules():
+        if (rule["provider_id"] == venue["id"] and rule["association"] == association
+                and rule["fixture_venue"] == _observed(venue)
+                and rule["provider_venue"] == _observed(provider)):
+            return copy.deepcopy(rule)
+    return None
+
+
+def _compatible_registered_locations(first, second):
+    if first["association"] != second["association"]:
+        return False
+    if first["city"] == second["city"]:
+        return True
+    # Only the two reviewed complete tuples for this provider ID are aliases.
+    # Never normalize accents globally or ignore city/name disagreements.
+    return (_city_alias(first, second, first["association"]) is not None
+            or _city_alias(second, first, first["association"]) is not None)
+
+
 def _base_registry():
     try:
         base = json.loads(nations.REGISTRY_PATH.read_text(encoding="utf-8"))
@@ -66,7 +122,7 @@ def _base_registry():
 
 def _validate_verification(entry, teams):
     verification = entry.get("verification")
-    if not isinstance(verification, dict) or verification.get("schema_version") != 1:
+    if not isinstance(verification, dict) or verification.get("schema_version") not in (1, 2):
         raise DataError("自动场地登记缺少有效来源证据。")
     observed = _observed(entry)
     if verification.get("original_venue") != observed:
@@ -78,8 +134,13 @@ def _validate_verification(entry, teams):
     association = _association(provider.get("country"), teams)
     if association is None or association != entry.get("association"):
         raise DataError("自动场地登记的国家与足协归属不一致或不能明确识别。")
+    city_alias = verification.get("city_alias_evidence")
     if provider["city"] != observed["city"]:
-        raise DataError("自动场地登记的城市与供应商来源不一致。")
+        expected_alias = _city_alias(observed, provider, association)
+        if expected_alias is None or city_alias != expected_alias or verification["schema_version"] != 2:
+            raise DataError("自动场地登记的城市与供应商来源不一致或别名证据无效。")
+    elif city_alias is not None:
+        raise DataError("完全相同的城市不能附加不适用的别名证据。")
     if verification.get("endpoint") != "/venues":
         raise DataError("自动场地登记的查询端点无效。")
     if _positive_id(observed["id"]):
@@ -98,6 +159,7 @@ def _validate_verification(entry, teams):
         raise DataError("自动场地登记的名称别名标记不一致。")
     for field in ("fetched_at", "verified_at"):
         _utc(verification.get(field))
+    nations._entry_temporal(entry)
     if type(verification.get("from_cache")) is not bool:
         raise DataError("自动场地登记缺少明确的缓存来源状态。")
 
@@ -131,7 +193,7 @@ def _validate_registry(registry, base):
         for other in registry["venues"]:
             if other is entry or _effective_id(other) != canonical_id:
                 continue
-            if other["city"] != entry["city"] or other["association"] != entry["association"]:
+            if not _compatible_registered_locations(entry, other):
                 raise DataError("自动场地登记的同ID城市或足协归属互相冲突。")
     return digest
 
@@ -269,25 +331,27 @@ def _select_provider(envelope, venue, teams, params):
     provider = candidates[0]
     if not _positive_id(provider.get("id")) or not _complete_strings(provider):
         return None, "invalid_provider_venue", "供应商场馆身份或名称城市无效。"
-    if provider["city"] != venue["city"]:
-        return None, "city_mismatch", "同ID场馆城市与原始赛程城市不一致。"
     association = _association(provider.get("country"), teams)
     if association is None:
         return None, "unknown_association", "场馆国家缺失、非支持足协或不能明确区分足协。"
+    alias = _city_alias(venue, provider, association) if provider["city"] != venue["city"] else None
+    if provider["city"] != venue["city"] and alias is None:
+        return None, "city_mismatch", "同ID场馆城市与原始赛程城市不一致且无已审核精确别名。"
     try:
         _utc(envelope.get("fetched_at"))
     except DataError:
         return None, "missing_source_time", "场馆查询没有有效原始抓取时间。"
     if type(envelope.get("from_cache")) is not bool:
         return None, "missing_cache_state", "场馆查询没有明确缓存来源状态。"
-    return (copy.deepcopy(provider), association), None, None
+    return (copy.deepcopy(provider), association, alias), None, None
 
 
-def resolve_venues(raw, client, runtime, asof, days=7, *, max_lookups=24, reserve_requests=0):
+def resolve_venues(raw, client, runtime, asof, days=7, *, max_lookups=24, reserve_requests=0, clock=None):
     """Resolve unknown tuples without fitting models or modifying raw fixtures."""
     if type(max_lookups) is not int or max_lookups < 0 or type(reserve_requests) is not int or reserve_requests < 0:
         raise DataError("场馆查询上限与预留请求数必须为非负整数。")
     _utc(asof)
+    clock = clock or (lambda: datetime.now(timezone.utc))
     runtime = Path(runtime)
     base = _base_registry()
     # Identity/date/score conflicts fail before reading or writing any mutable
@@ -411,20 +475,31 @@ def resolve_venues(raw, client, runtime, asof, days=7, *, max_lookups=24, reserv
         if resolved is None:
             pending(group, code, reason)
             continue
-        provider, association = resolved
+        provider, association, alias = resolved
+        verified_at = _utc(clock())
+        if (_utc(envelope["fetched_at"]) > verified_at
+                or alias is not None and _utc(alias["reviewed_at"]) > verified_at):
+            pending(group, "source_time_in_future", "来源取得或别名审核时间晚于实际核实时钟，未自动登记。")
+            continue
         canonical_id = provider["id"]
+        candidate = {**venue, "association": association}
         conflicts = [entry for entry in registry["venues"] if _effective_id(entry) == canonical_id
-                     and (entry["city"] != venue["city"] or entry["association"] != association)]
+                     and not _compatible_registered_locations(candidate, entry)]
         if conflicts:
             pending(group, "registered_id_conflict", "同ID已登记场馆城市或足协归属冲突，保留原登记。")
             continue
         entry = {**copy.deepcopy(venue), "association": association,
-            "verification": {"schema_version": 1,
+            "verification": {"schema_version": 2,
                 "method": _ID_METHOD if _positive_id(venue["id"]) else _NAME_METHOD,
                 "original_venue": copy.deepcopy(venue), "provider_record": provider,
                 "endpoint": "/venues", "params": params,
-                "fetched_at": envelope["fetched_at"], "verified_at": _iso(datetime.now(timezone.utc)),
-                "from_cache": envelope["from_cache"], "name_alias": provider["name"] != venue["name"]}}
+                "fetched_at": envelope["fetched_at"], "verified_at": _iso(verified_at),
+                "from_cache": envelope["from_cache"], "name_alias": provider["name"] != venue["name"],
+                "temporal": {"schema_version": 1, "known_at": envelope["fetched_at"],
+                    "valid_from": None, "valid_to": None, "source_published_at": None,
+                    "validity_status": "unknown", "basis": "provider_current_response"}}}
+        if alias is not None:
+            entry["verification"]["city_alias_evidence"] = alias
         _validate_verification(entry, teams)
         registry["venues"].append(entry)
         audit["added"].append({"match_ids": group["match_ids"], "entry": copy.deepcopy(entry)})

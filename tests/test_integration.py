@@ -58,7 +58,7 @@ class IntegrationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.base = tempfile.TemporaryDirectory()
-        code, report = run_pipeline(CONFIG, cls.base.name, "train", now=NOW, client=FakeClient())
+        code, report = run_pipeline(CONFIG, cls.base.name, "train", now=NOW, clock=lambda: NOW, client=FakeClient())
         if code:
             raise AssertionError(report)
         cls.run_id = report["run_id"]
@@ -216,7 +216,7 @@ class IntegrationTests(unittest.TestCase):
     def test_index_failure_changes_task_exit_and_is_saved_in_report(self):
         destination = self.runtime
         with patch("football_model.integration.build_index", side_effect=OSError("index cannot be saved")):
-            code, report = run_pipeline(CONFIG, destination, "train", now=NOW+timedelta(minutes=30), client=FakeClient())
+            code, report = run_pipeline(CONFIG, destination, "train", now=NOW+timedelta(minutes=30), clock=lambda: NOW+timedelta(minutes=30), client=FakeClient())
         self.assertEqual(code, 1)
         self.assertEqual(report["integration_index"]["status"], "failed")
         self.assertTrue((destination / "models" / "epl.json").is_file())
@@ -232,7 +232,7 @@ class IntegrationTests(unittest.TestCase):
 
     def test_target_only_snapshot_works_without_unrelated_files(self):
         code, report = run_pipeline(CONFIG, self.runtime, "train", league="mls",
-                                    now=NOW+timedelta(minutes=30), client=FakeClient())
+                                    now=NOW+timedelta(minutes=30), clock=lambda: NOW+timedelta(minutes=30), client=FakeClient())
         self.assertEqual(code, 0)
         (self.runtime / "models" / "mls.json").unlink()
         (self.runtime / "predictions" / report["run_id"] / "mls.json").unlink()
