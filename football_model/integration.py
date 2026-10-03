@@ -12,7 +12,7 @@ import sys
 
 import numpy as np
 
-from .cli import atomic_json, iso, parse_date, safe_error
+from .cli import atomic_json, iso, parse_date, safe_error, TIME_SEMANTICS
 from .model import score_distribution
 
 UTC = timezone.utc
@@ -55,12 +55,105 @@ def _sha(path):
 
 
 def _attempt(report, item, path):
-    return {"run_id": report["run_id"], "generated_at": report["generated_at"],
+    result = {"run_id": report["run_id"], "generated_at": report["generated_at"],
             "mode": report.get("mode"), "status": item.get("status"),
             "detail": item.get("detail"), "model_id": item.get("model_id"),
             "trained_at": item.get("trained_at"), "source_commit": report.get("source_commit"),
             "report_file": path, "forecast_count": item.get("forecast_count"),
             "unsupported_forecasts": item.get("unsupported_forecasts")}
+    # Leave legacy index entries byte-for-byte equivalent in structure. Adding
+    # invented null timestamp fields would break otherwise usable saved states.
+    if report.get("time_semantics") == TIME_SEMANTICS:
+        result.update(time_semantics=TIME_SEMANTICS, run_started_at=report["run_started_at"])
+        for name in ("data_observed_at", "forecast_generated_at", "model_fitted_at", "training_cutoff"):
+            if name in item:
+                result[name] = item[name]
+    return result
+
+
+def _source_times(seasons, observed, *, require_received=False):
+    """Check the stored response envelopes, not only copied forecast labels."""
+    if not isinstance(seasons, list) or not seasons:
+        raise IntegrationError("缺少实际来源取得时间证据。")
+    for season in seasons:
+        fetched = _time(season.get("fetched_at"), "来源抓取时间")
+        if fetched > observed:
+            raise IntegrationError("来源实际抓取晚于声称的数据观测时间，存在前视信息。")
+        if require_received:
+            received = _time(season.get("received_at"), "来源接收时间")
+            if not fetched <= received <= observed:
+                raise IntegrationError("来源抓取、接收和数据观测时间顺序不合法。")
+
+
+def _temporal_provenance(runtime, row, bundle, attempt, now, *, historical):
+    """Validate modern completion clocks; legacy clocks cannot prove a past cutoff."""
+    model = bundle["model"]
+    cutoff = _time(model.get("training_cutoff"), "训练截止")
+    if any(_time(value, "训练截止") != cutoff for value in
+           (bundle.get("trained_at"), row.get("trained_at"), attempt.get("trained_at"))):
+        raise IntegrationError("训练时间/截止不一致。")
+    generated = _time(row.get("generated_at"), "预测生成时间")
+    observed = _time(row.get("data_observed_at"), "数据观测时间")
+    report_time = _time(attempt["generated_at"], "运行报告时间")
+    kickoff = _time(row.get("kickoff"), "开赛时间")
+    modern_forecast = row.get("time_semantics") == TIME_SEMANTICS
+    modern_model = bundle.get("time_semantics") == TIME_SEMANTICS
+    if ((row.get("schema_version", 1) != 1 and not modern_forecast)
+            or (bundle.get("schema_version", 1) != 1 and not modern_model)):
+        raise IntegrationError("新产物缺少适用的真实时间协议；不能静默降级为旧产物。")
+    if historical and not (modern_forecast and modern_model):
+        raise IntegrationError("旧产物时间证据有限，不能证明显式 --as-of 的历史可得性；省略 --as-of 仅可作当前未来比赛核查，不会补造历史资格。")
+    if not cutoff <= generated <= report_time <= now < kickoff or observed > generated:
+        raise IntegrationError("预测、来源或训练截点存在前视，或者比赛已到开赛时间。")
+    report = _read(runtime / "reports" / "history" / f"{attempt['run_id']}.json")
+    items = [item for item in report["competitions"] if item.get("key") == row["competition"]]
+    if len(items) != 1:
+        raise IntegrationError("预测引用的来源报告缺失或重复。")
+    item = items[0]
+    # Legacy observed_at was the task start, not source availability. We may
+    # inspect it now, but never treat it as proof the response already existed.
+    source_bound = observed if modern_forecast else now
+    _source_times(item.get("seasons"), source_bound, require_received=modern_forecast)
+    if modern_forecast:
+        if row.get("schema_version") != 2 or attempt.get("time_semantics") != TIME_SEMANTICS:
+            raise IntegrationError("预测与运行报告的时间协议不一致。")
+        started = _time(row.get("run_started_at"), "运行开始")
+        if (row.get("run_started_at") != attempt.get("run_started_at")
+                or row.get("data_observed_at") != attempt.get("data_observed_at")
+                or row.get("training_cutoff") != model.get("training_cutoff")
+                or row.get("model_fitted_at") != bundle.get("model_fitted_at")
+                or attempt.get("model_fitted_at") != bundle.get("model_fitted_at")
+                or row.get("forecast_generated_at") != row.get("generated_at")):
+            raise IntegrationError("预测时间字段与来源模型/实际运行记录不一致。")
+        batch_generated = _time(attempt.get("forecast_generated_at"), "本赛事预测完成时间")
+        metadata_received = _time(item.get("metadata_received_at"), "赛事元数据取得时间")
+        if not started <= metadata_received <= observed <= generated <= batch_generated <= report_time:
+            raise IntegrationError("真实取得、预测完成与报告完成时间顺序不合法。")
+    elif generated != report_time or observed != report_time:
+        raise IntegrationError("旧预测时间字段与原始运行记录不一致。")
+    if modern_model:
+        if bundle.get("schema_version") != 2 or bundle.get("training_cutoff") != model.get("training_cutoff"):
+            raise IntegrationError("模型训练截止与时间协议不一致。")
+        fitted = _time(bundle.get("model_fitted_at"), "模型拟合完成时间")
+        model_observed = _time(bundle.get("data_observed_at"), "训练来源取得时间")
+        model_started = _time(bundle.get("run_started_at"), "训练运行开始时间")
+        if not (model_started <= model_observed <= fitted <= generated and cutoff <= fitted):
+            raise IntegrationError("训练来源或拟合完成晚于预测，存在前视信息。")
+        _source_times(bundle.get("source_seasons"), model_observed, require_received=True)
+        venue_available = bundle.get("national_audit", {}).get("venue_temporal", {}).get("max_evidence_available_at")
+        if venue_available and _time(venue_available, "训练场地证据可用时间") > model_observed:
+            raise IntegrationError("训练使用的场地证据晚于模型的数据观测时间。")
+    else:
+        _source_times(bundle.get("source_seasons"), now)
+    return {
+        "time_semantics": TIME_SEMANTICS if modern_forecast and modern_model else "legacy_time_evidence_limited",
+        "run_started_at": row.get("run_started_at"), "model_fitted_at": bundle.get("model_fitted_at"),
+        "historical_availability_verified": bool(historical and modern_forecast and modern_model),
+        "source_publication_history_verified": False,
+        "time_evidence_note": ("真实取得及完成时间已核验；训练留出不等于供应商历史发布时间重演。"
+            if modern_forecast and modern_model else
+            "旧模型或预测未保存可信完成时间；只允许当前未来比赛复核，不能证明历史截点赛前资格。"),
+    }
 
 
 def build_index(runtime, config, current_report=None, *, write=True):
@@ -288,18 +381,10 @@ def match_packet(runtime, config, league, match_id, as_of=None, state_commit=Non
         raise IntegrationError("模型成熟度与本接入协议不一致，不能宣称已通过正式验收。")
     if model.get("optimizer", {}).get("parameter_at_bound") is not False:
         raise IntegrationError("模型参数边界状态未经确认。")
-    trained = _time(bundle.get("trained_at"), "模型训练时间")
-    for value in (row.get("trained_at"), attempt.get("trained_at"), model.get("training_cutoff")):
-        if _time(value, "训练截止") != trained:
-            raise IntegrationError("训练时间/截止不一致。")
-    generated = _time(row.get("generated_at"), "预测生成时间")
-    observed = _time(row.get("data_observed_at"), "数据观测时间")
+    time_provenance = _temporal_provenance(runtime, row, bundle, attempt, now,
+                                          historical=as_of is not None)
+    trained = _time(model.get("training_cutoff"), "模型训练截止")
     kickoff = _time(row.get("kickoff"), "开赛时间")
-    report_time = _time(attempt["generated_at"], "运行时间")
-    if generated != report_time or observed != report_time:
-        raise IntegrationError("预测时间/观测时间与实际运行记录不一致。")
-    if not trained <= observed <= generated <= now < kickoff:
-        raise IntegrationError("预测、数据或训练截点存在前视，或者比赛已到开赛时间。")
     maximum_age = config["max_model_age_days"]
     if not isinstance(maximum_age, (float, int)) or isinstance(maximum_age, bool) or not math.isfinite(maximum_age) or maximum_age <= 0:
         raise IntegrationError("模型时效配置无效。")
@@ -312,19 +397,28 @@ def match_packet(runtime, config, league, match_id, as_of=None, state_commit=Non
     prediction = row.get("prediction")
     venue_registry_provenance = {}
     if national:
-        from .nations import validate_nations_forecast
+        from .nations import validate_nations_forecast, venue_temporal_audit
         from .venue_registry import load_forecast_registry
         try:
             registry = load_forecast_registry(runtime, row)
             validate_nations_forecast(row, registry=registry)
+            temporal = venue_temporal_audit(row, registry, cutoff=iso(now),
+                valid_at=row["kickoff"], strict=as_of is not None)
+            available = temporal.get("evidence_available_at")
+            if available and _time(available, "场地证据实际可用时间") > now:
+                raise IntegrationError("场地证据晚于分析截点，不能回填历史预测。")
+            if row.get("time_semantics") == TIME_SEMANTICS and available and (
+                    _time(available, "场地证据实际可用时间") > _time(row["data_observed_at"], "数据观测时间")):
+                raise IntegrationError("场地证据晚于预测的数据取得时间。")
+            venue_registry_provenance["venue_temporal_audit"] = temporal
             if registry is not None:
                 registry_path = runtime / "registries" / "nations_venues" / (
                     row["venue_evidence"]["registry_sha256"] + ".json")
-                venue_registry_provenance = {
+                venue_registry_provenance.update({
                     "venue_registry_snapshot": row["registry_snapshot"],
                     "venue_registry_file_sha256": _sha(registry_path),
                     "venue_registry_digest": row["venue_evidence"]["registry_sha256"],
-                }
+                })
         except (ValueError, KeyError, TypeError, OSError) as exc:
             raise IntegrationError("欧国联场地证据无效或与当前登记表不一致。") from exc
         if not isinstance(prediction, dict) or prediction.get("neutral") is not row["neutral"]:
@@ -358,6 +452,7 @@ def match_packet(runtime, config, league, match_id, as_of=None, state_commit=Non
                        "training_data_sha256": model["training_data_sha256"],
                        "data_observed_at": row["data_observed_at"], "forecast_generated_at": row["generated_at"],
                        "read_and_recomputed": True, "fit_performed": False,
+                       **time_provenance,
                        **venue_registry_provenance},
         "latest_league_attempt": latest,
         "prediction": prediction, "validation": validation,

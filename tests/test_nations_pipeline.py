@@ -99,7 +99,7 @@ class NationalPipelineTests(unittest.TestCase):
     def setUpClass(cls):
         cls.base = tempfile.TemporaryDirectory()
         code, cls.report = run_pipeline(CONFIG, cls.base.name, "train", league="unl",
-                                        now=NOW, client=NationalClient())
+                                        now=NOW, client=NationalClient(), clock=lambda: NOW)
         if code:
             raise AssertionError(cls.report)
         cls.run_id = cls.report["run_id"]
@@ -122,8 +122,11 @@ class NationalPipelineTests(unittest.TestCase):
         return json.loads(path.read_text(encoding="utf-8"))
 
     def packet(self, mid=2001, asof=None):
-        return match_packet(self.runtime, CONFIG, "unl", mid,
-                            as_of=iso(asof or NOW + timedelta(hours=1)))
+        # These tests exercise current forecast use. A strict historical
+        # replay requires independently documented venue validity intervals.
+        with patch("football_model.integration.datetime", wraps=datetime) as observed_clock:
+            observed_clock.now.return_value = asof or NOW + timedelta(hours=1)
+            return match_packet(self.runtime, CONFIG, "unl", mid)
 
     def test_actual_fit_stores_isolated_model_validation_and_audit(self):
         bundle = self.read(self.model_path)
@@ -207,7 +210,7 @@ class NationalPipelineTests(unittest.TestCase):
         with patch("football_model.cli.fit_model", side_effect=AssertionError("unexpected refit")), \
                 patch("football_model.cli.evaluate_time_holdout", side_effect=AssertionError("unexpected validation")):
             code, report = run_pipeline(CONFIG, self.runtime, "train", league="unl",
-                                        now=now, client=NationalClient(now))
+                                        now=now, client=NationalClient(now), clock=lambda: now)
         self.assertEqual(code, 0, report)
         self.assertEqual(report["competitions"][0]["model_change"], "数据未变，沿用参数")
         self.assertEqual(before, self.model_path.read_bytes())
@@ -227,7 +230,7 @@ class NationalPipelineTests(unittest.TestCase):
         now = NOW + timedelta(days=elapsed_days)
         with patch("football_model.cli.fit_model", wraps=fit_model) as actual_fit:
             code, report = run_pipeline(CONFIG, self.runtime, "train", league="unl",
-                                        now=now, client=NationalClient(now))
+                                        now=now, client=NationalClient(now), clock=lambda: now)
         self.assertEqual(code, 0, report)
         actual_fit.assert_called_once()
         self.assertEqual(actual_fit.call_args.args[1], iso(now))
@@ -247,7 +250,7 @@ class NationalPipelineTests(unittest.TestCase):
         now = NOW + timedelta(days=15)
         with patch("football_model.cli.fit_model", side_effect=AssertionError("unexpected refit")):
             code, report = run_pipeline(CONFIG, self.runtime, "train", league="unl", now=now,
-                                        client=NationalClient(now, include_upcoming=False))
+                                        client=NationalClient(now, include_upcoming=False), clock=lambda: now)
         self.assertEqual(code, 0, report)
         self.assertEqual(report["competitions"][0]["status"], "模型陈旧")
         self.assertEqual(before, self.model_path.read_bytes())
@@ -294,15 +297,16 @@ class AutomaticallyRegisteredVenuePipelineTests(unittest.TestCase):
         self.runtime = Path(self.temp.name) / "runtime"
         self.client = AutomaticallyRegisteredVenueClient()
         code, self.report = run_pipeline(CONFIG, self.runtime, "train", league="unl",
-                                         now=NOW, client=self.client)
+                                         now=NOW, client=self.client, clock=lambda: NOW)
         self.assertEqual(code, 0, self.report)
 
     def read(self, path):
         return json.loads(path.read_text(encoding="utf-8"))
 
     def packet(self):
-        return match_packet(self.runtime, CONFIG, "unl", 2003,
-                            as_of=iso(NOW + timedelta(hours=1)))
+        with patch("football_model.integration.datetime", wraps=datetime) as observed_clock:
+            observed_clock.now.return_value = NOW + timedelta(hours=1)
+            return match_packet(self.runtime, CONFIG, "unl", 2003)
 
     def test_new_stadium_absent_from_training_produces_verified_baseline(self):
         item = self.report["competitions"][0]
@@ -339,7 +343,7 @@ class AutomaticallyRegisteredVenuePipelineTests(unittest.TestCase):
 
         new_raw = [fixture(2004, NOW + timedelta(days=3), TEAMS[0], TEAMS[1],
                            (None, None), other, "NS")]
-        _, audit = resolve_venues(new_raw, AdditionalVenueClient(), self.runtime, NOW)
+        _, audit = resolve_venues(new_raw, AdditionalVenueClient(), self.runtime, NOW, clock=lambda: NOW)
         self.assertEqual(len(audit["added"]), 1)
         after = self.packet()
         self.assertEqual(before["prediction"], after["prediction"])

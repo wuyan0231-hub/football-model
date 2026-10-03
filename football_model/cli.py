@@ -16,6 +16,18 @@ from .data import APIClient, APIError, normalize_fixtures, normalize_upcoming
 from .model import fit_model, evaluate_time_holdout, score_distribution
 
 UTC = timezone.utc
+TIME_SEMANTICS = "observed_wall_clock_v1"
+
+
+def observed_time(clock, *not_before):
+    """Read completion time; a training cutoff is never a completion clock."""
+    value = clock()
+    if not isinstance(value, datetime) or value.tzinfo is None:
+        raise ValueError("实际完成时钟必须返回含时区的时间。")
+    value = value.astimezone(UTC)
+    if any(value < moment for moment in not_before if moment is not None):
+        raise ValueError("实际完成时间早于已取得的来源或前序步骤；不能倒填时间。")
+    return value
 
 
 def iso(value: datetime) -> str:
@@ -23,6 +35,8 @@ def iso(value: datetime) -> str:
 
 
 def parse_date(value: str) -> datetime:
+    if not isinstance(value, str):
+        raise ValueError("时间必须是含时区的字符串。")
     result = datetime.fromisoformat(value.replace("Z", "+00:00"))
     if result.tzinfo is None:
         raise ValueError("时间必须含时区。")
@@ -128,14 +142,19 @@ def markdown_report(report: dict) -> str:
 
 
 def process_competition(client, competition, settings, runtime, now, mode, run_id,
-                        venue_reserve_requests=0):
+                        venue_reserve_requests=0, clock=None, run_started=None):
+    clock = clock or (lambda: datetime.now(UTC))
+    run_started = run_started or observed_time(clock, now)
     key = competition["key"]
     national = competition.get("mode") == "national_baseline"
     result = {"key": key, "label": competition["label"], "status": "待检查", "seasons": [],
               "configured": True, "model_change": "未训练", "lineup_model": "未实现",
-              "xg_model": "未实现", "return_advantage": "未经验证", "ev": "未量化"}
+              "xg_model": "未实现", "return_advantage": "未经验证", "ev": "未量化",
+              "time_semantics": TIME_SEMANTICS, "run_started_at": iso(run_started)}
     try:
         metadata = client.resolve_league(competition)
+        metadata_received = observed_time(clock, now, run_started)
+        result["metadata_received_at"] = iso(metadata_received)
         league = metadata["league"]
         result["provider_league_id"] = league["id"]
         selected = select_seasons(metadata, now, settings["history_seasons"])
@@ -149,6 +168,8 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
                 envelope = client.fetch_fixtures(league["id"], season["year"],
                                                 current=(index == 0), force=(index == 0),
                                                 max_age_seconds=7 * 86400)
+                fetched = parse_date(envelope["fetched_at"])
+                received = observed_time(clock, metadata_received, fetched)
                 fixtures = envelope["response"]
                 if not isinstance(fixtures, list) or not fixtures:
                     raise ValueError("返回空赛程；可能是赛季权限或来源缺口，不能按完整赛季处理。")
@@ -158,6 +179,7 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
                     if record_league.get("id") != league["id"] or record_league.get("season") != season["year"]:
                         raise ValueError("返回的联赛ID或赛季与请求不一致。")
                 entry.update(fixtures=len(fixtures), fetched_at=envelope["fetched_at"],
+                             received_at=iso(received),
                              from_cache=envelope.get("from_cache", False),
                              status_counts=dict(Counter(x.get("fixture", {}).get("status", {}).get("short", "missing") for x in fixtures)))
                 raw.extend(fixtures)
@@ -174,7 +196,7 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
             from .venue_registry import resolve_venues
             venue_registry, venue_registration = resolve_venues(
                 raw, client, runtime, iso(now), days=settings["forecast_days"],
-                reserve_requests=venue_reserve_requests)
+                reserve_requests=venue_reserve_requests, clock=clock)
             result["venue_registration"] = venue_registration
             atomic_json(runtime / "audits" / key / f"{run_id}-venues.json", venue_registration)
             matches, national_upcoming, national_audit = prepare_nations(
@@ -187,8 +209,17 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
         result["eligible_matches"] = len(matches)
         result["missing_seasons"] = failed_seasons
         result["last_match_kickoff"] = max((x["kickoff"] for x in matches), default=None)
-        result["observed_at"] = iso(now)
-        atomic_json(runtime / "data" / f"{key}.json", {"observed_at": iso(now), "matches": matches,
+        data_observed = observed_time(clock, now, metadata_received,
+            *(parse_date(s["received_at"]) for s in result["seasons"] if "received_at" in s))
+        if national:
+            venue_available = national_audit.get("venue_temporal", {}).get("max_evidence_available_at")
+            if venue_available and parse_date(venue_available) > data_observed:
+                raise ValueError("场地证据实际可用时间晚于数据观测；不能发布倒填预测。")
+        result["observed_at"] = result["data_observed_at"] = iso(data_observed)
+        atomic_json(runtime / "data" / f"{key}.json", {"schema_version": 2,
+                                                       "time_semantics": TIME_SEMANTICS,
+                                                       "run_started_at": iso(run_started),
+                                                       "observed_at": iso(data_observed), "matches": matches,
                                                        "requested_seasons": [s["year"] for s in selected],
                                                        "missing_seasons": failed_seasons})
         if failed_seasons:
@@ -212,13 +243,33 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
             bundle = old
             result["model_change"] = "数据未变，沿用参数"
         else:
+            previous_validation = None
+            previous_source = {"competition": (old or {}).get("competition", {}).get("key"),
+                               "target_scope": ("regulation_time_90_plus_stoppage" if old and
+                                    "score.fulltime (regulation time incl. stoppage time)" in old.get("source", "") else None),
+                               "model_id": old.get("model_id") if old else None, "path": None}
+            # An unchanged forecast run is not necessarily the training run.
+            # Pair the old validation with its model ID before writing new data.
+            if old and isinstance(old.get("model_id"), str) and old["model_id"].startswith(key + "-"):
+                old_run = old["model_id"][len(key) + 1:]
+                if old_run and all(c.isalnum() or c in "_-" for c in old_run):
+                    old_validation_path = runtime / "validation" / key / f"{old_run}.json"
+                    previous_source["path"] = f"runtime/validation/{key}/{old_run}.json"
+                    try:
+                        previous_validation = json.loads(old_validation_path.read_text(encoding="utf-8"))
+                    except (OSError, ValueError):
+                        pass
             evaluation = evaluate_time_holdout(matches, iso(now), **knobs)
             if not evaluation["report"]["meets_minimum_supported_test_matches"]:
                 raise ValueError("留出期已覆盖比赛不足；保留旧模型，不发布新的球队参数。")
             fitted = fit_model(matches, iso(now), **{k: v for k, v in knobs.items() if k != "min_test"})
+            fitted_at = observed_time(clock, data_observed)
             if fitted["optimizer"]["parameter_at_bound"]:
                 raise ValueError("拟合参数触及预设优化边界，须检查数据；本次不发布新模型。")
-            bundle = {"schema_version": 1, "program_version": __version__, "model_id": f"{key}-{run_id}",
+            bundle = {"schema_version": 2, "time_semantics": TIME_SEMANTICS,
+                      "run_started_at": iso(run_started), "training_cutoff": iso(now),
+                      "data_observed_at": iso(data_observed), "model_fitted_at": iso(fitted_at),
+                      "program_version": __version__, "model_id": f"{key}-{run_id}",
                       "competition": competition, "data_fingerprint": fingerprint,
                       "trained_at": iso(now), "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
                       "maturity": "exploratory_baseline", "lineup_effects": "未量化", "ev": "未量化",
@@ -227,6 +278,19 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
             if national:
                 bundle["national_audit"] = national_audit
                 bundle["venue_policy"] = "Exact provider venue and association registry; third-country neutral; unknown excluded."
+            from .coverage_audit import compare_validation_coverage
+            coverage = compare_validation_coverage(previous_validation, evaluation,
+                old_source=previous_source,
+                new_source={"competition": key, "target_scope": "regulation_time_90_plus_stoppage",
+                            "model_id": bundle["model_id"], "path": f"runtime/validation/{key}/{run_id}.json"},
+                old_temporal_audit=(old or {}).get("national_audit", {}).get("venue_temporal"),
+                new_temporal_audit=national_audit.get("venue_temporal") if national else None)
+            coverage_path = f"runtime/audits/{key}/{run_id}-coverage.json"
+            atomic_json(runtime / "audits" / key / f"{run_id}-coverage.json", coverage)
+            result["coverage_audit"] = {"path": coverage_path, "status": coverage["status"],
+                                        "counts": coverage["counts"],
+                                        "comparison_eligibility": coverage["comparison_eligibility"],
+                                        "prospective_increment_validated": False}
             # Save immutable version first; latest changes only after a successful complete fit.
             atomic_json(runtime / "model_history" / key / f"{run_id}.json", bundle)
             atomic_json(runtime / "validation" / key / f"{run_id}.json", evaluation)
@@ -235,6 +299,8 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
         result["validation"] = bundle["validation"]
         result["model_id"] = bundle["model_id"]
         result["trained_at"] = bundle["trained_at"]
+        result["training_cutoff"] = bundle["model"]["training_cutoff"]
+        result["model_fitted_at"] = bundle.get("model_fitted_at")
         result.update(status="探索性基线", detail="未含阵容伤停、xG与赛程；未证实预测或收益优势。")
         age = (now - parse_date(bundle["trained_at"])).total_seconds() / 86400
         if age > settings["max_model_age_days"]:
@@ -243,8 +309,13 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
         upcoming = national_upcoming if national else normalize_upcoming(newest_raw, iso(now), days=settings["forecast_days"])
         forecasts = []
         for fixture in upcoming:
-            row = {**fixture, "competition": key, "generated_at": iso(now), "model_id": bundle["model_id"],
-                   "trained_at": bundle["trained_at"], "data_observed_at": iso(now),
+            row = {**fixture, "schema_version": 2, "time_semantics": TIME_SEMANTICS,
+                   "run_started_at": iso(run_started), "competition": key, "model_id": bundle["model_id"],
+                   "trained_at": bundle["trained_at"], "training_cutoff": bundle["model"]["training_cutoff"],
+                   "model_fitted_at": bundle.get("model_fitted_at"),
+                   "model_time_evidence": (TIME_SEMANTICS if bundle.get("time_semantics") == TIME_SEMANTICS
+                                           else "legacy_time_evidence_limited"),
+                   "data_observed_at": iso(data_observed),
                    "lineup_adjustment": "未量化", "ev": "未量化", "venue_status": "名义主客；实际场地未核实",
                    "usage": "探索性条件基线；不能据此宣称已纳入本场全部信息"}
             try:
@@ -264,7 +335,15 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
                 row["status"] = "exploratory_baseline"
             except (ValueError, KeyError, TypeError) as exc:
                 row.update(status="unsupported", reason=safe_error(exc))
+            completed = observed_time(clock, data_observed,
+                parse_date(bundle["model_fitted_at"]) if bundle.get("model_fitted_at") else None)
+            row["generated_at"] = row["forecast_generated_at"] = iso(completed)
+            if completed >= parse_date(fixture["kickoff"]):
+                row.pop("prediction", None)
+                row.update(status="unsupported", reason="预测实际完成时比赛已开赛；不能倒填赛前预测。")
             forecasts.append(row)
+        result["forecast_generated_at"] = iso(observed_time(clock, data_observed,
+            *(parse_date(r["generated_at"]) for r in forecasts)))
         result["forecast_count"] = sum(row["status"] == "exploratory_baseline" for row in forecasts)
         result["unsupported_forecasts"] = sum(row["status"] == "unsupported" for row in forecasts)
         if national:
@@ -277,10 +356,19 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
     return result
 
 
-def run_pipeline(config, runtime, mode="audit", league="epl", now=None, client=None):
-    now = now or datetime.now(UTC)
+def run_pipeline(config, runtime, mode="audit", league="epl", now=None, client=None, *, clock=None):
+    clock = clock or (lambda: datetime.now(UTC))
+    run_started = observed_time(clock)
+    now = now or run_started
+    if now.tzinfo is None:
+        raise ValueError("运行/训练截点必须含时区。")
+    now = now.astimezone(UTC)
     runtime = Path(runtime)
-    run_id = now.strftime("%Y%m%dT%H%M%S%fZ")
+    run_id = run_started.strftime("%Y%m%dT%H%M%S%fZ")
+    if ((runtime / "reports" / "history" / f"{run_id}.json").exists()
+            or (runtime / "predictions" / run_id).exists()
+            or any((runtime / "model_history").glob(f"*/{run_id}.json"))):
+        raise ValueError("运行ID已存在；旧运行及预测不可覆盖，请使用新的实际运行截点。")
     chosen = [c for c in config["competitions"] if league == "all" or c["key"] == league]
     if not chosen:
         raise ValueError(f"未配置赛事：{league}")
@@ -288,7 +376,8 @@ def run_pipeline(config, runtime, mode="audit", league="epl", now=None, client=N
         raise ValueError("mode 必须为 audit 或 train。")
     if not 1 <= config["history_seasons"] <= 10:
         raise ValueError("history_seasons 必须为 1 到 10。")
-    report = {"generated_at": iso(now), "run_id": run_id, "mode": mode,
+    report = {"schema_version": 2, "time_semantics": TIME_SEMANTICS,
+              "run_started_at": iso(run_started), "training_cutoff": iso(now), "run_id": run_id, "mode": mode,
               "program_version": __version__, "source_commit": os.environ.get("GITHUB_SHA"),
               "requested_competitions": [c["key"] for c in chosen],
               "competitions": [], "api_requests": 0}
@@ -301,7 +390,7 @@ def run_pipeline(config, runtime, mode="audit", league="epl", now=None, client=N
             # reserved for later competitions in the same all-league run.
             reserve = (len(chosen) - position - 1) * (1 + config["history_seasons"])
             item = process_competition(client, competition, config, runtime, now, mode,
-                                       run_id, venue_reserve_requests=reserve)
+                                       run_id, venue_reserve_requests=reserve, clock=clock, run_started=run_started)
             report["competitions"].append(item)
             print(f"{item['label']}：{item['status']}；{item.get('eligible_matches', 0)}场可用赛果。", flush=True)
             if item["status"] == "未完成":
@@ -311,6 +400,9 @@ def run_pipeline(config, runtime, mode="audit", league="epl", now=None, client=N
         exit_code = 2
     report["api_requests"] = getattr(client, "requests_made", 0)
     report["exit_code"] = exit_code
+    report["generated_at"] = iso(observed_time(clock, now,
+        *(parse_date(item["forecast_generated_at"]) for item in report["competitions"]
+          if item.get("forecast_generated_at"))))
     # Index all saved league runs, not only this run's possibly single-league
     # report. This access layer never changes fitting or validation inputs.
     from .integration import build_index
@@ -325,14 +417,14 @@ def run_pipeline(config, runtime, mode="audit", league="epl", now=None, client=N
         invalid_index = runtime / "integration" / "index.json"
         try:
             atomic_json(invalid_index, {"schema_version": 1, "status": "failed", "run_id": run_id,
-                        "generated_at": iso(now), "reason": safe_error(exc), "competitions": []})
+                        "generated_at": report["generated_at"], "reason": safe_error(exc), "competitions": []})
         except OSError:
             invalid_index.unlink(missing_ok=True)
         invalid_markdown = runtime / "integration" / "index.md"
         try:
             invalid_markdown.parent.mkdir(parents=True, exist_ok=True)
             invalid_markdown.write_text(
-                f"# 模型接入索引失败\n\n运行ID：{run_id}\n\n时间：{iso(now)}\n\n"
+                f"# 模型接入索引失败\n\n运行ID：{run_id}\n\n时间：{report['generated_at']}\n\n"
                 f"原因：{safe_error(exc)}\n\n旧索引已失效，不能据此调用旧预测。\n",
                 encoding="utf-8",
             )

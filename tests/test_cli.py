@@ -68,7 +68,7 @@ class PipelineTests(unittest.TestCase):
     def test_actual_fit_and_unchanged_data_reuses_same_parameters(self):
         with tempfile.TemporaryDirectory() as tmp:
             client = FakeClient()
-            code, report = run_pipeline(BASE_CONFIG, tmp, "train", now=NOW, client=client)
+            code, report = run_pipeline(BASE_CONFIG, tmp, "train", now=NOW, clock=lambda: NOW, client=client)
             self.assertEqual(code, 0, report)
             item = report["competitions"][0]
             self.assertEqual(item["model_change"], "完成新拟合")
@@ -77,7 +77,7 @@ class PipelineTests(unittest.TestCase):
             model_path = Path(tmp)/"models/epl.json"
             before = model_path.read_bytes()
             with patch("football_model.cli.fit_model", side_effect=AssertionError("不应重训")):
-                code, second = run_pipeline(BASE_CONFIG, tmp, "train", now=NOW+timedelta(hours=2), client=FakeClient())
+                code, second = run_pipeline(BASE_CONFIG, tmp, "train", now=NOW+timedelta(hours=2), clock=lambda: NOW+timedelta(hours=2), client=FakeClient())
             self.assertEqual(code, 0, second)
             self.assertEqual(model_path.read_bytes(), before)
             self.assertEqual(second["competitions"][0]["model_change"], "数据未变，沿用参数")
@@ -88,7 +88,7 @@ class PipelineTests(unittest.TestCase):
             model_path = Path(tmp)/"models/epl.json"
             model_path.parent.mkdir()
             model_path.write_text('{"sentinel":"existing model"}', encoding="utf-8")
-            code, report = run_pipeline(BASE_CONFIG, tmp, "train", now=NOW, client=FakeClient(True))
+            code, report = run_pipeline(BASE_CONFIG, tmp, "train", now=NOW, clock=lambda: NOW, client=FakeClient(True))
             self.assertEqual(code, 1)
             self.assertEqual(report["competitions"][0]["status"], "未完成")
             self.assertEqual(json.loads(model_path.read_text())["sentinel"], "existing model")
@@ -98,7 +98,7 @@ class PipelineTests(unittest.TestCase):
         config = copy.deepcopy(BASE_CONFIG)
         config["competitions"][0].update(key="ucl", label="欧冠", mode="audit_only")
         with tempfile.TemporaryDirectory() as tmp, patch("football_model.cli.fit_model", side_effect=AssertionError("欧冠不能训练")):
-            code, report = run_pipeline(config, tmp, "train", league="all", now=NOW, client=FakeClient())
+            code, report = run_pipeline(config, tmp, "train", league="all", now=NOW, clock=lambda: NOW, client=FakeClient())
             self.assertEqual(code, 0)
             self.assertEqual(report["competitions"][0]["status"], "仅审计")
             self.assertFalse((Path(tmp)/"models").exists())
@@ -114,7 +114,7 @@ class PipelineTests(unittest.TestCase):
             model_path = Path(tmp)/"models/epl.json"
             model_path.parent.mkdir()
             model_path.write_text('{"sentinel":"existing model"}', encoding="utf-8")
-            code, report = run_pipeline(BASE_CONFIG, tmp, "train", now=NOW, client=client)
+            code, report = run_pipeline(BASE_CONFIG, tmp, "train", now=NOW, clock=lambda: NOW, client=client)
             self.assertEqual(code, 1)
             item = report["competitions"][0]
             self.assertEqual(item["status"], "未完成")
@@ -124,7 +124,7 @@ class PipelineTests(unittest.TestCase):
 
     def test_audit_does_not_train(self):
         with tempfile.TemporaryDirectory() as tmp:
-            code, report = run_pipeline(BASE_CONFIG, tmp, "audit", now=NOW, client=FakeClient())
+            code, report = run_pipeline(BASE_CONFIG, tmp, "audit", now=NOW, clock=lambda: NOW, client=FakeClient())
             self.assertEqual(code, 0)
             self.assertEqual(report["competitions"][0]["status"], "已取得数据")
             self.assertFalse((Path(tmp)/"models").exists())
@@ -133,14 +133,14 @@ class PipelineTests(unittest.TestCase):
         client = FakeClient()
         client.fixtures[0]["league"]["id"] = 123
         with tempfile.TemporaryDirectory() as tmp:
-            code, report = run_pipeline(BASE_CONFIG, tmp, "train", now=NOW, client=client)
+            code, report = run_pipeline(BASE_CONFIG, tmp, "train", now=NOW, clock=lambda: NOW, client=client)
             self.assertEqual(code, 1)
             self.assertIn("未完成", report["competitions"][0]["status"])
             self.assertFalse((Path(tmp)/"models").exists())
 
     def test_missing_key_has_report_and_no_dummy_model(self):
         with tempfile.TemporaryDirectory() as tmp, patch.dict("os.environ", {"FOOTBALL_API_KEY": ""}):
-            code, report = run_pipeline(BASE_CONFIG, tmp, "audit", now=NOW)
+            code, report = run_pipeline(BASE_CONFIG, tmp, "audit", now=NOW, clock=lambda: NOW)
             self.assertEqual(code, 2)
             self.assertIn("FOOTBALL_API_KEY", report["fatal_error"])
             self.assertTrue((Path(tmp)/"reports/latest.md").exists())

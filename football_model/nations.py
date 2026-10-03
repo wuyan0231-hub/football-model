@@ -12,12 +12,131 @@ import hashlib
 import json
 from pathlib import Path
 
-from .data import DataError, normalize_fixtures, normalize_upcoming
+from .data import DataError, _iso, _utc, normalize_fixtures, normalize_upcoming
 from .model import _connected_components
 
 
 REGISTRY_PATH = Path(__file__).with_name("nations_venues.json")
 PROVIDER_LEAGUE_ID = 5
+
+
+def _entry_temporal(entry):
+    """Describe evidence time without inventing first publication or validity.
+
+    Legacy snapshots are read verbatim. A date-only registry review label does
+    not prove when each historical fact was available or applicable.
+    """
+    verification = entry.get("verification")
+    if verification is None:
+        return {"schema_version": 1, "known_at": None, "valid_from": None,
+                "valid_to": None, "source_published_at": None,
+                "validity_status": "unknown", "basis": "legacy_reviewed_tuple",
+                "evidence_available_at": None}
+    if not isinstance(verification, dict) or verification.get("schema_version") not in (1, 2):
+        raise DataError("场地证据结构版本无效。")
+    fetched = _utc(verification.get("fetched_at"))
+    verified = _utc(verification.get("verified_at"))
+    if fetched > verified:
+        raise DataError("场地证据抓取时间不能晚于核实时间。")
+    available = max(fetched, verified)
+    alias = verification.get("city_alias_evidence")
+    if alias is not None:
+        if not isinstance(alias, dict):
+            raise DataError("场地城市别名证据无效。")
+        reviewed = _utc(alias.get("reviewed_at"))
+        if reviewed > verified:
+            raise DataError("场地城市别名审定时间晚于登记核实时间。")
+        available = max(available, reviewed)
+    temporal = verification.get("temporal")
+    if verification["schema_version"] == 1:
+        if temporal is not None or alias is not None:
+            raise DataError("旧版场地证据不能附加未声明的新时间或别名结构。")
+        return {"schema_version": 1, "known_at": _iso(fetched), "valid_from": None,
+                "valid_to": None, "source_published_at": None,
+                "validity_status": "unknown", "basis": "legacy_provider_response",
+                "evidence_available_at": _iso(available)}
+    if (not isinstance(temporal, dict) or temporal.get("schema_version") != 1
+            or not {"known_at", "valid_from", "valid_to", "source_published_at",
+                    "validity_status", "basis"}.issubset(temporal)):
+        raise DataError("新场地登记缺少明确的时间证据字段。")
+    known = _utc(temporal["known_at"])
+    if known < fetched or known > verified:
+        raise DataError("场地known_at须为本系统实际取得证据的时间，且不晚于核实。")
+    published = temporal["source_published_at"]
+    if published is not None and _utc(published) > known:
+        raise DataError("场地来源发布时间不能晚于取得时间。")
+    start, end = temporal["valid_from"], temporal["valid_to"]
+    if temporal["validity_status"] == "unknown":
+        if (start is not None or end is not None
+                or temporal["basis"] != "provider_current_response" or published is not None):
+            raise DataError("当前供应商资料不能推断历史有效区间或首次公开时间。")
+    elif temporal["validity_status"] == "documented_interval":
+        if temporal["basis"] != "reviewed_historical_source" or start is None:
+            raise DataError("历史有效区间必须有已审核的历史来源。")
+        start_dt = _utc(start)
+        if end is not None and _utc(end) <= start_dt:
+            raise DataError("场地历史有效区间无效。")
+        source = temporal.get("validity_source")
+        if (not isinstance(source, dict) or not isinstance(source.get("url"), str)
+                or not source["url"].startswith("https://")
+                or not isinstance(source.get("statement"), str) or not source["statement"].strip()
+                or not isinstance(source.get("source_sha256"), str)
+                or len(source["source_sha256"]) != 64
+                or any(c not in "0123456789abcdef" for c in source["source_sha256"])):
+            raise DataError("历史场地有效区间缺少来源、原文说明或来源指纹。")
+        source_fetched, source_reviewed = _utc(source.get("fetched_at")), _utc(source.get("reviewed_at"))
+        if source_fetched > known or source_reviewed < source_fetched or source_reviewed > verified:
+            raise DataError("历史场地来源的取得与审核时间不一致。")
+        available = max(available, source_reviewed)
+    else:
+        raise DataError("场地历史有效性状态无效。")
+    return {**temporal, "evidence_available_at": _iso(max(available, known))}
+
+
+def venue_temporal_audit(row, registry=None, *, cutoff, valid_at=None, strict=False):
+    """Audit point-in-time eligibility separately from current retrospective use.
+
+    ``known_at`` is documented acquisition by this system, never a guessed
+    first-publication timestamp. Unknown facts remain unknown; strict history
+    cannot pass on a present-day API lookup alone.
+    """
+    _, venues, registry_sha = _registry(registry)
+    cutoff_dt = _utc(cutoff)
+    evidence = row.get("venue_evidence") if isinstance(row, dict) else None
+    key = _venue_key(evidence.get("venue")) if isinstance(evidence, dict) else None
+    entry = venues.get(key)
+    if entry is None:
+        raise DataError("场地时间审计没有匹配的已登记场地。")
+    if evidence.get("registry_sha256") != registry_sha:
+        raise DataError("场地时间审计所用登记快照与预测来源不一致。")
+    if valid_at is None:
+        valid_at = row.get("kickoff")
+    valid_dt = _utc(valid_at) if valid_at is not None else None
+    temporal = _entry_temporal(entry)
+    reasons = []
+    known, available = temporal["known_at"], temporal["evidence_available_at"]
+    if known is None:
+        reasons.append("known_at_unknown")
+    elif _utc(known) > cutoff_dt:
+        reasons.append("known_after_cutoff")
+    if available is None:
+        reasons.append("evidence_available_at_unknown")
+    elif _utc(available) > cutoff_dt:
+        reasons.append("evidence_after_cutoff")
+    if temporal["validity_status"] != "documented_interval":
+        reasons.append("historical_validity_unknown")
+    elif valid_dt is None:
+        reasons.append("valid_at_unknown")
+    elif (valid_dt < _utc(temporal["valid_from"])
+          or temporal["valid_to"] is not None and valid_dt >= _utc(temporal["valid_to"])):
+        reasons.append("outside_documented_validity")
+    result = {"match_id": row.get("match_id"), **temporal,
+              "cutoff": _iso(cutoff_dt), "valid_at": _iso(valid_dt) if valid_dt else None,
+              "eligible": not reasons, "point_in_time_eligible": not reasons,
+              "reasons": reasons, "usage": "point_in_time_verified" if not reasons else "current_retrospective"}
+    if strict and reasons:
+        raise DataError("场地证据不满足严格历史截点资格：" + ", ".join(reasons))
+    return result
 
 
 def _venue_key(venue):
@@ -58,6 +177,7 @@ def _registry(registry):
             raise DataError("欧国联登记表场地身份或所属协会无效。")
         if key in venues:
             raise DataError("欧国联登记表包含重复场地身份。")
+        _entry_temporal(entry)
         venues[key] = entry
     try:
         digest = hashlib.sha256(json.dumps(registry, sort_keys=True, ensure_ascii=False,
@@ -119,6 +239,8 @@ def _classify(item, venues, registry_sha):
                 "classification": "third_association_neutral" if neutral else "home_association",
                 "registry_sha256": registry_sha,
                 "method": "exact_reviewed_venue_tuple_and_national_team_identity"}
+    if entry.get("verification", {}).get("schema_version") == 2:
+        evidence["temporal"] = _entry_temporal(entry)
     return evidence, None
 
 
@@ -193,6 +315,10 @@ def prepare_nations(raw, asof, days=7, registry=None):
         upcoming.append({**row, **({"venue_error": error} if error else
                                  {"neutral": evidence["neutral"], "venue_evidence": evidence})})
     components = _connected_components(matches)
+    temporal_rows = [venue_temporal_audit(row, registry, cutoff=min(_utc(asof), _utc(row["kickoff"])))
+                     for row in matches + upcoming if "venue_evidence" in row]
+    available_times = [_utc(row["evidence_available_at"]) for row in temporal_rows
+                       if row["evidence_available_at"] is not None]
     audit = {"scope": "uefa_nations_league_only", "provider_league_id": PROVIDER_LEAGUE_ID,
              "registry_sha256": registry_sha, "raw_records": len(raw),
              "unique_raw_fixtures": len(originals), "duplicate_records": len(raw) - len(originals),
@@ -209,6 +335,11 @@ def prepare_nations(raw, asof, days=7, registry=None):
                                        for row in upcoming if "venue_error" in row],
              "training_graph": {"connected": len(components) == 1,
                                 "component_count": len(components), "components": components},
+             "venue_temporal": {"mode": "current_retrospective", "by_match": temporal_rows,
+                                "strict_eligible": sum(row["eligible"] for row in temporal_rows),
+                                "limited": sum(not row["eligible"] for row in temporal_rows),
+                                "max_evidence_available_at": _iso(max(available_times)) if available_times else None,
+                                "unknown_evidence_time_count": sum(row["evidence_available_at"] is None for row in temporal_rows)},
              "limitations": ["场地位置按已审核精确登记表分类，不量化球迷、旅行或特殊主场环境。",
                              "完整训练对阵图检查不代替留出切分训练图检查；原训练保护仍适用。",
                              "仅90分钟加伤停补时；阵容、伤停、xG与战术均未量化。"]}
