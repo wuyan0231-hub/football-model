@@ -232,6 +232,93 @@ class VenueRegistryTests(unittest.TestCase):
         self.assertEqual(audit["counts"]["queried"], 1)
         self.assertTrue(all("venue_error" not in row for row in self.forecasts(raw, registry, audit)))
 
+    def test_default_queries_more_than_24_unique_venues_and_deduplicates_aliases(self):
+        venues = [{"id": 987001 + i, "name": f"Synthetic Uncapped Ground {i}", "city": "London"}
+                  for i in range(30)]
+        raw = [fixture(530001 + i, venue) for i, venue in enumerate(venues)]
+        raw.extend([fixture(530101, venues[0]),
+                    fixture(530102, {**venues[0], "name": "Synthetic Same-ID Alias"})])
+        by_id = {venue["id"]: venue for venue in venues}
+        client = VenueClient(response=lambda venue_id=None, name=None: [provider_venue(by_id[venue_id])])
+
+        registry, audit = self.resolve(raw, client)
+
+        self.assertEqual(len(client.calls), 30)
+        self.assertEqual(audit["counts"]["queried"], 30)
+        self.assertEqual(audit["counts"]["added"], 31)
+        self.assertEqual(audit["counts"]["deferred"], 0)
+        self.assertEqual(audit["pending"], [])
+        self.assertIsNone(audit["max_lookups"])
+        self.assertIsNone(json.loads(json.dumps(audit))["max_lookups"])
+        self.assertTrue(all("venue_error" not in row for row in self.forecasts(raw, registry, audit)))
+
+    def test_explicit_zero_lookup_cap_defers_all_unknown_venues(self):
+        client = VenueClient()
+        _, audit = self.resolve([fixture(venue=NEW_VENUE)], client, max_lookups=0)
+        self.assertEqual(client.calls, [])
+        self.assertEqual(audit["max_lookups"], 0)
+        self.assertEqual(audit["counts"]["queried"], 0)
+        self.assertEqual(audit["pending"][0]["reason_code"], "lookup_budget_deferred")
+
+    def test_invalid_lookup_caps_fail_before_requests_or_mutable_state(self):
+        for invalid in (True, False, -1, 1.5, "24", [], {}):
+            with self.subTest(max_lookups=invalid):
+                client = VenueClient()
+                with self.assertRaises(DataError):
+                    self.resolve([fixture(venue=NEW_VENUE)], client, max_lookups=invalid)
+                self.assertEqual(client.calls, [])
+                self.assertFalse(self.runtime.exists())
+
+    def test_default_still_protects_real_network_and_known_daily_budgets_after_24(self):
+        venues = [{"id": 988001 + i, "name": f"Synthetic Budget Ground {i}", "city": "London"}
+                  for i in range(31)]
+        raw = [fixture(540001 + i, venue) for i, venue in enumerate(venues)]
+        for budget in ("run", "daily"):
+            with self.subTest(budget=budget), tempfile.TemporaryDirectory() as temporary:
+                opener = Mock(side_effect=[SyntheticHTTPResponse([provider_venue(venue)])
+                                           for venue in venues])
+                with patch.dict(os.environ, {"FOOTBALL_API_KEY": "synthetic-unit-test-secret"}):
+                    client = APIClient(Path(temporary) / "data", max_requests=80, opener=opener,
+                                       clock=lambda: NOW, sleep=lambda _: None, min_interval=0)
+                    client.requests_made = 50 if budget == "run" else 0
+                    client.daily_remaining = None if budget == "run" else 30
+                    original_used = client.requests_made
+                    _, audit = resolve_venues(raw, client, Path(temporary) / "runtime", NOW,
+                                               reserve_requests=1)
+                    self.assertEqual(opener.call_count, 29)
+                    self.assertEqual(client.requests_made - original_used, 29)
+                    self.assertEqual(audit["counts"]["added"], 29)
+                    self.assertEqual(audit["counts"]["queried"], 29)
+                    self.assertEqual(audit["counts"]["deferred"], 2)
+                    self.assertTrue(all(item["reason_code"] == "request_budget_deferred"
+                                        for item in audit["pending"]))
+                    self.assertIsNone(audit["max_lookups"])
+                    self.assertEqual(client.max_requests, 80)
+                    if budget == "daily":
+                        self.assertEqual(client.daily_remaining, 1)
+                    else:
+                        self.assertIsNone(client.daily_remaining)
+
+    def test_default_uses_cached_venue_when_real_network_and_daily_budgets_are_exhausted(self):
+        later = {**NEW_VENUE, "id": 989001, "name": "Synthetic Uncached Ground"}
+        opener = Mock(return_value=SyntheticHTTPResponse([provider_venue()]))
+        with patch.dict(os.environ, {"FOOTBALL_API_KEY": "synthetic-unit-test-secret"}):
+            client = APIClient(self.runtime / "data", max_requests=1, opener=opener,
+                               clock=lambda: NOW, sleep=lambda _: None, min_interval=0)
+            original = client.fetch_venues(venue_id=NEW_VENUE["id"])
+            client.daily_remaining = 0
+            _, audit = self.resolve([fixture(1, NEW_VENUE), fixture(2, later)], client,
+                                     reserve_requests=1)
+            self.assertEqual(opener.call_count, 1)
+            self.assertEqual(client.requests_made, 1)
+            self.assertEqual(client.daily_remaining, 0)
+            self.assertEqual(audit["counts"]["queried"], 1)
+            self.assertEqual(audit["counts"]["added"], 1)
+            self.assertTrue(audit["queries"][0]["from_cache"])
+            self.assertEqual(audit["queries"][0]["fetched_at"], original["fetched_at"])
+            self.assertEqual(audit["pending"][0]["venue"], later)
+            self.assertEqual(audit["pending"][0]["reason_code"], "request_budget_deferred")
+
     def test_future_window_is_prioritized_before_historical_unknowns(self):
         historic = {**NEW_VENUE, "id": 900002, "name": "Synthetic Historical Ground"}
         raw = [fixture(1, historic, status="FT"), fixture(2, NEW_VENUE)]
@@ -294,14 +381,14 @@ class VenueRegistryTests(unittest.TestCase):
             return [provider_venue(venues[i], country="England" if i == 24 else "United Kingdom")]
 
         first = VenueClient(response=response)
-        _, first_audit = self.resolve(raw, first)
+        _, first_audit = self.resolve(raw, first, max_lookups=24)
         self.assertEqual([call["venue_id"] for call in first.calls], list(range(980001, 980025)))
         self.assertEqual(first_audit["added"], [])
         self.assertEqual(first_audit["pending"][-1]["reason_code"], "lookup_budget_deferred")
         # A fresh client reads the saved scheduler rather than retaining any
         # in-process cursor. The formerly deferred stadium now gets evidence.
         second = VenueClient(response=response)
-        registry, second_audit = self.resolve(raw, second)
+        registry, second_audit = self.resolve(raw, second, max_lookups=24)
         self.assertEqual(second.calls[0]["venue_id"], venues[-1]["id"])
         self.assertEqual(second_audit["counts"]["added"], 1)
         entry = second_audit["added"][0]["entry"]
@@ -322,11 +409,11 @@ class VenueRegistryTests(unittest.TestCase):
                                    else "United Kingdom")]
 
         first = VenueClient(response=response)
-        _, initial = self.resolve(raw, first)
+        _, initial = self.resolve(raw, first, max_lookups=24)
         self.assertEqual([call["venue_id"] for call in first.calls], [v["id"] for v in future[:24]])
         self.assertEqual(initial["counts"]["added"], 0)
         second = VenueClient(response=response)
-        _, advanced = self.resolve(raw, second)
+        _, advanced = self.resolve(raw, second, max_lookups=24)
         self.assertEqual([call["venue_id"] for call in second.calls[:2]],
                          [future[-1]["id"], historic["id"]])
         self.assertEqual(advanced["added"][0]["entry"]["id"], historic["id"])
@@ -338,12 +425,12 @@ class VenueRegistryTests(unittest.TestCase):
                for i, venue in enumerate(venues)]
         by_id = {venue["id"]: venue for venue in venues}
         response = lambda venue_id=None, name=None: [provider_venue(by_id[venue_id], country="United Kingdom")]
-        _, first = self.resolve(raw, VenueClient(response=response))
+        _, first = self.resolve(raw, VenueClient(response=response), max_lookups=24)
         snapshot = self.runtime / first["registry_snapshot"]
         original_bytes = snapshot.read_bytes()
         initial_queue = (self.runtime / first["retry_state_path"]).read_bytes()
         second_client = VenueClient(response=response)
-        _, second = self.resolve(raw, second_client)
+        _, second = self.resolve(raw, second_client, max_lookups=24)
         self.assertEqual([call["venue_id"] for call in second_client.calls[:2]],
                          [venues[24]["id"], venues[25]["id"]])
         self.assertNotEqual((self.runtime / second["retry_state_path"]).read_bytes(), initial_queue)
