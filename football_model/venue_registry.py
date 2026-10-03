@@ -1,4 +1,4 @@
-"""Bounded provider-backed Nations League venue discovery and frozen registries.
+"""Budget-protected Nations League venue discovery and frozen registries.
 
 Fixture tuples remain unchanged. Positive provider IDs can verify a name alias
 when the independently returned city agrees exactly or a narrowly reviewed
@@ -346,10 +346,17 @@ def _select_provider(envelope, venue, teams, params):
     return (copy.deepcopy(provider), association, alias), None, None
 
 
-def resolve_venues(raw, client, runtime, asof, days=7, *, max_lookups=24, reserve_requests=0, clock=None):
-    """Resolve unknown tuples without fitting models or modifying raw fixtures."""
-    if type(max_lookups) is not int or max_lookups < 0 or type(reserve_requests) is not int or reserve_requests < 0:
-        raise DataError("场馆查询上限与预留请求数必须为非负整数。")
+def resolve_venues(raw, client, runtime, asof, days=7, *, max_lookups=None, reserve_requests=0, clock=None):
+    """Resolve unknown tuples without fitting models or modifying raw fixtures.
+
+    None applies no additional logical lookup cap; the client's network, daily
+    and reserved-request budgets still apply. Explicit nonnegative caps remain
+    supported for callers that need to bound an optional discovery batch.
+    """
+    if max_lookups is not None and (type(max_lookups) is not int or max_lookups < 0):
+        raise DataError("场馆查询上限必须为None（无额外逻辑上限）或非负整数。")
+    if type(reserve_requests) is not int or reserve_requests < 0:
+        raise DataError("预留请求数必须为非负整数。")
     _utc(asof)
     clock = clock or (lambda: datetime.now(timezone.utc))
     runtime = Path(runtime)
@@ -426,7 +433,7 @@ def resolve_venues(raw, client, runtime, asof, days=7, *, max_lookups=24, reserv
         params = _query_params(venue)
         query_key = _query_key(params)
         if query_key not in lookup_results:
-            if len(attempted_queries) >= max_lookups:
+            if max_lookups is not None and len(attempted_queries) >= max_lookups:
                 deferred += 1
                 pending(group, "lookup_budget_deferred", "本次唯一场馆查询已达上限，保留后续查询。")
                 continue

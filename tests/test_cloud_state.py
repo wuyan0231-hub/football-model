@@ -178,7 +178,8 @@ class CloudStateTests(unittest.TestCase):
 
         cloud_state.load_state(self.repo)
         first_client = VenueClient(response=response)
-        _, first_audit = resolve_venues(raw, first_client, self.repo / "runtime", NOW)
+        _, first_audit = resolve_venues(raw, first_client, self.repo / "runtime", NOW,
+                                         max_lookups=24)
         self.assertEqual(len(first_client.calls), 24)
         self.assertEqual(first_audit["added"], [])
         self.assertTrue(any(item["venue"]["id"] == 980025 and
@@ -192,7 +193,7 @@ class CloudStateTests(unittest.TestCase):
         self.assertEqual(cloud_state.load_state(next_run), first)
         second_client = VenueClient(response=response)
         registry, second_audit = resolve_venues(raw, second_client,
-                                               next_run / "runtime", NOW)
+                                               next_run / "runtime", NOW, max_lookups=24)
         self.assertEqual(second_client.calls[0]["venue_id"], 980025)
         self.assertEqual(len(second_audit["added"]), 1)
         self.assertTrue(any(item["id"] == 980025 for item in registry["venues"]))
