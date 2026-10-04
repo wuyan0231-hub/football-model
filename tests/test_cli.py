@@ -79,27 +79,32 @@ class BudgetClient(FakeClient):
 
 
 class PipelineTests(unittest.TestCase):
-    def test_segunda_single_run_keeps_laliga_model_independent(self):
+    def test_added_domestic_league_run_keeps_existing_models_independent(self):
         production = json.loads((Path(__file__).parents[1] / "config.json").read_text())
-        competition = next(c for c in production["competitions"] if c["key"] == "segunda")
-        config = copy.deepcopy(BASE_CONFIG)
-        config["competitions"].append(competition)
-        with tempfile.TemporaryDirectory() as tmp:
-            existing = Path(tmp) / "models" / "laliga.json"
-            existing.parent.mkdir()
-            original = b'{"sentinel":"existing La Liga model"}'
-            existing.write_bytes(original)
-            code, report = run_pipeline(config, tmp, "train", league="segunda",
-                                        now=NOW, clock=lambda: NOW, client=FakeClient())
-            self.assertEqual(code, 0, report)
-            self.assertEqual(report["requested_competitions"], ["segunda"])
-            self.assertEqual(report["competitions"][0]["forecast_count"], 1)
-            model = json.loads((Path(tmp) / "models" / "segunda.json").read_text())
-            self.assertEqual(model["competition"], competition)
-            self.assertEqual(existing.read_bytes(), original)
-            self.assertFalse((Path(tmp) / "models" / "epl.json").exists())
+        for key in ("segunda", "argentina_a"):
+            with self.subTest(league=key), tempfile.TemporaryDirectory() as tmp:
+                competition = next(c for c in production["competitions"] if c["key"] == key)
+                config = copy.deepcopy(BASE_CONFIG)
+                config["competitions"].append(competition)
+                existing = Path(tmp) / "models" / "laliga.json"
+                existing.parent.mkdir()
+                original = b'{"sentinel":"existing La Liga model"}'
+                existing.write_bytes(original)
+                with patch("football_model.nations.prepare_nations",
+                           side_effect=AssertionError("国内联赛不能调用国家队适配")), patch(
+                        "football_model.venue_registry.resolve_venues",
+                        side_effect=AssertionError("国内联赛不能调用欧国联场地登记")):
+                    code, report = run_pipeline(config, tmp, "train", league=key,
+                                                now=NOW, clock=lambda: NOW, client=FakeClient())
+                self.assertEqual(code, 0, report)
+                self.assertEqual(report["requested_competitions"], [key])
+                self.assertEqual(report["competitions"][0]["forecast_count"], 1)
+                model = json.loads((Path(tmp) / "models" / (key + ".json")).read_text())
+                self.assertEqual(model["competition"], competition)
+                self.assertEqual(existing.read_bytes(), original)
+                self.assertFalse((Path(tmp) / "models" / "epl.json").exists())
 
-    def test_real_config_all_selection_and_workflow_menu_include_segunda(self):
+    def test_real_config_all_selection_and_workflow_menu_include_added_leagues(self):
         root = Path(__file__).parents[1]
         config = json.loads((root / "config.json").read_text())
         workflow = (root / ".github/workflows/football.yml").read_text()
@@ -118,7 +123,8 @@ class PipelineTests(unittest.TestCase):
                                         now=NOW, clock=lambda: NOW, client=FakeClient())
             self.assertEqual(code, 0, report)
             self.assertEqual(report["requested_competitions"], keys)
-            self.assertEqual([call.args[1]["key"] for call in process.call_args_list].count("segunda"), 1)
+            for key in ("segunda", "argentina_a"):
+                self.assertEqual([call.args[1]["key"] for call in process.call_args_list].count(key), 1)
 
     def test_actual_fit_and_unchanged_data_reuses_same_parameters(self):
         with tempfile.TemporaryDirectory() as tmp:
