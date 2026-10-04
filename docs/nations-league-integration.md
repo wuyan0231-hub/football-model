@@ -113,3 +113,16 @@ PR #1原发布规程（历史记录）：全部相关测试、文件核验与本
 - https://www.uefa.com/uefanationsleague/match/2043048--iceland-vs-kosovo/matchinfo/
 - https://www.uefa.com/uefanationsleague/match/2040057--belgium-vs-israel/matchinfo/
 - https://www.uefa.com/uefanationsleague/news/0297-1d597601d9a2-f305608efca7-1000/
+
+
+## 国家级准入线上验收（2026-10-04）
+
+PR #7已合并；Actions [37214300551](https://github.com/wuyan0231-hub/football-model/actions/runs/37214300551)的push流程在北京时间23:47完成一次欧国联更新，训练、输出检查和长期保存均成功。源代码提交`d9fe52a29a20d3fd7d8a392a7ccf5f4e8382145f`，固定状态`ddf28c41c5d749504722ea3f4dc5566890e34369`。
+
+- 240项全量回归及远端CI通过，独立审查无阻塞问题。
+- 同一未来窗口可用预测13→25场，不支持12→0场；原12场均恢复，线上25份比分分布逐场复算一致。
+- 428场合格常规赛果中，历史准入387→408场，20场仍按真实缺口排除；完成真实重拟合。离线回放记录407场，线上以新查询与最终代码实际结果408场为准，不修改原回放记录。
+- 爱尔兰对以色列按已核Serbia第三方地区处理；原来15个非欧国联模型文件的Git blob未变，并行新增西乙模型仍保留。
+- 本次更新API实际请求3次，无预算延期；每日all继续应用新规则，未重复手动派发。
+
+详细原件路径、指纹、恢复比赛ID和逐场复算摘要见[线上验收记录](evidence/欧国联国家级准入_线上验收_20261004.json)。覆盖和工程复算通过不等于预测准确率或收益提升，也不代表人员、战术和报价已进入模型。
