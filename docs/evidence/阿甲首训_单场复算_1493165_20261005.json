@@ -1,0 +1,343 @@
+{
+  "schema_version": 1,
+  "packet_type": "saved_exploratory_forecast_for_framework",
+  "created_at": "2026-10-04T17:49:01.135748Z",
+  "analysis_as_of": "2026-10-04T17:49:01.131754Z",
+  "status": "baseline_verified_external_checks_pending",
+  "competition": {
+    "key": "argentina_a",
+    "label": "阿根廷甲级联赛",
+    "name": "Liga Profesional Argentina",
+    "country": "Argentina",
+    "mode": "domestic_baseline"
+  },
+  "fixture": {
+    "match_id": 1493165,
+    "kickoff": "2026-10-04T20:00:00Z",
+    "home_id": 456,
+    "away_id": 440,
+    "home_name": "Talleres Cordoba",
+    "away_name": "Belgrano Cordoba"
+  },
+  "provenance": {
+    "model_id": "argentina_a-20261004T174619863657Z",
+    "model_file": "runtime/models/argentina_a.json",
+    "model_file_sha256": "80e2eb93d62d597c9236ff96e870c28c2a5a7a8818decc3512a42eda9c5533b0",
+    "prediction_file": "runtime/predictions/20261004T174619863657Z/argentina_a.json",
+    "prediction_file_sha256": "26a053fd9b08ae7d88b8144fa461531df6047d995205cea47ee3b0b635855793",
+    "report_file": "runtime/reports/history/20261004T174619863657Z.json",
+    "source_commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+    "state_commit": "de684da69bb72a3bbbe5a443e94715ddbf18c415",
+    "state_commit_source": "caller_supplied; verify against checkout",
+    "trained_at": "2026-10-04T17:46:19.863657Z",
+    "training_cutoff": "2026-10-04T17:46:19.863657Z",
+    "training_data_sha256": "7adafcaf7ce06fd3d81ebb94caa13c39a28c63b3dd648661bd01c8ccef4e05bf",
+    "data_observed_at": "2026-10-04T17:46:21.514744Z",
+    "forecast_generated_at": "2026-10-04T17:46:21.900261Z",
+    "read_and_recomputed": true,
+    "fit_performed": false,
+    "time_semantics": "observed_wall_clock_v1",
+    "run_started_at": "2026-10-04T17:46:19.863657Z",
+    "model_fitted_at": "2026-10-04T17:46:21.783768Z",
+    "historical_availability_verified": false,
+    "source_publication_history_verified": false,
+    "time_evidence_note": "真实取得及完成时间已核验；训练留出不等于供应商历史发布时间重演。"
+  },
+  "latest_league_attempt": {
+    "run_id": "20261004T174619863657Z",
+    "generated_at": "2026-10-04T17:46:21.909868Z",
+    "mode": "train",
+    "status": "探索性基线",
+    "detail": "未含阵容伤停、xG与赛程；未证实预测或收益优势。",
+    "model_id": "argentina_a-20261004T174619863657Z",
+    "trained_at": "2026-10-04T17:46:19.863657Z",
+    "source_commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+    "report_file": "runtime/reports/history/20261004T174619863657Z.json",
+    "forecast_count": 7,
+    "unsupported_forecasts": 0,
+    "time_semantics": "observed_wall_clock_v1",
+    "run_started_at": "2026-10-04T17:46:19.863657Z",
+    "data_observed_at": "2026-10-04T17:46:21.514744Z",
+    "forecast_generated_at": "2026-10-04T17:46:21.902375Z",
+    "model_fitted_at": "2026-10-04T17:46:21.783768Z",
+    "training_cutoff": "2026-10-04T17:46:19.863657Z"
+  },
+  "prediction": {
+    "expected_goals": {
+      "home": 0.8658678681299874,
+      "away": 0.9892601639849492
+    },
+    "probabilities": {
+      "home_win": 0.30570510736195067,
+      "draw": 0.3220047941023639,
+      "away_win": 0.3722900985356853
+    },
+    "score_matrix": [
+      [
+        0.15643291343575222,
+        0.15475284959809563,
+        0.07654541468527513,
+        0.0252411098279504,
+        0.006242506111890081,
+        0.0012350925239850868,
+        0.00020363797213567854,
+        2.87787048155005e-05,
+        3.5587032806320606e-06,
+        3.911648212190945e-07,
+        3.869637751843454e-08,
+        3.4800713426827346e-09
+      ],
+      [
+        0.13545023326197764,
+        0.13399551996854364,
+        0.06627821502866502,
+        0.021855465955962286,
+        0.0054051854588906805,
+        0.0010694269306862523,
+        0.00017632357680343375,
+        2.491855578613962e-05,
+        3.0813668229080748e-06,
+        3.38697049836425e-07,
+        3.350594990624008e-08,
+        3.0132819544289624e-09
+      ],
+      [
+        0.058641002356129054,
+        0.058011207607066025,
+        0.028694088375165537,
+        0.009461972857138292,
+        0.0023400882050684407,
+        0.00046299120829705056,
+        7.633645977392165e-05,
+        1.0788088387711437e-05,
+        1.3340282609389435e-06,
+        1.466334462418907e-07,
+        1.4505862707493127e-08,
+        1.3045520109779838e-09
+      ],
+      [
+        0.016925119898369013,
+        0.016743346886125457,
+        0.008281763043112681,
+        0.0027309394220380472,
+        0.00067540239511958,
+        0.00013362973683036475,
+        2.2032429228345363e-05,
+        3.113686364488526e-06,
+        3.850307354414527e-07,
+        4.2321729831339686e-08,
+        4.186720139307789e-09,
+        3.7652322287006504e-10
+      ],
+      [
+        0.0036637293710613016,
+        0.0036243815184125784,
+        0.0017927281276244233,
+        0.0005911581738380558,
+        0.0001462023079980195,
+        2.8926423837019792e-05,
+        4.769293131418056e-06,
+        6.740102436112727e-07,
+        8.334643551530295e-08,
+        9.161256496158845e-09,
+        9.062866103698295e-10,
+        8.150484007198382e-11
+      ],
+      [
+        0.0006344611079852138,
+        0.0006276470997275251,
+        0.00031045313640056465,
+        0.00010237297354175477,
+        2.5318376148385796e-05,
+        5.009292188076955e-06,
+        8.259155352375887e-07,
+        1.1672076254669321e-07,
+        1.4433400087173763e-08,
+        1.5864875263442115e-09,
+        1.5694489104713538e-10,
+        1.4114484423080839e-11
+      ],
+      [
+        9.155991449709102e-05,
+        9.057657602984018e-05,
+        4.4801899228237465e-05,
+        1.4773578059121118e-05,
+        3.65372806335265e-06,
+        7.228975246217313e-07,
+        1.1918895395860124e-07,
+        1.68441263054686e-08,
+        2.082902893891384e-09,
+        2.2894809537507966e-10,
+        2.2648923037479346e-11,
+        2.036879756194484e-12
+      ],
+      [
+        1.1325541138822895e-05,
+        1.1203906684210227e-05,
+        5.5417892818469385e-06,
+        1.827423791243312e-06,
+        4.5194938984883895e-07,
+        8.941910550295211e-08,
+        1.4743126495539641e-08,
+        2.0835411049469094e-09,
+        2.576455268936454e-10,
+        2.8319828464977373e-11,
+        2.8015678151289194e-12,
+        2.519526760190357e-13
+      ],
+      [
+        1.225802770161379e-06,
+        1.2126378494230508e-06,
+        5.998071588873016e-07,
+        1.977884427867328e-07,
+        4.891605683638275e-08,
+        9.678141281491428e-09,
+        1.5956999385329519e-09,
+        2.255089118376969e-10,
+        2.7885872888078452e-11,
+        3.0651536873471055e-12,
+        3.032234439384074e-13,
+        2.726971580678093e-14
+      ],
+      [
+        1.1793147014971862e-07,
+        1.1666490549929677e-07,
+        5.7705971772761473e-08,
+        1.902873969961095e-08,
+        4.706093538916009e-09,
+        9.31110173207313e-10,
+        1.5351836710585342e-10,
+        2.169565785969113e-11,
+        2.6828312565049266e-12,
+        2.948908987504457e-13,
+        2.917238188555355e-14,
+        2.623552298903117e-15
+      ],
+      [
+        1.021130706439718e-08,
+        1.0101639301026226e-08,
+        4.996574675725006e-09,
+        1.6476374276902545e-09,
+        4.074855179761502e-10,
+        8.062183806691572e-11,
+        1.3292662124474173e-11,
+        1.878557301864831e-12,
+        2.322977380622409e-13,
+        2.553365538319837e-14,
+        2.5259428111518044e-15,
+        2.2716496359787633e-16
+      ]
+    ],
+    "score_matrix_axes": {
+      "rows": "home_goals_from_0",
+      "columns": "away_goals_from_0"
+    },
+    "tail_mass_before_normalization": 3.0663959149634934e-09,
+    "tail_tolerance": 1e-08,
+    "matrix_renormalized": true,
+    "home_id": 456,
+    "away_id": 440,
+    "home_name": "Talleres Cordoba",
+    "away_name": "Belgrano Cordoba",
+    "kickoff": "2026-10-04T20:00:00Z",
+    "neutral": false,
+    "model_version": "independent_poisson_time_decay_l2_v1",
+    "model_scope": "baseline_unadjusted_lineup",
+    "training_cutoff": "2026-10-04T17:46:19.863657Z",
+    "training_data_sha256": "7adafcaf7ce06fd3d81ebb94caa13c39a28c63b3dd648661bd01c8ccef4e05bf",
+    "lineup_adjusted": false,
+    "team_training_matches": {
+      "home": 87,
+      "away": 89
+    },
+    "low_sample": false,
+    "model_age_days": 0.09282565211805556,
+    "warnings": [
+      "仅为未调整阵容的球队基线；尚未量化本场人员变化，不含 EV。"
+    ]
+  },
+  "validation": {
+    "validation_status": "exploratory_single_fixed_holdout",
+    "deployment_approved": false,
+    "is_rolling_backtest": false,
+    "minimum_test_matches": 40,
+    "meets_minimum_supported_test_matches": true,
+    "evaluation_data_cutoff": "2026-10-04T17:46:19.863657Z",
+    "split": {
+      "method": "chronological_fixed_model_holdout",
+      "grouped_by": "kickoff_utc_calendar_date",
+      "train_cutoff": "2026-03-22T00:00:00Z",
+      "train_last_kickoff": "2026-03-21T18:30:00Z",
+      "test_start": "2026-03-22T01:15:00Z",
+      "test_end": "2026-10-03T20:00:00Z",
+      "training_count": 1039,
+      "testing_count": 257,
+      "result_availability_delay_hours": 4,
+      "embargoed_count": 3,
+      "embargoed_match_ids": [
+        1491988,
+        1491995,
+        1491993
+      ]
+    },
+    "coverage": {
+      "total": 257,
+      "scored": 257,
+      "excluded": 0,
+      "ratio": 1.0,
+      "exclusions": []
+    },
+    "model_metrics": {
+      "n": 257,
+      "log_loss": 1.0709404662431303,
+      "brier_score": 0.6473480592121436,
+      "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+      "log_loss_probability_floor": 1e-15
+    },
+    "baseline_metrics": {
+      "n": 257,
+      "log_loss": 1.0798565565648073,
+      "brier_score": 0.6533824546521552,
+      "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+      "log_loss_probability_floor": 1e-15
+    },
+    "baseline": {
+      "name": "training_league_home_away_mean_poisson",
+      "home_rate": 1.1462241462241463,
+      "away_rate": 0.8403078403078403,
+      "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
+      "same_scored_matches_as_model": true
+    },
+    "comparison": {
+      "model_minus_baseline_log_loss": -0.00891609032167695,
+      "model_minus_baseline_brier_score": -0.0060343954400116084,
+      "lower_is_better": true
+    },
+    "warnings": [
+      "单次固定模型留出验证仅为探索性检查，不是滚动回测，也不构成上线或盈利证明。",
+      "不含赔率、投注收益、阵容修正或提前十小时伤停历史快照验证。",
+      "超参数为显式默认值，不能根据本留出期反复挑选参数后再声称独立验证。",
+      "未知球队比赛单独列为未覆盖，指标只针对 model_metrics.n 场已覆盖比赛。"
+    ]
+  },
+  "external_checks": {
+    "current_fixture_status_and_kickoff": "pending",
+    "actual_venue_and_neutral_status": "pending",
+    "team_identity_against_current_schedule": "pending",
+    "lineups_injuries_news": "pending",
+    "current_odds_and_settlement_contract": "pending"
+  },
+  "unquantified_factors": [
+    "球员与伤停/预计及实际阵容",
+    "射门事件xG",
+    "战术变化",
+    "旅行与赛程特征",
+    "天气与场地变化",
+    "参数不确定性"
+  ],
+  "market_mapping": {
+    "status": "not_executed",
+    "instruction": "以框架§22按真实合约映射五态及EV；本包未读取赔率、不计算盘口EV。预测λ不是射门xG。"
+  },
+  "usage": "仅为已读取并复算的探索性常规时间比分基线。尚须外部核实本场资料；不能称已纳入全部信息、已验证优势或已自动推荐。90分钟含补时，不含加时与点球大战。"
+}

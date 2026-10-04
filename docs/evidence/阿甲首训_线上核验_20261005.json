@@ -1,0 +1,907 @@
+{
+  "schema_version": 1,
+  "repository": "wuyan0231-hub/football-model",
+  "request": "增加阿根廷足球甲级联赛",
+  "source_commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+  "state_commit": "de684da69bb72a3bbbe5a443e94715ddbf18c415",
+  "parent_state_commit": "7c4ddfb3e4a756be808d7336cf7235024f84f35d",
+  "pull_request": 8,
+  "actions_runs": [
+    {
+      "id": 37221753168,
+      "event": "workflow_dispatch",
+      "status": "completed",
+      "conclusion": "success",
+      "source_commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+      "created_at": "2026-10-04T17:45:53Z",
+      "updated_at": "2026-10-04T17:46:30Z"
+    },
+    {
+      "id": 37221681969,
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "source_commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+      "created_at": "2026-10-04T17:44:49Z",
+      "updated_at": "2026-10-04T17:45:31Z"
+    },
+    {
+      "id": 37221627252,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "source_commit": "12d5cbd9d7cecae047c0fb3eb55161d46cb6dd9f",
+      "created_at": "2026-10-04T17:43:57Z",
+      "updated_at": "2026-10-04T17:44:26Z"
+    }
+  ],
+  "jobs": [
+    {
+      "id": 111493325273,
+      "conclusion": "success",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "读取程序",
+          "conclusion": "success"
+        },
+        {
+          "name": "准备 Python",
+          "conclusion": "success"
+        },
+        {
+          "name": "安装依赖",
+          "conclusion": "success"
+        },
+        {
+          "name": "检查场地适配发布",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "恢复上次模型与缓存",
+          "conclusion": "success"
+        },
+        {
+          "name": "清除上次报告入口，避免将旧报告显示为本次结果",
+          "conclusion": "success"
+        },
+        {
+          "name": "检查数据或训练",
+          "conclusion": "success"
+        },
+        {
+          "name": "检查输出是否可以保存和上传",
+          "conclusion": "success"
+        },
+        {
+          "name": "保存模型、缓存和报告的长期历史",
+          "conclusion": "success"
+        },
+        {
+          "name": "上传本次报告便捷副本（保留 14 天）",
+          "conclusion": "success"
+        },
+        {
+          "name": "在运行摘要中显示结果",
+          "conclusion": "success"
+        },
+        {
+          "name": "将实际失败标记为失败",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post 准备 Python",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post 读取程序",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "regression": {
+    "full_suite_passed": 240,
+    "cli_after_final_test_change_passed": 12,
+    "independent_review": "No blocking issues; all production source and existing competition/global settings unchanged"
+  },
+  "state_preservation": {
+    "all_previous_models_unchanged": 17,
+    "old_protected_artifacts_unchanged": 364,
+    "old_artifact_missing_or_modified": 0
+  },
+  "independent_recomputation": {
+    "validation_rows": 257,
+    "metrics_max_report_difference": 6.7e-16,
+    "forecast_rows": 7,
+    "lambda_max_absolute_difference": 0,
+    "outcome_probabilities_max_absolute_difference": 0,
+    "matrix_max_absolute_difference": 8.673617379884035e-19,
+    "fit_performed": false,
+    "training_input_hashes_rebuilt_and_matched": true
+  },
+  "schedule": {
+    "cron": "17 1 * * *",
+    "timezone": "UTC",
+    "beijing": "09:17",
+    "selection": "train/all",
+    "unchanged": true
+  },
+  "limits": {
+    "actual_venue_checks_pending": true,
+    "league_specific_phase_model_added": false,
+    "rolling_or_prospective_profit_validation": false
+  },
+  "access_channel": "authorized GitHub connector",
+  "raw_original_response_files": [
+    "argentina-connector-files.json",
+    "argentina-validation-original-response.json",
+    "argentina-data-originals.json"
+  ],
+  "browser_proof": {
+    "run_url": "https://github.com/wuyan0231-hub/football-model/actions/runs/37221753168",
+    "status_and_save_success_visibly_verified": true,
+    "screenshot_saved_in_browser": true,
+    "screenshot_main_container_sync_failed_after_five_seconds": true
+  },
+  "league": {
+    "key": "argentina_a",
+    "label": "阿根廷甲级联赛",
+    "name": "Liga Profesional Argentina",
+    "country": "Argentina",
+    "mode": "domestic_baseline"
+  },
+  "training": {
+    "n_matches": 1299,
+    "n_teams": 32,
+    "min_team_matches": 26,
+    "model_id": "argentina_a-20261004T174619863657Z",
+    "training_cutoff": "2026-10-04T17:46:19.863657Z",
+    "data_observed_at": "2026-10-04T17:46:21.514744Z",
+    "model_fitted_at": "2026-10-04T17:46:21.783768Z",
+    "training_data_sha256": "7adafcaf7ce06fd3d81ebb94caa13c39a28c63b3dd648661bd01c8ccef4e05bf"
+  },
+  "validation": {
+    "validation_status": "exploratory_single_fixed_holdout",
+    "deployment_approved": false,
+    "is_rolling_backtest": false,
+    "minimum_test_matches": 40,
+    "meets_minimum_supported_test_matches": true,
+    "evaluation_data_cutoff": "2026-10-04T17:46:19.863657Z",
+    "split": {
+      "method": "chronological_fixed_model_holdout",
+      "grouped_by": "kickoff_utc_calendar_date",
+      "train_cutoff": "2026-03-22T00:00:00Z",
+      "train_last_kickoff": "2026-03-21T18:30:00Z",
+      "test_start": "2026-03-22T01:15:00Z",
+      "test_end": "2026-10-03T20:00:00Z",
+      "training_count": 1039,
+      "testing_count": 257,
+      "result_availability_delay_hours": 4,
+      "embargoed_count": 3,
+      "embargoed_match_ids": [
+        1491988,
+        1491995,
+        1491993
+      ]
+    },
+    "coverage": {
+      "total": 257,
+      "scored": 257,
+      "excluded": 0,
+      "ratio": 1.0,
+      "exclusions": []
+    },
+    "model_metrics": {
+      "n": 257,
+      "log_loss": 1.0709404662431303,
+      "brier_score": 0.6473480592121436,
+      "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+      "log_loss_probability_floor": 1e-15
+    },
+    "baseline_metrics": {
+      "n": 257,
+      "log_loss": 1.0798565565648073,
+      "brier_score": 0.6533824546521552,
+      "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+      "log_loss_probability_floor": 1e-15
+    },
+    "baseline": {
+      "name": "training_league_home_away_mean_poisson",
+      "home_rate": 1.1462241462241463,
+      "away_rate": 0.8403078403078403,
+      "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
+      "same_scored_matches_as_model": true
+    },
+    "comparison": {
+      "model_minus_baseline_log_loss": -0.00891609032167695,
+      "model_minus_baseline_brier_score": -0.0060343954400116084,
+      "lower_is_better": true
+    },
+    "warnings": [
+      "单次固定模型留出验证仅为探索性检查，不是滚动回测，也不构成上线或盈利证明。",
+      "不含赔率、投注收益、阵容修正或提前十小时伤停历史快照验证。",
+      "超参数为显式默认值，不能根据本留出期反复挑选参数后再声称独立验证。",
+      "未知球队比赛单独列为未覆盖，指标只针对 model_metrics.n 场已覆盖比赛。"
+    ]
+  },
+  "forecast_summary": {
+    "count": 7,
+    "unsupported": 0,
+    "match_ids": [
+      1493165,
+      1493152,
+      1493159,
+      1493157,
+      1493158,
+      1493166,
+      1493154
+    ]
+  },
+  "provider_data_audit": {
+    "source_commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+    "state_commit": "de684da69bb72a3bbbe5a443e94715ddbf18c415",
+    "provider_league_id": 128,
+    "target": "90_plus_stoppage",
+    "training_cutoff": "2026-10-04T17:46:19.863657Z",
+    "eligible_count": 1299,
+    "unique_teams": 32,
+    "seasons": [
+      {
+        "year": 2026,
+        "raw_count": 495,
+        "eligible_regulation": 411,
+        "statuses": {
+          "FT": 406,
+          "AET": 3,
+          "PEN": 2,
+          "NS": 84
+        },
+        "round_counts": {
+          "Apertura - 1": 15,
+          "Apertura - 10": 15,
+          "Apertura - 11": 15,
+          "Apertura - 12": 15,
+          "Apertura - 13": 15,
+          "Apertura - 14": 15,
+          "Apertura - 15": 15,
+          "Apertura - 16": 15,
+          "Apertura - 2": 15,
+          "Apertura - 3": 15,
+          "Apertura - 4": 15,
+          "Apertura - 5": 15,
+          "Apertura - 6": 15,
+          "Apertura - 7": 15,
+          "Apertura - 8": 15,
+          "Apertura - 9": 15,
+          "Apertura - Final": 1,
+          "Apertura - Quarter-finals": 4,
+          "Apertura - Round of 16": 8,
+          "Apertura - Semi-finals": 2,
+          "Clausura - 1": 15,
+          "Clausura - 10": 15,
+          "Clausura - 11": 15,
+          "Clausura - 12": 15,
+          "Clausura - 13": 15,
+          "Clausura - 14": 15,
+          "Clausura - 15": 15,
+          "Clausura - 16": 15,
+          "Clausura - 2": 15,
+          "Clausura - 3": 15,
+          "Clausura - 4": 15,
+          "Clausura - 5": 15,
+          "Clausura - 6": 15,
+          "Clausura - 7": 15,
+          "Clausura - 8": 15,
+          "Clausura - 9": 15
+        },
+        "raw_round_prefix_counts": {
+          "Apertura": 255,
+          "Clausura": 240
+        },
+        "raw_file": "../argentina-data-audit/runtime/cache/api_cache/ad58d8852d2a302cdd22dc385a4d2729c442eb1f33c0b4ff633189f731cb8cca.json",
+        "raw_sha256": "4266448a76cb6a8824e1268dd1d3e630c2f14d87dc39a398def59b247f9519cc"
+      },
+      {
+        "year": 2025,
+        "raw_count": 510,
+        "eligible_regulation": 510,
+        "statuses": {
+          "FT": 503,
+          "PEN": 6,
+          "AET": 1
+        },
+        "round_counts": {
+          "1st Phase - 1": 15,
+          "1st Phase - 10": 15,
+          "1st Phase - 11": 15,
+          "1st Phase - 12": 15,
+          "1st Phase - 13": 15,
+          "1st Phase - 14": 15,
+          "1st Phase - 15": 15,
+          "1st Phase - 16": 15,
+          "1st Phase - 2": 15,
+          "1st Phase - 3": 15,
+          "1st Phase - 4": 15,
+          "1st Phase - 5": 15,
+          "1st Phase - 6": 15,
+          "1st Phase - 7": 15,
+          "1st Phase - 8": 15,
+          "1st Phase - 8th Finals": 8,
+          "1st Phase - 9": 15,
+          "1st Phase - Final": 1,
+          "1st Phase - Quarter-finals": 4,
+          "1st Phase - Semi-finals": 2,
+          "2nd Phase - 1": 15,
+          "2nd Phase - 10": 15,
+          "2nd Phase - 11": 15,
+          "2nd Phase - 12": 15,
+          "2nd Phase - 13": 15,
+          "2nd Phase - 14": 15,
+          "2nd Phase - 15": 15,
+          "2nd Phase - 16": 15,
+          "2nd Phase - 2": 15,
+          "2nd Phase - 3": 15,
+          "2nd Phase - 4": 15,
+          "2nd Phase - 5": 15,
+          "2nd Phase - 6": 15,
+          "2nd Phase - 7": 15,
+          "2nd Phase - 8": 15,
+          "2nd Phase - 9": 15,
+          "Final": 1,
+          "Quarter-finals": 4,
+          "Round of 16": 8,
+          "Semi-finals": 2
+        },
+        "raw_round_prefix_counts": {
+          "1st Phase": 255,
+          "2nd Phase": 240,
+          "Final": 1,
+          "Quarter-finals": 4,
+          "Round of 16": 8,
+          "Semi-finals": 2
+        },
+        "raw_file": "../argentina-data-audit/runtime/cache/api_cache/a68a6c39a867503d30dcb82cef9da27e68c7f37768a6b35ff9639afaf1fc5841.json",
+        "raw_sha256": "6757ebed06859c774f818c0acf8d66397b2a887db61a18a9c7dc9b917de310c6"
+      },
+      {
+        "year": 2024,
+        "raw_count": 378,
+        "eligible_regulation": 378,
+        "statuses": {
+          "FT": 378
+        },
+        "round_counts": {
+          "2nd Phase - 1": 14,
+          "2nd Phase - 10": 14,
+          "2nd Phase - 11": 14,
+          "2nd Phase - 12": 14,
+          "2nd Phase - 13": 14,
+          "2nd Phase - 14": 14,
+          "2nd Phase - 15": 14,
+          "2nd Phase - 16": 14,
+          "2nd Phase - 17": 14,
+          "2nd Phase - 18": 14,
+          "2nd Phase - 19": 14,
+          "2nd Phase - 2": 14,
+          "2nd Phase - 20": 14,
+          "2nd Phase - 21": 14,
+          "2nd Phase - 22": 14,
+          "2nd Phase - 23": 14,
+          "2nd Phase - 24": 14,
+          "2nd Phase - 25": 14,
+          "2nd Phase - 26": 14,
+          "2nd Phase - 27": 14,
+          "2nd Phase - 3": 14,
+          "2nd Phase - 4": 14,
+          "2nd Phase - 5": 14,
+          "2nd Phase - 6": 14,
+          "2nd Phase - 7": 14,
+          "2nd Phase - 8": 14,
+          "2nd Phase - 9": 14
+        },
+        "raw_round_prefix_counts": {
+          "2nd Phase": 378
+        },
+        "raw_file": "../argentina-data-audit/runtime/cache/api_cache/56e73f4b3d89373c15031893ecf912b3a98e16e7951220386bba2db7875fc588.json",
+        "raw_sha256": "fc8ecbfb6b8b017f2ce4d0097d5a4686e77a40281730e5e0fd47496d3713222f"
+      }
+    ],
+    "AET_PEN_targets_checked": [
+      {
+        "season": 2026,
+        "match_id": 1544177,
+        "status": "AET",
+        "round": "Apertura - Round of 16",
+        "target_fulltime": {
+          "home": 1,
+          "away": 1
+        },
+        "extratime_not_target": {
+          "home": 1,
+          "away": 2
+        },
+        "penalty_not_target": {
+          "home": null,
+          "away": null
+        }
+      },
+      {
+        "season": 2026,
+        "match_id": 1544182,
+        "status": "PEN",
+        "round": "Apertura - Round of 16",
+        "target_fulltime": {
+          "home": 1,
+          "away": 1
+        },
+        "extratime_not_target": {
+          "home": null,
+          "away": null
+        },
+        "penalty_not_target": {
+          "home": 4,
+          "away": 3
+        }
+      },
+      {
+        "season": 2026,
+        "match_id": 1544850,
+        "status": "AET",
+        "round": "Apertura - Quarter-finals",
+        "target_fulltime": {
+          "home": 0,
+          "away": 0
+        },
+        "extratime_not_target": {
+          "home": 1,
+          "away": 0
+        },
+        "penalty_not_target": {
+          "home": null,
+          "away": null
+        }
+      },
+      {
+        "season": 2026,
+        "match_id": 1544851,
+        "status": "AET",
+        "round": "Apertura - Quarter-finals",
+        "target_fulltime": {
+          "home": 1,
+          "away": 1
+        },
+        "extratime_not_target": {
+          "home": 1,
+          "away": 0
+        },
+        "penalty_not_target": {
+          "home": null,
+          "away": null
+        }
+      },
+      {
+        "season": 2026,
+        "match_id": 1545165,
+        "status": "PEN",
+        "round": "Apertura - Semi-finals",
+        "target_fulltime": {
+          "home": 1,
+          "away": 1
+        },
+        "extratime_not_target": {
+          "home": null,
+          "away": null
+        },
+        "penalty_not_target": {
+          "home": 3,
+          "away": 4
+        }
+      },
+      {
+        "season": 2025,
+        "match_id": 1374527,
+        "status": "PEN",
+        "round": "1st Phase - 8th Finals",
+        "target_fulltime": {
+          "home": 0,
+          "away": 0
+        },
+        "extratime_not_target": {
+          "home": null,
+          "away": null
+        },
+        "penalty_not_target": {
+          "home": 4,
+          "away": 2
+        }
+      },
+      {
+        "season": 2025,
+        "match_id": 1375310,
+        "status": "PEN",
+        "round": "1st Phase - Quarter-finals",
+        "target_fulltime": {
+          "home": 1,
+          "away": 1
+        },
+        "extratime_not_target": {
+          "home": null,
+          "away": null
+        },
+        "penalty_not_target": {
+          "home": 7,
+          "away": 8
+        }
+      },
+      {
+        "season": 2025,
+        "match_id": 1375312,
+        "status": "PEN",
+        "round": "1st Phase - Quarter-finals",
+        "target_fulltime": {
+          "home": 1,
+          "away": 1
+        },
+        "extratime_not_target": {
+          "home": null,
+          "away": null
+        },
+        "penalty_not_target": {
+          "home": 2,
+          "away": 4
+        }
+      },
+      {
+        "season": 2025,
+        "match_id": 1376084,
+        "status": "PEN",
+        "round": "1st Phase - Semi-finals",
+        "target_fulltime": {
+          "home": 0,
+          "away": 0
+        },
+        "extratime_not_target": {
+          "home": null,
+          "away": null
+        },
+        "penalty_not_target": {
+          "home": 5,
+          "away": 6
+        }
+      },
+      {
+        "season": 2025,
+        "match_id": 1486749,
+        "status": "AET",
+        "round": "Round of 16",
+        "target_fulltime": {
+          "home": 0,
+          "away": 0
+        },
+        "extratime_not_target": {
+          "home": 0,
+          "away": 1
+        },
+        "penalty_not_target": {
+          "home": null,
+          "away": null
+        }
+      },
+      {
+        "season": 2025,
+        "match_id": 1488406,
+        "status": "PEN",
+        "round": "Quarter-finals",
+        "target_fulltime": {
+          "home": 0,
+          "away": 0
+        },
+        "extratime_not_target": {
+          "home": null,
+          "away": null
+        },
+        "penalty_not_target": {
+          "home": 4,
+          "away": 2
+        }
+      },
+      {
+        "season": 2025,
+        "match_id": 1490750,
+        "status": "PEN",
+        "round": "Final",
+        "target_fulltime": {
+          "home": 1,
+          "away": 1
+        },
+        "extratime_not_target": {
+          "home": null,
+          "away": null
+        },
+        "penalty_not_target": {
+          "home": 4,
+          "away": 5
+        }
+      }
+    ],
+    "boundary_notes": [
+      "2024 ID128 only returned 2nd Phase: separate league cup is not included",
+      "2026 Clausura knockout fixtures not yet returned; future publication completeness unknown",
+      "Domestic nominal home/away unchanged; actual venue not modeled"
+    ]
+  },
+  "materialization_manifest": {
+    "schema_version": 1,
+    "repository": "wuyan0231-hub/football-model",
+    "source_commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+    "state_commit": "de684da69bb72a3bbbe5a443e94715ddbf18c415",
+    "materialized_at": "2026-10-04T17:47:59.564664+00:00",
+    "status": "files_materialized_not_model_verified",
+    "scope": "Supplied connector-response consistency only; not authentication, complete-model verification or integration match verification. No network access, credential access, training or downloaded-code execution.",
+    "files": [
+      {
+        "role": "source",
+        "path": "football_model/__init__.py",
+        "commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/2898acd86cc40d5a278a2c5e65b34913233a4217/football_model/__init__.py",
+        "bytes": 101,
+        "git_blob_sha": "6226dcd3ea0332826acee148dc0d91d32276ac36",
+        "sha256": "5dc1b825290762d05af9d1ba22b0d73caec449e976bd276d0db243b1a9706a82"
+      },
+      {
+        "role": "source",
+        "path": "football_model/cli.py",
+        "commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/2898acd86cc40d5a278a2c5e65b34913233a4217/football_model/cli.py",
+        "bytes": 31429,
+        "git_blob_sha": "da094d4a60f53f1b4f7a538540d9baa4108116eb",
+        "sha256": "9d9eaa173601b8d973aaafc390262e0dc6f1400fde51a9373d65cd5b6e6fe446"
+      },
+      {
+        "role": "source",
+        "path": "football_model/coverage_audit.py",
+        "commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/2898acd86cc40d5a278a2c5e65b34913233a4217/football_model/coverage_audit.py",
+        "bytes": 19757,
+        "git_blob_sha": "a401dfc13f51a6f39dd8240ce0c0d5048bf24927",
+        "sha256": "9cac81a10ad8985388454ac837dcf36ff89ac3aeb7e2ffaa5271e46d27e5cd8d"
+      },
+      {
+        "role": "source",
+        "path": "football_model/data.py",
+        "commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/2898acd86cc40d5a278a2c5e65b34913233a4217/football_model/data.py",
+        "bytes": 30903,
+        "git_blob_sha": "d34dacf2e06574c353ce353f0a829c6e2a3789eb",
+        "sha256": "da2ceff6d841fcf0b0acc1d6a6a1458bd91125b94db401f0574fe381111422df"
+      },
+      {
+        "role": "source",
+        "path": "football_model/integration.py",
+        "commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/2898acd86cc40d5a278a2c5e65b34913233a4217/football_model/integration.py",
+        "bytes": 31518,
+        "git_blob_sha": "87db0974746647bc70d7ada0d8e24b735446ca1b",
+        "sha256": "74da10fb61aa3a14d10ad854d7bb066edd994c70b691909eecc03a3136a20203"
+      },
+      {
+        "role": "source",
+        "path": "football_model/match_locations.py",
+        "commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/2898acd86cc40d5a278a2c5e65b34913233a4217/football_model/match_locations.py",
+        "bytes": 7139,
+        "git_blob_sha": "7bec9e8c36624873a027379ad1c0bf960d92c108",
+        "sha256": "2721025e1e314577f25e1d07eded7121ffec8f8b6cf3942420c9cb804458b0c3"
+      },
+      {
+        "role": "source",
+        "path": "football_model/model.py",
+        "commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/2898acd86cc40d5a278a2c5e65b34913233a4217/football_model/model.py",
+        "bytes": 24344,
+        "git_blob_sha": "2f2afb6ccee9916c9bb19076aea9f6b3fe2cacf7",
+        "sha256": "bb1373a867d8afa903465ca77ca61f314b4ea01957dbc25382f48f7033581995"
+      },
+      {
+        "role": "source",
+        "path": "football_model/nations.py",
+        "commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/2898acd86cc40d5a278a2c5e65b34913233a4217/football_model/nations.py",
+        "bytes": 22096,
+        "git_blob_sha": "4920fb3b992a60ea8ee148695e05bb848b14a969",
+        "sha256": "8956218497f90c5d8f1b12a284e9a2de1768d385091bdf92dbb5e51be28083ca"
+      },
+      {
+        "role": "source",
+        "path": "football_model/nations_match_locations.json",
+        "commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/2898acd86cc40d5a278a2c5e65b34913233a4217/football_model/nations_match_locations.json",
+        "bytes": 16461,
+        "git_blob_sha": "fd0e20ed97bd5fd2de1482c63ef83d4924e2286a",
+        "sha256": "9c7f53fc069c74ea6a45a9b577b39b7e540094ff549717e27afbf4e272fc073b"
+      },
+      {
+        "role": "source",
+        "path": "football_model/nations_venue_city_aliases.json",
+        "commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/2898acd86cc40d5a278a2c5e65b34913233a4217/football_model/nations_venue_city_aliases.json",
+        "bytes": 1809,
+        "git_blob_sha": "b738ca193c0de423e33e8f07210fbbf4cf611764",
+        "sha256": "d0aa387ad3c28cd87bc90a7f7ef1f521b85e1c3276cb476cea7794ac9c55a16a"
+      },
+      {
+        "role": "source",
+        "path": "football_model/nations_venues.json",
+        "commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/2898acd86cc40d5a278a2c5e65b34913233a4217/football_model/nations_venues.json",
+        "bytes": 18902,
+        "git_blob_sha": "e27efbbd8753e595714bc15a4eb795bae85decf8",
+        "sha256": "91127a18d8acd19ed9a83dc921c299408f654c60fa126dc86de4cefef1630898"
+      },
+      {
+        "role": "source",
+        "path": "football_model/venue_registry.py",
+        "commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/2898acd86cc40d5a278a2c5e65b34913233a4217/football_model/venue_registry.py",
+        "bytes": 33862,
+        "git_blob_sha": "876f7177010b69bd322d5b40b7e3a1b428d584a8",
+        "sha256": "42c1a42ea66c11c7083b6731c5ec9b13ff150f322f1ecf1981f672135e2c0755"
+      },
+      {
+        "role": "source",
+        "path": "AGENTS.md",
+        "commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/2898acd86cc40d5a278a2c5e65b34913233a4217/AGENTS.md",
+        "bytes": 15957,
+        "git_blob_sha": "72552b53ddad1150d2729a1f20e7ffde2ba68f7f",
+        "sha256": "c416a2d2b928ebf814654da2e39b3258b2fd76bdbd3503ff1c80ae551f68dd5f"
+      },
+      {
+        "role": "source",
+        "path": "config.json",
+        "commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/2898acd86cc40d5a278a2c5e65b34913233a4217/config.json",
+        "bytes": 3258,
+        "git_blob_sha": "16751966b677e20a3db2b277938bcd75b0a6345b",
+        "sha256": "50c09c7d5ba8a5f09fc2f35cfc37191e24447716c15669c543eb9fb0792c58c2"
+      },
+      {
+        "role": "source",
+        "path": "requirements.txt",
+        "commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/2898acd86cc40d5a278a2c5e65b34913233a4217/requirements.txt",
+        "bytes": 27,
+        "git_blob_sha": "871c966c09f89af68c058514f0f7ecce9f1578d3",
+        "sha256": "1668a3152e33680d94637b13421c15e68bd97cd8701f7f555c691f5bc5c0b9f3"
+      },
+      {
+        "role": "source",
+        "path": "docs/model-access.md",
+        "commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/2898acd86cc40d5a278a2c5e65b34913233a4217/docs/model-access.md",
+        "bytes": 10599,
+        "git_blob_sha": "c4cbd444a9452a68fe326d8de398ee65234f5c24",
+        "sha256": "eb0fbf50580dc5fe219b33fc1b5f5ae4311f2a23d418515892a4c46733748a56"
+      },
+      {
+        "role": "source",
+        "path": "docs/model-integration.md",
+        "commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/2898acd86cc40d5a278a2c5e65b34913233a4217/docs/model-integration.md",
+        "bytes": 20776,
+        "git_blob_sha": "812db460c00bdfde09310b87e920bd9c5aca904b",
+        "sha256": "f5ed628f89dfdfd5e730e38f58fbe425ec84f2d0673eff1749d0b26c88d90ce5"
+      },
+      {
+        "role": "source",
+        "path": "docs/football-framework-v1.7.md",
+        "commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/2898acd86cc40d5a278a2c5e65b34913233a4217/docs/football-framework-v1.7.md",
+        "bytes": 224191,
+        "git_blob_sha": "9dbbc55183364c1e1814b051d52463f007cbbd46",
+        "sha256": "21c61dcd9dd51eb67af8e520925cc8868791d2a046d6b7c066a0305f68638f09"
+      },
+      {
+        "role": "source",
+        "path": "docs/odds-screenshot-reading-v1.2.md",
+        "commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/2898acd86cc40d5a278a2c5e65b34913233a4217/docs/odds-screenshot-reading-v1.2.md",
+        "bytes": 54138,
+        "git_blob_sha": "8192f1525574f3cd330e1f540b8e05604ac45442",
+        "sha256": "c666cff8c70e08a455f2446754f3ffcba65409815766461c90a4745cbcddeec1"
+      },
+      {
+        "role": "source",
+        "path": "scripts/materialize_model_access.py",
+        "commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/2898acd86cc40d5a278a2c5e65b34913233a4217/scripts/materialize_model_access.py",
+        "bytes": 8110,
+        "git_blob_sha": "a8a06d081938895063f77edb61313dc241c77263",
+        "sha256": "65f79db302e7cb9230036dad7e7982412db1f878a55aa74abae461b711e501bd"
+      },
+      {
+        "role": "state",
+        "path": "runtime/integration/index.json",
+        "commit": "de684da69bb72a3bbbe5a443e94715ddbf18c415",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/de684da69bb72a3bbbe5a443e94715ddbf18c415/runtime/integration/index.json",
+        "bytes": 63093,
+        "git_blob_sha": "e5d2b42c368c2e8980126a330f02d2698e6ce536",
+        "sha256": "a7bcd22c67adb0d289802bf700f0327aa5f42735e8d110aae572d49deca7f11d"
+      },
+      {
+        "role": "state",
+        "path": "runtime/models/argentina_a.json",
+        "commit": "de684da69bb72a3bbbe5a443e94715ddbf18c415",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/de684da69bb72a3bbbe5a443e94715ddbf18c415/runtime/models/argentina_a.json",
+        "bytes": 12281,
+        "git_blob_sha": "13e7a7e63a5b2a9005668039dd981c4465a8b38d",
+        "sha256": "80e2eb93d62d597c9236ff96e870c28c2a5a7a8818decc3512a42eda9c5533b0"
+      },
+      {
+        "role": "state",
+        "path": "runtime/reports/history/20261004T174619863657Z.json",
+        "commit": "de684da69bb72a3bbbe5a443e94715ddbf18c415",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/de684da69bb72a3bbbe5a443e94715ddbf18c415/runtime/reports/history/20261004T174619863657Z.json",
+        "bytes": 8301,
+        "git_blob_sha": "0a14045a87ae395919496f6b0f768de7354da665",
+        "sha256": "74a1cdeda3251a9c220a88dcc3fa7f6e8aa04fd4f70f7b2b78c680429f2c6a83"
+      },
+      {
+        "role": "state",
+        "path": "runtime/predictions/20261004T174619863657Z/argentina_a.json",
+        "commit": "de684da69bb72a3bbbe5a443e94715ddbf18c415",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/de684da69bb72a3bbbe5a443e94715ddbf18c415/runtime/predictions/20261004T174619863657Z/argentina_a.json",
+        "bytes": 49961,
+        "git_blob_sha": "b9d41ab30390c1b423b18f4a9a4c2e61d6e12536",
+        "sha256": "26a053fd9b08ae7d88b8144fa461531df6047d995205cea47ee3b0b635855793"
+      }
+    ]
+  },
+  "validation_materialization": {
+    "source_commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+    "state_commit": "de684da69bb72a3bbbe5a443e94715ddbf18c415",
+    "path": "runtime/validation/argentina_a/20261004T174619863657Z.json",
+    "byte_count": 1806583,
+    "sha256": "7bdd70f207270eda84e4cb24b91f93479acba325d8f86afd35646ab9f9e865b8",
+    "git_blob_sha": "9ddf757745d61b916373570c57fc267ddf19cded",
+    "original_fetch_file_content_empty": true,
+    "method": "fetch_blob by original fixed fetch_file Git blob SHA"
+  },
+  "single_match": {
+    "match_id": 1493165,
+    "status": "baseline_verified_external_checks_pending",
+    "provenance": {
+      "model_id": "argentina_a-20261004T174619863657Z",
+      "model_file": "runtime/models/argentina_a.json",
+      "model_file_sha256": "80e2eb93d62d597c9236ff96e870c28c2a5a7a8818decc3512a42eda9c5533b0",
+      "prediction_file": "runtime/predictions/20261004T174619863657Z/argentina_a.json",
+      "prediction_file_sha256": "26a053fd9b08ae7d88b8144fa461531df6047d995205cea47ee3b0b635855793",
+      "report_file": "runtime/reports/history/20261004T174619863657Z.json",
+      "source_commit": "2898acd86cc40d5a278a2c5e65b34913233a4217",
+      "state_commit": "de684da69bb72a3bbbe5a443e94715ddbf18c415",
+      "state_commit_source": "caller_supplied; verify against checkout",
+      "trained_at": "2026-10-04T17:46:19.863657Z",
+      "training_cutoff": "2026-10-04T17:46:19.863657Z",
+      "training_data_sha256": "7adafcaf7ce06fd3d81ebb94caa13c39a28c63b3dd648661bd01c8ccef4e05bf",
+      "data_observed_at": "2026-10-04T17:46:21.514744Z",
+      "forecast_generated_at": "2026-10-04T17:46:21.900261Z",
+      "read_and_recomputed": true,
+      "fit_performed": false,
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-04T17:46:19.863657Z",
+      "model_fitted_at": "2026-10-04T17:46:21.783768Z",
+      "historical_availability_verified": false,
+      "source_publication_history_verified": false,
+      "time_evidence_note": "真实取得及完成时间已核验；训练留出不等于供应商历史发布时间重演。"
+    },
+    "external_checks_completed": false
+  }
+}
