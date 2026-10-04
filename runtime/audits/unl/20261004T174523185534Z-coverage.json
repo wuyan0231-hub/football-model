@@ -1,0 +1,572 @@
+{
+  "schema_version": 1,
+  "status": "noncomparable_diagnostic",
+  "sources": {
+    "old": {
+      "competition": "unl",
+      "target_scope": "regulation_time_90_plus_stoppage",
+      "model_id": "unl-20261004T154745780846Z",
+      "path": "runtime/validation/unl/20261004T154745780846Z.json"
+    },
+    "new": {
+      "competition": "unl",
+      "target_scope": "regulation_time_90_plus_stoppage",
+      "model_id": "unl-20261004T174523185534Z",
+      "path": "runtime/validation/unl/20261004T174523185534Z.json"
+    }
+  },
+  "target": "regulation_time_1x2",
+  "evaluation_context": {
+    "old": {
+      "evaluation_data_cutoff": "2026-10-04T15:47:45.780846Z",
+      "split": {
+        "method": "chronological_fixed_model_holdout",
+        "grouped_by": "kickoff_utc_calendar_date",
+        "train_cutoff": "2025-03-23T00:00:00Z",
+        "train_last_kickoff": "2025-03-20T19:45:00Z",
+        "test_start": "2025-03-23T14:00:00Z",
+        "test_end": "2026-10-03T18:45:00Z",
+        "training_count": 330,
+        "testing_count": 78,
+        "result_availability_delay_hours": 4,
+        "embargoed_count": 0,
+        "embargoed_match_ids": []
+      }
+    },
+    "new": {
+      "evaluation_data_cutoff": "2026-10-04T17:45:23.185534Z",
+      "split": {
+        "method": "chronological_fixed_model_holdout",
+        "grouped_by": "kickoff_utc_calendar_date",
+        "train_cutoff": "2025-03-23T00:00:00Z",
+        "train_last_kickoff": "2025-03-20T19:45:00Z",
+        "test_start": "2025-03-23T14:00:00Z",
+        "test_end": "2026-10-04T13:00:00Z",
+        "training_count": 330,
+        "testing_count": 79,
+        "result_availability_delay_hours": 4,
+        "embargoed_count": 0,
+        "embargoed_match_ids": []
+      }
+    }
+  },
+  "comparison_eligibility": {
+    "same_evaluation_conditions": false,
+    "reasons": [
+      "different_or_unknown_evaluation_data_cutoff",
+      "different_or_unknown_split_test_end"
+    ],
+    "pure_repair_effect_validated": false,
+    "note": "共同样本配对评分仅为描述性检查；因果增量还需固定修复外的资料、实现和验证条件。"
+  },
+  "counts": {
+    "old_total": 78,
+    "new_total": 79,
+    "old_scored": 78,
+    "new_scored": 79,
+    "common_scored": 78,
+    "paired_common_scored": 78,
+    "new_only_scored": 1,
+    "removed_scored": 0,
+    "unpaired_common_scored": 0,
+    "old_excluded": 0,
+    "new_excluded": 0
+  },
+  "groups": {
+    "common": {
+      "n": 78,
+      "old": {
+        "n": 78,
+        "match_ids": [
+          "1316546",
+          "1316548",
+          "1316550",
+          "1316552",
+          "1316554",
+          "1316556",
+          "1316558",
+          "1316560",
+          "1316562",
+          "1316564",
+          "1316566",
+          "1316568",
+          "1316570",
+          "1316571",
+          "1316572",
+          "1366136",
+          "1366137",
+          "1377653",
+          "1377654",
+          "1528862",
+          "1528863",
+          "1528865",
+          "1528878",
+          "1528879",
+          "1528880",
+          "1528881",
+          "1528882",
+          "1528883",
+          "1528884",
+          "1528886",
+          "1528887",
+          "1528889",
+          "1528891",
+          "1528893",
+          "1528894",
+          "1528896",
+          "1528897",
+          "1528899",
+          "1528900",
+          "1528901",
+          "1528902",
+          "1528903",
+          "1528905",
+          "1528907",
+          "1528908",
+          "1528909",
+          "1528913",
+          "1528914",
+          "1528915",
+          "1528917",
+          "1528918",
+          "1528919",
+          "1528920",
+          "1528921",
+          "1528922",
+          "1528923",
+          "1528924",
+          "1528925",
+          "1528926",
+          "1528927",
+          "1528929",
+          "1528933",
+          "1528934",
+          "1528936",
+          "1545601",
+          "1545602",
+          "1545603",
+          "1545605",
+          "1545606",
+          "1545607",
+          "1545608",
+          "1545609",
+          "1545651",
+          "1545653",
+          "1545656",
+          "1545658",
+          "1545660",
+          "1545661"
+        ],
+        "model_metrics": {
+          "n": 78,
+          "log_loss": 1.159975096414412,
+          "brier_score": 0.6991713918016601
+        },
+        "baseline_metrics": {
+          "n": 78,
+          "log_loss": 1.0842222127472623,
+          "brier_score": 0.6582529417649997
+        },
+        "baseline_status": "complete_same_rows"
+      },
+      "new": {
+        "n": 78,
+        "match_ids": [
+          "1316546",
+          "1316548",
+          "1316550",
+          "1316552",
+          "1316554",
+          "1316556",
+          "1316558",
+          "1316560",
+          "1316562",
+          "1316564",
+          "1316566",
+          "1316568",
+          "1316570",
+          "1316571",
+          "1316572",
+          "1366136",
+          "1366137",
+          "1377653",
+          "1377654",
+          "1528862",
+          "1528863",
+          "1528865",
+          "1528878",
+          "1528879",
+          "1528880",
+          "1528881",
+          "1528882",
+          "1528883",
+          "1528884",
+          "1528886",
+          "1528887",
+          "1528889",
+          "1528891",
+          "1528893",
+          "1528894",
+          "1528896",
+          "1528897",
+          "1528899",
+          "1528900",
+          "1528901",
+          "1528902",
+          "1528903",
+          "1528905",
+          "1528907",
+          "1528908",
+          "1528909",
+          "1528913",
+          "1528914",
+          "1528915",
+          "1528917",
+          "1528918",
+          "1528919",
+          "1528920",
+          "1528921",
+          "1528922",
+          "1528923",
+          "1528924",
+          "1528925",
+          "1528926",
+          "1528927",
+          "1528929",
+          "1528933",
+          "1528934",
+          "1528936",
+          "1545601",
+          "1545602",
+          "1545603",
+          "1545605",
+          "1545606",
+          "1545607",
+          "1545608",
+          "1545609",
+          "1545651",
+          "1545653",
+          "1545656",
+          "1545658",
+          "1545660",
+          "1545661"
+        ],
+        "model_metrics": {
+          "n": 78,
+          "log_loss": 1.159975096414412,
+          "brier_score": 0.6991713918016601
+        },
+        "baseline_metrics": {
+          "n": 78,
+          "log_loss": 1.0842222127472623,
+          "brier_score": 0.6582529417649997
+        },
+        "baseline_status": "complete_same_rows"
+      },
+      "paired_diagnostic_delta": {
+        "new_minus_old_log_loss": 0.0,
+        "new_minus_old_brier_score": 0.0
+      },
+      "controlled_comparison_eligible": false
+    },
+    "new_only": {
+      "n": 1,
+      "match_ids": [
+        "1528937"
+      ],
+      "model_metrics": {
+        "n": 1,
+        "log_loss": 1.1108841955858433,
+        "brier_score": 0.6817304091939248
+      },
+      "baseline_metrics": {
+        "n": 1,
+        "log_loss": 0.8215530088551463,
+        "brier_score": 0.4716111236600295
+      },
+      "baseline_status": "complete_same_rows",
+      "transitions": [
+        {
+          "match_id": "1528937",
+          "other_status": "absent_from_validation",
+          "other_reason": "未出现在另一份验证逐场记录；可能是清洗排除或评价窗口变化，不能猜具体原因。"
+        }
+      ],
+      "classification": "newly_scored_in_supplied_validation_only"
+    },
+    "removed": {
+      "n": 0,
+      "match_ids": [],
+      "model_metrics": null,
+      "baseline_metrics": null,
+      "baseline_status": "unavailable_or_incomplete",
+      "transitions": []
+    },
+    "unpaired_common": {
+      "n": 0,
+      "matches": [],
+      "old": {
+        "n": 0,
+        "match_ids": [],
+        "model_metrics": null,
+        "baseline_metrics": null,
+        "baseline_status": "unavailable_or_incomplete"
+      },
+      "new": {
+        "n": 0,
+        "match_ids": [],
+        "model_metrics": null,
+        "baseline_metrics": null,
+        "baseline_status": "unavailable_or_incomplete"
+      },
+      "controlled_comparison_eligible": false,
+      "note": "同ID但身份、赛果或训练条件不一致；各侧诊断评分不能视为相同条件的配对增量。"
+    },
+    "current_all": {
+      "n": 79,
+      "match_ids": [
+        "1316566",
+        "1316554",
+        "1316558",
+        "1316560",
+        "1316562",
+        "1316568",
+        "1316546",
+        "1316548",
+        "1316550",
+        "1316552",
+        "1316556",
+        "1316564",
+        "1366136",
+        "1366137",
+        "1377653",
+        "1377654",
+        "1316571",
+        "1316570",
+        "1316572",
+        "1545601",
+        "1528862",
+        "1528863",
+        "1528865",
+        "1528878",
+        "1528879",
+        "1528880",
+        "1528881",
+        "1545602",
+        "1528882",
+        "1528883",
+        "1528884",
+        "1528886",
+        "1528887",
+        "1545658",
+        "1528889",
+        "1545603",
+        "1528891",
+        "1528893",
+        "1528894",
+        "1545656",
+        "1528896",
+        "1528897",
+        "1528899",
+        "1528900",
+        "1528901",
+        "1528902",
+        "1528903",
+        "1545605",
+        "1528905",
+        "1528907",
+        "1528908",
+        "1528914",
+        "1528909",
+        "1528913",
+        "1528915",
+        "1545606",
+        "1545651",
+        "1545661",
+        "1528917",
+        "1528918",
+        "1528919",
+        "1528920",
+        "1528921",
+        "1528922",
+        "1545607",
+        "1528923",
+        "1545608",
+        "1528924",
+        "1528925",
+        "1528926",
+        "1528927",
+        "1528929",
+        "1528933",
+        "1528934",
+        "1545609",
+        "1528936",
+        "1545653",
+        "1545660",
+        "1528937"
+      ],
+      "model_metrics": {
+        "n": 79,
+        "log_loss": 1.1593536926064554,
+        "brier_score": 0.6989506198699167
+      },
+      "baseline_metrics": {
+        "n": 79,
+        "log_loss": 1.0808972861157167,
+        "brier_score": 0.6558903871054432
+      },
+      "baseline_status": "complete_same_rows"
+    }
+  },
+  "exclusions": {
+    "old": [],
+    "new": []
+  },
+  "data_errors": {
+    "old": [],
+    "new": []
+  },
+  "temporal_evidence": {
+    "old": {
+      "n": 78,
+      "mode": "current_retrospective",
+      "provided_eligibility_counts": {
+        "eligible": 0,
+        "ineligible": 78,
+        "unknown": 0
+      },
+      "missing_or_invalid_time_counts": {
+        "known_at": 30,
+        "valid_at": 0,
+        "valid_from": 78,
+        "valid_to": 78,
+        "evidence_available_at": 30
+      },
+      "reason_counts": {
+        "known_at_unknown": 30,
+        "evidence_available_at_unknown": 30,
+        "historical_validity_unknown": 78,
+        "known_after_cutoff": 37,
+        "evidence_after_cutoff": 40
+      },
+      "historical_point_in_time_validated": false,
+      "note": "只汇总传入证据。当前回填资格不证明历史训练截点已可知；未知时间不补造，开放有效区间的null也不推定有界。"
+    },
+    "new": {
+      "n": 79,
+      "mode": "current_retrospective",
+      "provided_eligibility_counts": {
+        "eligible": 0,
+        "ineligible": 79,
+        "unknown": 0
+      },
+      "missing_or_invalid_time_counts": {
+        "known_at": 30,
+        "valid_at": 0,
+        "valid_from": 79,
+        "valid_to": 79,
+        "evidence_available_at": 30
+      },
+      "reason_counts": {
+        "known_at_unknown": 30,
+        "evidence_available_at_unknown": 30,
+        "historical_validity_unknown": 79,
+        "known_after_cutoff": 37,
+        "evidence_after_cutoff": 40
+      },
+      "historical_point_in_time_validated": false,
+      "note": "只汇总传入证据。当前回填资格不证明历史训练截点已可知；未知时间不补造，开放有效区间的null也不推定有界。"
+    },
+    "common_old": {
+      "n": 78,
+      "mode": "current_retrospective",
+      "provided_eligibility_counts": {
+        "eligible": 0,
+        "ineligible": 78,
+        "unknown": 0
+      },
+      "missing_or_invalid_time_counts": {
+        "known_at": 30,
+        "valid_at": 0,
+        "valid_from": 78,
+        "valid_to": 78,
+        "evidence_available_at": 30
+      },
+      "reason_counts": {
+        "known_at_unknown": 30,
+        "evidence_available_at_unknown": 30,
+        "historical_validity_unknown": 78,
+        "known_after_cutoff": 37,
+        "evidence_after_cutoff": 40
+      },
+      "historical_point_in_time_validated": false,
+      "note": "只汇总传入证据。当前回填资格不证明历史训练截点已可知；未知时间不补造，开放有效区间的null也不推定有界。"
+    },
+    "common_new": {
+      "n": 78,
+      "mode": "current_retrospective",
+      "provided_eligibility_counts": {
+        "eligible": 0,
+        "ineligible": 78,
+        "unknown": 0
+      },
+      "missing_or_invalid_time_counts": {
+        "known_at": 30,
+        "valid_at": 0,
+        "valid_from": 78,
+        "valid_to": 78,
+        "evidence_available_at": 30
+      },
+      "reason_counts": {
+        "known_at_unknown": 30,
+        "evidence_available_at_unknown": 30,
+        "historical_validity_unknown": 78,
+        "known_after_cutoff": 37,
+        "evidence_after_cutoff": 40
+      },
+      "historical_point_in_time_validated": false,
+      "note": "只汇总传入证据。当前回填资格不证明历史训练截点已可知；未知时间不补造，开放有效区间的null也不推定有界。"
+    },
+    "new_only": {
+      "n": 1,
+      "mode": "current_retrospective",
+      "provided_eligibility_counts": {
+        "eligible": 0,
+        "ineligible": 1,
+        "unknown": 0
+      },
+      "missing_or_invalid_time_counts": {
+        "known_at": 0,
+        "valid_at": 0,
+        "valid_from": 1,
+        "valid_to": 1,
+        "evidence_available_at": 0
+      },
+      "reason_counts": {
+        "historical_validity_unknown": 1
+      },
+      "historical_point_in_time_validated": false,
+      "note": "只汇总传入证据。当前回填资格不证明历史训练截点已可知；未知时间不补造，开放有效区间的null也不推定有界。"
+    }
+  },
+  "metric_definitions": {
+    "outcome_order": [
+      "home_win",
+      "draw",
+      "away_win"
+    ],
+    "lower_is_better": true,
+    "brier": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+    "log_loss_probability_floor": 1e-15
+  },
+  "prospective_increment_validated": false,
+  "deep_handicap_validated": false,
+  "betting_return_validated": false,
+  "deployment_approved": false,
+  "limitations": [
+    "本报告不改变固定留出、训练参数、比分目标或原始逐场记录。",
+    "验证中新增出现的样本可能来自评价窗口或历史回填，不能称为前瞻新增覆盖。",
+    "原预处理就排除的比赛若不在验证JSON中，不在本报告分母；须同时保留国家队场地审计分母。",
+    "概率评分、覆盖数量及代码测试不等于深盘、实际投注收益或模型质量验收。"
+  ]
+}
