@@ -2,6 +2,7 @@
 import copy
 from datetime import datetime, timedelta, timezone
 import json
+import re
 from pathlib import Path
 import tempfile
 import unittest
@@ -78,6 +79,47 @@ class BudgetClient(FakeClient):
 
 
 class PipelineTests(unittest.TestCase):
+    def test_segunda_single_run_keeps_laliga_model_independent(self):
+        production = json.loads((Path(__file__).parents[1] / "config.json").read_text())
+        competition = next(c for c in production["competitions"] if c["key"] == "segunda")
+        config = copy.deepcopy(BASE_CONFIG)
+        config["competitions"].append(competition)
+        with tempfile.TemporaryDirectory() as tmp:
+            existing = Path(tmp) / "models" / "laliga.json"
+            existing.parent.mkdir()
+            original = b'{"sentinel":"existing La Liga model"}'
+            existing.write_bytes(original)
+            code, report = run_pipeline(config, tmp, "train", league="segunda",
+                                        now=NOW, clock=lambda: NOW, client=FakeClient())
+            self.assertEqual(code, 0, report)
+            self.assertEqual(report["requested_competitions"], ["segunda"])
+            self.assertEqual(report["competitions"][0]["forecast_count"], 1)
+            model = json.loads((Path(tmp) / "models" / "segunda.json").read_text())
+            self.assertEqual(model["competition"], competition)
+            self.assertEqual(existing.read_bytes(), original)
+            self.assertFalse((Path(tmp) / "models" / "epl.json").exists())
+
+    def test_real_config_all_selection_and_workflow_menu_include_segunda(self):
+        root = Path(__file__).parents[1]
+        config = json.loads((root / "config.json").read_text())
+        workflow = (root / ".github/workflows/football.yml").read_text()
+        keys = [c["key"] for c in config["competitions"]]
+        self.assertEqual(len(keys), len(set(keys)))
+        menus = re.findall(r"options: \[([^\]]+)\]", workflow)
+        league_menu = next([k.strip() for k in line.split(",")] for line in menus if "all" in line)
+        self.assertEqual(set(league_menu), set(keys) | {"all"})
+        self.assertIn("github.event_name == 'schedule' && 'all'", workflow)
+        self.assertIn("cron: '17 1 * * *'", workflow)
+        def audit_stub(client, competition, *args, **kwargs):
+            return {**competition, "status": "仅审计"}
+        with tempfile.TemporaryDirectory() as tmp, patch(
+                "football_model.cli.process_competition", side_effect=audit_stub) as process:
+            code, report = run_pipeline(config, tmp, "audit", league="all",
+                                        now=NOW, clock=lambda: NOW, client=FakeClient())
+            self.assertEqual(code, 0, report)
+            self.assertEqual(report["requested_competitions"], keys)
+            self.assertEqual([call.args[1]["key"] for call in process.call_args_list].count("segunda"), 1)
+
     def test_actual_fit_and_unchanged_data_reuses_same_parameters(self):
         with tempfile.TemporaryDirectory() as tmp:
             client = FakeClient()
