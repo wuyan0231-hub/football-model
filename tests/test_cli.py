@@ -10,7 +10,7 @@ from unittest.mock import patch
 import numpy as np
 
 from football_model.cli import run_pipeline, select_seasons, iso
-from football_model.data import APIError
+from football_model.data import APIError, RequestBudgetError
 
 
 NOW = datetime(2025, 1, 1, tzinfo=timezone.utc)
@@ -64,6 +64,19 @@ class FakeClient:
         return {"response": copy.deepcopy(self.fixtures), "fetched_at": iso(NOW), "from_cache": False}
 
 
+class BudgetClient(FakeClient):
+    """Report the same budget contract without an account or real network."""
+
+    def budget_snapshot(self):
+        return {"configured_daily_limit": 5000, "provider_daily_limit": 5000,
+                "provider_daily_used": 4988, "daily_remaining": 10,
+                "daily_remaining_reported": 12, "minute_limit": 60,
+                "minute_remaining": 58, "max_requests_per_run": None,
+                "requests_made": self.requests_made, "min_interval_seconds": 1.0,
+                "max_run_seconds": 3600, "elapsed_seconds": 3.0,
+                "quota_observed_at": iso(NOW), "quota_source": "status"}
+
+
 class PipelineTests(unittest.TestCase):
     def test_actual_fit_and_unchanged_data_reuses_same_parameters(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -76,8 +89,10 @@ class PipelineTests(unittest.TestCase):
             self.assertTrue(client.fetch_calls[0]["force"])
             model_path = Path(tmp)/"models/epl.json"
             before = model_path.read_bytes()
+            changed_budget = {**BASE_CONFIG, "max_requests_per_run": None,
+                              "api_daily_limit": 5000, "api_max_run_seconds": 3600}
             with patch("football_model.cli.fit_model", side_effect=AssertionError("不应重训")):
-                code, second = run_pipeline(BASE_CONFIG, tmp, "train", now=NOW+timedelta(hours=2), clock=lambda: NOW+timedelta(hours=2), client=FakeClient())
+                code, second = run_pipeline(changed_budget, tmp, "train", now=NOW+timedelta(hours=2), clock=lambda: NOW+timedelta(hours=2), client=FakeClient())
             self.assertEqual(code, 0, second)
             self.assertEqual(model_path.read_bytes(), before)
             self.assertEqual(second["competitions"][0]["model_change"], "数据未变，沿用参数")
@@ -128,6 +143,56 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(report["competitions"][0]["status"], "已取得数据")
             self.assertFalse((Path(tmp)/"models").exists())
+            self.assertIsNone(report["api_budget"])
+            self.assertIn("API额度快照不可用", (Path(tmp)/"reports/latest.md").read_text())
+
+    def test_config_passes_daily_limit_and_deadline_without_per_run_cap(self):
+        config = {**BASE_CONFIG, "max_requests_per_run": None,
+                  "api_daily_limit": 5000, "api_max_run_seconds": 3600}
+        client = BudgetClient()
+        # Even an account-bearing status response is never copied to reports.
+        client.status = lambda: {"account": {"email": "private-account@example.test"},
+                                 "requests": {"current": 4988, "limit_day": 5000}}
+        with tempfile.TemporaryDirectory() as tmp, patch("football_model.cli.APIClient", return_value=client) as factory:
+            code, report = run_pipeline(config, tmp, "audit", now=NOW, clock=lambda: NOW)
+            self.assertEqual(code, 0, report)
+            factory.assert_called_once_with(Path(tmp)/"cache", max_requests=None,
+                                            daily_limit=5000, max_run_seconds=3600)
+            saved = json.loads((Path(tmp)/"reports/latest.json").read_text())
+            self.assertEqual(saved["api_budget"], client.budget_snapshot())
+            markdown = (Path(tmp)/"reports/latest.md").read_text()
+            self.assertIn("不设额外次数上限", markdown)
+            self.assertIn("5000／4988", markdown)
+            self.assertIn("当前有效日余额（保守估计）|10", markdown)
+            self.assertNotIn("private-account@example.test", json.dumps(saved) + markdown)
+
+    def test_daily_exhaustion_and_soft_deadline_preserve_failure_reports_and_model(self):
+        for phase, reason in (("status", "今日剩余额度为 0"),
+                              ("fetch_fixtures", "达到网络请求软截止 3600 秒")):
+            with self.subTest(phase=phase), tempfile.TemporaryDirectory() as tmp:
+                client = BudgetClient()
+                client.requests_made = 7
+                snapshot = client.budget_snapshot()
+                snapshot.update(daily_remaining=0 if phase == "status" else 10,
+                                elapsed_seconds=3600 if phase == "fetch_fixtures" else 3)
+                client.budget_snapshot = lambda: {**snapshot, "requests_made": client.requests_made}
+                model_path = Path(tmp)/"models/epl.json"
+                model_path.parent.mkdir()
+                original = b'{"sentinel":"keep existing model"}'
+                model_path.write_bytes(original)
+                with patch.object(client, phase, side_effect=RequestBudgetError(reason)):
+                    code, report = run_pipeline(BASE_CONFIG, tmp, "train", now=NOW,
+                                                clock=lambda: NOW, client=client)
+                self.assertEqual(code, 2 if phase == "status" else 1, report)
+                self.assertEqual(model_path.read_bytes(), original)
+                self.assertFalse((Path(tmp)/"predictions").exists())
+                saved = json.loads((Path(tmp)/"reports/latest.json").read_text())
+                self.assertEqual(saved, report)
+                histories = list((Path(tmp)/"reports/history").glob("*.json"))
+                self.assertEqual(len(histories), 1)
+                self.assertEqual(json.loads(histories[0].read_text()), report)
+                self.assertIn(reason, (Path(tmp)/"reports/latest.md").read_text())
+                self.assertEqual(saved["api_budget"], client.budget_snapshot())
 
     def test_wrong_competition_response_does_not_train(self):
         client = FakeClient()

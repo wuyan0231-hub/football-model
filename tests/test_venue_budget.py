@@ -1,6 +1,7 @@
 """Optional venue budget regressions with the real client and mocked HTTP only."""
 
 from email.message import Message
+import json
 import os
 from pathlib import Path
 import tempfile
@@ -89,6 +90,41 @@ class VenueBudgetTests(unittest.TestCase):
         client.fetch_fixtures(39, 2026)
         self.assertEqual(opener.call_count, 2)
         self.assertEqual(client.requests_made, 2)
+
+    def test_runtime_deadline_defers_network_but_keeps_cached_evidence_and_queue(self):
+        payload = envelope([provider_venue()])
+        payload["get"] = "venues"
+        payload["parameters"] = {"id": NEW_VENUE["id"]}
+        opener = Mock(return_value=Response(payload))
+        elapsed = [0.0]
+        client = self.client(opener, max_run_seconds=3600, monotonic=lambda: elapsed[0])
+        original = client.fetch_venues(venue_id=NEW_VENUE["id"])
+        elapsed[0] = 3600.0
+        uncached = {**NEW_VENUE, "id": NEW_VENUE["id"] + 1, "name": "Synthetic Uncached Ground"}
+        raw = [fixture(1, uncached), fixture(2, NEW_VENUE), fixture(3, KNOWN_VENUE)]
+
+        registry, audit = resolve_venues(raw, client, self.runtime, NOW, reserve_requests=1)
+
+        self.assertEqual(opener.call_count, 1)
+        self.assertEqual(client.requests_made, 1)
+        self.assertEqual(audit["counts"]["deferred"], 1)
+        self.assertEqual(audit["counts"]["queried"], 1)
+        self.assertEqual(audit["pending"], [{"venue": uncached, "match_ids": [1],
+            "reason_code": "runtime_budget_deferred",
+            "reason": "本轮请求运行时间已到软截止，场馆查询延后"}])
+        verification = audit["added"][0]["entry"]["verification"]
+        self.assertTrue(verification["from_cache"])
+        self.assertEqual(verification["fetched_at"], original["fetched_at"])
+        self.assertTrue((self.runtime / audit["registry_snapshot"]).is_file())
+        retry_state = json.loads((self.runtime / audit["retry_state_path"]).read_text(encoding="utf-8"))
+        by_id = {json.loads(key)["id"]: value for key, value in retry_state["queries"].items()}
+        self.assertEqual(by_id[uncached["id"]]["attempts"], 0)
+        self.assertEqual(by_id[uncached["id"]]["last_attempt_run"], 0)
+        self.assertEqual(by_id[NEW_VENUE["id"]]["attempts"], 1)
+        _, upcoming, _ = prepare_nations(raw, NOW, registry=registry)
+        self.assertIn("venue_error", next(row for row in upcoming if row["match_id"] == 1))
+        for mid in (2, 3):
+            self.assertNotIn("venue_error", next(row for row in upcoming if row["match_id"] == mid))
 
     def test_first_error_header_makes_unknown_daily_balance_protect_retry(self):
         headers = Message()

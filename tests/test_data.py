@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import Mock, patch
 from urllib.error import HTTPError, URLError
 
-from football_model.data import APIClient, APIError, DataError, RequestBudgetError, normalize_fixtures, normalize_upcoming
+from football_model.data import APIClient, APIError, DataError, RequestBudgetError, RequestDeadlineError, normalize_fixtures, normalize_upcoming
 
 
 NOW = datetime(2026, 9, 21, 12, tzinfo=timezone.utc)
@@ -26,6 +26,19 @@ class Response(io.BytesIO):
     def __init__(self, payload, headers=None):
         super().__init__(json.dumps(payload).encode())
         self.headers = headers or {}
+
+
+class FakeTimer:
+    def __init__(self):
+        self.now = 0.0
+        self.sleeps = []
+
+    def __call__(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.sleeps.append(seconds)
+        self.now += seconds
 
 
 def fixture(mid=1, status="FT", kickoff=None):
@@ -46,8 +59,9 @@ class DataTests(unittest.TestCase):
         self.addCleanup(self.env.stop)
 
     def client(self, opener, **kwargs):
-        return APIClient(self.temp.name, opener=opener, sleep=lambda _: None,
-                         clock=lambda: NOW, min_interval=0, **kwargs)
+        kwargs.setdefault("min_interval", 0)
+        kwargs.setdefault("sleep", lambda _: None)
+        return APIClient(self.temp.name, opener=opener, clock=lambda: NOW, **kwargs)
 
     def test_missing_key_fails_without_network(self):
         with patch.dict(os.environ, {"FOOTBALL_API_KEY": ""}):
@@ -97,6 +111,267 @@ class DataTests(unittest.TestCase):
             client.fetch_fixtures(39, 2026)
         self.assertEqual(client.requests_made, 3)
         self.assertNotIn(SECRET, str(caught.exception))
+
+    def test_default_has_no_80_attempt_cap_and_unknown_daily_is_not_reset(self):
+        opener = Mock(side_effect=lambda *a, **k: Response(envelope([])))
+        client = self.client(opener)
+        for _ in range(85):
+            client.fetch_fixtures(39, 2026)
+        self.assertEqual(client.requests_made, 85)
+        self.assertIsNone(client.max_requests)
+        self.assertIsNone(client.daily_remaining)
+        self.assertEqual(client.budget_snapshot()["quota_source"], "unknown")
+
+    def test_configured_5000_uses_status_and_allows_more_than_80_actual_requests(self):
+        opener = Mock(side_effect=lambda request, **k: Response(envelope(
+            {"requests": {"current": 4000, "limit_day": 5000}}
+            if request.full_url.endswith("/status") else [])))
+        client = self.client(opener, daily_limit=5000)
+        client.status()
+        for _ in range(85):
+            client.fetch_fixtures(39, 2026)
+        self.assertEqual(client.requests_made, 86)
+        self.assertEqual(client.daily_remaining, 915)
+
+    def test_configured_daily_limit_blocks_unknown_and_partial_evidence_until_status(self):
+        opener = Mock(side_effect=[Response(envelope({}), {"X-RateLimit-Requests-Remaining": "6000"}),
+                                   Response(envelope({"requests": {"current": 4999, "limit_day": 7500}})),
+                                   Response(envelope([]))])
+        client = self.client(opener, daily_limit=5000)
+        with self.assertRaises(RequestBudgetError):
+            client.fetch_fixtures(39, 2026)
+        opener.assert_not_called()
+        client.status()
+        self.assertIsNone(client.daily_remaining)
+        self.assertEqual(client.daily_remaining_reported, 6000)
+        self.assertEqual(client.budget_snapshot()["daily_quota_status"], "incomplete")
+        with self.assertRaises(RequestBudgetError):
+            client.fetch_fixtures(39, 2026)
+        self.assertEqual(opener.call_count, 1)
+        client.status()
+        self.assertEqual(client.daily_remaining, 1)
+        client.fetch_fixtures(39, 2026)
+        self.assertEqual(client.daily_remaining, 0)
+
+    def test_configured_daily_limit_cannot_be_bypassed_by_fully_missing_status_quota(self):
+        opener = Mock(return_value=Response(envelope({"subscription": {"active": True}})))
+        client = self.client(opener, daily_limit=5000)
+        client.status()
+        self.assertIsNone(client.daily_remaining)
+        with self.assertRaises(RequestBudgetError):
+            client.fetch_fixtures(39, 2026)
+        self.assertEqual(opener.call_count, 1)
+
+    def test_conflicting_status_body_cannot_relax_same_response_zero_balance_header(self):
+        opener = Mock(return_value=Response(envelope({"requests": {"current": 4900, "limit_day": 5000}}),
+                                             {"X-RateLimit-Requests-Remaining": "0"}))
+        client = self.client(opener, daily_limit=5000)
+        client.status()
+        self.assertEqual(client.daily_remaining, 0)
+        self.assertEqual(client.daily_remaining_reported, 0)
+        self.assertEqual(client.budget_snapshot()["quota_source"], "status_and_response_headers")
+        with self.assertRaises(RequestBudgetError):
+            client.fetch_fixtures(39, 2026)
+        self.assertEqual(opener.call_count, 1)
+
+    def test_conflicting_large_plan_status_keeps_stricter_configured_allowance_from_headers(self):
+        opener = Mock(return_value=Response(envelope({"requests": {"current": 4900, "limit_day": 10000}}),
+            {"X-RateLimit-Requests-Limit": "10000", "X-RateLimit-Requests-Remaining": "5000"}))
+        client = self.client(opener, daily_limit=5000)
+        client.status()
+        self.assertEqual(client.daily_remaining, 0)
+        self.assertEqual(client.provider_daily_used, 5000)
+        with self.assertRaises(RequestBudgetError):
+            client.fetch_fixtures(39, 2026)
+        self.assertEqual(opener.call_count, 1)
+
+    def test_limit_only_header_cannot_relax_conservative_status_balance(self):
+        opener = Mock(side_effect=[Response(envelope({"requests": {"current": 4900, "limit_day": 5000}}),
+            {"X-RateLimit-Requests-Limit": "5000", "X-RateLimit-Requests-Remaining": "5"}),
+            Response(envelope([]), {"X-RateLimit-Requests-Limit": "5000"})])
+        client = self.client(opener, daily_limit=5000)
+        client.status()
+        self.assertEqual(client.daily_remaining, 5)
+        client.fetch_fixtures(39, 2026)
+        self.assertEqual(client.daily_remaining, 4)
+        self.assertEqual(client.provider_daily_used, 4995)
+
+    def test_status_uses_already_spent_daily_allowance_and_protects_reserve(self):
+        opener = Mock(side_effect=[Response(envelope({"requests": {"current": 4998, "limit_day": 5000}})),
+                                   Response(envelope([])), Response(envelope([]))])
+        client = self.client(opener, daily_limit=5000)
+        client.status()
+        self.assertEqual(client.daily_remaining, 2)
+        self.assertEqual(client.requests_made, 1)
+        with client.reserve_requests(1):
+            client.fetch_fixtures(39, 2026)
+            with self.assertRaises(RequestBudgetError):
+                client.fetch_fixtures(39, 2026)
+        client.fetch_fixtures(39, 2026)
+        with self.assertRaises(RequestBudgetError):
+            client.fetch_fixtures(39, 2026)
+        self.assertEqual(client.requests_made, 3)
+        self.assertEqual(client.daily_remaining, 0)
+
+    def test_status_respects_smaller_provider_plan_and_larger_plan_configuration(self):
+        for provider_limit, current, expected in ((100, 97, 3), (7500, 4998, 2), (7500, 6000, 0)):
+            with self.subTest(provider_limit=provider_limit, current=current):
+                client = self.client(Mock(return_value=Response(envelope(
+                    {"requests": {"current": current, "limit_day": provider_limit}}))), daily_limit=5000)
+                client.status()
+                self.assertEqual(client.daily_remaining, expected)
+                snapshot = client.budget_snapshot()
+                self.assertEqual(snapshot["configured_daily_limit"], 5000)
+                self.assertEqual(snapshot["provider_daily_limit"], provider_limit)
+                self.assertEqual(snapshot["provider_daily_used"], current)
+                self.assertEqual(snapshot["quota_source"], "status")
+                self.assertEqual(snapshot["quota_observed_at"], "2026-09-21T12:00:00Z")
+
+    def test_status_can_refresh_exhausted_balance_without_charging_daily_allowance(self):
+        opener = Mock(side_effect=[URLError("status timeout"), Response(envelope(
+            {"requests": {"current": 4999, "limit_day": 5000}}))])
+        client = self.client(opener, daily_limit=5000)
+        client.daily_remaining = 0
+        with client.reserve_requests(1):
+            client.status()
+        self.assertEqual(client.requests_made, 2)
+        self.assertEqual(client.daily_remaining, 1)
+
+    def test_malformed_status_does_not_invent_balance_or_return_account(self):
+        for requests in ({}, {"current": True, "limit_day": 5000},
+                         {"current": "4999", "limit_day": 5000}, {"current": -1, "limit_day": 5000}):
+            with self.subTest(requests=requests):
+                client = self.client(Mock(return_value=Response(envelope(
+                    {"account": {"email": "private@example.invalid"}, "requests": requests}))),
+                    daily_limit=5000)
+                status = client.status()
+                self.assertNotIn("account", status)
+                self.assertEqual(status["requests"], {})
+                self.assertIsNone(client.daily_remaining)
+                self.assertNotIn("private@example.invalid", json.dumps(client.budget_snapshot()))
+
+    def test_daily_limit_and_remaining_headers_correct_usage_under_configured_limit(self):
+        opener = Mock(side_effect=[Response(envelope({"requests": {"current": 4996, "limit_day": 7500}})),
+                                   Response(envelope([]), {"X-RateLimit-Requests-Limit": "7500",
+                                                           "X-RateLimit-Requests-Remaining": "2502"}),
+                                   Response(envelope([]))])
+        client = self.client(opener, daily_limit=5000)
+        client.status()
+        self.assertEqual(client.daily_remaining, 4)
+        client.fetch_fixtures(39, 2026)
+        self.assertEqual(client.daily_remaining, 2)
+        self.assertEqual(client.daily_remaining_reported, 2502)
+        self.assertEqual(client.provider_daily_used, 4998)
+        client.fetch_fixtures(39, 2026)
+        self.assertEqual(client.daily_remaining, 1)
+        self.assertEqual(client.budget_snapshot()["quota_source"], "response_headers")
+
+    def test_invalid_budget_timing_inputs_fail_before_network(self):
+        cases = [(name, bad) for name in ("max_requests", "daily_limit")
+                 for bad in (0, -1, True, 1.5, "5000")]
+        cases += [(name, bad) for name in ("timeout", "max_run_seconds")
+                  for bad in (0, -1, True, float("inf"), float("nan"), "25")]
+        cases += [("min_interval", bad) for bad in (-1, 61, True, float("inf"), float("nan"), "0")]
+        opener = Mock()
+        for name, bad in cases:
+            with self.subTest(name=name, value=bad), self.assertRaises(ValueError):
+                self.client(opener, **{name: bad})
+        opener.assert_not_called()
+
+    def test_adaptive_interval_uses_provider_limit_and_explicit_zero_cannot_bypass_it(self):
+        for configured in (None, 0):
+            with self.subTest(min_interval=configured):
+                timer = FakeTimer()
+                opener = Mock(side_effect=lambda *a, **k: Response(envelope([]),
+                    {"X-RateLimit-Limit": "300", "X-RateLimit-Remaining": "299"}))
+                client = self.client(opener, min_interval=configured, monotonic=timer, sleep=timer.sleep)
+                self.assertEqual(client.budget_snapshot()["min_interval_seconds"], 6.5 if configured is None else 0)
+                client.fetch_fixtures(39, 2026)
+                client.fetch_fixtures(39, 2026)
+                self.assertAlmostEqual(timer.sleeps[0], 0.21)
+                self.assertAlmostEqual(client.budget_snapshot()["min_interval_seconds"], 0.21)
+
+    def test_unknown_minute_limit_uses_adaptive_fallback(self):
+        timer = FakeTimer()
+        client = self.client(Mock(side_effect=lambda *a, **k: Response(envelope([]))),
+                             min_interval=None, monotonic=timer, sleep=timer.sleep)
+        client.fetch_fixtures(39, 2026)
+        client.fetch_fixtures(39, 2026)
+        self.assertEqual(timer.sleeps, [6.5])
+
+    def test_one_request_per_minute_is_supported_without_wait_exceeding_60(self):
+        timer = FakeTimer()
+        client = self.client(Mock(side_effect=lambda *a, **k: Response(envelope([]),
+            {"X-RateLimit-Limit": "1", "X-RateLimit-Remaining": "0"})),
+            min_interval=None, monotonic=timer, sleep=timer.sleep)
+        client.fetch_fixtures(39, 2026)
+        client.fetch_fixtures(39, 2026)
+        self.assertEqual(timer.sleeps, [60])
+        self.assertEqual(client.budget_snapshot()["min_interval_seconds"], 60)
+
+    def test_headerless_failure_conservatively_consumes_minute_balance(self):
+        timer = FakeTimer()
+        call_times = []
+        responses = [Response(envelope([]), {"X-RateLimit-Limit": "120", "X-RateLimit-Remaining": "1"}),
+                     URLError("response lost"), Response(envelope([]))]
+        def open_response(*args, **kwargs):
+            call_times.append(timer.now)
+            result = responses.pop(0)
+            if isinstance(result, Exception):
+                raise result
+            return result
+        client = self.client(open_response, monotonic=timer, sleep=timer.sleep)
+        client.fetch_fixtures(39, 2026)
+        client.fetch_fixtures(39, 2026)
+        self.assertEqual(len(call_times), 3)
+        self.assertGreaterEqual(call_times[2], 60)
+        self.assertIsNone(client.minute_remaining)
+        self.assertTrue(all(wait <= 60 for wait in timer.sleeps))
+
+    def test_expired_minute_window_is_unknown_and_429_waits_before_retry(self):
+        timer = FakeTimer()
+        headers = Message()
+        headers["X-RateLimit-Remaining"] = "0"
+        headers["X-RateLimit-Limit"] = "120"
+        opener = Mock(side_effect=[HTTPError("https://v3.football.api-sports.io/fixtures",
+                                           429, "too many requests", headers, None), Response(envelope([]))])
+        client = self.client(opener, monotonic=timer, sleep=timer.sleep)
+        client.fetch_fixtures(39, 2026)
+        self.assertEqual(timer.sleeps, [60])
+        self.assertIsNone(client.budget_snapshot()["minute_remaining"])
+        self.assertEqual(client.requests_made, 2)
+
+    def test_soft_deadline_checks_wait_and_timeout_before_network(self):
+        for elapsed, timeout, remaining_header in ((8, 5, None), (1, 1, "0")):
+            with self.subTest(elapsed=elapsed):
+                timer = FakeTimer()
+                opener = Mock()
+                client = self.client(opener, max_run_seconds=10, timeout=timeout,
+                                     monotonic=timer, sleep=timer.sleep)
+                timer.now = elapsed
+                if remaining_header is not None:
+                    client._rate_headers({"X-RateLimit-Remaining": remaining_header})
+                with self.assertRaises(RequestDeadlineError):
+                    client.fetch_fixtures(39, 2026)
+                opener.assert_not_called()
+                self.assertEqual(timer.sleeps, [])
+                self.assertEqual(client.requests_made, 0)
+
+    def test_soft_deadline_stops_retry_and_keeps_cached_evidence_usable(self):
+        timer = FakeTimer()
+        headers = Message()
+        opener = Mock(side_effect=[Response(envelope([])),
+            HTTPError("https://v3.football.api-sports.io/fixtures", 429, "too many", headers, None)])
+        client = self.client(opener, max_run_seconds=30, timeout=5, monotonic=timer, sleep=timer.sleep)
+        original = client.fetch_venues(venue_id=780)
+        with self.assertRaises(RequestDeadlineError):
+            client.fetch_fixtures(39, 2026)
+        timer.now = 31
+        cached = client.fetch_venues(venue_id=780)
+        self.assertTrue(cached["from_cache"])
+        self.assertEqual(cached["fetched_at"], original["fetched_at"])
+        self.assertEqual(opener.call_count, 2)
+        self.assertEqual(timer.sleeps, [])
 
     def test_daily_quota_header_stops_next_call(self):
         opener = Mock(return_value=Response(envelope([]), {"x-ratelimit-requests-remaining": "0"}))

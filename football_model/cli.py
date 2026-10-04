@@ -112,8 +112,30 @@ def markdown_report(report: dict) -> str:
         detail = str(item.get("detail", "")).replace("|", "／").replace("\n", " ")
         rows.append(f"|{item['label']}|{item['status']}|{item.get('eligible_matches', 0)}|"
                     f"{item.get('model_change', '未训练')}|{detail}|")
-    rows.extend(["", f"本次接口请求次数：{report.get('api_requests', 0)}。",
-                 "", "## 怎样阅读", "",
+    rows.extend(["", f"本次接口网络尝试次数：{report.get('api_requests', 0)}（含状态查询与重试，不等于当日计费已用量）。"])
+    budget = report.get("api_budget")
+    if isinstance(budget, dict):
+        def quota_value(field):
+            value = budget.get(field)
+            return "未知" if value is None else str(value)
+
+        per_run = budget.get("max_requests_per_run")
+        rows.extend(["", "## API额度与限速", "",
+                     "|项目|本次记录|", "|---|---|",
+                     f"|配置的每日上限|{quota_value('configured_daily_limit')}|",
+                     f"|供应商日上限／当日已用（最近观测）|{quota_value('provider_daily_limit')}／{quota_value('provider_daily_used')}|",
+                     f"|供应商最近回报余额|{quota_value('daily_remaining_reported')}|",
+                     f"|当前有效日余额（保守估计）|{quota_value('daily_remaining')}|",
+                     f"|日额证据状态|{quota_value('daily_quota_status')}|",
+                     f"|每轮网络次数上限|{'不设额外次数上限' if per_run is None else per_run}|",
+                     f"|供应商分钟上限／最近剩余|{quota_value('minute_limit')}／{quota_value('minute_remaining')}|",
+                     f"|当前请求最小间隔（秒）|{quota_value('min_interval_seconds')}|",
+                     f"|网络请求软截止／已运行（秒）|{quota_value('max_run_seconds')}／{quota_value('elapsed_seconds')}|",
+                     f"|额度最近观测时间／来源|{quota_value('quota_observed_at')}／{quota_value('quota_source')}|",
+                     "", "每轮不设额外次数上限时，仍遵守已核实的当日额度、后续下载预留、分钟限速及软截止；不把每日上限当作每轮可重新使用的余额。未知额度不填零，也不以配置值冒充已核实余额。", ""])
+    else:
+        rows.extend(["", "API额度快照不可用；当日已用、剩余和分钟限速未知，不能由配置上限推定。", ""])
+    rows.extend(["", "## 怎样阅读", "",
                  "- 已取得数据，不代表该赛事全部历史数据完整；请查看各赛季统计和请求失败项。",
                  "- 已拟合／沿用参数，不代表通过准确性或收益验收。参数和所有概率都是探索性估计。",
                  "- 验证采用按日期划分的时间留出集，未来时段不参与那次拟合；不是完整滚动回测。",
@@ -380,10 +402,13 @@ def run_pipeline(config, runtime, mode="audit", league="epl", now=None, client=N
               "run_started_at": iso(run_started), "training_cutoff": iso(now), "run_id": run_id, "mode": mode,
               "program_version": __version__, "source_commit": os.environ.get("GITHUB_SHA"),
               "requested_competitions": [c["key"] for c in chosen],
-              "competitions": [], "api_requests": 0}
+              "competitions": [], "api_requests": 0, "api_budget": None}
     exit_code = 0
     try:
-        client = client or APIClient(runtime / "cache", max_requests=config["max_requests_per_run"])
+        client = client or APIClient(runtime / "cache",
+                                    max_requests=config.get("max_requests_per_run"),
+                                    daily_limit=config.get("api_daily_limit"),
+                                    max_run_seconds=config.get("api_max_run_seconds"))
         client.status()  # Confirm key validity first; do not save account identifiers or credentials.
         for position, competition in enumerate(chosen):
             # Venue enrichment must not consume the ordinary data-fetch budget
@@ -399,6 +424,9 @@ def run_pipeline(config, runtime, mode="audit", league="epl", now=None, client=N
         report["fatal_error"] = safe_error(exc)
         exit_code = 2
     report["api_requests"] = getattr(client, "requests_made", 0)
+    budget_snapshot = getattr(client, "budget_snapshot", None)
+    if callable(budget_snapshot):
+        report["api_budget"] = budget_snapshot()
     report["exit_code"] = exit_code
     report["generated_at"] = iso(observed_time(clock, now,
         *(parse_date(item["forecast_generated_at"]) for item in report["competitions"]

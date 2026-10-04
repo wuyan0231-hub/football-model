@@ -15,7 +15,7 @@ from pathlib import Path, PurePosixPath
 import re
 
 from . import nations
-from .data import APIError, DataError, RequestBudgetError, _iso, _utc, normalize_fixtures, normalize_upcoming
+from .data import APIError, DataError, RequestBudgetError, RequestDeadlineError, _iso, _utc, normalize_fixtures, normalize_upcoming
 
 
 CURRENT_PATH = Path("registries/nations_venues.json")
@@ -391,7 +391,7 @@ def resolve_venues(raw, client, runtime, asof, days=7, *, max_lookups=None, rese
              "reserve_requests": reserve_requests}
     lookup_results = {}
     attempted_queries = set()
-    budget_deferred_queries = set()
+    budget_deferred_queries = {}
     deferred = 0
 
     for group in groups.values():
@@ -443,7 +443,7 @@ def resolve_venues(raw, client, runtime, asof, days=7, *, max_lookups=None, rese
             if not guarded and ((type(maximum) is int and type(used) is int and used >= maximum - reserve_requests)
                                 or type(daily) is int and daily <= reserve_requests):
                 deferred += 1
-                pending(group, "request_budget_deferred", "请求预算需保留后续赛事下载，场馆查询延后。")
+                pending(group, "request_budget_deferred", "达到请求或日额预算，或需保留后续赛事下载，场馆查询延后。")
                 continue
             try:
                 with _reserve_query_budget(client, reserve_requests):
@@ -453,16 +453,20 @@ def resolve_venues(raw, client, runtime, asof, days=7, *, max_lookups=None, rese
                 audit["queries"].append({"params": params, "status": "received",
                     "fetched_at": envelope.get("fetched_at") if isinstance(envelope, dict) else None,
                     "from_cache": envelope.get("from_cache") if isinstance(envelope, dict) else None})
-            except RequestBudgetError:
+            except RequestBudgetError as exc:
                 lookup_results[query_key] = None
-                budget_deferred_queries.add(query_key)
+                code, reason = (
+                    ("runtime_budget_deferred", "本轮请求运行时间已到软截止，场馆查询延后")
+                    if isinstance(exc, RequestDeadlineError) else
+                    ("request_budget_deferred", "达到请求或日额预算，或需保留后续赛事下载，场馆查询延后。"))
+                budget_deferred_queries[query_key] = (code, reason)
                 current_used = getattr(client, "requests_made", None)
                 # A guard before the first HTTP attempt is truly deferred.
                 # A network failure followed by a protected retry has already
                 # used a turn and must not displace untouched deferred work.
                 if type(used) is int and type(current_used) is int and current_used > used:
                     mark_attempt(query_key)
-                    audit["queries"].append({"params": params, "status": "request_budget_deferred",
+                    audit["queries"].append({"params": params, "status": code,
                                              "request_attempts": current_used - used})
             except APIError:
                 # APIError may carry provider text; keep a safe constant and
@@ -472,7 +476,8 @@ def resolve_venues(raw, client, runtime, asof, days=7, *, max_lookups=None, rese
                 audit["queries"].append({"params": params, "status": "api_error"})
         if query_key in budget_deferred_queries:
             deferred += 1
-            pending(group, "request_budget_deferred", "请求预算需保留后续赛事下载，场馆查询延后。")
+            code, reason = budget_deferred_queries[query_key]
+            pending(group, code, reason)
             continue
         envelope = lookup_results[query_key]
         if envelope is None:

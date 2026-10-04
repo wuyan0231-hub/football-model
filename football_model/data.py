@@ -16,6 +16,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import time
@@ -34,6 +35,10 @@ class APIError(RuntimeError):
 
 class RequestBudgetError(APIError):
     """An HTTP attempt was refused to preserve a known request budget."""
+
+
+class RequestDeadlineError(RequestBudgetError):
+    """Network work stopped early enough to save the run's reports and state."""
 
 
 class DataError(ValueError):
@@ -68,28 +73,36 @@ def _integer(value: Any, label: str, minimum: int = 0) -> int:
 
 
 class APIClient:
-    """One run, one global request budget, shared by all competitions.
+    """Provider-aware request budgets shared by all competitions in one run.
 
-    max_requests includes /status, retries and every network attempt. It is not
-    the account's total daily quota: response headers impose that second limit.
+    Optional max_requests includes /status, retries and every network attempt.
+    Daily allowance comes from status/headers, never a newly reset local quota.
     Current-season fetches bypass disk cache by default. Historical cache hits
     keep their original fetched_at and are never relabelled as fresh downloads.
     Optional lookups can reserve requests for later required work. The known
-    daily balance is conservatively reduced for every network attempt, including
-    failures without headers; daily_remaining_reported retains the last actual
-    response-header value. An unknown daily balance stays None.
+    daily balance is conservatively reduced for every paid attempt, including
+    failures without headers; daily_remaining_reported retains the last provider
+    balance (header, or limit minus usage from status). Unknown stays None.
     """
 
-    def __init__(self, data_dir: str | Path, max_requests: int = 80,
+    def __init__(self, data_dir: str | Path, max_requests: int | None = None,
                  timeout: float = 25, max_retries: int = 2,
-                 min_interval: float = 6.5, *, opener=None, sleep=None,
+                 min_interval: float | None = None, *, daily_limit: int | None = None,
+                 max_run_seconds: float | None = None, opener=None, sleep=None,
                  clock=None, monotonic=None):
-        if type(max_requests) is not int or max_requests < 1:
-            raise ValueError("max_requests 必须是正整数")
+        for label, value in (("max_requests", max_requests), ("daily_limit", daily_limit)):
+            if value is not None and (type(value) is not int or value < 1):
+                raise ValueError(f"{label} 必须是正整数或 None")
         if type(max_retries) is not int or not 0 <= max_retries <= 2:
             raise ValueError("max_retries 必须在 0 至 2 之间")
-        if timeout <= 0 or not 0 <= min_interval <= 60:
-            raise ValueError("timeout 必须为正，min_interval 必须在 0 至 60 秒之间")
+        if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0:
+            raise ValueError("timeout 必须为有限正数")
+        if min_interval is not None and (type(min_interval) not in (int, float)
+                or not math.isfinite(min_interval) or not 0 <= min_interval <= 60):
+            raise ValueError("min_interval 必须为 None 或 0 至 60 秒之间的有限数值")
+        if max_run_seconds is not None and (type(max_run_seconds) not in (int, float)
+                or not math.isfinite(max_run_seconds) or max_run_seconds <= 0):
+            raise ValueError("max_run_seconds 必须为 None 或有限正数")
         self._key = os.environ.get("FOOTBALL_API_KEY", "").strip()
         if not self._key:
             raise APIError("未配置 FOOTBALL_API_KEY；请在 GitHub Actions Secrets 中添加密钥")
@@ -97,17 +110,30 @@ class APIClient:
         self.max_requests = max_requests
         self.timeout = timeout
         self.max_retries = max_retries
-        self.min_interval = float(min_interval)
+        self.min_interval = None if min_interval is None else float(min_interval)
+        self.daily_limit = daily_limit
+        self.max_run_seconds = max_run_seconds
         self.requests_made = 0
         self.daily_remaining: int | None = None
         self.daily_remaining_reported: int | None = None
+        self.provider_daily_limit: int | None = None
+        self.provider_daily_used: int | None = None
+        self._estimated_daily_used: int | None = None
+        self.quota_observed_at: str | None = None
+        self.quota_source = "unknown"
+        self.daily_quota_status = "unknown"
+        self._last_response_daily_remaining: int | None = None
+        self._last_response_daily_limit: int | None = None
+        self.minute_limit: int | None = None
         self.minute_remaining: int | None = None
         self._opener = opener or build_opener(_NoRedirect()).open
         self._sleep = sleep or time.sleep
         self._clock = clock or (lambda: datetime.now(timezone.utc))
         self._monotonic = monotonic or time.monotonic
+        self._started_at = self._monotonic()
         self._last_request: float | None = None
         self._wait_until: float = 0
+        self._minute_window_until: float | None = None
         self._reserved_requests = 0
 
     @contextmanager
@@ -133,53 +159,142 @@ class APIClient:
         return text.replace(self._key, "[REDACTED]")[:1500]
 
     def _pause(self, seconds: float) -> None:
+        self._check_runtime(seconds)
         # No individual blocking sleep is longer than 60 seconds.
         if seconds > 60:
             raise APIError("接口要求等待超过 60 秒；请稍后重新运行")
         if seconds > 0:
             self._sleep(seconds)
 
+    def _check_runtime(self, required_seconds: float = 0) -> None:
+        if (self.max_run_seconds is not None
+                and self._monotonic() - self._started_at + required_seconds >= self.max_run_seconds):
+            raise RequestDeadlineError("达到本次运行软时间预算；停止网络请求并保留时间保存报告和状态")
+
+    def _effective_interval(self) -> float:
+        provider = min(60.0, 60.0 / self.minute_limit + 0.01) if self.minute_limit else 0.0
+        chosen = (6.5 if self.minute_limit is None else 0.0) if self.min_interval is None else self.min_interval
+        return max(chosen, provider)
+
+    def _expire_minute_window(self) -> None:
+        if self._minute_window_until is not None and self._monotonic() >= self._minute_window_until:
+            # The next real header can establish a new balance. Do not invent
+            # a refreshed remaining count when the previous window expires.
+            self.minute_remaining = None
+            self._minute_window_until = None
+
+    def _observe_daily(self, limit, used, remaining, source) -> None:
+        if limit is not None:
+            self.provider_daily_limit = limit
+        if used is not None:
+            self.provider_daily_used = used
+            self._estimated_daily_used = used
+        limits = [value for value in (self.daily_limit, self.provider_daily_limit) if value is not None]
+        allowed = (max(0, min(limits) - self._estimated_daily_used)
+                   if limits and self._estimated_daily_used is not None else None)
+        if remaining is not None:
+            self.daily_remaining_reported = remaining
+            allowed = remaining if allowed is None else min(allowed, remaining)
+        if used is None and remaining is None and self.daily_remaining is not None and allowed is not None:
+            # A limit-only header cannot prove that earlier consumption fell.
+            allowed = min(allowed, self.daily_remaining)
+        if self.daily_limit is not None and self._estimated_daily_used is None:
+            # A larger provider plan's remaining count does not disclose how
+            # much of our configured daily allowance has already been spent.
+            self.daily_remaining = None
+            self.daily_quota_status = "incomplete"
+            self.quota_source = source
+            self.quota_observed_at = _iso(self._clock())
+            return
+        if allowed is not None:
+            self.daily_remaining = allowed
+            self.daily_quota_status = "known"
+            self.quota_source = source
+            self.quota_observed_at = _iso(self._clock())
+
     def _rate_headers(self, headers) -> None:
+        self._last_response_daily_remaining = None
+        self._last_response_daily_limit = None
         if headers is None:
             return
         lowered = {str(k).lower(): v for k, v in headers.items()}
-        for field, attr in (("x-ratelimit-requests-remaining", "daily_remaining"),
-                            ("x-ratelimit-remaining", "minute_remaining")):
+        def number(field, minimum=0):
             try:
                 val = int(lowered[field])
-                if val >= 0:
-                    setattr(self, attr, val)
-                    if attr == "daily_remaining":
-                        self.daily_remaining_reported = val
+                return val if val >= minimum else None
             except (KeyError, TypeError, ValueError):
-                pass
-        if self.minute_remaining == 0:
-            self._wait_until = self._monotonic() + 60
+                return None
+        daily_limit = number("x-ratelimit-requests-limit", 1)
+        self._last_response_daily_limit = daily_limit
+        remaining = number("x-ratelimit-requests-remaining")
+        self._last_response_daily_remaining = remaining
+        limit = daily_limit if daily_limit is not None else self.provider_daily_limit
+        used = max(0, limit - remaining) if limit is not None and remaining is not None else None
+        if daily_limit is not None or remaining is not None:
+            self._observe_daily(daily_limit, used, remaining, "response_headers")
+        minute_limit = number("x-ratelimit-limit", 1)
+        if minute_limit is not None:
+            self.minute_limit = minute_limit
+        minute_remaining = number("x-ratelimit-remaining")
+        if minute_remaining is not None:
+            self.minute_remaining = minute_remaining
+            self._minute_window_until = self._monotonic() + 60
+            if minute_remaining == 0:
+                self._wait_until = max(self._wait_until, self._minute_window_until)
 
-    def _check_request_budget(self) -> None:
-        if self.requests_made >= self.max_requests:
+    def budget_snapshot(self) -> dict:
+        """Return only numeric budget evidence and timing; never account data."""
+        self._expire_minute_window()
+        return {"configured_daily_limit": self.daily_limit,
+                "provider_daily_limit": self.provider_daily_limit,
+                "provider_daily_used": self.provider_daily_used,
+                "daily_remaining": self.daily_remaining,
+                "daily_remaining_reported": self.daily_remaining_reported,
+                "minute_limit": self.minute_limit, "minute_remaining": self.minute_remaining,
+                "max_requests_per_run": self.max_requests, "requests_made": self.requests_made,
+                "min_interval_seconds": self._effective_interval(),
+                "max_run_seconds": self.max_run_seconds,
+                "elapsed_seconds": max(0.0, self._monotonic() - self._started_at),
+                "quota_observed_at": self.quota_observed_at, "quota_source": self.quota_source,
+                "daily_quota_status": self.daily_quota_status}
+
+    def _check_request_budget(self, *, paid=True) -> None:
+        self._check_runtime()
+        if self.max_requests is not None and self.requests_made >= self.max_requests:
             raise RequestBudgetError(f"达到本次运行请求上限 {self.max_requests}；停止下载，未完成部分不可当作成功")
-        if self.daily_remaining == 0:
+        if paid and self.daily_limit is not None and self._estimated_daily_used is None:
+            raise RequestBudgetError("日额度证据不完整，无法核算配置上限下的实际余额；先通过 status 核实已用量")
+        if paid and self.daily_remaining == 0:
             raise RequestBudgetError("今日剩余额度为 0（供应商回报或已知余额按请求保守扣减）；停止下载，请等待额度恢复")
         reserve = self._reserved_requests
-        if reserve and self.requests_made >= self.max_requests - reserve:
+        if reserve and self.max_requests is not None and self.requests_made >= self.max_requests - reserve:
             raise RequestBudgetError(f"本次运行请求预算需预留 {reserve} 次供后续下载；可选查询延后")
-        if reserve and self.daily_remaining is not None and self.daily_remaining <= reserve:
+        if paid and reserve and self.daily_remaining is not None and self.daily_remaining <= reserve:
             raise RequestBudgetError(f"今日已知请求余额需预留 {reserve} 次供后续下载；可选查询延后")
 
-    def _before_request(self) -> None:
-        self._check_request_budget()
+    def _before_request(self, *, paid=True) -> None:
+        self._check_request_budget(paid=paid)
+        self._expire_minute_window()
         now = self._monotonic()
         wait = max(0.0, self._wait_until - now)
         if self._last_request is not None:
-            wait = max(wait, self.min_interval - (now - self._last_request))
+            wait = max(wait, self._effective_interval() - (now - self._last_request))
+        self._check_runtime(wait + self.timeout)
         self._pause(wait)
+        self._check_runtime(self.timeout)
+        self._expire_minute_window()
         self._last_request = self._monotonic()
         self.requests_made += 1
-        if self.daily_remaining is not None:
+        if paid and self.daily_remaining is not None:
             # An attempt may reach the provider even if the response is lost.
             # Do not keep spending a stale header balance on subsequent retries.
             self.daily_remaining -= 1
+        if paid and self._estimated_daily_used is not None:
+            self._estimated_daily_used += 1
+        if self.minute_remaining is not None:
+            self.minute_remaining = max(0, self.minute_remaining - 1)
+            if self.minute_remaining == 0 and self._minute_window_until is not None:
+                self._wait_until = max(self._wait_until, self._minute_window_until)
 
     def _request(self, endpoint: str, params: dict[str, Any]) -> dict:
         if endpoint not in {"/status", "/leagues", "/fixtures", "/venues"}:
@@ -188,7 +303,8 @@ class APIClient:
         if params:
             url += "?" + urlencode(sorted(params.items()))
         for attempt in range(self.max_retries + 1):
-            self._before_request()
+            paid = endpoint != "/status"
+            self._before_request(paid=paid)
             request = Request(url, headers={"x-apisports-key": self._key,
                                           "Accept": "application/json"}, method="GET")
             try:
@@ -219,9 +335,9 @@ class APIClient:
                 code = exc.code
                 if code not in {429, 499, 500, 502, 503, 504} or attempt >= self.max_retries:
                     raise APIError(f"API-Football HTTP {code}；请检查账户权限或稍后重试") from None
-                if self.daily_remaining == 0:
+                if paid and self.daily_remaining == 0:
                     raise APIError("API-Football 今日额度耗尽；停止重试") from None
-                self._check_request_budget()
+                self._check_request_budget(paid=paid)
                 wait = 60.0 if code == 429 else float(2 ** (attempt + 1))
                 retry_after = exc.headers.get("Retry-After") if exc.headers else None
                 if retry_after is not None:
@@ -235,7 +351,7 @@ class APIClient:
                 if attempt >= self.max_retries:
                     # Do not expose raw exception text: it may contain headers.
                     raise APIError("连接 API-Football 失败或超时；已停止有限重试") from None
-                self._check_request_budget()
+                self._check_request_budget(paid=paid)
                 self._pause(float(2 ** (attempt + 1)))
         raise APIError("请求未完成")
 
@@ -273,11 +389,35 @@ class APIClient:
         return record
 
     def status(self) -> dict:
-        """Fetch account state, do not cache account/profile information."""
+        """Observe the real daily balance without retaining account details.
+
+        API-Football's status endpoint counts as a network attempt but does not
+        consume the subscription's daily request allowance.
+        """
         result = self._request("/status", {})
         if not isinstance(result["response"], dict):
             raise APIError("status 接口 response 应为对象")
-        return {**result["response"], "fetched_at": result["fetched_at"], "from_cache": False}
+        payload = result["response"]
+        requests = payload.get("requests")
+        requests = requests if isinstance(requests, dict) else {}
+        used, limit = requests.get("current"), requests.get("limit_day")
+        valid = type(used) is int and used >= 0 and type(limit) is int and limit > 0
+        if valid:
+            header_remaining = self._last_response_daily_remaining
+            header_limit = self._last_response_daily_limit
+            observed_limit = min(limit, header_limit) if header_limit is not None else limit
+            observed_used = used
+            remaining = max(0, limit - used)
+            if header_remaining is not None:
+                observed_used = max(used, max(0, (header_limit or limit) - header_remaining))
+                remaining = min(remaining, header_remaining)
+            source = "status_and_response_headers" if (header_remaining is not None or header_limit is not None) else "status"
+            self._observe_daily(observed_limit, observed_used, remaining, source)
+        subscription = payload.get("subscription")
+        active = subscription.get("active") if isinstance(subscription, dict) else None
+        return {"requests": {"current": used, "limit_day": limit} if valid else {},
+                "subscription": {"active": active} if type(active) is bool else {},
+                "fetched_at": result["fetched_at"], "from_cache": False}
 
     def resolve_league(self, config: dict, force: bool = False) -> dict:
         """Exact name AND country; zero/multiple matches require manual correction."""
