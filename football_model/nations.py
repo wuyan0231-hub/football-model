@@ -1,8 +1,8 @@
 """Isolated UEFA Nations League venue adapter; no fitting or parameter changes.
 
-The registry records exact observed provider identities and reviewed or
-provider-verified football-association venue locations. Unknown locations never imply a
-home advantage. A venue in the nominal away association is deliberately not
+The registry preserves raw venue context and country-level or match-bound
+reviewed football-association evidence. Legacy exact-stadium snapshots remain
+readable. Unknown locations never imply a home advantage. A venue in the nominal away association is deliberately not
 represented by this baseline, which cannot apply home advantage to that side.
 """
 from __future__ import annotations
@@ -12,6 +12,7 @@ import hashlib
 import json
 from pathlib import Path
 
+from . import match_locations
 from .data import DataError, _iso, _utc, normalize_fixtures, normalize_upcoming
 from .model import _connected_components
 
@@ -32,7 +33,7 @@ def _entry_temporal(entry):
                 "valid_to": None, "source_published_at": None,
                 "validity_status": "unknown", "basis": "legacy_reviewed_tuple",
                 "evidence_available_at": None}
-    if not isinstance(verification, dict) or verification.get("schema_version") not in (1, 2):
+    if not isinstance(verification, dict) or verification.get("schema_version") not in (1, 2, 3):
         raise DataError("场地证据结构版本无效。")
     fetched = _utc(verification.get("fetched_at"))
     verified = _utc(verification.get("verified_at"))
@@ -100,11 +101,12 @@ def venue_temporal_audit(row, registry=None, *, cutoff, valid_at=None, strict=Fa
     first-publication timestamp. Unknown facts remain unknown; strict history
     cannot pass on a present-day API lookup alone.
     """
-    _, venues, registry_sha = _registry(registry)
+    teams, venues, registry_sha = _registry(registry)
     cutoff_dt = _utc(cutoff)
     evidence = row.get("venue_evidence") if isinstance(row, dict) else None
-    key = _venue_key(evidence.get("venue")) if isinstance(evidence, dict) else None
-    entry = venues.get(key)
+    key = _venue_key(evidence.get("venue"), country_only=True) if isinstance(evidence, dict) else None
+    official = evidence.get("method") == match_locations.METHOD if isinstance(evidence, dict) else False
+    entry = match_locations.entries(registry, teams).get(row.get("match_id")) if official else venues.get(key)
     if entry is None:
         raise DataError("场地时间审计没有匹配的已登记场地。")
     if evidence.get("registry_sha256") != registry_sha:
@@ -112,7 +114,9 @@ def venue_temporal_audit(row, registry=None, *, cutoff, valid_at=None, strict=Fa
     if valid_at is None:
         valid_at = row.get("kickoff")
     valid_dt = _utc(valid_at) if valid_at is not None else None
-    temporal = _entry_temporal(entry)
+    if official:
+        validate_nations_forecast(row, registry)
+    temporal = match_locations.temporal(entry) if official else _entry_temporal(entry)
     reasons = []
     known, available = temporal["known_at"], temporal["evidence_available_at"]
     if known is None:
@@ -139,7 +143,7 @@ def venue_temporal_audit(row, registry=None, *, cutoff, valid_at=None, strict=Fa
     return result
 
 
-def _venue_key(venue):
+def _venue_key(venue, *, country_only=False):
     if not isinstance(venue, dict):
         return None
     vid, name, city = venue.get("id"), venue.get("name"), venue.get("city")
@@ -147,7 +151,10 @@ def _venue_key(venue):
     # it can only classify after a name/city lookup has verified a registry entry.
     if vid is not None and (type(vid) is not int or vid < 0):
         return None
-    if not isinstance(name, str) or not name.strip() or not isinstance(city, str) or not city.strip():
+    if country_only:
+        if any(value is not None and not isinstance(value, str) for value in (name, city)):
+            return None
+    elif not isinstance(name, str) or not name.strip() or not isinstance(city, str) or not city.strip():
         return None
     # Exact text is intentional: changes need review rather than fuzzy matching.
     return vid, name, city
@@ -172,13 +179,17 @@ def _registry(registry):
         raise DataError("欧国联登记表缺少场地列表。")
     venues = {}
     for entry in registry["venues"]:
-        key = _venue_key(entry)
+        key = _venue_key(entry, country_only=entry.get("verification", {}).get("schema_version") == 3)
         if key is None or entry.get("association") not in teams.values():
             raise DataError("欧国联登记表场地身份或所属协会无效。")
         if key in venues:
             raise DataError("欧国联登记表包含重复场地身份。")
+        if entry.get("verification", {}).get("schema_version") == 3:
+            from .venue_registry import _validate_verification
+            _validate_verification(entry, teams, registry)
         _entry_temporal(entry)
         venues[key] = entry
+    match_locations.entries(registry, teams)
     try:
         digest = hashlib.sha256(json.dumps(registry, sort_keys=True, ensure_ascii=False,
                                          allow_nan=False).encode()).hexdigest()
@@ -220,26 +231,41 @@ def _validate_raw(raw, teams):
     return {mid: record[1] for mid, record in records.items()}
 
 
-def _classify(item, venues, registry_sha):
+def _classify(item, venues, registry_sha, locations=None):
     fixture = item["fixture"]
-    key = _venue_key(fixture.get("venue"))
-    if key is None:
-        return None, "场地ID/名称/城市缺失或无效，不能推定为主场。"
-    entry = venues.get(key)
+    observed = match_locations.observed_venue(fixture.get("venue"))
+    key = _venue_key(observed, country_only=True)
+    venue_entry = venues.get(key)
+    match_entry = (locations or {}).get(fixture.get("id"))
+    if match_entry is not None and match_entry.get("conflict"):
+        return None, "官方比赛举办地区对应的供应商/登记国家证据冲突，须重新核实。"
+    if match_entry is not None and not match_locations.matches(match_entry, item):
+        return None, "比赛举办地区证据的球队、开赛时间或原始场地已变化，须重新核实。"
+    if match_entry is not None and venue_entry is not None and match_entry["association"] != venue_entry["association"]:
+        return None, "官方比赛举办地区与已核场地国家冲突，不能生成预测。"
+    # A match-specific official record is narrower than a reusable venue fact.
+    entry = match_entry or venue_entry
     if entry is None:
-        return None, "场地ID、名称与城市的精确组合未登记核实。"
+        return None, "比赛场地所在国家/足协地区尚未核实，不能推定为主场。"
     home, away = item["teams"]["home"]["name"], item["teams"]["away"]["name"]
     association = entry["association"]
     if association == away:
         return None, "场地位于名义客队协会，当前基线不支持反向主场优势。"
     neutral = association != home
-    evidence = {"venue": {"id": key[0], "name": key[1], "city": key[2]},
+    evidence = {"venue": observed,
                 "association": association, "home_association": home,
                 "away_association": away, "neutral": neutral,
                 "classification": "third_association_neutral" if neutral else "home_association",
                 "registry_sha256": registry_sha,
                 "method": "exact_reviewed_venue_tuple_and_national_team_identity"}
-    if entry.get("verification", {}).get("schema_version") == 2:
+    if match_entry is not None:
+        evidence.update(method=match_locations.METHOD, scope="football_association_only",
+                        match_binding=match_locations.binding(item),
+                        temporal=match_locations.temporal(match_entry))
+    elif entry.get("verification", {}).get("schema_version") == 3:
+        evidence.update(method=entry["verification"]["method"], scope="football_association_only",
+                        temporal=_entry_temporal(entry))
+    elif entry.get("verification", {}).get("schema_version") == 2:
         evidence["temporal"] = _entry_temporal(entry)
     return evidence, None
 
@@ -261,8 +287,12 @@ def validate_nations_forecast(row, registry=None):
         identities[side] = {"id": team_id, "name": name}
     if identities["home"]["id"] == identities["away"]["id"]:
         raise DataError("欧国联预测双方国家队不能相同。")
-    item = {"fixture": {"venue": row["venue_evidence"].get("venue")}, "teams": identities}
-    expected, error = _classify(item, venues, registry_sha)
+    locations = match_locations.entries(registry, teams)
+    bound = row["venue_evidence"].get("match_binding", {})
+    item = {"fixture": {"id": row.get("match_id"), "date": row.get("kickoff"),
+                        "venue": row["venue_evidence"].get("venue")}, "teams": identities,
+            "league": {"id": PROVIDER_LEAGUE_ID, "season": bound.get("season")}}
+    expected, error = _classify(item, venues, registry_sha, locations)
     if error:
         raise DataError(f"欧国联预测场地核验失败：{error}")
     if (type(row.get("neutral")) is not bool or row["neutral"] != expected["neutral"]
@@ -280,6 +310,7 @@ def prepare_nations(raw, asof, days=7, registry=None):
     are malformed data and fail the run rather than being silently excluded.
     """
     teams, venues, registry_sha = _registry(registry)
+    locations = match_locations.entries(registry, teams)
     originals = _validate_raw(raw, teams)
     eligible = normalize_fixtures(raw, asof)
     scheduled = normalize_upcoming(raw, asof, days)
@@ -296,7 +327,7 @@ def prepare_nations(raw, asof, days=7, registry=None):
         season, stage = item["league"]["season"], item["league"].get("round") or "unspecified"
         for groups, key in ((season_counts, season), (stage_counts, stage)):
             group_count(groups, key, "eligible_regulation")
-        evidence, error = _classify(item, venues, registry_sha)
+        evidence, error = _classify(item, venues, registry_sha, locations)
         if error:
             exclusions.append({"match_id": row["match_id"], "season": season,
                                "stage": stage, "reason": error,
@@ -311,7 +342,7 @@ def prepare_nations(raw, asof, days=7, registry=None):
                 group_count(groups, key, "neutral")
 
     for row in scheduled:
-        evidence, error = _classify(originals[row["match_id"]], venues, registry_sha)
+        evidence, error = _classify(originals[row["match_id"]], venues, registry_sha, locations)
         upcoming.append({**row, **({"venue_error": error} if error else
                                  {"neutral": evidence["neutral"], "venue_evidence": evidence})})
     components = _connected_components(matches)
@@ -340,7 +371,7 @@ def prepare_nations(raw, asof, days=7, registry=None):
                                 "limited": sum(not row["eligible"] for row in temporal_rows),
                                 "max_evidence_available_at": _iso(max(available_times)) if available_times else None,
                                 "unknown_evidence_time_count": sum(row["evidence_available_at"] is None for row in temporal_rows)},
-             "limitations": ["场地位置按已审核精确登记表分类，不量化球迷、旅行或特殊主场环境。",
+             "limitations": ["欧国联按已核举办国家/足协地区分类；国家级证据不等于精确球场身份已验证，不量化球迷、旅行或特殊主场环境。",
                              "完整训练对阵图检查不代替留出切分训练图检查；原训练保护仍适用。",
                              "仅90分钟加伤停补时；阵容、伤停、xG与战术均未量化。"]}
     return matches, upcoming, audit

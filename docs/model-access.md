@@ -43,7 +43,7 @@ await tools.mcp__codex_apps__github_fetch_file({
 
 | 来源 | 必取原件与选择规则 |
 |---|---|
-| `source_commit` | `AGENTS.md`、本页、`docs/model-integration.md`、当次完整框架/图规；`config.json`、`requirements.txt`；该提交 `football_model/` 下全部 Python 源码及其数据资源（当前包括 `__init__.py`、`cli.py`、`data.py`、`model.py`、`integration.py`、`nations.py`、`venue_registry.py`、`coverage_audit.py`、`nations_venues.json`、`nations_venue_city_aliases.json`）。按固定提交目录实际内容核清，不能只下载 `integration.py`。helper 从同一源码提交取得。 |
+| `source_commit` | `AGENTS.md`、本页、`docs/model-integration.md`、当次完整框架/图规；`config.json`、`requirements.txt`；该提交 `football_model/` 下全部 Python 源码及其数据资源（当前包括 `__init__.py`、`cli.py`、`data.py`、`model.py`、`integration.py`、`nations.py`、`venue_registry.py`、`match_locations.py`、`coverage_audit.py`、`nations_venues.json`、`nations_venue_city_aliases.json`、`nations_match_locations.json`）。按固定提交目录实际内容核清，不能只下载 `integration.py`。helper 从同一源码提交取得。 |
 | `state_commit` | 原 `runtime/integration/index.json`；目标联赛索引列出的模型、预测、对应最近尝试/训练运行报告和完整逐场验证；欧国联另取本条预测 `registry_snapshot` 指向的冻结文件。若原索引或较新已知记录引用相关失败，保留相应证据，不能漏掉后称全部通过。 |
 | 当次执行 | 连接器原响应、访问尝试、Actions 核查记录、helper 清单、真实 match 命令/退出状态/输出。无需为只读复算下载历史 API 缓存或调用训练；新增依赖按实际 import/文件引用补齐。 |
 

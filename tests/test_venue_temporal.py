@@ -50,7 +50,7 @@ class VenueTemporalTests(unittest.TestCase):
         registry, audit = self.resolve(self.observed, [self.provider])
         self.assertEqual(audit["counts"]["added"], 1)
         entry = audit["added"][0]["entry"]
-        self.assertEqual(entry["verification"]["city_alias_evidence"], self.rule)
+        self.assertEqual(entry["verification"]["identity_basis"]["evidence"], self.rule)
         self.assertEqual(entry["verification"]["original_venue"], original)
         self.assertEqual(entry["verification"]["provider_record"], self.provider)
         row = self.row(registry, self.observed)
@@ -156,6 +156,10 @@ class VenueTemporalTests(unittest.TestCase):
         entry = next(v for v in registry["venues"] if v["id"] == NEW_VENUE["id"])
         entry["verification"]["schema_version"] = 1
         entry["verification"].pop("temporal")
+        entry["verification"]["method"] = "api_football_venue_id_city_country"
+        entry["verification"]["name_alias"] = False
+        for key in ("scope", "identity_basis", "name_matches", "city_matches"):
+            entry["verification"].pop(key)
         current = self.runtime / "registries/nations_venues.json"
         current.write_text(json.dumps(registry, ensure_ascii=False, indent=2) + "\n")
         registry, audit = self.resolve()
