@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "stage": "offline_engineering_replay_not_production",
+  "baseline_source_commit": "f4cb9895437bad16fc5aa2c7a2e8e9b3682d29ca",
+  "baseline_state_commit": "5a50850130696e243fb98ce5e43fbb50dc11807d",
+  "run_id": "20261004T154054275733Z",
+  "checks": {
+    "pipeline_completed": true,
+    "zero_api_requests": true,
+    "original_supported_retained": true,
+    "original_12_restored": true,
+    "all_supported_recomputed": true,
+    "ireland_neutral": true,
+    "old_cutoff_refused": true,
+    "original_inputs_unchanged": true
+  },
+  "coverage": {
+    "old_supported": 13,
+    "new_supported": 25,
+    "total": 25,
+    "restored_ids": [
+      1528938,
+      1528942,
+      1528943,
+      1528949,
+      1528950,
+      1528953,
+      1528954,
+      1528956,
+      1545610,
+      1545611,
+      1545612,
+      1545655
+    ],
+    "still_rejected": []
+  },
+  "historical_regulation": {
+    "eligible": 428,
+    "previous_admitted": 387,
+    "admitted": 407,
+    "excluded": 21
+  },
+  "model_change": "完成新拟合",
+  "packets": {
+    "1528938": {
+      "passed": true,
+      "neutral": false,
+      "method": "api_football_venue_id_country"
+    },
+    "1545610": {
+      "passed": true,
+      "neutral": false,
+      "method": "official_match_host_association"
+    },
+    "1528939": {
+      "passed": true,
+      "neutral": false,
+      "method": "exact_reviewed_venue_tuple_and_national_team_identity"
+    },
+    "1528940": {
+      "passed": true,
+      "neutral": false,
+      "method": "exact_reviewed_venue_tuple_and_national_team_identity"
+    },
+    "1528941": {
+      "passed": true,
+      "neutral": false,
+      "method": "exact_reviewed_venue_tuple_and_national_team_identity"
+    },
+    "1528942": {
+      "passed": true,
+      "neutral": false,
+      "method": "api_football_venue_id_country"
+    },
+    "1528943": {
+      "passed": true,
+      "neutral": true,
+      "method": "official_match_host_association"
+    },
+    "1545611": {
+      "passed": true,
+      "neutral": false,
+      "method": "official_match_host_association"
+    },
+    "1528944": {
+      "passed": true,
+      "neutral": false,
+      "method": "exact_reviewed_venue_tuple_and_national_team_identity"
+    },
+    "1528945": {
+      "passed": true,
+      "neutral": false,
+      "method": "exact_reviewed_venue_tuple_and_national_team_identity"
+    },
+    "1528946": {
+      "passed": true,
+      "neutral": true,
+      "method": "exact_reviewed_venue_tuple_and_national_team_identity"
+    },
+    "1528947": {
+      "passed": true,
+      "neutral": false,
+      "method": "exact_reviewed_venue_tuple_and_national_team_identity"
+    },
+    "1528948": {
+      "passed": true,
+      "neutral": false,
+      "method": "exact_reviewed_venue_tuple_and_national_team_identity"
+    },
+    "1528949": {
+      "passed": true,
+      "neutral": false,
+      "method": "api_football_venue_id_country"
+    },
+    "1528950": {
+      "passed": true,
+      "neutral": false,
+      "method": "official_match_host_association"
+    },
+    "1528951": {
+      "passed": true,
+      "neutral": false,
+      "method": "exact_reviewed_venue_tuple_and_national_team_identity"
+    },
+    "1528952": {
+      "passed": true,
+      "neutral": false,
+      "method": "exact_reviewed_venue_tuple_and_national_team_identity"
+    },
+    "1528953": {
+      "passed": true,
+      "neutral": false,
+      "method": "official_match_host_association"
+    },
+    "1528954": {
+      "passed": true,
+      "neutral": false,
+      "method": "official_match_host_association"
+    },
+    "1528955": {
+      "passed": true,
+      "neutral": true,
+      "method": "exact_reviewed_venue_tuple_and_national_team_identity"
+    },
+    "1528956": {
+      "passed": true,
+      "neutral": false,
+      "method": "api_football_venue_id_country"
+    },
+    "1528957": {
+      "passed": true,
+      "neutral": false,
+      "method": "exact_reviewed_venue_tuple_and_national_team_identity"
+    },
+    "1545612": {
+      "passed": true,
+      "neutral": false,
+      "method": "official_match_host_association"
+    },
+    "1545655": {
+      "passed": true,
+      "neutral": false,
+      "method": "api_football_venue_id_country"
+    },
+    "1545657": {
+      "passed": true,
+      "neutral": false,
+      "method": "exact_reviewed_venue_tuple_and_national_team_identity"
+    }
+  },
+  "summary_sha256": "667c2aed321e0b38528648ddfeb3f22e3028f088550aaac8648a9a067abcd6f6",
+  "limits": [
+    "Offline original provider responses; no fresh API requests or production state writes.",
+    "Current actual calculation times; source fetched_at preserved; not evidence of an older pre-match prediction.",
+    "Coverage and calculation consistency do not demonstrate forecast or return improvement."
+  ],
+  "regression_tests": {
+    "count": 240,
+    "result": "passed",
+    "duration_seconds": 16.245,
+    "log_sha256": "c0f3c32c38a04c147ace736ab11c41d2f4c8e07cb72982b5c03503c8eaa6647e"
+  },
+  "independent_review": {
+    "result": "no_blocking_findings",
+    "checks": [
+      "Old registry and 13 saved forecasts remain compatible",
+      "Seven official match bindings and 22 source statement hashes valid",
+      "Source lateness, context changes, country conflicts and away-host cases reject correctly",
+      "Conflict marker survives subsequent seed merge and API failure"
+    ]
+  },
+  "unchanged_original_files": [
+    "football_model/model.py",
+    "football_model/data.py",
+    "config.json",
+    "docs/football-framework-v1.7.md",
+    "docs/odds-screenshot-reading-v1.2.md"
+  ]
+}

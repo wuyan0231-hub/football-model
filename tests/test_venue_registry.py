@@ -171,19 +171,18 @@ class VenueRegistryTests(unittest.TestCase):
                 self.assertEqual(raw[0]["fixture"]["venue"]["id"], sentinel)
                 self.assertFalse(validate_nations_forecast(row, registry))
 
-    def test_name_search_requires_unique_exact_name_and_city(self):
+    def test_name_search_requires_unique_exact_name(self):
         venue = {**NEW_VENUE, "id": None}
         for response in (
             [provider_venue(), provider_venue(id=900002)],
             [provider_venue(name="Synthetic Different Ground")],
-            [provider_venue(city="Manchester")],
         ):
             with self.subTest(response=response):
                 self.assert_unregistered(venue, VenueClient(response))
 
     def test_positive_id_verified_alias_is_kept_without_mutating_fixture(self):
         raw = [fixture(venue=NEW_VENUE)]
-        canonical = "Synthetic Provider Canonical Ground"
+        canonical = "Synthetic New Ground Stadium"
         registry, audit = self.resolve(raw, VenueClient([provider_venue(name=canonical)]))
         row = self.forecasts(raw, registry, audit)[0]
         self.assertNotIn("venue_error", row)
@@ -191,8 +190,8 @@ class VenueRegistryTests(unittest.TestCase):
         self.assertEqual(raw[0]["fixture"]["venue"]["name"], NEW_VENUE["name"])
         self.assertIn(canonical, json.dumps(registry, ensure_ascii=False))
 
-    def test_positive_id_and_city_mismatch_cannot_register(self):
-        for response in ([provider_venue(id=900002)], [provider_venue(city="Manchester")]):
+    def test_wrong_positive_id_cannot_register(self):
+        for response in ([provider_venue(id=900002)],):
             with self.subTest(response=response):
                 self.assert_unregistered(NEW_VENUE, VenueClient(response))
 
@@ -205,10 +204,8 @@ class VenueRegistryTests(unittest.TestCase):
             with self.subTest(country=country):
                 self.assert_unregistered(NEW_VENUE, VenueClient([provider_venue(country=country)]))
 
-    def test_existing_id_conflicting_city_or_association_cannot_be_extended(self):
+    def test_existing_id_conflicting_association_cannot_be_extended(self):
         for venue, candidate in (
-            ({**KNOWN_VENUE, "city": "Manchester"},
-             provider_venue(KNOWN_VENUE, city="Manchester")),
             ({**KNOWN_VENUE, "name": "Synthetic Alias of Wembley"},
              provider_venue(KNOWN_VENUE, country="Scotland", name="Synthetic Alias of Wembley")),
         ):
@@ -237,7 +234,7 @@ class VenueRegistryTests(unittest.TestCase):
                   for i in range(30)]
         raw = [fixture(530001 + i, venue) for i, venue in enumerate(venues)]
         raw.extend([fixture(530101, venues[0]),
-                    fixture(530102, {**venues[0], "name": "Synthetic Same-ID Alias"})])
+                    fixture(530102, {**venues[0], "name": "Synthetic Uncapped Ground 0 Stadium"})])
         by_id = {venue["id"]: venue for venue in venues}
         client = VenueClient(response=lambda venue_id=None, name=None: [provider_venue(by_id[venue_id])])
 

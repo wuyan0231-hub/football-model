@@ -98,7 +98,7 @@ def input_fingerprint(matches: list, settings: dict, competition: dict) -> str:
         # Isolate the new normalization policy; domestic fingerprints are unchanged.
         payload["national_sources"] = {
             name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
-            for name in ("nations.py", "nations_venues.json")}
+            for name in ("nations.py", "nations_venues.json", "venue_registry.py", "match_locations.py")}
     return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
@@ -299,7 +299,7 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
                       "source_seasons": result["seasons"]}
             if national:
                 bundle["national_audit"] = national_audit
-                bundle["venue_policy"] = "Exact provider venue and association registry; third-country neutral; unknown excluded."
+                bundle["venue_policy"] = "Verified host football association using provider or match-bound official evidence; country-only scope; third-association neutral; unknown/conflict/away-host excluded."
             from .coverage_audit import compare_validation_coverage
             coverage = compare_validation_coverage(previous_validation, evaluation,
                 old_source=previous_source,
@@ -342,7 +342,7 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
                    "usage": "探索性条件基线；不能据此宣称已纳入本场全部信息"}
             try:
                 if national:
-                    row["venue_status"] = "供应商场地及归属登记表分类；本场仍须核对最新场地"
+                    row["venue_status"] = "按已核举办国家/足协地区分类；国家级准入不表示精确球场已核实；本场仍须核对最新场地"
                     row["registry_snapshot"] = venue_registration["registry_snapshot"]
                     if fixture.get("venue_error"):
                         raise ValueError(fixture["venue_error"])
