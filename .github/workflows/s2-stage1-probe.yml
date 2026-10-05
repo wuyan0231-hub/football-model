@@ -1,0 +1,49 @@
+name: S2 stage 1 isolated API capability probe
+
+on:
+  push:
+    branches: [s2/stage1-readonly-probe-20261006]
+    paths:
+      - 'experiments/s2_stage1/**'
+      - '.github/workflows/s2-stage1-probe.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: football-model-state
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    if: github.event.repository.private == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Check bounded probe offline
+        run: python -m unittest discover -s experiments/s2_stage1 -p 'test_probe_api.py' -v
+      - name: Read-only bounded data probe
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: >-
+          python experiments/s2_stage1/probe_api.py
+          --output s2_probe_output
+          --samples experiments/s2_stage1/probe_samples.json
+          --max-attempts 24
+          --max-paid 20
+          --daily-limit 5000
+          --production-reserve 1000
+      - name: Preserve probe evidence only
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: s2-stage1-api-probe-${{ github.run_id }}-${{ github.run_attempt }}
+          path: s2_probe_output/
+          if-no-files-found: error
+          retention-days: 14
