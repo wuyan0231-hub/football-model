@@ -14,6 +14,7 @@ these files receive the same path, type, size and credential checks as models.
 from __future__ import annotations
 
 import argparse
+import gzip
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import json
@@ -121,6 +122,7 @@ def _validate_runtime(runtime: Path) -> None:
         ) if len(value := os.environ.get(name, "")) >= 6
     ]
     total = 0
+    expanded_total = 0
     for path in runtime.rglob("*"):
         if path.is_symlink():
             raise StateError("runtime 包含符号链接，已停止保存。")
@@ -128,12 +130,26 @@ def _validate_runtime(runtime: Path) -> None:
             raise StateError("runtime 包含隐藏文件或目录，已停止保存。")
         if path.is_dir():
             continue
-        if not path.is_file() or path.suffix.lower() not in _ALLOWED_SUFFIXES:
+        relative = path.relative_to(runtime).as_posix()
+        replay_gzip = bool(re.fullmatch(r"replay/bundles/[0-9a-f]{64}\.json\.gz", relative))
+        if not path.is_file() or (path.suffix.lower() not in _ALLOWED_SUFFIXES and not replay_gzip):
             raise StateError("runtime 包含不允许上传的文件类型，已停止保存。")
         size = path.stat().st_size
         total += size
         if size > _MAX_FILE_BYTES or total > _MAX_TOTAL_BYTES:
             raise StateError("状态超过安全保存大小，请检查缓存体积；未覆盖远端。")
+        if replay_gzip:
+            try:
+                with gzip.open(path, "rb") as handle:
+                    content = handle.read(_MAX_FILE_BYTES + 1)
+                expanded_total += len(content)
+                if len(content) > _MAX_FILE_BYTES or expanded_total > _MAX_TOTAL_BYTES:
+                    raise StateError("回放解压内容超过安全保存大小，已停止保存。")
+                json.loads(content)
+            except (OSError, EOFError, ValueError) as exc:
+                raise StateError("回放压缩文件无效，已停止保存。") from exc
+            if any(secret in content for secret in known_secrets):
+                raise StateError("回放解压内容疑似包含凭据，已停止保存；请检查程序输出。")
         if known_secrets:
             content = path.read_bytes()
             if any(secret in content for secret in known_secrets):

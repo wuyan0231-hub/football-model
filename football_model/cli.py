@@ -188,11 +188,16 @@ def markdown_report(report: dict) -> str:
         if validation:
             rows.extend(["", "验证结果（完整字段见同名JSON）：", "", "```json",
                          json.dumps(validation, ensure_ascii=False, indent=2), "```", ""])
+    if report.get("research_replay"):
+        rows.insert(0, "> 研究回放：所有记录时间来自原运行；不具备新的赛前预测资格。\n")
+    if report.get("replay_recording", {}).get("status") == "failed":
+        rows.extend(["", "## 回放证据记录失败", "", report["replay_recording"]["detail"],
+                     "预测文件保留；本轮不能据此声称可完整复现。"])
     return "\n".join(rows)
 
 
 def process_competition(client, competition, settings, runtime, now, mode, run_id,
-                        venue_reserve_requests=0, clock=None, run_started=None):
+                        venue_reserve_requests=0, clock=None, run_started=None, research_replay=False):
     clock = clock or (lambda: datetime.now(UTC))
     run_started = run_started or observed_time(clock, now)
     key = competition["key"]
@@ -425,6 +430,8 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
             if completed >= parse_date(fixture["kickoff"]):
                 row.pop("prediction", None)
                 row.update(status="unsupported", reason="预测实际完成时比赛已开赛；不能倒填赛前预测。")
+            if research_replay:
+                row["research_replay"] = True
             forecasts.append(row)
         result["forecast_generated_at"] = iso(observed_time(clock, data_observed,
             *(parse_date(r["generated_at"]) for r in forecasts)))
@@ -443,8 +450,17 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
     return result
 
 
-def run_pipeline(config, runtime, mode="audit", league="epl", now=None, client=None, *, clock=None):
+def run_pipeline(config, runtime, mode="audit", league="epl", now=None, client=None, *, clock=None,
+                 record_replay=False, research_replay=False):
     clock = clock or (lambda: datetime.now(UTC))
+    recorder, recording_error = None, None
+    if record_replay and not research_replay:
+        try:
+            from .production_replay import Recorder
+            recorder = Recorder(config, runtime, mode, league, clock, now)
+            clock = recorder.clock
+        except (ValueError, KeyError, TypeError, OSError) as exc:
+            recording_error = safe_error(exc)
     run_started = observed_time(clock)
     now = now or run_started
     if now.tzinfo is None:
@@ -468,19 +484,25 @@ def run_pipeline(config, runtime, mode="audit", league="epl", now=None, client=N
               "program_version": __version__, "source_commit": os.environ.get("GITHUB_SHA"),
               "requested_competitions": [c["key"] for c in chosen],
               "competitions": [], "api_requests": 0, "api_budget": None}
+    if research_replay:
+        report["research_replay"] = True
+        report["prospective_eligible"] = False
     exit_code = 0
     try:
         client = client or APIClient(runtime / "cache",
                                     max_requests=config.get("max_requests_per_run"),
                                     daily_limit=config.get("api_daily_limit"),
                                     max_run_seconds=config.get("api_max_run_seconds"))
+        if recorder is not None:
+            client = recorder.client(client)
         client.status()  # Confirm key validity first; do not save account identifiers or credentials.
         for position, competition in enumerate(chosen):
             # Venue enrichment must not consume the ordinary data-fetch budget
             # reserved for later competitions in the same all-league run.
             reserve = (len(chosen) - position - 1) * (1 + config["history_seasons"])
             item = process_competition(client, competition, config, runtime, now, mode,
-                                       run_id, venue_reserve_requests=reserve, clock=clock, run_started=run_started)
+                                       run_id, venue_reserve_requests=reserve, clock=clock, run_started=run_started,
+                                       research_replay=research_replay)
             report["competitions"].append(item)
             print(f"{item['label']}：{item['status']}；{item.get('eligible_matches', 0)}场可用赛果。", flush=True)
             if item["status"] == "未完成":
@@ -504,8 +526,11 @@ def run_pipeline(config, runtime, mode="audit", league="epl", now=None, client=N
     # report. This access layer never changes fitting or validation inputs.
     from .integration import build_index
     try:
-        build_index(runtime, config, current_report=report)
-        report["integration_index"] = {"status": "updated", "path": "runtime/integration/index.json"}
+        if research_replay:
+            report["integration_index"] = {"status": "research_replay_not_published"}
+        else:
+            build_index(runtime, config, current_report=report)
+            report["integration_index"] = {"status": "updated", "path": "runtime/integration/index.json"}
     except (ValueError, KeyError, TypeError, RuntimeError, OSError) as exc:
         report["integration_index"] = {"status": "failed", "detail": safe_error(exc)}
         report["integration_error"] = safe_error(exc)
@@ -528,6 +553,16 @@ def run_pipeline(config, runtime, mode="audit", league="epl", now=None, client=N
         except OSError:
             invalid_markdown.unlink(missing_ok=True)
         print(f"模型接入索引更新失败：{safe_error(exc)}", flush=True)
+    if recorder is not None:
+        try:
+            if client is None:
+                raise ValueError("真实API客户端未建立；本轮无法冻结完整API行为，原失败报告保留。")
+            report["replay_recording"] = recorder.save(report)
+        except (ValueError, KeyError, TypeError, OSError) as exc:
+            recording_error = safe_error(exc)
+    if recording_error:
+        report["replay_recording"] = {"status": "failed", "detail": recording_error,
+                                      "forecast_files_preserved": True}
     atomic_json(runtime / "reports" / "history" / f"{run_id}.json", report)
     atomic_json(runtime / "reports" / "latest.json", report)
     markdown = markdown_report(report)
@@ -542,10 +577,11 @@ def main(argv=None):
     parser.add_argument("--league", default="epl", help="config.json 中赛事key，或 all")
     parser.add_argument("--config", default="config.json")
     parser.add_argument("--runtime", default="runtime")
+    parser.add_argument("--record-replay", action="store_true", help="冻结无敏感API响应、初始状态与时钟，供严格离线研究回放")
     args = parser.parse_args(argv)
     with open(args.config, encoding="utf-8") as fp:
         config = json.load(fp)
-    return run_pipeline(config, args.runtime, args.mode, args.league)[0]
+    return run_pipeline(config, args.runtime, args.mode, args.league, record_replay=args.record_replay)[0]
 
 
 if __name__ == "__main__":

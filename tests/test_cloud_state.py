@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import gzip
 import hashlib
 import json
 import os
@@ -72,6 +73,42 @@ class CloudStateTests(unittest.TestCase):
         destination = self.root / name
         git(self.root, "clone", "--branch", "main", str(self.remote), str(destination))
         return destination
+
+    def test_compressed_replay_survives_cloud_state_and_checks_plaintext(self) -> None:
+        cloud_state.load_state(self.repo)
+        self.write_model(self.repo, 1)
+        path = self.repo / "runtime/replay/bundles" / ("a" * 64 + ".json.gz")
+        path.parent.mkdir(parents=True)
+        payload = b'{"schema_version":1,"events":[]}'
+        path.write_bytes(gzip.compress(payload))
+        ledger = self.repo / "runtime/prospective"
+        ledger.mkdir()
+        (ledger / "writer-lock.txt").touch()
+        saved = cloud_state.save_state(self.repo)
+        restored = self.clone("replay-restored")
+        self.assertEqual(cloud_state.load_state(restored), saved)
+        self.assertEqual(gzip.decompress((restored / path.relative_to(self.repo)).read_bytes()), payload)
+        with patch.dict(os.environ, {"FOOTBALL_API_KEY": "synthetic-secret-not-a-real-key"}):
+            path.write_bytes(gzip.compress(b'{"secret":"synthetic-secret-not-a-real-key"}'))
+            with self.assertRaisesRegex(cloud_state.StateError, "凭据"):
+                cloud_state._validate_runtime(self.repo / "runtime")
+
+    def test_compressed_replay_rejects_other_paths_corruption_and_expansion(self) -> None:
+        runtime = self.repo / "runtime"
+        path = runtime / "replay/bundles" / ("b" * 64 + ".json.gz")
+        path.parent.mkdir(parents=True)
+        for body in (b"not gzip", gzip.compress(b"not json")):
+            path.write_bytes(body)
+            with self.assertRaisesRegex(cloud_state.StateError, "无效"):
+                cloud_state._validate_runtime(runtime)
+        path.write_bytes(gzip.compress(b'{"pad":"' + b"a" * 500 + b'"}'))
+        with patch.object(cloud_state, "_MAX_FILE_BYTES", 100):
+            with self.assertRaisesRegex(cloud_state.StateError, "大小"):
+                cloud_state._validate_runtime(runtime)
+        path.write_bytes(gzip.compress(b"{}"))
+        path.rename(runtime / "unexpected.json.gz")
+        with self.assertRaisesRegex(cloud_state.StateError, "类型"):
+            cloud_state._validate_runtime(runtime)
 
     def test_first_save_is_isolated_and_preserves_source_and_local_changes(self) -> None:
         (self.repo / "README.md").write_text("Uncommitted source work\n", encoding="utf-8")

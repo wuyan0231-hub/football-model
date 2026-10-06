@@ -108,6 +108,26 @@ class IntegrationTests(unittest.TestCase):
         with self.assertRaisesRegex(IntegrationError, "audit_only"):
             self.packet(league="ucl")
 
+    def test_research_replay_cannot_enter_live_integration(self):
+        for marker in (self.runtime / "RESEARCH_REPLAY.json", self.runtime.parent / "RESEARCH_REPLAY.json"):
+            marker.write_text("{}")
+            with self.assertRaisesRegex(IntegrationError, "研究回放"):
+                self.packet()
+            marker.unlink()
+        rows = self.read(self.prediction_path)
+        rows[0]["research_replay"] = True
+        atomic_json(self.prediction_path, rows)
+        with self.assertRaisesRegex(IntegrationError, "研究回放"):
+            self.packet()
+        rows[0].pop("research_replay")
+        atomic_json(self.prediction_path, rows)
+        report = self.read(self.report_path)
+        report["research_replay"] = True
+        atomic_json(self.report_path, report)
+        build_index(self.runtime, CONFIG)
+        with self.assertRaisesRegex(IntegrationError, "研究回放"):
+            self.packet()
+
     def test_current_report_hook_retains_source_and_all_leagues(self):
         report = self.read(self.report_path)
         report["source_commit"] = "b"*40
