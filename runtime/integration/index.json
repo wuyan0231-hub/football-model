@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "status": "ready",
-  "generated_at": "2026-10-06T01:31:41.690786Z",
-  "source_commit": "e308d6a0672106f6eced9bf2b9f7a8afd31596f8",
-  "history_reports": 39,
+  "generated_at": "2026-10-06T15:04:45.566677Z",
+  "source_commit": "9ffde463e72e32a455a1c6771aae769fe54448cb",
+  "history_reports": 40,
   "competitions": [
     {
       "key": "epl",
@@ -1046,71 +1046,167 @@
       "label": "欧洲国家联赛",
       "mode": "national_baseline",
       "latest_attempt": {
-        "run_id": "20261006T013129416454Z",
-        "generated_at": "2026-10-06T01:31:41.621069Z",
+        "run_id": "20261006T150443918641Z",
+        "generated_at": "2026-10-06T15:04:45.485823Z",
         "mode": "train",
         "status": "探索性基线",
-        "detail": "未含阵容伤停、xG与赛程；未证实预测或收益优势。 场地筛选：444场常规赛果中纳入424场、排除20场；未来7天可用预测10场，不支持0场。",
+        "detail": "未含阵容伤停、xG与赛程；未证实预测或收益优势。 场地筛选：444场常规赛果中纳入424场、排除20场；未来7天可用预测9场，不支持0场。",
         "model_id": "unl-20261006T013129416454Z",
         "trained_at": "2026-10-06T01:31:29.416454Z",
-        "source_commit": "e308d6a0672106f6eced9bf2b9f7a8afd31596f8",
-        "report_file": "runtime/reports/history/20261006T013129416454Z.json",
-        "forecast_count": 10,
+        "source_commit": "9ffde463e72e32a455a1c6771aae769fe54448cb",
+        "report_file": "runtime/reports/history/20261006T150443918641Z.json",
+        "forecast_count": 9,
         "unsupported_forecasts": 0,
         "time_semantics": "observed_wall_clock_v1",
-        "run_started_at": "2026-10-06T01:31:29.416454Z",
-        "data_observed_at": "2026-10-06T01:31:39.215586Z",
-        "forecast_generated_at": "2026-10-06T01:31:39.409821Z",
-        "model_fitted_at": "2026-10-06T01:31:39.323729Z",
-        "training_cutoff": "2026-10-06T01:31:29.416454Z"
-      },
-      "latest_train_attempt": {
-        "run_id": "20261006T013129416454Z",
-        "generated_at": "2026-10-06T01:31:41.621069Z",
-        "mode": "train",
-        "status": "探索性基线",
-        "detail": "未含阵容伤停、xG与赛程；未证实预测或收益优势。 场地筛选：444场常规赛果中纳入424场、排除20场；未来7天可用预测10场，不支持0场。",
-        "model_id": "unl-20261006T013129416454Z",
-        "trained_at": "2026-10-06T01:31:29.416454Z",
-        "source_commit": "e308d6a0672106f6eced9bf2b9f7a8afd31596f8",
-        "report_file": "runtime/reports/history/20261006T013129416454Z.json",
-        "forecast_count": 10,
-        "unsupported_forecasts": 0,
-        "time_semantics": "observed_wall_clock_v1",
-        "run_started_at": "2026-10-06T01:31:29.416454Z",
-        "data_observed_at": "2026-10-06T01:31:39.215586Z",
-        "forecast_generated_at": "2026-10-06T01:31:39.409821Z",
-        "model_fitted_at": "2026-10-06T01:31:39.323729Z",
-        "training_cutoff": "2026-10-06T01:31:29.416454Z"
-      },
-      "latest_successful_forecast": {
-        "run_id": "20261006T013129416454Z",
-        "generated_at": "2026-10-06T01:31:41.621069Z",
-        "mode": "train",
-        "status": "探索性基线",
-        "detail": "未含阵容伤停、xG与赛程；未证实预测或收益优势。 场地筛选：444场常规赛果中纳入424场、排除20场；未来7天可用预测10场，不支持0场。",
-        "model_id": "unl-20261006T013129416454Z",
-        "trained_at": "2026-10-06T01:31:29.416454Z",
-        "source_commit": "e308d6a0672106f6eced9bf2b9f7a8afd31596f8",
-        "report_file": "runtime/reports/history/20261006T013129416454Z.json",
-        "forecast_count": 10,
-        "unsupported_forecasts": 0,
-        "time_semantics": "observed_wall_clock_v1",
-        "run_started_at": "2026-10-06T01:31:29.416454Z",
-        "data_observed_at": "2026-10-06T01:31:39.215586Z",
-        "forecast_generated_at": "2026-10-06T01:31:39.409821Z",
+        "run_started_at": "2026-10-06T15:04:43.918641Z",
+        "data_observed_at": "2026-10-06T15:04:45.458965Z",
+        "forecast_generated_at": "2026-10-06T15:04:45.480680Z",
         "model_fitted_at": "2026-10-06T01:31:39.323729Z",
         "training_cutoff": "2026-10-06T01:31:29.416454Z",
-        "prediction_file": "runtime/predictions/20261006T013129416454Z/unl.json"
+        "forecast_availability": {
+          "status": "available",
+          "upcoming_count": 9,
+          "supported_count": 9,
+          "unsupported_count": 0,
+          "unsupported_reasons": {}
+        },
+        "model_freshness": {
+          "status": "current",
+          "evaluated_at": "2026-10-06T15:04:43.918641Z",
+          "age_basis": "training_cutoff",
+          "age_days": 0.5647511827199074,
+          "max_age_days": 14,
+          "latest_upcoming_model_age_days": 0.717715087337963,
+          "training_last_match_kickoff": "2026-10-05T18:45:00Z",
+          "training_data_age_days": 0.8470360953819444,
+          "note": "真实重拟合可沿用相同历史样本；不代表取得新赛果、阵容或其他基本面。"
+        },
+        "model_refresh": {
+          "required": false,
+          "reasons": [],
+          "training_inputs_changed": false,
+          "data_changed": false,
+          "performed": false,
+          "prior_model_id": "unl-20261006T013129416454Z"
+        }
+      },
+      "latest_train_attempt": {
+        "run_id": "20261006T150443918641Z",
+        "generated_at": "2026-10-06T15:04:45.485823Z",
+        "mode": "train",
+        "status": "探索性基线",
+        "detail": "未含阵容伤停、xG与赛程；未证实预测或收益优势。 场地筛选：444场常规赛果中纳入424场、排除20场；未来7天可用预测9场，不支持0场。",
+        "model_id": "unl-20261006T013129416454Z",
+        "trained_at": "2026-10-06T01:31:29.416454Z",
+        "source_commit": "9ffde463e72e32a455a1c6771aae769fe54448cb",
+        "report_file": "runtime/reports/history/20261006T150443918641Z.json",
+        "forecast_count": 9,
+        "unsupported_forecasts": 0,
+        "time_semantics": "observed_wall_clock_v1",
+        "run_started_at": "2026-10-06T15:04:43.918641Z",
+        "data_observed_at": "2026-10-06T15:04:45.458965Z",
+        "forecast_generated_at": "2026-10-06T15:04:45.480680Z",
+        "model_fitted_at": "2026-10-06T01:31:39.323729Z",
+        "training_cutoff": "2026-10-06T01:31:29.416454Z",
+        "forecast_availability": {
+          "status": "available",
+          "upcoming_count": 9,
+          "supported_count": 9,
+          "unsupported_count": 0,
+          "unsupported_reasons": {}
+        },
+        "model_freshness": {
+          "status": "current",
+          "evaluated_at": "2026-10-06T15:04:43.918641Z",
+          "age_basis": "training_cutoff",
+          "age_days": 0.5647511827199074,
+          "max_age_days": 14,
+          "latest_upcoming_model_age_days": 0.717715087337963,
+          "training_last_match_kickoff": "2026-10-05T18:45:00Z",
+          "training_data_age_days": 0.8470360953819444,
+          "note": "真实重拟合可沿用相同历史样本；不代表取得新赛果、阵容或其他基本面。"
+        },
+        "model_refresh": {
+          "required": false,
+          "reasons": [],
+          "training_inputs_changed": false,
+          "data_changed": false,
+          "performed": false,
+          "prior_model_id": "unl-20261006T013129416454Z"
+        }
+      },
+      "latest_successful_forecast": {
+        "run_id": "20261006T150443918641Z",
+        "generated_at": "2026-10-06T15:04:45.485823Z",
+        "mode": "train",
+        "status": "探索性基线",
+        "detail": "未含阵容伤停、xG与赛程；未证实预测或收益优势。 场地筛选：444场常规赛果中纳入424场、排除20场；未来7天可用预测9场，不支持0场。",
+        "model_id": "unl-20261006T013129416454Z",
+        "trained_at": "2026-10-06T01:31:29.416454Z",
+        "source_commit": "9ffde463e72e32a455a1c6771aae769fe54448cb",
+        "report_file": "runtime/reports/history/20261006T150443918641Z.json",
+        "forecast_count": 9,
+        "unsupported_forecasts": 0,
+        "time_semantics": "observed_wall_clock_v1",
+        "run_started_at": "2026-10-06T15:04:43.918641Z",
+        "data_observed_at": "2026-10-06T15:04:45.458965Z",
+        "forecast_generated_at": "2026-10-06T15:04:45.480680Z",
+        "model_fitted_at": "2026-10-06T01:31:39.323729Z",
+        "training_cutoff": "2026-10-06T01:31:29.416454Z",
+        "forecast_availability": {
+          "status": "available",
+          "upcoming_count": 9,
+          "supported_count": 9,
+          "unsupported_count": 0,
+          "unsupported_reasons": {}
+        },
+        "model_freshness": {
+          "status": "current",
+          "evaluated_at": "2026-10-06T15:04:43.918641Z",
+          "age_basis": "training_cutoff",
+          "age_days": 0.5647511827199074,
+          "max_age_days": 14,
+          "latest_upcoming_model_age_days": 0.717715087337963,
+          "training_last_match_kickoff": "2026-10-05T18:45:00Z",
+          "training_data_age_days": 0.8470360953819444,
+          "note": "真实重拟合可沿用相同历史样本；不代表取得新赛果、阵容或其他基本面。"
+        },
+        "model_refresh": {
+          "required": false,
+          "reasons": [],
+          "training_inputs_changed": false,
+          "data_changed": false,
+          "performed": false,
+          "prior_model_id": "unl-20261006T013129416454Z"
+        },
+        "prediction_file": "runtime/predictions/20261006T150443918641Z/unl.json"
       },
       "current_model_file": "runtime/models/unl.json",
       "current_model_id": "unl-20261006T013129416454Z",
       "usable_saved_forecasts": true,
       "training_cutoff": "2026-10-06T01:31:29.416454Z",
       "validation_status": "exploratory_single_fixed_holdout",
-      "forecast_count": 10,
+      "forecast_count": 9,
       "unsupported_forecasts": 0,
-      "status": "available"
+      "status": "available",
+      "model_freshness": {
+        "status": "current",
+        "evaluated_at": "2026-10-06T15:04:43.918641Z",
+        "age_basis": "training_cutoff",
+        "age_days": 0.5647511827199074,
+        "max_age_days": 14,
+        "latest_upcoming_model_age_days": 0.717715087337963,
+        "training_last_match_kickoff": "2026-10-05T18:45:00Z",
+        "training_data_age_days": 0.8470360953819444,
+        "note": "真实重拟合可沿用相同历史样本；不代表取得新赛果、阵容或其他基本面。"
+      },
+      "forecast_availability": {
+        "status": "available",
+        "upcoming_count": 9,
+        "supported_count": 9,
+        "unsupported_count": 0,
+        "unsupported_reasons": {}
+      }
     },
     {
       "key": "liga_mx",
@@ -1326,5 +1422,17 @@
       "status": "available"
     }
   ],
-  "usage": "索引仅标识已保存结果；单场仍须核查截点、赛程、场地和适用性。无自动质量验收。"
+  "forecast_availability_summary": {
+    "competition_status_counts": {
+      "unsupported_only": 11,
+      "audit_only": 1,
+      "available": 7
+    },
+    "upcoming_count": 9,
+    "supported_count": 9,
+    "unsupported_count": 0,
+    "unknown_coverage_competitions": 18,
+    "usage": "流程成功不代表存在可用预测；空窗、全部不支持与失败分别计数。"
+  },
+  "usage": "索引仅标识已保存结果；运行成功不等于有可用预测。空窗、全部不支持和陈旧分别记录；单场仍须核查截点、赛程、场地和适用性。无自动质量验收。"
 }
