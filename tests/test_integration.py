@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-from football_model.cli import atomic_json, iso, run_pipeline
+from football_model.cli import atomic_json, iso, run_pipeline, forecast_availability
 from football_model.integration import IntegrationError, build_index, match_packet, main
 
 NOW = datetime(2025, 1, 1, tzinfo=timezone.utc)
@@ -131,6 +131,7 @@ class IntegrationTests(unittest.TestCase):
         report = self.read(self.report_path)
         report["competitions"][0]["forecast_count"] = 0
         report["competitions"][0]["unsupported_forecasts"] = 0
+        report["competitions"][0]["forecast_availability"] = forecast_availability([])
         atomic_json(self.report_path, report)
         atomic_json(self.prediction_path, [])
         self.assertEqual(build_index(self.runtime, CONFIG)["competitions"][0]["status"], "no_upcoming")
@@ -146,6 +147,13 @@ class IntegrationTests(unittest.TestCase):
                 self.assertEqual(row["latest_successful_forecast"]["run_id"], self.run_id)
                 with self.assertRaisesRegex(IntegrationError, "blocked_latest_failure"):
                     self.packet()
+
+    def test_report_availability_counts_cannot_disagree_with_saved_predictions(self):
+        report = self.read(self.report_path)
+        report["competitions"][0]["forecast_availability"]["supported_count"] = 99
+        atomic_json(self.report_path, report)
+        with self.assertRaisesRegex(IntegrationError, "预测可用性与报告不一致"):
+            build_index(self.runtime, CONFIG)
 
     def test_fatal_scoped_attempt_blocks_without_league_result(self):
         self.add_attempt(fatal=True)

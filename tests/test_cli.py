@@ -12,6 +12,7 @@ import numpy as np
 
 from football_model.cli import run_pipeline, select_seasons, iso
 from football_model.data import APIError, RequestBudgetError
+from football_model.model import fit_model
 
 
 NOW = datetime(2025, 1, 1, tzinfo=timezone.utc)
@@ -156,6 +157,132 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(report["competitions"][0]["status"], "未完成")
             self.assertEqual(json.loads(model_path.read_text())["sentinel"], "existing model")
             self.assertFalse((Path(tmp)/"predictions").exists())
+
+    def test_domestic_same_data_expiring_window_really_refits_and_keeps_history(self):
+        for days in (13, 15):
+            with self.subTest(days=days), tempfile.TemporaryDirectory() as tmp:
+                code, original = run_pipeline(BASE_CONFIG, tmp, "train", now=NOW,
+                                             clock=lambda: NOW, client=FakeClient())
+                self.assertEqual(code, 0, original)
+                model_path = Path(tmp)/"models/epl.json"
+                old = json.loads(model_path.read_text())
+                prior_history = Path(tmp)/"model_history/epl"/(original["run_id"] + ".json")
+                history_bytes = prior_history.read_bytes()
+                later = NOW + timedelta(days=days)
+                client = FakeClient()
+                client.fixtures[-1] = fixture(2001, later + timedelta(days=2), 1, 2, None, None, "NS")
+                with patch("football_model.cli.fit_model", wraps=fit_model) as actual_fit:
+                    code, report = run_pipeline(BASE_CONFIG, tmp, "train", now=later,
+                                                clock=lambda: later, client=client)
+                self.assertEqual(code, 0, report)
+                actual_fit.assert_called_once()
+                self.assertEqual(actual_fit.call_args.args[1], iso(later))
+                refreshed = json.loads(model_path.read_text())
+                self.assertEqual(refreshed["data_fingerprint"], old["data_fingerprint"])
+                self.assertEqual(refreshed["model"]["training_data_sha256"], old["model"]["training_data_sha256"])
+                self.assertNotEqual(refreshed["model_id"], old["model_id"])
+                self.assertEqual(refreshed["trained_at"], iso(later))
+                self.assertEqual(refreshed["model_fitted_at"], iso(later))
+                self.assertEqual(prior_history.read_bytes(), history_bytes)
+                item = report["competitions"][0]
+                self.assertTrue(item["model_refresh"]["performed"])
+                self.assertFalse(item["model_refresh"]["data_changed"])
+                self.assertIn("expires_before_kickoff", item["model_refresh"]["reasons"])
+                self.assertEqual(item["model_freshness"]["age_days"], 0)
+                self.assertGreater(item["model_freshness"]["training_data_age_days"], days)
+                self.assertEqual(item["forecast_availability"]["status"], "available")
+                self.assertEqual(item["forecast_count"], 1)
+
+    def test_domestic_stale_empty_window_is_reported_without_fake_refresh(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_pipeline(BASE_CONFIG, tmp, "train", now=NOW, clock=lambda: NOW, client=FakeClient())
+            model_path = Path(tmp)/"models/epl.json"
+            before = model_path.read_bytes()
+            later = NOW + timedelta(days=15)
+            with patch("football_model.cli.fit_model", side_effect=AssertionError("empty window must not refit")):
+                code, report = run_pipeline(BASE_CONFIG, tmp, "train", now=later,
+                                            clock=lambda: later, client=FakeClient())
+            self.assertEqual(code, 0, report)
+            self.assertEqual(model_path.read_bytes(), before)
+            item = report["competitions"][0]
+            self.assertEqual(item["model_freshness"]["status"], "stale")
+            self.assertEqual(item["forecast_availability"]["status"], "no_upcoming")
+            self.assertEqual(item["forecast_availability"]["upcoming_count"], 0)
+            index = json.loads((Path(tmp)/"integration/index.json").read_text())
+            self.assertEqual(index["competitions"][0]["status"], "no_upcoming")
+            self.assertFalse(index["competitions"][0]["usable_saved_forecasts"])
+
+    def test_kickoff_at_exact_age_limit_keeps_existing_model(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_pipeline(BASE_CONFIG, tmp, "train", now=NOW, clock=lambda: NOW, client=FakeClient())
+            model_path = Path(tmp)/"models/epl.json"
+            before = model_path.read_bytes()
+            later = NOW + timedelta(days=12)
+            client = FakeClient()
+            client.fixtures[-1] = fixture(2001, NOW + timedelta(days=14), 1, 2, None, None, "NS")
+            with patch("football_model.cli.fit_model", side_effect=AssertionError("age boundary is still valid")):
+                code, report = run_pipeline(BASE_CONFIG, tmp, "train", now=later,
+                                            clock=lambda: later, client=client)
+            self.assertEqual(code, 0, report)
+            self.assertEqual(model_path.read_bytes(), before)
+            self.assertEqual(report["competitions"][0]["forecast_count"], 1)
+
+    def test_long_forecast_horizon_does_not_bypass_model_age_gate(self):
+        config = {**BASE_CONFIG, "forecast_days": 21}
+        client = FakeClient()
+        client.fixtures[-1] = fixture(2001, NOW + timedelta(days=20), 1, 2, None, None, "NS")
+        with tempfile.TemporaryDirectory() as tmp:
+            code, report = run_pipeline(config, tmp, "train", now=NOW, clock=lambda: NOW, client=client)
+            self.assertEqual(code, 0, report)
+            item = report["competitions"][0]
+            self.assertEqual(item["forecast_availability"]["status"], "unavailable")
+            self.assertEqual(item["forecast_count"], 0)
+            rows = json.loads((Path(tmp)/"predictions"/report["run_id"]/"epl.json").read_text())
+            self.assertNotIn("prediction", rows[0])
+            self.assertIn("不能仅刷新时间戳", rows[0]["reason"])
+
+    def test_failed_expiry_refit_preserves_model_and_blocks_old_forecast(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_pipeline(BASE_CONFIG, tmp, "train", now=NOW, clock=lambda: NOW, client=FakeClient())
+            model_path = Path(tmp)/"models/epl.json"
+            before = model_path.read_bytes()
+            later = NOW + timedelta(days=15)
+            client = FakeClient()
+            client.fixtures[-1] = fixture(2001, later + timedelta(days=2), 1, 2, None, None, "NS")
+            with patch("football_model.cli.fit_model", side_effect=RuntimeError("synthetic refit failure")):
+                code, report = run_pipeline(BASE_CONFIG, tmp, "train", now=later,
+                                            clock=lambda: later, client=client)
+            self.assertEqual(code, 1, report)
+            self.assertEqual(model_path.read_bytes(), before)
+            item = report["competitions"][0]
+            self.assertEqual(item["forecast_availability"]["status"], "failed")
+            self.assertFalse(item["model_refresh"]["performed"])
+            self.assertFalse((Path(tmp)/"predictions"/report["run_id"]/"epl.json").exists())
+            index = json.loads((Path(tmp)/"integration/index.json").read_text())
+            self.assertEqual(index["competitions"][0]["status"], "blocked_latest_failure")
+
+    def test_unknown_team_coverage_differs_from_an_empty_window_and_process_success(self):
+        for known, expected in ((False, "unavailable"), (True, "partial")):
+            with self.subTest(known=known), tempfile.TemporaryDirectory() as tmp:
+                client = FakeClient()
+                unknown = fixture(2001, NOW + timedelta(days=3), 999, 2, None, None, "NS")
+                if known:
+                    client.fixtures.append(unknown)
+                else:
+                    client.fixtures[-1] = unknown
+                code, report = run_pipeline(BASE_CONFIG, tmp, "train", now=NOW,
+                                            clock=lambda: NOW, client=client)
+                self.assertEqual(code, 0, report)  # Execution success is not availability.
+                item = report["competitions"][0]
+                coverage = item["forecast_availability"]
+                self.assertEqual(coverage["status"], expected)
+                self.assertEqual(coverage["supported_count"], int(known))
+                self.assertEqual(coverage["unsupported_count"], 1)
+                self.assertEqual(sum(coverage["unsupported_reasons"].values()), 1)
+                self.assertEqual(report["forecast_availability_summary"]["competition_status_counts"], {expected: 1})
+                index = json.loads((Path(tmp)/"integration/index.json").read_text())
+                self.assertEqual(index["competitions"][0]["forecast_availability"], coverage)
+                self.assertEqual(index["competitions"][0]["usable_saved_forecasts"], known)
 
     def test_ucl_stays_audit_only_even_in_train_mode(self):
         config = copy.deepcopy(BASE_CONFIG)

@@ -1,0 +1,13 @@
+{
+  "original_experiment_code_sha256": "8490c133ee2f3872d7ca23edcb2ec7e639b41b827afae4cd8640865781d9b79e",
+  "reviewed_code_sha256": "108f506bc1df24a993f4cd468c599fbd4fb5559f274c689ee957357729e13597",
+  "changes": [
+    "按生产一致的parameter_at_bound规则剔除球队及混合候选并保存拒绝参数。四赛事全部原点触边次数为0，既有数值结果不受影响。",
+    "CLI同一输入只读取一次，输入解析和SHA-256指纹复用同一字节，避免并发改写风险。真实输入原件未被修改，产物输入哈希均与冻结协议一致。",
+    "补充同一赛事、核准终场比分的输入合同。"
+  ],
+  "numeric_protocol_or_parameters_changed": false,
+  "real_experiments_rerun": false,
+  "quality_tests_passed": 9,
+  "outputs_preserved_as_original_experiment": true
+}

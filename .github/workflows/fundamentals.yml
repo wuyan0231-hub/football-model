@@ -1,0 +1,140 @@
+name: 足球基本面：手动单场证据采集
+
+# Manual only: permits a fresh collection close to kickoff without training.
+# No schedule or push trigger; probabilities and existing models are unchanged.
+on:
+  workflow_dispatch:
+    inputs:
+      league:
+        description: config.json 中的赛事 key，例如 epl、unl；必须与目标比赛一致
+        type: string
+        required: true
+      match_id:
+        description: 已保存赛程中的 API-Football 比赛正整数 ID；未来 168 小时内
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: football-model-state
+  cancel-in-progress: false
+
+jobs:
+  fundamentals:
+    if: ${{ github.event.repository.private == true && github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    # The collector stops new network work after at most 900 seconds. Leave
+    # another 15 minutes for reporting, validation, and durable state saving.
+    timeout-minutes: 30
+    env:
+      PYTHONUNBUFFERED: '1'
+      LEAGUE: ${{ inputs.league }}
+      MATCH_ID: ${{ inputs.match_id }}
+    steps:
+      - name: 读取程序
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: 准备 Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: 安装依赖
+        run: python -m pip install -r requirements.txt
+
+      - name: 恢复模型状态、采集历史和缓存
+        id: restore
+        run: python scripts/cloud_state.py load --runtime runtime
+
+      - name: 清除旧采集报告入口
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          Path('runtime/fundamentals/reports/latest.json').unlink(missing_ok=True)
+          PY
+
+      - name: 采集指定比赛基本面证据
+        id: collect
+        # CLI validates the configured league and positive integer match ID.
+        # Inputs are quoted environment values, never interpolated shell code.
+        # Continue so partial evidence and error records can still be saved.
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: >-
+          python -m football_model.collect_fundamentals --runtime runtime --config config.json
+          --league "$LEAGUE" --match-id "$MATCH_ID" --horizon-hours 168 --recent-matches 5
+
+      - name: 检查输出是否可以保存和上传
+        id: check
+        if: ${{ always() && steps.restore.outcome == 'success' && steps.collect.outcome != 'skipped' }}
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python scripts/cloud_state.py check --runtime runtime
+
+      - name: 保存证据、缓存和不可覆盖的采集历史
+        id: persist
+        if: ${{ always() && steps.check.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          # Used only by credential checks; never written or printed.
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python scripts/cloud_state.py save --runtime runtime
+
+      - name: 上传本次证据便捷副本（保留 14 天）
+        id: upload
+        if: ${{ always() && steps.check.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: football-fundamentals-${{ github.run_id }}-${{ github.run_attempt }}
+          path: runtime/fundamentals/
+          if-no-files-found: warn
+          retention-days: 14
+          include-hidden-files: false
+
+      - name: 显示采集状态、缺失原因和保存结果
+        if: ${{ always() }}
+        env:
+          COLLECT_OUTCOME: ${{ steps.collect.outcome }}
+          STATE_OUTCOME: ${{ steps.persist.outcome }}
+          OUTPUT_CHECK: ${{ steps.check.outcome }}
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          import json
+          import os
+          from pathlib import Path
+          with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a', encoding='utf-8') as out:
+              out.write('# 单场基本面证据采集\n\n')
+              out.write('采集步骤：' + os.environ['COLLECT_OUTCOME'] + '\n\n')
+              out.write('状态保存：' + os.environ['STATE_OUTCOME'] + '\n\n')
+              out.write('本任务不训练模型，不修改预测概率或 EV。未发布首发及缺失资料保持未知。\n\n')
+              report_path = Path('runtime/fundamentals/reports/latest.json')
+              if os.environ['OUTPUT_CHECK'] == 'success' and report_path.is_file():
+                  report = json.loads(report_path.read_text(encoding='utf-8'))
+                  out.write('采集结果：' + report['status'] + '；比赛数：' + str(len(report['matches'])) + '。\n\n')
+                  counts = Counter(item['status'] for item in report['matches'])
+                  missing = Counter(row['reason'] for item in report['matches'] for row in item.get('missing', []))
+                  excerpt = {'run_id': report['run_id'], 'generated_at': report['generated_at'],
+                      'match_status_counts': dict(counts), 'missing_reason_counts': dict(missing),
+                      'issues': report['issues'], 'exit_code': report['exit_code']}
+                  out.write('```json\n' + json.dumps(excerpt, ensure_ascii=False, indent=2) + '\n```\n\n')
+                  out.write('逐场证据、来源时间与缺失原因见 fundamentals/reports/latest.json 及对应历史记录。\n\n')
+              else:
+                  out.write('本次报告未生成或未通过上传前检查；请检查失败步骤，不能沿用旧报告声称成功。\n\n')
+              out.write('partial 表示部分采集失败或延期；资料仍可保存，但任务不会标为成功。只有状态保存 success 才表示写入 model-state。便捷附件保留 14 天。\n')
+          PY
+
+      - name: 将采集或保存失败标记为失败
+        if: ${{ always() && (steps.collect.outcome != 'success' || steps.persist.outcome != 'success') }}
+        run: |
+          echo '单场证据采集或状态保存未完整完成。请查看摘要和已保存的部分记录；概率调整未启用。'
+          exit 1

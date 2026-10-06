@@ -16,6 +16,8 @@ on:
       - 'football_model/data.py'
       - 'football_model/cli.py'
       - 'football_model/integration.py'
+      - 'football_model/fundamentals.py'
+      - 'football_model/collect_fundamentals.py'
       - 'config.json'
   workflow_dispatch:
     inputs:
@@ -98,6 +100,18 @@ jobs:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
         run: python -m football_model.cli --mode "$MODE" --league "$LEAGUE" --runtime runtime
 
+      - name: 采集未来24小时比赛的基本面证据
+        id: fundamentals
+        if: ${{ always() && steps.restore.outcome == 'success' && steps.model.outcome != 'skipped' && env.MODE == 'train' }}
+        # Evidence can be incomplete without invalidating the separate score model.
+        # The collector has a 15-minute soft deadline and shares the daily quota.
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: |
+          rm -f runtime/fundamentals/reports/latest.json
+          python -m football_model.collect_fundamentals --runtime runtime --config config.json --league "$LEAGUE" --horizon-hours 24
+
       - name: 检查输出是否可以保存和上传
         id: check
         if: ${{ always() && steps.restore.outcome == 'success' && steps.model.outcome != 'skipped' }}
@@ -126,6 +140,7 @@ jobs:
             runtime/models/
             runtime/registries/
             runtime/audits/unl/
+            runtime/fundamentals/
           if-no-files-found: warn
           retention-days: 14
           include-hidden-files: false
@@ -136,6 +151,7 @@ jobs:
           MODEL_OUTCOME: ${{ steps.model.outcome }}
           STATE_OUTCOME: ${{ steps.persist.outcome }}
           OUTPUT_CHECK: ${{ steps.check.outcome }}
+          FUNDAMENTALS_OUTCOME: ${{ steps.fundamentals.outcome }}
         run: |
           python - <<'PY'
           import os
@@ -146,10 +162,17 @@ jobs:
               handle.write('# 足球模型运行结果\n\n')
               handle.write('模型任务：' + os.environ['MODEL_OUTCOME'] + '\n\n')
               handle.write('状态保存：' + os.environ['STATE_OUTCOME'] + '\n\n')
+              handle.write('基本面采集步骤：' + os.environ['FUNDAMENTALS_OUTCOME'] + '（单独报告；尚未用于调整概率）\n\n')
               if report.is_file() and os.environ['OUTPUT_CHECK'] == 'success':
                   handle.write(report.read_text(encoding='utf-8'))
               else:
                   handle.write('本次报告未生成或未通过上传前检查，请检查失败步骤。\n')
+              facts = Path('runtime/fundamentals/reports/latest.json')
+              if os.environ['FUNDAMENTALS_OUTCOME'] != 'skipped' and facts.is_file() and os.environ['OUTPUT_CHECK'] == 'success':
+                  import json
+                  evidence = json.loads(facts.read_text(encoding='utf-8'))
+                  handle.write('\n基本面结果：' + evidence['status'] + '；比赛数：' + str(len(evidence['matches'])) + '。\n')
+                  handle.write('资料缺失、预算延期和逐场原因见 fundamentals/reports/latest.json。每日任务不保证取得临场正式首发。\n')
               handle.write('\n\n只有状态保存 success 才表示本次状态已写入 model-state。附件只保留 14 天。\n')
           PY
 
