@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 import hashlib
 import gzip
 import json
+import math
 import os
 import tempfile
 from pathlib import Path
@@ -165,6 +166,7 @@ class Recorder:
         self.keys = [c["key"] for c in config["competitions"] if league == "all" or c["key"] == league]
         self.state = _initial_state(runtime, self.keys)
         self.sources = _sources()
+        self.comparison_policy = copy.deepcopy(COMPARISON_POLICY)
         self.events = []
         self.clock_source = clock
         self.now = now.isoformat() if now is not None else None
@@ -196,6 +198,7 @@ class Recorder:
         payload = {"schema": SCHEMA, "recorded_run_id": report["run_id"],
             "config": self.config, "mode": self.mode, "league": self.league, "now": self.now,
             "initial_state": self.state, "source_sha256": self.sources,
+            "comparison_policy": self.comparison_policy,
             "events": self.events, "expected": _outcome(report, self.runtime),
             "usage": "Recorded production inputs; any replay is research and is not prospective evidence."}
         digest = _digest(_canonical(payload))
@@ -348,6 +351,99 @@ def read_bundle(path):
     return json.loads(encoded)
 
 
+
+COMPARISON_POLICY = {
+    "version": "replay_outcome_comparison_v1",
+    "exact_gate": "same_structure_scalar_types_and_float_hex_values",
+    "strict_relative_tolerance": 1e-12,
+    "strict_absolute_tolerance": 0.0,
+    "tail_mass_absolute_tolerance": 1e-12,
+    "tail_mass_path": r"^/predictions/[a-z0-9_]+/[0-9]+/prediction/tail_mass_before_normalization$",
+    "tail_mass_basis": "model.py computes max(0, 1 - retained_mass); subtraction near 1 loses relative precision",
+    "prior_bound_source": "integration._same uses 1e-12; this policy restricts its absolute bound to the cancellation residual",
+    "zero_and_sign_transitions": "never_tolerated",
+    "discrete_values": "exact_only",
+    "usage": "Fixed formula-aware comparison; numerically_consistent is separate from exact matched. No operator tolerance override.",
+}
+
+
+def compare_outcomes(expected, actual):
+    """Explain every difference while keeping the exact replay gate strict.
+
+    All floats use a relative-only bound except the precise forecast tail-mass
+    field, computed as max(0, 1 - retained_mass). Only that cancellation residual
+    can use an absolute bound. Neither rule waives discrete, sign, zero or event
+    changes, and numerical consistency never establishes exact equality.
+    """
+    differences = []
+    def pointer(path, key):
+        return path + "/" + str(key).replace("~", "~0").replace("/", "~1")
+
+    def discrete(path, kind, **detail):
+        differences.append({"path": path or "/", "kind": kind,
+                            "strict_relative_consistent": False,
+                            "numerically_consistent": False, **detail})
+
+    def walk(left, right, path):
+        if type(left) is not type(right):
+            discrete(path, "type_mismatch", expected_type=type(left).__name__, actual_type=type(right).__name__)
+            return
+        if isinstance(left, dict):
+            if set(left) != set(right):
+                discrete(path, "keys_mismatch", missing_keys=sorted(set(left) - set(right)),
+                         unexpected_keys=sorted(set(right) - set(left)))
+            for key in sorted(set(left) & set(right)):
+                walk(left[key], right[key], pointer(path, key))
+        elif isinstance(left, list):
+            if len(left) != len(right):
+                discrete(path, "length_mismatch", expected_length=len(left), actual_length=len(right))
+            for index, (old, new) in enumerate(zip(left, right)):
+                walk(old, new, pointer(path, index))
+        elif type(left) is float:
+            if not math.isfinite(left) or not math.isfinite(right):
+                discrete(path, "nonfinite_float", expected=repr(left), actual=repr(right))
+                return
+            if left.hex() == right.hex():
+                return
+            absolute = abs(left - right)
+            zero_transition = left == 0.0 or right == 0.0
+            sign_transition = (left > 0.0) != (right > 0.0)
+            scale = max(abs(left), abs(right))
+            relative = (absolute / scale if math.isfinite(absolute)
+                        else abs(left / scale - right / scale)) if scale else None
+            allowed_domain = not zero_transition and not sign_transition
+            strict = allowed_domain and relative <= COMPARISON_POLICY["strict_relative_tolerance"]
+            tail_residual = bool(re.fullmatch(COMPARISON_POLICY["tail_mass_path"], path))
+            absolute_tolerance = COMPARISON_POLICY["tail_mass_absolute_tolerance"] if tail_residual else 0.0
+            reference = allowed_domain and math.isclose(left, right,
+                rel_tol=COMPARISON_POLICY["strict_relative_tolerance"], abs_tol=absolute_tolerance)
+            differences.append({"path": path or "/", "kind": "float_change",
+                "expected": left, "actual": right,
+                "absolute_error": absolute if math.isfinite(absolute) else None,
+                "absolute_error_overflow": not math.isfinite(absolute), "relative_error": relative,
+                "zero_transition": zero_transition, "sign_transition": sign_transition,
+                "absolute_tolerance": absolute_tolerance, "tail_cancellation_residual": tail_residual,
+                "strict_relative_consistent": strict, "numerically_consistent": reference})
+        elif left != right:
+            discrete(path, "scalar_change", expected=left, actual=right)
+
+    walk(expected, actual, "")
+    floating = [row for row in differences if row["kind"] == "float_change"]
+    overflowing = any(row["absolute_error_overflow"] for row in floating)
+    relative_errors = [row["relative_error"] for row in floating if row["relative_error"] is not None]
+    return {"policy": copy.deepcopy(COMPARISON_POLICY), "exact_outcomes_equal": not differences,
+        "strict_relative_consistent": all(row["strict_relative_consistent"] for row in differences),
+        "numerically_consistent": all(row["numerically_consistent"] for row in differences),
+        "difference_count": len(differences), "float_difference_count": len(floating),
+        "non_float_difference_count": len(differences) - len(floating),
+        "zero_transition_count": sum(row["zero_transition"] for row in floating),
+        "sign_transition_count": sum(row["sign_transition"] for row in floating),
+        "maximum_absolute_error": None if overflowing else max((row["absolute_error"] for row in floating), default=0.0),
+        "maximum_absolute_error_overflow": overflowing,
+        "maximum_relative_error": max(relative_errors, default=0.0),
+        "differences": differences}
+
+
 def replay_bundle(bundle_path, output_dir):
     from .cli import atomic_json, run_pipeline
     bundle_path, output = Path(bundle_path).resolve(), Path(output_dir).resolve()
@@ -356,6 +452,8 @@ def replay_bundle(bundle_path, output_dir):
     digest = _digest(_canonical(payload))
     if envelope.get("sha256") != digest or not isinstance(payload, dict) or payload.get("schema") != SCHEMA:
         raise ReplayError("回放包指纹/schema不匹配")
+    if payload.get("comparison_policy") != COMPARISON_POLICY:
+        raise ReplayError("回放包缺少匹配的预先冻结数值比较政策")
     if payload.get("source_sha256") != _sources():
         raise ReplayError("回放源码指纹不匹配；须使用录制时的源码版本")
     if output.exists():
@@ -388,13 +486,18 @@ def replay_bundle(bundle_path, output_dir):
             now=datetime.fromisoformat(payload["now"]) if payload.get("now") else None,
             client=ReplayClient(trace), clock=trace.clock, research_replay=True)
     complete = trace.position == len(trace.events)
-    equal = _outcome(report, output) == payload["expected"]
-    result = {**marker, "status": "matched" if complete and equal else "mismatch",
+    comparison = compare_outcomes(payload["expected"], _outcome(report, output))
+    equal = comparison["exact_outcomes_equal"]
+    numerical = complete and comparison["numerically_consistent"]
+    status = "matched" if complete and equal else "numerically_consistent" if numerical else "mismatch"
+    result = {**marker, "status": status,
               "recorded_events": len(trace.events), "consumed_events": trace.position,
-              "outcomes_equal": equal, "pipeline_exit_code": code,
+              "outcomes_equal": equal, "exact_outcomes_equal": equal, "numerical_consistency": numerical,
+              "comparison": comparison,
+              "pipeline_exit_code": code,
               "limitation": "Policy execution reproducibility, not predictive accuracy or betting returns."}
     atomic_json(output / "replay_result.json", result)
-    return (0 if complete and equal else 1), result
+    return (0 if numerical else 1), result
 
 
 def main(argv=None):

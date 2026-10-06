@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "scope": "issues_4_6_first_live_release_and_independent_replay_diagnosis",
+  "source_commit": "a6d52f1084bf6ab4ad8aa1d9c844f391a34e686b",
+  "state_commit": "b419e81f8f9168a331bc65b29905ac835a49be98",
+  "pull_request": 10,
+  "workflow_run_id": 37489461001,
+  "workflow_conclusion": "success",
+  "local_regression_tests": 377,
+  "cloud_regression_tests": 377,
+  "production_run_id": "20261006T154100099931Z",
+  "model_id": "unl-20261006T013129416454Z",
+  "prospective": {
+    "forecast_versions": 9,
+    "unique_matches": 9,
+    "scored": 0,
+    "pending": 9,
+    "baseline_available": 9,
+    "quote_simulation": "not_available",
+    "errors": []
+  },
+  "recording": {
+    "status": "recorded",
+    "path": "replay/bundles/a956f1a6363248e3763b06c8aac4e04dbe434d3909f939431dc33bce3a126340.json.gz",
+    "sha256": "a956f1a6363248e3763b06c8aac4e04dbe434d3909f939431dc33bce3a126340",
+    "events": 191,
+    "initial_state_files": 5
+  },
+  "independent_replay": {
+    "original_status": "mismatch",
+    "recorded_events": 191,
+    "consumed_events": 191,
+    "exact_outcomes_equal": false,
+    "float_differences": 412,
+    "non_float_differences": 0,
+    "maximum_absolute_difference": 1.1102230246251565e-16,
+    "maximum_relative_difference": 1.6663700527972686e-7,
+    "tail_cancellation_differences": 2,
+    "diagnosis": "404 matrix cells, 6 1X2 sums and 2 values of max(0, 1-matrix.sum()); no structural or zero-boundary changes. Original exact comparison result is retained. Applying a subsequent tolerance policy to this already-observed recording is retrospective diagnosis, not preregistered acceptance."
+  },
+  "limitations": [
+    "This release verifies UNL only; daily all-league schedule is unchanged.",
+    "Nine pending matches do not establish predictive quality.",
+    "No real odds, actual bets, real OCR benchmark or independent repeated GPT analyses were scored."
+  ]
+}
