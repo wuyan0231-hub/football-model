@@ -102,16 +102,44 @@ def input_fingerprint(matches: list, settings: dict, competition: dict) -> str:
     return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
+def forecast_availability(rows):
+    """Describe saved output coverage, independently of pipeline completion."""
+    supported = sum(row.get("status") == "exploratory_baseline" for row in rows)
+    unsupported = sum(row.get("status") == "unsupported" for row in rows)
+    return {"status": ("no_upcoming" if not rows else "available" if supported == len(rows)
+                       else "partial" if supported else "unavailable"),
+            "upcoming_count": len(rows), "supported_count": supported,
+            "unsupported_count": unsupported,
+            "unsupported_reasons": dict(Counter(row.get("reason", "未说明") for row in rows
+                                                 if row.get("status") == "unsupported"))}
+
+
+def availability_summary(items):
+    """Run-level observability; a zero exit code is not a coverage guarantee."""
+    records = [item.get("forecast_availability", {"status": item.get("status", "unknown")}) for item in items]
+    counts = Counter(row["status"] for row in records)
+    return {"competition_status_counts": dict(counts),
+            "upcoming_count": sum(row.get("upcoming_count") or 0 for row in records),
+            "supported_count": sum(row.get("supported_count") or 0 for row in records),
+            "unsupported_count": sum(row.get("unsupported_count") or 0 for row in records),
+            "unknown_coverage_competitions": sum(row.get("upcoming_count") is None for row in records),
+            "usage": "流程成功不代表存在可用预测；空窗、全部不支持与失败分别计数。"}
+
+
 def markdown_report(report: dict) -> str:
     rows = ["# 足球模型运行报告", "", f"生成时间：{report['generated_at']}（UTC）",
             f"程序版本：{__version__}；运行模式：{report['mode']}。", "",
             "本程序生成探索性历史比分基线。没有球员/伤停、xG、战术、赛程特征，也没有经过验证的收益优势。",
             "数据来源 API-Football；基本面训练不读取赔率或供应商预测。欧冠只做数据审计。", "",
-            "|赛事|状态|可用90分钟赛果|训练参数变化|说明|", "|---|---|---:|---|---|"]
+            "|赛事|运行状态|预测可用性|可用/不支持/未来场次|可用90分钟赛果|训练参数变化|说明|", "|---|---|---|---|---:|---|---|"]
     for item in report["competitions"]:
         detail = str(item.get("detail", "")).replace("|", "／").replace("\n", " ")
-        rows.append(f"|{item['label']}|{item['status']}|{item.get('eligible_matches', 0)}|"
+        coverage = item.get("forecast_availability", {})
+        rows.append(f"|{item['label']}|{item['status']}|{coverage.get('status', 'unknown')}|"
+                    f"{coverage.get('supported_count', '—')}/{coverage.get('unsupported_count', '—')}/{coverage.get('upcoming_count', '—')}|{item.get('eligible_matches', 0)}|"
                     f"{item.get('model_change', '未训练')}|{detail}|")
+    rows.extend(["", "预测可用性：available=全部已保存可用；partial=部分可用；unavailable=有赛程但全部不支持；"
+                 "no_upcoming=窗口内无待预测比赛；failed=处理失败。以上不表示准确性或收益验收。"])
     rows.extend(["", f"本次接口网络尝试次数：{report.get('api_requests', 0)}（含状态查询与重试，不等于当日计费已用量）。"])
     budget = report.get("api_budget")
     if isinstance(budget, dict):
@@ -172,7 +200,10 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
     result = {"key": key, "label": competition["label"], "status": "待检查", "seasons": [],
               "configured": True, "model_change": "未训练", "lineup_model": "未实现",
               "xg_model": "未实现", "return_advantage": "未经验证", "ev": "未量化",
-              "time_semantics": TIME_SEMANTICS, "run_started_at": iso(run_started)}
+              "time_semantics": TIME_SEMANTICS, "run_started_at": iso(run_started),
+              "forecast_availability": {"status": "not_requested", "upcoming_count": None,
+                  "supported_count": None, "unsupported_count": None, "unsupported_reasons": {}},
+              "model_freshness": {"status": "not_checked"}}
     try:
         metadata = client.resolve_league(competition)
         metadata_received = observed_time(clock, now, run_started)
@@ -247,21 +278,35 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
         if failed_seasons:
             raise ValueError(f"这些已请求赛季未完整取得：{failed_seasons}。本次不训练；核对套餐或明确缩短训练窗口。")
         if competition["mode"] == "audit_only":
+            result["forecast_availability"]["status"] = "audit_only"
             result.update(status="仅审计", detail=("欧冠跨联赛模型尚未实现；不会拼接国内参数生成欧冠概率。" if key == "ucl" else "此赛事先完成独立数据审计，再决定训练适用范围。"))
             return result
         if mode == "audit":
             result.update(status="已取得数据", detail="已检查接口与基本字段；尚未执行训练或准确性验证。")
             return result
 
+        upcoming = national_upcoming if national else normalize_upcoming(newest_raw, iso(now), days=settings["forecast_days"])
+        result["forecast_availability"]["upcoming_count"] = len(upcoming)
         knobs = {k: settings[k] for k in ["half_life_days", "ridge", "min_train", "min_test"]}
         fingerprint = input_fingerprint(matches, knobs, competition)
         model_path = runtime / "models" / f"{key}.json"
         old = json.loads(model_path.read_text(encoding="utf-8")) if model_path.exists() else None
-        refresh_national_window = bool(national and old and national_upcoming and
-            max((now - parse_date(old["trained_at"])).total_seconds(),
-                max((parse_date(row["kickoff"]) - parse_date(old["trained_at"])).total_seconds()
-                    for row in national_upcoming)) > settings["max_model_age_days"] * 86400)
-        if old and old.get("data_fingerprint") == fingerprint and not refresh_national_window:
+        refresh_reasons = []
+        if old and upcoming:
+            previous_cutoff = parse_date(old["trained_at"])
+            if (now - previous_cutoff).total_seconds() > settings["max_model_age_days"] * 86400:
+                refresh_reasons.append("expired_at_run")
+            if any((parse_date(row["kickoff"]) - previous_cutoff).total_seconds() >
+                   settings["max_model_age_days"] * 86400 for row in upcoming):
+                refresh_reasons.append("expires_before_kickoff")
+        refresh_window = bool(refresh_reasons)
+        data_changed = bool(old and old.get("data_fingerprint") != fingerprint)
+        result["model_refresh"] = {"required": bool(not old or data_changed or refresh_window),
+            "reasons": (["initial_fit"] if not old else (["training_inputs_changed"] if data_changed else [])) + refresh_reasons,
+            "training_inputs_changed": data_changed,
+            "data_changed": False if old and not data_changed else None,
+            "performed": False, "prior_model_id": (old or {}).get("model_id")}
+        if old and old.get("data_fingerprint") == fingerprint and not refresh_window:
             bundle = old
             result["model_change"] = "数据未变，沿用参数"
         else:
@@ -317,7 +362,11 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
             atomic_json(runtime / "model_history" / key / f"{run_id}.json", bundle)
             atomic_json(runtime / "validation" / key / f"{run_id}.json", evaluation)
             atomic_json(model_path, bundle)
-            result["model_change"] = "按真实当前截点重拟合欧国联窗口" if refresh_national_window else "完成新拟合"
+            result["model_refresh"]["performed"] = True
+            prior_data_hash = (old or {}).get("model", {}).get("training_data_sha256")
+            result["model_refresh"]["data_changed"] = (prior_data_hash != fitted["training_data_sha256"]
+                                                        if prior_data_hash else None)
+            result["model_change"] = "按真实当前截点重拟合预测窗口" if refresh_window else "完成新拟合"
         result["validation"] = bundle["validation"]
         result["model_id"] = bundle["model_id"]
         result["trained_at"] = bundle["trained_at"]
@@ -325,10 +374,23 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
         result["model_fitted_at"] = bundle.get("model_fitted_at")
         result.update(status="探索性基线", detail="未含阵容伤停、xG与赛程；未证实预测或收益优势。")
         age = (now - parse_date(bundle["trained_at"])).total_seconds() / 86400
+        result["model_freshness"] = {"status": "stale" if age > settings["max_model_age_days"] else "current",
+            "evaluated_at": iso(now), "age_basis": "training_cutoff",
+            "age_days": age, "max_age_days": settings["max_model_age_days"],
+            "latest_upcoming_model_age_days": max(((parse_date(row["kickoff"]) - parse_date(bundle["trained_at"])).total_seconds() / 86400
+                                                    for row in upcoming), default=None),
+            "training_last_match_kickoff": bundle["model"].get("last_match_kickoff"),
+            "training_data_age_days": ((now - parse_date(bundle["model"]["last_match_kickoff"])).total_seconds() / 86400
+                                       if bundle["model"].get("last_match_kickoff") else None),
+            "note": "真实重拟合可沿用相同历史样本；不代表取得新赛果、阵容或其他基本面。"}
         if age > settings["max_model_age_days"]:
-            result.update(status="模型陈旧", detail="没有新赛果可更新且旧模型超过有效期；本次不发布预测。")
+            result.update(status="模型陈旧", detail="旧模型超过有效期；空窗不为更新时间戳而重训，本次不发布预测。")
+            if not upcoming:
+                result.update(forecast_count=0, unsupported_forecasts=0,
+                              forecast_availability=forecast_availability([]))
+            else:
+                result["forecast_availability"]["status"] = "unavailable"
             return result
-        upcoming = national_upcoming if national else normalize_upcoming(newest_raw, iso(now), days=settings["forecast_days"])
         forecasts = []
         for fixture in upcoming:
             row = {**fixture, "schema_version": 2, "time_semantics": TIME_SEMANTICS,
@@ -347,7 +409,7 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
                     if fixture.get("venue_error"):
                         raise ValueError(fixture["venue_error"])
                 if (parse_date(fixture["kickoff"]) - parse_date(bundle["trained_at"])).total_seconds() / 86400 > settings["max_model_age_days"]:
-                    raise ValueError("预计开赛时模型将超过配置的有效天数；请临近比赛后重新更新。")
+                    raise ValueError("预计开赛时模型将超过配置的有效天数；须在真实新截点重新拟合，不能仅刷新时间戳。")
                 if national:
                     row["prediction"] = score_distribution(bundle["model"], fixture["home_id"],
                         fixture["away_id"], fixture["kickoff"], neutral=fixture["neutral"])
@@ -368,13 +430,16 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
             *(parse_date(r["generated_at"]) for r in forecasts)))
         result["forecast_count"] = sum(row["status"] == "exploratory_baseline" for row in forecasts)
         result["unsupported_forecasts"] = sum(row["status"] == "unsupported" for row in forecasts)
+        result["forecast_availability"] = forecast_availability(forecasts)
         if national:
             result["detail"] += (f" 场地筛选：{national_audit['eligible_regulation']}场常规赛果中"
                 f"纳入{national_audit['admitted']}场、排除{national_audit['excluded']}场；"
-                f"未来7天可用预测{result['forecast_count']}场，不支持{result['unsupported_forecasts']}场。")
+                f"未来{settings['forecast_days']}天可用预测{result['forecast_count']}场，不支持{result['unsupported_forecasts']}场。")
         atomic_json(runtime / "predictions" / run_id / f"{key}.json", forecasts)
     except (APIError, ValueError, KeyError, TypeError, RuntimeError, OSError) as exc:
         result.update(status="未完成", detail=safe_error(exc))
+        result["forecast_availability"].update(status="failed", supported_count=None,
+                                               unsupported_count=None, unsupported_reasons={})
     return result
 
 
@@ -428,6 +493,10 @@ def run_pipeline(config, runtime, mode="audit", league="epl", now=None, client=N
     if callable(budget_snapshot):
         report["api_budget"] = budget_snapshot()
     report["exit_code"] = exit_code
+    report["forecast_availability_summary"] = availability_summary(report["competitions"])
+    report["forecast_availability_summary"]["requested_competitions"] = len(chosen)
+    report["forecast_availability_summary"]["unreported_competitions"] = [
+        c["key"] for c in chosen if c["key"] not in {item["key"] for item in report["competitions"]}]
     report["generated_at"] = iso(observed_time(clock, now,
         *(parse_date(item["forecast_generated_at"]) for item in report["competitions"]
           if item.get("forecast_generated_at"))))

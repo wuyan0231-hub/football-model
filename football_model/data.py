@@ -5,8 +5,8 @@ https://www.api-football.com/documentation-v3
 https://www.api-football.com/news/post/how-to-get-started-with-api-football-the-complete-beginners-guide
 https://www.api-football.com/news/post/how-ratelimit-works
 
-No request to an authenticated endpoint is made during import or tests. This
-client collects scores only; coverage flags do not implement a lineup model.
+No request to an authenticated endpoint is made during import or tests. Optional
+fundamentals endpoints collect evidence; coverage flags do not implement a lineup model.
 """
 
 from __future__ import annotations
@@ -297,7 +297,8 @@ class APIClient:
                 self._wait_until = max(self._wait_until, self._minute_window_until)
 
     def _request(self, endpoint: str, params: dict[str, Any]) -> dict:
-        if endpoint not in {"/status", "/leagues", "/fixtures", "/venues"}:
+        if endpoint not in {"/status", "/leagues", "/fixtures", "/venues",
+                            "/injuries", "/fixtures/lineups", "/fixtures/statistics"}:
             raise APIError("此客户端不允许该 endpoint")
         url = BASE_URL + endpoint
         if params:
@@ -464,6 +465,44 @@ class APIClient:
         age = 7 * 86400 if max_age_seconds is None else max_age_seconds
         return self._cached_request("/fixtures", {"league": league_id, "season": season},
                                     force=bypass, max_age_seconds=age)
+
+    def fetch_fixture(self, fixture_id: int, *, force: bool = True,
+                      max_age_seconds: float = 0) -> dict:
+        """Read one provider fixture, preserving its real response observation time.
+
+        Consumers must validate the exact returned fixture/league/team identity
+        and status. The default refresh is intentional for pre-match collection.
+        """
+        _integer(fixture_id, "fixture_id", 1)
+        if type(force) is not bool:
+            raise ValueError("force 必须为布尔值")
+        if (type(max_age_seconds) not in (int, float)
+                or not math.isfinite(max_age_seconds) or max_age_seconds < 0):
+            raise ValueError("max_age_seconds 必须为有限非负数")
+        return self._cached_request("/fixtures", {"id": fixture_id}, force=force,
+                                    max_age_seconds=max_age_seconds)
+
+    def fetch_fundamentals(self, endpoint: str, fixture_id: int, *, force: bool = False,
+                           max_age_seconds: float = 900) -> dict:
+        """Collect fixture-bound facts using the existing quota and cache controls.
+
+        A cached response retains its original fetched_at. Empty responses and
+        missing xG do not prove absence of injuries or zero expected goals.
+        Historical responses fetched today are not historical pre-match evidence.
+        Normalization, match/team identity checks and as-of eligibility are the
+        responsibility of football_model.fundamentals. Pagination still fails
+        closed in _request; partial lists must never appear complete.
+        """
+        if endpoint not in {"/injuries", "/fixtures/lineups", "/fixtures/statistics"}:
+            raise ValueError("基本面接口必须为 injuries、fixtures/lineups 或 fixtures/statistics")
+        _integer(fixture_id, "fixture_id", 1)
+        if type(force) is not bool:
+            raise ValueError("force 必须为布尔值")
+        if (type(max_age_seconds) not in (int, float)
+                or not math.isfinite(max_age_seconds) or max_age_seconds < 0):
+            raise ValueError("max_age_seconds 必须为有限非负数")
+        return self._cached_request(endpoint, {"fixture": fixture_id}, force=force,
+                                    max_age_seconds=max_age_seconds)
 
     def fetch_venues(self, *, venue_id: int | None = None, name: str | None = None,
                      force: bool = False) -> dict:

@@ -12,7 +12,7 @@ import sys
 
 import numpy as np
 
-from .cli import atomic_json, iso, parse_date, safe_error, TIME_SEMANTICS
+from .cli import atomic_json, iso, parse_date, safe_error, TIME_SEMANTICS, forecast_availability, availability_summary
 from .model import score_distribution
 
 UTC = timezone.utc
@@ -68,6 +68,9 @@ def _attempt(report, item, path):
         for name in ("data_observed_at", "forecast_generated_at", "model_fitted_at", "training_cutoff"):
             if name in item:
                 result[name] = item[name]
+    for name in ("forecast_availability", "model_freshness", "model_refresh"):
+        if name in item:
+            result[name] = item[name]
     return result
 
 
@@ -243,7 +246,9 @@ def build_index(runtime, config, current_report=None, *, write=True):
         elif trained is None:
             entry["status"] = "no_training_forecast"
         elif trained["status"] == "模型陈旧":
-            entry["status"] = "stale_model"
+            # A genuine empty fixture window is distinct from failed coverage.
+            coverage = trained.get("forecast_availability")
+            entry["status"] = ("no_upcoming" if coverage == forecast_availability([]) else "stale_model")
         elif trained["status"] != "探索性基线" or success is None or trained["run_id"] != success["run_id"]:
             entry["status"] = "blocked_latest_training"
         elif entry["current_model_id"] != success["model_id"]:
@@ -259,18 +264,35 @@ def build_index(runtime, config, current_report=None, *, write=True):
             entry.update(forecast_count=supported, unsupported_forecasts=unsupported,
                          status="no_upcoming" if not rows else "available" if supported else "unsupported_only",
                          usable_saved_forecasts=bool(supported))
+            if "forecast_availability" in success:
+                coverage = forecast_availability(rows)
+                if coverage != success["forecast_availability"]:
+                    raise IntegrationError(f"{key}预测可用性与报告不一致。")
+        # Preserve old entry shapes for untouched legacy state snapshots. New
+        # observability fields are emitted only when the producing run has them.
+        if trained and "forecast_availability" in trained:
+            entry["model_freshness"] = trained.get("model_freshness", {"status": "not_checked"})
+            if entry["status"] in {"available", "unsupported_only", "no_upcoming"}:
+                entry["forecast_availability"] = trained["forecast_availability"]
+                if entry["status"] == "no_upcoming":
+                    entry.update(forecast_count=0, unsupported_forecasts=0)
+            else:
+                entry["forecast_availability"] = {"status": entry["status"],
+                    "upcoming_count": (latest or {}).get("forecast_availability", {}).get("upcoming_count"),
+                    "supported_count": None, "unsupported_count": None, "unsupported_reasons": {}}
     index = {"schema_version": 1, "status": "ready", "generated_at": iso(datetime.now(UTC)),
              "source_commit": current_report.get("source_commit") if current_report else (ordered[-1].get("source_commit") if ordered else None),
              "history_reports": len(ordered), "competitions": list(records.values()),
-             "usage": "索引仅标识已保存结果；单场仍须核查截点、赛程、场地和适用性。无自动质量验收。"}
+             "forecast_availability_summary": availability_summary(list(records.values())),
+             "usage": "索引仅标识已保存结果；运行成功不等于有可用预测。空窗、全部不支持和陈旧分别记录；单场仍须核查截点、赛程、场地和适用性。无自动质量验收。"}
     if write:
         destination = runtime / "integration"
         atomic_json(destination / "index.json", index)
         lines = ["# 模型接入索引", "", f"索引生成：{index['generated_at']}", "", index["usage"], "",
-                 "|联赛|接入状态|最近尝试|当前模型|可用/不支持预测|", "|---|---|---|---|---|"]
+                 "|联赛|接入状态|预测可用性|模型时效|最近尝试|当前模型|可用/不支持预测|", "|---|---|---|---|---|---|---|"]
         for entry in index["competitions"]:
             attempt = entry["latest_attempt"] or {}
-            lines.append(f"|{entry['label']}|{entry['status']}|{attempt.get('run_id', '无')} / {attempt.get('status', '无')}|{entry['current_model_id'] or '无'}|{entry.get('forecast_count', '—')} / {entry.get('unsupported_forecasts', '—')}|")
+            lines.append(f"|{entry['label']}|{entry['status']}|{entry.get('forecast_availability', {}).get('status', 'legacy_unreported')}|{entry.get('model_freshness', {}).get('status', 'legacy_unreported')}|{attempt.get('run_id', '无')} / {attempt.get('status', '无')}|{entry['current_model_id'] or '无'}|{entry.get('forecast_count', '—')} / {entry.get('unsupported_forecasts', '—')}|")
         (destination / "index.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     return index
 

@@ -1,0 +1,558 @@
+{
+  "study_type": "historical_development_replay",
+  "protocol_file": "frozen_protocol.json",
+  "window": "2025-09-01T00:00:00Z / 2026-10-06T00:00:00Z",
+  "candidates": [
+    "league_mean",
+    "poisson_mix_50",
+    "team_poisson",
+    "sequential_policy"
+  ],
+  "leagues": {
+    "unl": {
+      "coverage": {
+        "total": 78,
+        "common": 78,
+        "common_ratio": 1.0,
+        "by_candidate": {
+          "league_mean": 78,
+          "poisson_mix_50": 78,
+          "team_poisson": 78,
+          "sequential_policy": 78
+        },
+        "policy_fallback_count": 0,
+        "not_common_match_ids": []
+      },
+      "windows": 13,
+      "at_bound_fits": 0,
+      "effective_policy_counts": {
+        "league_mean": 42,
+        "team_poisson": 36
+      },
+      "metrics": {
+        "league_mean": {
+          "one_x_two": {
+            "n": 78,
+            "log_loss": 1.079228442677252,
+            "brier_score": 0.6543285816929785
+          },
+          "over_2_5": {
+            "n": 78,
+            "log_loss": 0.6939977826568009,
+            "brier_score": 0.2504252197064527
+          },
+          "home_win_by_2_plus": {
+            "n": 78,
+            "log_loss": 0.48976805165338816,
+            "brier_score": 0.15540120245630318
+          },
+          "over_2_25": {
+            "n": 78,
+            "log_loss": 1.0398227451836335,
+            "brier_score": 0.6252589845447478
+          },
+          "over_2_75": {
+            "n": 78,
+            "log_loss": 1.0540021915137168,
+            "brier_score": 0.6322431700611494
+          }
+        },
+        "poisson_mix_50": {
+          "one_x_two": {
+            "n": 78,
+            "log_loss": 1.05617847647139,
+            "brier_score": 0.6372201025748526
+          },
+          "over_2_5": {
+            "n": 78,
+            "log_loss": 0.6969458329077076,
+            "brier_score": 0.25178113618901443
+          },
+          "home_win_by_2_plus": {
+            "n": 78,
+            "log_loss": 0.471190518923859,
+            "brier_score": 0.14869581135693585
+          },
+          "over_2_25": {
+            "n": 78,
+            "log_loss": 1.046084070354529,
+            "brier_score": 0.6289954786938788
+          },
+          "over_2_75": {
+            "n": 78,
+            "log_loss": 1.045639903378443,
+            "brier_score": 0.6284334970882884
+          }
+        },
+        "team_poisson": {
+          "one_x_two": {
+            "n": 78,
+            "log_loss": 1.0511736514395527,
+            "brier_score": 0.6333894461360394
+          },
+          "over_2_5": {
+            "n": 78,
+            "log_loss": 0.7175940947794366,
+            "brier_score": 0.2605045874084842
+          },
+          "home_win_by_2_plus": {
+            "n": 78,
+            "log_loss": 0.46718505355690726,
+            "brier_score": 0.14597389346435957
+          },
+          "over_2_25": {
+            "n": 78,
+            "log_loss": 1.0735425203406805,
+            "brier_score": 0.6452307232381644
+          },
+          "over_2_75": {
+            "n": 78,
+            "log_loss": 1.0530110378136202,
+            "brier_score": 0.6379060441615039
+          }
+        },
+        "sequential_policy": {
+          "one_x_two": {
+            "n": 78,
+            "log_loss": 1.0709963578820365,
+            "brier_score": 0.6485276915433527
+          },
+          "over_2_5": {
+            "n": 78,
+            "log_loss": 0.7302550937996698,
+            "brier_score": 0.26656404932948186
+          },
+          "home_win_by_2_plus": {
+            "n": 78,
+            "log_loss": 0.4753877421888237,
+            "brier_score": 0.14892391800780388
+          },
+          "over_2_25": {
+            "n": 78,
+            "log_loss": 1.0806607016981005,
+            "brier_score": 0.6506065084615732
+          },
+          "over_2_75": {
+            "n": 78,
+            "log_loss": 1.0777052630346147,
+            "brier_score": 0.6533126181463399
+          }
+        }
+      },
+      "input_sha_matches_frozen_protocol": true,
+      "result_file_sha256": "169faa2622bc966cd33c5477a5cc32a1b4e938fe5a938329e7d3f40de711b726"
+    },
+    "mls": {
+      "coverage": {
+        "total": 526,
+        "common": 526,
+        "common_ratio": 1.0,
+        "by_candidate": {
+          "league_mean": 526,
+          "poisson_mix_50": 526,
+          "team_poisson": 526,
+          "sequential_policy": 526
+        },
+        "policy_fallback_count": 0,
+        "not_common_match_ids": []
+      },
+      "windows": 113,
+      "at_bound_fits": 0,
+      "effective_policy_counts": {
+        "league_mean": 40,
+        "team_poisson": 380,
+        "poisson_mix_50": 106
+      },
+      "metrics": {
+        "league_mean": {
+          "one_x_two": {
+            "n": 526,
+            "log_loss": 1.0626453705221923,
+            "brier_score": 0.6415660164946014
+          },
+          "over_2_5": {
+            "n": 526,
+            "log_loss": 0.659502401425213,
+            "brier_score": 0.23332045083167735
+          },
+          "home_win_by_2_plus": {
+            "n": 526,
+            "log_loss": 0.5534611011137067,
+            "brier_score": 0.18341390175669947
+          },
+          "over_2_25": {
+            "n": 526,
+            "log_loss": 0.9112597010027144,
+            "brier_score": 0.5316077411972779
+          },
+          "over_2_75": {
+            "n": 526,
+            "log_loss": 1.0756513479814496,
+            "brier_score": 0.6528617699255432
+          }
+        },
+        "poisson_mix_50": {
+          "one_x_two": {
+            "n": 526,
+            "log_loss": 1.0435863411747328,
+            "brier_score": 0.6270232132739167
+          },
+          "over_2_5": {
+            "n": 526,
+            "log_loss": 0.6536414770279744,
+            "brier_score": 0.23067622025078513
+          },
+          "home_win_by_2_plus": {
+            "n": 526,
+            "log_loss": 0.5306116662704924,
+            "brier_score": 0.17502257814067215
+          },
+          "over_2_25": {
+            "n": 526,
+            "log_loss": 0.9046766432603518,
+            "brier_score": 0.5274429750224771
+          },
+          "over_2_75": {
+            "n": 526,
+            "log_loss": 1.0668897045520624,
+            "brier_score": 0.6459997308909461
+          }
+        },
+        "team_poisson": {
+          "one_x_two": {
+            "n": 526,
+            "log_loss": 1.0467235642414041,
+            "brier_score": 0.6283479200528135
+          },
+          "over_2_5": {
+            "n": 526,
+            "log_loss": 0.6557966954788135,
+            "brier_score": 0.23201981985006437
+          },
+          "home_win_by_2_plus": {
+            "n": 526,
+            "log_loss": 0.5233085760251348,
+            "brier_score": 0.17296660023756688
+          },
+          "over_2_25": {
+            "n": 526,
+            "log_loss": 0.9063521891645898,
+            "brier_score": 0.529442006780327
+          },
+          "over_2_75": {
+            "n": 526,
+            "log_loss": 1.0699563888419354,
+            "brier_score": 0.647800236655342
+          }
+        },
+        "sequential_policy": {
+          "one_x_two": {
+            "n": 526,
+            "log_loss": 1.0511521190575377,
+            "brier_score": 0.6318767549464354
+          },
+          "over_2_5": {
+            "n": 526,
+            "log_loss": 0.6596847086265802,
+            "brier_score": 0.2337629551760339
+          },
+          "home_win_by_2_plus": {
+            "n": 526,
+            "log_loss": 0.5258635761778018,
+            "brier_score": 0.17393405971139697
+          },
+          "over_2_25": {
+            "n": 526,
+            "log_loss": 0.909832099598424,
+            "brier_score": 0.5316595540997581
+          },
+          "over_2_75": {
+            "n": 526,
+            "log_loss": 1.074818512832652,
+            "brier_score": 0.6514974222306914
+          }
+        }
+      },
+      "input_sha_matches_frozen_protocol": true,
+      "result_file_sha256": "e80731e187ecb2a3e2060dc17b458d6f91eb57e2395043bc2cddb0447cf611d3"
+    },
+    "liga_mx": {
+      "coverage": {
+        "total": 364,
+        "common": 363,
+        "common_ratio": 0.9972527472527473,
+        "by_candidate": {
+          "league_mean": 364,
+          "poisson_mix_50": 363,
+          "team_poisson": 363,
+          "sequential_policy": 364
+        },
+        "policy_fallback_count": 1,
+        "not_common_match_ids": [
+          1550894
+        ]
+      },
+      "windows": 127,
+      "at_bound_fits": 0,
+      "effective_policy_counts": {
+        "league_mean": 43,
+        "team_poisson": 307,
+        "poisson_mix_50": 14
+      },
+      "metrics": {
+        "league_mean": {
+          "one_x_two": {
+            "n": 363,
+            "log_loss": 1.0644703796064021,
+            "brier_score": 0.6429333787898373
+          },
+          "over_2_5": {
+            "n": 363,
+            "log_loss": 0.6892403784550789,
+            "brier_score": 0.2480479995996095
+          },
+          "home_win_by_2_plus": {
+            "n": 363,
+            "log_loss": 0.5793208832154669,
+            "brier_score": 0.19514034646662642
+          },
+          "over_2_25": {
+            "n": 363,
+            "log_loss": 1.002093082182322,
+            "brier_score": 0.5978250517453386
+          },
+          "over_2_75": {
+            "n": 363,
+            "log_loss": 1.0592676728185118,
+            "brier_score": 0.6408384038493972
+          }
+        },
+        "poisson_mix_50": {
+          "one_x_two": {
+            "n": 363,
+            "log_loss": 1.0340575586747622,
+            "brier_score": 0.6198182673406997
+          },
+          "over_2_5": {
+            "n": 363,
+            "log_loss": 0.692644505210111,
+            "brier_score": 0.24970739730672153
+          },
+          "home_win_by_2_plus": {
+            "n": 363,
+            "log_loss": 0.5462932941591003,
+            "brier_score": 0.18254465948332904
+          },
+          "over_2_25": {
+            "n": 363,
+            "log_loss": 1.0076829043793845,
+            "brier_score": 0.6012890213260336
+          },
+          "over_2_75": {
+            "n": 363,
+            "log_loss": 1.061342296845825,
+            "brier_score": 0.6425092331816435
+          }
+        },
+        "team_poisson": {
+          "one_x_two": {
+            "n": 363,
+            "log_loss": 1.0363876220402106,
+            "brier_score": 0.620857674858673
+          },
+          "over_2_5": {
+            "n": 363,
+            "log_loss": 0.7043981241684403,
+            "brier_score": 0.2551315332074301
+          },
+          "home_win_by_2_plus": {
+            "n": 363,
+            "log_loss": 0.536777582147279,
+            "brier_score": 0.17983959645915742
+          },
+          "over_2_25": {
+            "n": 363,
+            "log_loss": 1.022801063757229,
+            "brier_score": 0.6107517318447309
+          },
+          "over_2_75": {
+            "n": 363,
+            "log_loss": 1.074350676569324,
+            "brier_score": 0.651516959188854
+          }
+        },
+        "sequential_policy": {
+          "one_x_two": {
+            "n": 363,
+            "log_loss": 1.0451392626362062,
+            "brier_score": 0.6274489874203177
+          },
+          "over_2_5": {
+            "n": 363,
+            "log_loss": 0.7030671551076499,
+            "brier_score": 0.2544977934231474
+          },
+          "home_win_by_2_plus": {
+            "n": 363,
+            "log_loss": 0.5424843416737194,
+            "brier_score": 0.1817856317945021
+          },
+          "over_2_25": {
+            "n": 363,
+            "log_loss": 1.0197056981301635,
+            "brier_score": 0.6088518332284198
+          },
+          "over_2_75": {
+            "n": 363,
+            "log_loss": 1.0715556954497216,
+            "brier_score": 0.6503090705214327
+          }
+        }
+      },
+      "input_sha_matches_frozen_protocol": true,
+      "result_file_sha256": "b8757f0057714a916ec73219a274d8eb3d5451081ec5451f5f3b14925ee27862"
+    },
+    "epl": {
+      "coverage": {
+        "total": 400,
+        "common": 398,
+        "common_ratio": 0.995,
+        "by_candidate": {
+          "league_mean": 400,
+          "poisson_mix_50": 398,
+          "team_poisson": 398,
+          "sequential_policy": 400
+        },
+        "policy_fallback_count": 2,
+        "not_common_match_ids": [
+          1557367,
+          1557368
+        ]
+      },
+      "windows": 121,
+      "at_bound_fits": 0,
+      "effective_policy_counts": {
+        "league_mean": 42,
+        "team_poisson": 358
+      },
+      "metrics": {
+        "league_mean": {
+          "one_x_two": {
+            "n": 398,
+            "log_loss": 1.0916174031586836,
+            "brier_score": 0.6614581151309866
+          },
+          "over_2_5": {
+            "n": 398,
+            "log_loss": 0.6883257027486095,
+            "brier_score": 0.24759119354072462
+          },
+          "home_win_by_2_plus": {
+            "n": 398,
+            "log_loss": 0.5371982357941871,
+            "brier_score": 0.17586434801261858
+          },
+          "over_2_25": {
+            "n": 398,
+            "log_loss": 0.997766969164488,
+            "brier_score": 0.5947546415851518
+          },
+          "over_2_75": {
+            "n": 398,
+            "log_loss": 1.0747292015667005,
+            "brier_score": 0.6495204439759823
+          }
+        },
+        "poisson_mix_50": {
+          "one_x_two": {
+            "n": 398,
+            "log_loss": 1.050499229949137,
+            "brier_score": 0.630860475986021
+          },
+          "over_2_5": {
+            "n": 398,
+            "log_loss": 0.6945843318227927,
+            "brier_score": 0.2506285205147659
+          },
+          "home_win_by_2_plus": {
+            "n": 398,
+            "log_loss": 0.5137568211552953,
+            "brier_score": 0.16810799758269632
+          },
+          "over_2_25": {
+            "n": 398,
+            "log_loss": 1.0040830671555465,
+            "brier_score": 0.5996021495619347
+          },
+          "over_2_75": {
+            "n": 398,
+            "log_loss": 1.080469839302599,
+            "brier_score": 0.6541678346785506
+          }
+        },
+        "team_poisson": {
+          "one_x_two": {
+            "n": 398,
+            "log_loss": 1.0327606656164647,
+            "brier_score": 0.6195477543172214
+          },
+          "over_2_5": {
+            "n": 398,
+            "log_loss": 0.7106050205724977,
+            "brier_score": 0.2580306211178039
+          },
+          "home_win_by_2_plus": {
+            "n": 398,
+            "log_loss": 0.509397502453366,
+            "brier_score": 0.166916683097796
+          },
+          "over_2_25": {
+            "n": 398,
+            "log_loss": 1.0204634861780233,
+            "brier_score": 0.611609641502708
+          },
+          "over_2_75": {
+            "n": 398,
+            "log_loss": 1.097554075337288,
+            "brier_score": 0.6668314224764964
+          }
+        },
+        "sequential_policy": {
+          "one_x_two": {
+            "n": 398,
+            "log_loss": 1.0419726797001496,
+            "brier_score": 0.6262040571443224
+          },
+          "over_2_5": {
+            "n": 398,
+            "log_loss": 0.708345882622085,
+            "brier_score": 0.25704758192937843
+          },
+          "home_win_by_2_plus": {
+            "n": 398,
+            "log_loss": 0.5156283124629016,
+            "brier_score": 0.1692737526063767
+          },
+          "over_2_25": {
+            "n": 398,
+            "log_loss": 1.0173687039786552,
+            "brier_score": 0.6097850119313156
+          },
+          "over_2_75": {
+            "n": 398,
+            "log_loss": 1.0961295404735443,
+            "brier_score": 0.6656001133161276
+          }
+        }
+      },
+      "input_sha_matches_frozen_protocol": true,
+      "result_file_sha256": "665fee9725504083e8811a86df7a6aaca629e312a57914eaaeb319b79e7ca7d6"
+    }
+  },
+  "conclusion_limits": [
+    "不能将不同样本和每日重拟合下的分数与之前单次固定留出直接相减归因。",
+    "四赛事共同样本的1X2及净胜2+研究对照优于均值，不构成未见未来验收或生产升级。",
+    "大2.5仅MLS固定混合及原模型好于均值；UNL/MX/EPL均未达到均值基准；序贯政策仅按1X2选型，不代表各市场最优。",
+    "缺少真实历史可观测快照、伤停/首发量化、市场概率及赔率收益对照。"
+  ]
+}
