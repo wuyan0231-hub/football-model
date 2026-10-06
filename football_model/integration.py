@@ -359,6 +359,8 @@ def _same(actual, expected, path="prediction"):
 def match_packet(runtime, config, league, match_id, as_of=None, state_commit=None):
     """Read, validate and reproduce a saved forecast without fitting parameters."""
     runtime = Path(runtime)
+    if any((base / "RESEARCH_REPLAY.json").exists() for base in (runtime, runtime.parent)):
+        raise IntegrationError("研究回放目录不能作为真实保存的赛前预测接入。")
     now = _time(as_of, "分析截点") if as_of else datetime.now(UTC)
     if now > datetime.now(UTC):
         raise IntegrationError("分析截点不能晚于实际当前时间。")
@@ -372,6 +374,9 @@ def match_packet(runtime, config, league, match_id, as_of=None, state_commit=Non
     attempt = entry["latest_successful_forecast"]
     latest = entry["latest_attempt"]
     for candidate in (attempt, latest):
+        report = _read(runtime / "reports" / "history" / f"{candidate['run_id']}.json")
+        if report.get("research_replay"):
+            raise IntegrationError("研究回放报告不能作为真实保存的赛前预测接入。")
         if _time(candidate["generated_at"], "报告时间") > now:
             raise IntegrationError("分析截点早于已知报告，存在前视信息；须读取该时点真实保存的历史状态。")
     prediction_path = runtime / "predictions" / attempt["run_id"] / f"{league}.json"
@@ -383,6 +388,8 @@ def match_packet(runtime, config, league, match_id, as_of=None, state_commit=Non
     if len(matches) != 1:
         raise IntegrationError("该比赛不在本联赛最新保存预测中；不能按名称猜测或虚构输出。")
     row = matches[0]
+    if row.get("research_replay"):
+        raise IntegrationError("研究回放输出不能作为真实保存的赛前预测接入。")
     if row.get("status") != "exploratory_baseline":
         raise IntegrationError(f"本场不支持：{row.get('reason', '缺少有效预测')}。")
     model_path = runtime / "models" / f"{league}.json"

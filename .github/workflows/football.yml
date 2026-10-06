@@ -18,6 +18,9 @@ on:
       - 'football_model/integration.py'
       - 'football_model/fundamentals.py'
       - 'football_model/collect_fundamentals.py'
+      - 'football_model/prospective.py'
+      - 'football_model/settlement.py'
+      - 'football_model/production_replay.py'
       - 'config.json'
   workflow_dispatch:
     inputs:
@@ -98,7 +101,36 @@ jobs:
         continue-on-error: true
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
-        run: python -m football_model.cli --mode "$MODE" --league "$LEAGUE" --runtime runtime
+        run: python -m football_model.cli --mode "$MODE" --league "$LEAGUE" --runtime runtime --record-replay
+
+      - name: 检查本次生产回放包已录制
+        id: replay_check
+        if: ${{ always() && steps.restore.outcome == 'success' && steps.model.outcome != 'skipped' }}
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from football_model.production_replay import read_bundle
+          report = json.loads(Path('runtime/reports/latest.json').read_text(encoding='utf-8'))
+          recording = report.get('replay_recording', {})
+          if recording.get('status') != 'recorded':
+              raise SystemExit('本次生产录制未完成；有效模型与预测仍另行保存。')
+          bundle = read_bundle(Path('runtime') / recording['path'])
+          if bundle['sha256'] != recording['sha256'] or bundle['payload']['recorded_run_id'] != report['run_id']:
+              raise SystemExit('回放包与本次报告不一致。')
+          print('已录制实际生产输入；离线重演是否匹配须另行核验。')
+          PY
+
+      - name: 冻结真实赛前预测并评分已结束比赛
+        id: prospective
+        if: ${{ always() && steps.restore.outcome == 'success' && steps.model.outcome != 'skipped' && env.MODE == 'train' }}
+        # Freeze before the separate evidence collector; preserve valid records
+        # even when another competition failed or a capture was too late.
+        continue-on-error: true
+        run: |
+          rm -f runtime/prospective/latest.json
+          python -m football_model.prospective --runtime runtime --config config.json
 
       - name: 采集未来24小时比赛的基本面证据
         id: fundamentals
@@ -141,6 +173,8 @@ jobs:
             runtime/registries/
             runtime/audits/unl/
             runtime/fundamentals/
+            runtime/prospective/
+            runtime/replay/
           if-no-files-found: warn
           retention-days: 14
           include-hidden-files: false
@@ -152,6 +186,8 @@ jobs:
           STATE_OUTCOME: ${{ steps.persist.outcome }}
           OUTPUT_CHECK: ${{ steps.check.outcome }}
           FUNDAMENTALS_OUTCOME: ${{ steps.fundamentals.outcome }}
+          PROSPECTIVE_OUTCOME: ${{ steps.prospective.outcome }}
+          REPLAY_OUTCOME: ${{ steps.replay_check.outcome }}
         run: |
           python - <<'PY'
           import os
@@ -162,6 +198,8 @@ jobs:
               handle.write('# 足球模型运行结果\n\n')
               handle.write('模型任务：' + os.environ['MODEL_OUTCOME'] + '\n\n')
               handle.write('状态保存：' + os.environ['STATE_OUTCOME'] + '\n\n')
+              handle.write('前瞻冻结与评分：' + os.environ['PROSPECTIVE_OUTCOME'] + '\n\n')
+              handle.write('生产回放包录制：' + os.environ['REPLAY_OUTCOME'] + '\n\n')
               handle.write('基本面采集步骤：' + os.environ['FUNDAMENTALS_OUTCOME'] + '（单独报告；尚未用于调整概率）\n\n')
               if report.is_file() and os.environ['OUTPUT_CHECK'] == 'success':
                   handle.write(report.read_text(encoding='utf-8'))
@@ -173,11 +211,18 @@ jobs:
                   evidence = json.loads(facts.read_text(encoding='utf-8'))
                   handle.write('\n基本面结果：' + evidence['status'] + '；比赛数：' + str(len(evidence['matches'])) + '。\n')
                   handle.write('资料缺失、预算延期和逐场原因见 fundamentals/reports/latest.json。每日任务不保证取得临场正式首发。\n')
+              prospective = Path('runtime/prospective/latest.json')
+              if os.environ['PROSPECTIVE_OUTCOME'] != 'skipped' and prospective.is_file() and os.environ['OUTPUT_CHECK'] == 'success':
+                  import json
+                  scored = json.loads(prospective.read_text(encoding='utf-8'))
+                  handle.write('\n累计冻结预测版本：' + str(scored['forecast_versions']) + '；按协议去重比赛：' + str(scored['unique_primary_matches_by_protocol']) + '。\n')
+                  handle.write('已评分：' + str(sum(g['scored'] for g in scored['groups'])) + '；待赛果：' + str(sum(g['pending'] for g in scored['groups'])) + '。\n')
+                  handle.write('这是实际冻结记录的描述性评分；未自动验收预测优势，也不是实际投注收益。\n')
               handle.write('\n\n只有状态保存 success 才表示本次状态已写入 model-state。附件只保留 14 天。\n')
           PY
 
       - name: 将实际失败标记为失败
-        if: ${{ always() && (steps.model.outcome != 'success' || steps.persist.outcome != 'success') }}
+        if: ${{ always() && (steps.model.outcome != 'success' || steps.persist.outcome != 'success' || steps.prospective.outcome == 'failure' || steps.replay_check.outcome == 'failure') }}
         run: |
-          echo '本次检查/训练或状态保存未完成。请查看运行摘要；不能将其视为训练成功。'
+          echo '本次检查/训练、回放录制、前瞻冻结评分或状态保存未完成。请查看运行摘要；不能将其视为全部成功。'
           exit 1
