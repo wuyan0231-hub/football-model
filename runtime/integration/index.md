@@ -1,6 +1,6 @@
 # 模型接入索引
 
-索引生成：2026-10-06T15:04:45.566677Z
+索引生成：2026-10-06T15:41:01.806143Z
 
 索引仅标识已保存结果；运行成功不等于有可用预测。空窗、全部不支持和陈旧分别记录；单场仍须核查截点、赛程、场地和适用性。无自动质量验收。
 
@@ -21,7 +21,7 @@
 |日职联J1|unsupported_only|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|j1-20260922T144950256594Z|0 / 10|
 |韩国K1|available|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|k1-20260928T012941903322Z|6 / 0|
 |美职联MLS|available|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|mls-20261003T013044865986Z|16 / 0|
-|欧洲国家联赛|available|available|current|20261006T150443918641Z / 探索性基线|unl-20261006T013129416454Z|9 / 0|
+|欧洲国家联赛|available|available|current|20261006T154100099931Z / 探索性基线|unl-20261006T013129416454Z|9 / 0|
 |墨西超Liga MX|available|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|liga_mx-20260929T013003365576Z|9 / 0|
 |西乙|available|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|segunda-20261006T013129416454Z|11 / 0|
 |阿根廷甲级联赛|available|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|argentina_a-20261006T013129416454Z|15 / 0|
