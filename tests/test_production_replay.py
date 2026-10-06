@@ -3,6 +3,7 @@ import copy
 from contextlib import contextmanager
 from datetime import timedelta
 import json
+import math
 from pathlib import Path
 import tempfile
 import unittest
@@ -11,7 +12,7 @@ from unittest.mock import patch
 from football_model.cli import run_pipeline
 from football_model.data import APIError, RequestBudgetError
 from football_model.model import fit_model
-from football_model.production_replay import replay_bundle, read_bundle, ReplayError
+from football_model.production_replay import replay_bundle, read_bundle, compare_outcomes, COMPARISON_POLICY, ReplayError, _outcome
 from test_cli import BASE_CONFIG, BudgetClient, FakeClient, NOW, fixture
 from test_nations_pipeline import CONFIG as NATIONAL_CONFIG, NOW as NATIONAL_NOW, NationalClient
 
@@ -182,6 +183,98 @@ class ProductionReplayTests(unittest.TestCase):
                 with self.assertRaisesRegex(ReplayError, "源码"):
                     replay_bundle(bundle, Path(tmp) / "changed")
             self.assertFalse((Path(tmp) / "new").exists())
+
+
+class ReplayComparisonTests(unittest.TestCase):
+    @staticmethod
+    def tail(value):
+        return {"predictions": {"epl": [{"prediction": {"tail_mass_before_normalization": value}}]}}
+
+    def test_exact_comparison_preserves_structure_types_and_all_values(self):
+        value = {"x": [1, 1.0, True, None, "2026-10-06T15:00:00Z", {"rate": 2.3}]}
+        comparison = compare_outcomes(value, copy.deepcopy(value))
+        self.assertTrue(comparison["exact_outcomes_equal"])
+        self.assertTrue(comparison["numerically_consistent"])
+        self.assertEqual(comparison["difference_count"], 0)
+        self.assertEqual(comparison["policy"], COMPARISON_POLICY)
+
+    def test_one_ulp_difference_is_numerical_but_never_exact(self):
+        comparison = compare_outcomes({"p": 0.25}, {"p": math.nextafter(0.25, math.inf)})
+        self.assertFalse(comparison["exact_outcomes_equal"])
+        self.assertTrue(comparison["numerically_consistent"])
+        self.assertTrue(comparison["strict_relative_consistent"])
+        self.assertEqual(comparison["float_difference_count"], 1)
+        self.assertGreater(comparison["maximum_absolute_error"], 0)
+        self.assertEqual(comparison["differences"][0]["path"], "/p")
+
+    def test_only_exact_tail_field_allows_cancellation_absolute_bound(self):
+        old, new = 1e-9, 1e-9 + 1e-16
+        comparison = compare_outcomes(self.tail(old), self.tail(new))
+        self.assertFalse(comparison["exact_outcomes_equal"])
+        self.assertFalse(comparison["strict_relative_consistent"])
+        self.assertTrue(comparison["numerically_consistent"])
+        self.assertEqual(comparison["differences"][0]["absolute_tolerance"], 1e-12)
+        self.assertFalse(compare_outcomes({"p": old}, {"p": new})["numerically_consistent"])
+        # A similarly named arbitrary field must not receive the exception.
+        self.assertFalse(compare_outcomes({"tail_mass_before_normalization": old},
+                                        {"tail_mass_before_normalization": new})["numerically_consistent"])
+        self.assertFalse(compare_outcomes(self.tail(old), self.tail(old + 1e-10))["numerically_consistent"])
+
+    def test_tiny_nonzero_probability_changes_do_not_hide_under_absolute_floor(self):
+        for old, new in ((1e-30, 1e-13), (1e-300, 2e-300), (0.1, 0.10000001)):
+            with self.subTest(old=old, new=new):
+                comparison = compare_outcomes({"p": old}, {"p": new})
+                self.assertFalse(comparison["numerically_consistent"])
+                self.assertFalse(comparison["exact_outcomes_equal"])
+
+    def test_zero_and_sign_transitions_rejected_even_for_tail(self):
+        for old, new in ((0.0, 1e-20), (1e-20, 0.0), (-1e-20, 1e-20), (-0.0, 0.0)):
+            with self.subTest(old=old, new=new):
+                comparison = compare_outcomes(self.tail(old), self.tail(new))
+                self.assertFalse(comparison["numerically_consistent"])
+                self.assertFalse(comparison["exact_outcomes_equal"])
+
+    def test_discrete_structure_and_scalar_changes_always_fail(self):
+        for old, new in ((1, 1.0), (True, 1), (1, 2), ("20:00", "20:01"),
+                         ({"a": 1}, {"b": 1}), ([1], [1, 2]), (None, 0)):
+            with self.subTest(old=old, new=new):
+                comparison = compare_outcomes(old, new)
+                self.assertFalse(comparison["numerically_consistent"])
+                self.assertGreater(comparison["non_float_difference_count"], 0)
+
+    def test_nonfinite_never_passes_and_diagnostics_are_json_safe(self):
+        for old, new in ((math.nan, math.nan), (math.inf, math.inf), (1.0, math.inf),
+                         (-1e308, 1e308)):
+            with self.subTest(old=old, new=new):
+                comparison = compare_outcomes(old, new)
+                self.assertFalse(comparison["numerically_consistent"])
+                json.dumps(comparison, allow_nan=False)
+
+    def test_replay_status_separates_numeric_exact_and_meaningful_mismatch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runtime = Path(tmp) / "production"
+            _, report = run_pipeline(BASE_CONFIG, runtime, "train", now=NOW,
+                                     clock=lambda: NOW, client=FakeClient(), record_replay=True)
+            bundle = runtime / report["replay_recording"]["path"]
+            self.assertEqual(read_bundle(bundle)["payload"]["comparison_policy"], COMPARISON_POLICY)
+            for change, wanted in (("roundoff", "numerically_consistent"), ("meaningful", "mismatch"),
+                                   ("discrete", "mismatch")):
+                def changed_outcome(report, runtime, change=change):
+                    actual = _outcome(report, runtime)
+                    if change == "discrete":
+                        actual["api_requests"] += 1
+                    else:
+                        matrix = actual["predictions"]["epl"][0]["prediction"]["score_matrix"]
+                        matrix[1][1] = (math.nextafter(matrix[1][1], math.inf) if change == "roundoff"
+                                         else matrix[1][1] + 1e-7)
+                    return actual
+                with self.subTest(change=change), patch("football_model.production_replay._outcome", side_effect=changed_outcome):
+                    code, result = replay_bundle(bundle, Path(tmp) / ("research_" + change))
+                self.assertEqual(result["status"], wanted)
+                self.assertFalse(result["outcomes_equal"])
+                self.assertFalse(result["exact_outcomes_equal"])
+                self.assertEqual(result["numerical_consistency"], change == "roundoff")
+                self.assertEqual(code, 0 if change == "roundoff" else 1)
 
 
 if __name__ == "__main__":
