@@ -1,0 +1,42 @@
+name: Configured league xG coverage audit
+on:
+  push:
+    branches: [audit/xg-league-coverage-20261006]
+    paths:
+      - 'experiments/s2_stage1/audit_leagues.py'
+      - 'experiments/s2_stage1/audit_competitions.json'
+      - '.github/workflows/xg-league-audit.yml'
+permissions:
+  contents: read
+concurrency:
+  group: football-model-state
+  cancel-in-progress: false
+jobs:
+  audit:
+    if: github.event.repository.private == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Validate inherited API transport offline
+        run: python -m unittest discover -s experiments/s2_stage1 -p 'test_probe_api.py' -v
+      - name: Audit 19 competitions without changing production state
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: >-
+          python experiments/s2_stage1/audit_leagues.py
+          --output xg_audit_output
+          --competitions experiments/s2_stage1/audit_competitions.json
+      - name: Preserve coverage evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: xg-league-audit-${{ github.run_id }}-${{ github.run_attempt }}
+          path: xg_audit_output/
+          if-no-files-found: error
+          retention-days: 30
