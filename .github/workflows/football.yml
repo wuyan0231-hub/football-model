@@ -21,6 +21,7 @@ on:
       - 'football_model/prospective.py'
       - 'football_model/settlement.py'
       - 'football_model/production_replay.py'
+      - 'football_model/run_summary.py'
       - 'config.json'
   workflow_dispatch:
     inputs:
@@ -82,6 +83,9 @@ jobs:
         if: ${{ github.event_name == 'push' }}
         run: python -m unittest discover -s tests -v
 
+      - name: 建立本轮摘要关联
+        run: python -m football_model.run_summary begin --context "$RUNNER_TEMP/football-run-context.json"
+
       - name: 恢复上次模型与缓存
         id: restore
         run: python scripts/cloud_state.py load --runtime runtime
@@ -101,7 +105,9 @@ jobs:
         continue-on-error: true
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
-        run: python -m football_model.cli --mode "$MODE" --league "$LEAGUE" --runtime runtime --record-replay
+        run: |
+          python -m football_model.run_summary mark --context "$RUNNER_TEMP/football-run-context.json" --stage model
+          python -m football_model.cli --mode "$MODE" --league "$LEAGUE" --runtime runtime --record-replay
 
       - name: 检查本次生产回放包已录制
         id: replay_check
@@ -129,6 +135,7 @@ jobs:
         # even when another competition failed or a capture was too late.
         continue-on-error: true
         run: |
+          python -m football_model.run_summary mark --context "$RUNNER_TEMP/football-run-context.json" --stage prospective
           rm -f runtime/prospective/latest.json
           python -m football_model.prospective --runtime runtime --config config.json
 
@@ -141,6 +148,7 @@ jobs:
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
         run: |
+          python -m football_model.run_summary mark --context "$RUNNER_TEMP/football-run-context.json" --stage fundamentals
           rm -f runtime/fundamentals/reports/latest.json
           python -m football_model.collect_fundamentals --runtime runtime --config config.json --league "$LEAGUE" --horizon-hours 24
 
@@ -161,6 +169,27 @@ jobs:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
         run: python scripts/cloud_state.py save --runtime runtime
 
+      - name: 在运行摘要中显示分层结果
+        id: summary
+        if: ${{ always() }}
+        env:
+          RESTORE_OUTCOME: ${{ steps.restore.outcome }}
+          MODEL_OUTCOME: ${{ steps.model.outcome }}
+          PERSIST_OUTCOME: ${{ steps.persist.outcome }}
+          CHECK_OUTCOME: ${{ steps.check.outcome }}
+          FUNDAMENTALS_OUTCOME: ${{ steps.fundamentals.outcome }}
+          PROSPECTIVE_OUTCOME: ${{ steps.prospective.outcome }}
+          REPLAY_OUTCOME: ${{ steps.replay_check.outcome }}
+        # Only whitelist-derived counts/enums enter the summary. It runs after
+        # persistence so success is observed, never predicted. This JSON is an
+        # artifact, not a claim that it entered the same model-state commit.
+        run: >-
+          python -m football_model.run_summary render
+          --context "$RUNNER_TEMP/football-run-context.json"
+          --runtime runtime
+          --output "$RUNNER_TEMP/football-run-summary.json"
+          --summary "$GITHUB_STEP_SUMMARY"
+
       - name: 上传本次报告便捷副本（保留 14 天）
         if: ${{ always() && steps.check.outcome == 'success' }}
         uses: actions/upload-artifact@v7
@@ -179,50 +208,18 @@ jobs:
           retention-days: 14
           include-hidden-files: false
 
-      - name: 在运行摘要中显示结果
-        if: ${{ always() }}
-        env:
-          MODEL_OUTCOME: ${{ steps.model.outcome }}
-          STATE_OUTCOME: ${{ steps.persist.outcome }}
-          OUTPUT_CHECK: ${{ steps.check.outcome }}
-          FUNDAMENTALS_OUTCOME: ${{ steps.fundamentals.outcome }}
-          PROSPECTIVE_OUTCOME: ${{ steps.prospective.outcome }}
-          REPLAY_OUTCOME: ${{ steps.replay_check.outcome }}
-        run: |
-          python - <<'PY'
-          import os
-          from pathlib import Path
-          summary = Path(os.environ['GITHUB_STEP_SUMMARY'])
-          report = Path('runtime/reports/latest.md')
-          with summary.open('a', encoding='utf-8') as handle:
-              handle.write('# 足球模型运行结果\n\n')
-              handle.write('模型任务：' + os.environ['MODEL_OUTCOME'] + '\n\n')
-              handle.write('状态保存：' + os.environ['STATE_OUTCOME'] + '\n\n')
-              handle.write('前瞻冻结与评分：' + os.environ['PROSPECTIVE_OUTCOME'] + '\n\n')
-              handle.write('生产回放包录制：' + os.environ['REPLAY_OUTCOME'] + '\n\n')
-              handle.write('基本面采集步骤：' + os.environ['FUNDAMENTALS_OUTCOME'] + '（单独报告；尚未用于调整概率）\n\n')
-              if report.is_file() and os.environ['OUTPUT_CHECK'] == 'success':
-                  handle.write(report.read_text(encoding='utf-8'))
-              else:
-                  handle.write('本次报告未生成或未通过上传前检查，请检查失败步骤。\n')
-              facts = Path('runtime/fundamentals/reports/latest.json')
-              if os.environ['FUNDAMENTALS_OUTCOME'] != 'skipped' and facts.is_file() and os.environ['OUTPUT_CHECK'] == 'success':
-                  import json
-                  evidence = json.loads(facts.read_text(encoding='utf-8'))
-                  handle.write('\n基本面结果：' + evidence['status'] + '；比赛数：' + str(len(evidence['matches'])) + '。\n')
-                  handle.write('资料缺失、预算延期和逐场原因见 fundamentals/reports/latest.json。每日任务不保证取得临场正式首发。\n')
-              prospective = Path('runtime/prospective/latest.json')
-              if os.environ['PROSPECTIVE_OUTCOME'] != 'skipped' and prospective.is_file() and os.environ['OUTPUT_CHECK'] == 'success':
-                  import json
-                  scored = json.loads(prospective.read_text(encoding='utf-8'))
-                  handle.write('\n累计冻结预测版本：' + str(scored['forecast_versions']) + '；按协议去重比赛：' + str(scored['unique_primary_matches_by_protocol']) + '。\n')
-                  handle.write('已评分：' + str(sum(g['scored'] for g in scored['groups'])) + '；待赛果：' + str(sum(g['pending'] for g in scored['groups'])) + '。\n')
-                  handle.write('这是实际冻结记录的描述性评分；未自动验收预测优势，也不是实际投注收益。\n')
-              handle.write('\n\n只有状态保存 success 才表示本次状态已写入 model-state。附件只保留 14 天。\n')
-          PY
+      - name: 上传分层摘要（独立于原运行附件布局）
+        if: ${{ always() && steps.summary.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: football-run-summary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/football-run-summary.json
+          if-no-files-found: error
+          retention-days: 14
+          include-hidden-files: false
 
       - name: 将实际失败标记为失败
-        if: ${{ always() && (steps.model.outcome != 'success' || steps.persist.outcome != 'success' || steps.prospective.outcome == 'failure' || steps.replay_check.outcome == 'failure') }}
+        if: ${{ always() && (steps.model.outcome != 'success' || steps.persist.outcome != 'success' || steps.prospective.outcome == 'failure' || steps.replay_check.outcome == 'failure' || steps.summary.outcome != 'success') }}
         run: |
           echo '本次检查/训练、回放录制、前瞻冻结评分或状态保存未完成。请查看运行摘要；不能将其视为全部成功。'
           exit 1

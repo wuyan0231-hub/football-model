@@ -147,13 +147,17 @@ class TimeProvenanceTests(unittest.TestCase):
                          client=FakeClient(), clock=lambda: NOW)
         self.assertEqual(path.read_bytes(), original)
 
-    def test_legacy_model_reuse_preserves_bytes_and_has_explicit_current_only_limit(self):
+    def test_legacy_schema_with_actual_fit_time_reuses_and_retains_current_only_limit(self):
         code, report = run_pipeline(BASE_CONFIG, self.runtime, "train", now=NOW,
                                    client=FakeClient(), clock=lambda: NOW)
         self.assertEqual(code, 0)
         model_path = self.runtime / "models/epl.json"
         bundle = self.read(model_path)
-        for key in ("time_semantics", "run_started_at", "training_cutoff", "data_observed_at", "model_fitted_at"):
+        # Keep the actual completion emitted by the real initial fit. An old
+        # schema alone must not force migration; missing completion evidence
+        # with upcoming fixtures now intentionally does (test_s2_fit_migration).
+        actual_fitted_at = bundle["model_fitted_at"]
+        for key in ("time_semantics", "run_started_at", "training_cutoff", "data_observed_at"):
             bundle.pop(key)
         bundle["schema_version"] = 1
         atomic_json(model_path, bundle)
@@ -163,11 +167,12 @@ class TimeProvenanceTests(unittest.TestCase):
                 client=FakeClient(), clock=lambda: NOW+timedelta(hours=2))
         self.assertEqual(code, 0, newer)
         self.assertEqual(model_path.read_bytes(), before)
+        self.assertFalse(newer["competitions"][0]["model_refresh"]["required"])
         with patch("football_model.integration.datetime") as real_clock:
             real_clock.now.return_value = NOW+timedelta(hours=3)
             packet = match_packet(self.runtime, BASE_CONFIG, "epl", 2000)
         self.assertEqual(packet["provenance"]["time_semantics"], "legacy_time_evidence_limited")
-        self.assertIsNone(packet["provenance"]["model_fitted_at"])
+        self.assertEqual(packet["provenance"]["model_fitted_at"], actual_fitted_at)
         with self.assertRaisesRegex(IntegrationError, "旧产物时间证据有限"):
             match_packet(self.runtime, BASE_CONFIG, "epl", 2000,
                          as_of=iso(NOW+timedelta(hours=3)))

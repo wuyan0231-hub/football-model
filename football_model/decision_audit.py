@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+from datetime import datetime
 import hashlib
 import json
 import math
@@ -15,8 +16,10 @@ from pathlib import Path
 from typing import Any
 
 VERSION = "decision-audit-1.0"
+VALIDATOR_VERSION = "decision-audit-validator-1.1"
+VALUE_PERMISSION_POLICY = "s2-value-permissions-1.0"
 FITS = {"适合", "条件适合", "不建议", "暂无法判断"}
-VALUES = {"unquantified", "unclear", "confirmed_positive", "negative"}
+VALUES = {"unquantified", "unclear", "confirmed_positive", "negative", "confirmed_adverse"}
 ID_FIELDS = {
     "sources": "source_id", "facts": "fact_id", "quotes": "quote_id",
     "contracts": "contract_id", "candidates": "candidate_id",
@@ -50,6 +53,16 @@ def _has(value: Any) -> bool:
 
 def _hash(value: Any) -> bool:
     return isinstance(value, str) and len(value) == 64 and all(c in "0123456789abcdef" for c in value)
+
+
+def _aware_time(value: Any) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None and parsed.utcoffset() is not None else None
 
 
 def validate_decision_record(record: dict[str, Any]) -> dict[str, Any]:
@@ -132,6 +145,97 @@ def validate_decision_record(record: dict[str, Any]) -> dict[str, Any]:
                 walk(value, f"{path}[{i}]")
 
     walk(record, "record")
+
+    def reference_list(value: Any) -> bool:
+        return (isinstance(value, list) and bool(value)
+                and all(isinstance(ref, str) and ref in refs for ref in value))
+
+    def qualified_value_claim(model: dict, candidate: dict, direction: str) -> bool:
+        """Check the same declaration/evidence contract for both value signs.
+
+        A syntactically valid claim is not a semantic verification of its sources.
+        In particular timestamps/hashes require the separate frozen evidence check.
+        """
+        qualified = True
+
+        def reject(code: str, path: str, message: str, severity: str = "error") -> None:
+            nonlocal qualified
+            qualified = False
+            issue(code, path, message, severity)
+
+        path = f"model_records[{model.get('model_record_id')}]"
+        if (model.get("candidate_id") != candidate.get("candidate_id")
+                or model.get("version_id") != candidate.get("version_id")):
+            reject("value_claim_candidate_mismatch", path, "明确价值声明属于其他候选或报告版本，不能借用其权限。")
+        if (model.get("applicable") is not True
+                or model.get("status") not in ("recomputed", "已复算")
+                or model.get("probability_role") not in ("F", "MIX")):
+            reject("unqualified_value_model", path, "明确正向/不利须由本场适用且已复算的F/MIX模型支持。")
+
+        role = model.get("model_decision_role")
+        if role is None:
+            reject("missing_value_permission", path, "未保存预先声明的模型用途；不能确认明确价值权限。", "not_evaluated")
+        elif role != "value_assessment":
+            reject("value_permission_denied", path + ".model_decision_role", "仅诊断或未知用途不能确认正向价值，也不能升级为充分不利。")
+
+        declaration = refs.get(model.get("role_declaration_ref")) if isinstance(model.get("role_declaration_ref"), str) else None
+        declaration_time = _aware_time(declaration.get("observed_at")) if declaration else None
+        context = record.get("decision_context")
+        settings_hash = context.get("model_settings_sha256") if isinstance(context, dict) else None
+        if not (declaration and _hash(declaration.get("sha256")) and declaration_time):
+            reject("missing_role_declaration_evidence", path + ".role_declaration_ref", "用途声明须引用有原字节SHA-256和带时区取得时间的冻结依据。", "not_evaluated")
+        elif (declaration.get("model_decision_role") != role or not _hash(settings_hash)
+              or declaration.get("model_settings_sha256") != settings_hash):
+            reject("role_declaration_mismatch", path + ".role_declaration_ref", "冻结用途依据与本次角色/模型设置指纹不一致。")
+
+        output_refs = model.get("model_output_refs")
+        output_times = []
+        if not reference_list(output_refs):
+            reject("missing_value_output_evidence", path + ".model_output_refs", "明确价值须引用实际看到的模型输出原件，不能仅手填较晚日期。", "not_evaluated")
+        else:
+            for ref in output_refs:
+                source = refs[ref]
+                observed = _aware_time(source.get("observed_at"))
+                if not (_hash(source.get("sha256")) and observed):
+                    reject("missing_value_output_evidence", path + ".model_output_refs", "模型输出引用缺少原字节SHA-256或带时区取得时间。", "not_evaluated")
+                else:
+                    output_times.append(observed)
+        if declaration_time and output_times and declaration_time >= min(output_times):
+            reject("role_not_declared_before_output", path, "用途声明须在首次所列模型输出观测之前；同一时点不能证明先后。")
+
+        task = model.get("task_qualification")
+        if not isinstance(task, dict):
+            reject("missing_value_task_qualification", path, "明确正向/不利均须保存该任务已验收的资格与范围依据。", "not_evaluated")
+        else:
+            if task.get("status") != "accepted":
+                reject("unaccepted_value_task", path + ".task_qualification", "探索性或未验收任务只能保留点估计，不能确认任一方向的价值。")
+            if (task.get("contract_id") != candidate.get("contract_id")
+                    or task.get("quote_id") != candidate.get("quote_id")):
+                reject("value_task_mismatch", path + ".task_qualification", "资格应用记录未绑定本次同一合约和报价。")
+            if not reference_list(task.get("scope_refs")):
+                reject("missing_value_task_scope", path + ".task_qualification.scope_refs", "须引用覆盖联赛、市场/盘口及预测时距的既有验收范围；引用不证明范围语义。", "not_evaluated")
+
+        if not (model.get("uncertainty_assessed") is True
+                and model.get("uncertainty_support") == direction
+                and reference_list(model.get("uncertainty_refs"))
+                and reference_list(model.get("validation_refs"))):
+            reject("positive_without_uncertainty" if direction == "positive" else "adverse_without_uncertainty",
+                  path, "明确正向/不利须使用同等的可解析不确定性及相关验证依据；点估计本身不够。")
+
+        calc_id = model.get("calculation_record_id")
+        calculation = tables["calculation_records"].get(calc_id) if isinstance(calc_id, str) else None
+        if not calculation:
+            reject("unresolved_reference", path + ".calculation_record_id", "无法解析到明确价值声明的计算记录。")
+        if calculation:
+            if (calculation.get("model_record_id") != model.get("model_record_id")
+                    or calculation.get("contract_id") != candidate.get("contract_id")
+                    or calculation.get("quote_id") != candidate.get("quote_id")):
+                reject("value_claim_calculation_mismatch", path, "明确价值依据未绑定同一模型、合约及报价的真实计算记录。")
+            ev = calculation.get("ev")
+            if not _number(ev) or (ev <= 0 if direction == "positive" else ev >= 0):
+                reject("value_claim_sign_mismatch", path, "明确价值依据的实际计算记录与声明正负号不符。")
+        return qualified
+
     candidates = tables["candidates"]
     if not candidates:
         issue("no_candidates", "candidates", "无可审计候选，不推定分析通过。", "not_evaluated")
@@ -230,13 +334,19 @@ def validate_decision_record(record: dict[str, Any]) -> dict[str, Any]:
             issue("invalid_model_ids", path + ".model_record_ids", "模型ID必须为数组。")
             model_ids = []
         models = [resolve(mid, "model_records", path + ".model_record_ids") for mid in model_ids]
+        qualified_adverse = []
+        for mid, model in tables["model_records"].items():
+            if (model.get("candidate_id") == cid and model.get("version_id") == candidate.get("version_id")
+                    and model.get("value_assessment") == "valid_negative"):
+                if qualified_value_claim(model, candidate, "negative"):
+                    qualified_adverse.append(mid)
         value = candidate.get("value")
         if not isinstance(value, dict):
             issue("missing_value_state", path + ".value", "价格价值须与适配单列。", "not_evaluated")
-            for model in tables["model_records"].values():
-                if (model.get("candidate_id") == cid and model.get("version_id") == candidate.get("version_id")
-                        and model.get("applicable") is True and model.get("value_assessment") == "valid_negative"):
-                    issue("hidden_adverse_model", path + ".value", "已有明确适用的不利模型，却未记录价格价值。")
+            if qualified_adverse:
+                issue("hidden_adverse_model", path + ".value", "已有明确适用的不利模型，却未记录价格价值。")
+                if fit in ("适合", "条件适合"):
+                    issue("adverse_model_fit_conflict", path + ".fit", "已记录明确适用的绝对收益不利，与有利适配矛盾。")
             continue
         need(value, ("status", "ev", "breakeven_odds", "calculation_record_id", "disclosed_model_record_ids"), path + ".value")
         status = value.get("status")
@@ -278,11 +388,18 @@ def validate_decision_record(record: dict[str, Any]) -> dict[str, Any]:
         if status == "confirmed_positive":
             if not _number(ev) or ev <= 0:
                 issue("positive_without_positive_ev", path + ".value", "正向价值声明缺少正EV点估计。")
-            if not models or not all(m.get("uncertainty_assessed") is True and m.get("uncertainty_support") == "positive"
-                                     and _has(m.get("uncertainty_refs")) and _has(m.get("validation_refs")) for m in models):
-                issue("positive_without_uncertainty", path + ".value", "未经有依据的不确定性和验证审查，正点估计只能记优势不清。")
-        if status == "negative" and (not _number(ev) or ev >= 0):
+            if not models:
+                issue("positive_without_uncertainty", path + ".value", "没有合格模型依据，不能确认正向价值。")
+            for model in models:
+                qualified_value_claim(model, candidate, "positive")
+        if status in ("negative", "confirmed_adverse") and (not _number(ev) or ev >= 0):
             issue("negative_without_negative_ev", path + ".value", "不利价值声明缺少负EV记录。")
+        if status == "confirmed_adverse":
+            if not models:
+                issue("adverse_without_uncertainty", path + ".value", "没有合格模型依据，不能确认充分不利。")
+            for mid, model in zip(model_ids, models):
+                if qualified_value_claim(model, candidate, "negative") and mid not in qualified_adverse:
+                    qualified_adverse.append(mid)
         disclosed = value.get("disclosed_model_record_ids", [])
         if not isinstance(disclosed, list):
             issue("invalid_disclosure", path + ".value.disclosed_model_record_ids", "披露ID必须为数组。")
@@ -290,13 +407,11 @@ def validate_decision_record(record: dict[str, Any]) -> dict[str, Any]:
         for mid in disclosed:
             resolve(mid, "model_records", path + ".value.disclosed_model_record_ids")
         # Inspect all bound records, not just the cherry-picked model references.
-        for mid, model in tables["model_records"].items():
-            bound = model.get("candidate_id") == cid and model.get("version_id") == candidate.get("version_id")
-            if bound and model.get("applicable") is True and model.get("value_assessment") == "valid_negative":
-                if mid not in disclosed or mid not in model_ids or status == "unquantified":
-                    issue("hidden_adverse_model", path + ".value", "本版本已记录适用且有充分依据的不利模型，不能省略或退回未量化。")
-                if fit in ("适合", "条件适合"):
-                    issue("adverse_model_fit_conflict", path + ".fit", "已记录明确适用的绝对收益不利，与有利适配矛盾。")
+        for mid in qualified_adverse:
+            if mid not in disclosed or mid not in model_ids or status == "unquantified":
+                issue("hidden_adverse_model", path + ".value", "本版本已记录适用且有充分依据的不利模型，不能省略或退回未量化。")
+            if fit in ("适合", "条件适合"):
+                issue("adverse_model_fit_conflict", path + ".fit", "已记录明确适用的绝对收益不利，与有利适配矛盾。")
 
     versions = tables["versions"]
     if not versions:
@@ -329,7 +444,9 @@ def validate_decision_record(record: dict[str, Any]) -> dict[str, Any]:
     errors = sum(i["severity"] == "error" for i in issues)
     missing = sum(i["severity"] == "not_evaluated" for i in issues)
     checks.append({"check": "manual_semantic_review", "status": "required"})
-    return {"schema_version": VERSION, "status": "blocked" if errors else "incomplete" if missing else "structural_checks_passed",
+    return {"schema_version": VERSION, "validator_version": VALIDATOR_VERSION,
+            "value_permission_policy": VALUE_PERMISSION_POLICY,
+            "status": "blocked" if errors else "incomplete" if missing else "structural_checks_passed",
             "error_count": errors, "not_evaluated_count": missing, "issues": issues, "checks": checks,
             "candidate_count": len(candidates), "version_count": len(versions),
             "manual_review_required": MANUAL_CHECKS, "predictive_quality_verified": False,
@@ -387,7 +504,7 @@ def compare_decision_runs(records: list[dict[str, Any]]) -> dict[str, Any]:
         directions.append(_digest(direction))
         fits.append(primary.get("fit"))
         value_state = primary.get("value", {}).get("status") if isinstance(primary.get("value"), dict) else None
-        if value_state not in ("unquantified", "unclear", "confirmed_positive", "negative"):
+        if not isinstance(value_state, str) or value_state not in VALUES:
             reasons.append(f"run[{i}]价格价值状态缺失或非法")
         values.append(value_state)
     if any(identity != identities[0] for identity in identities[1:]):
@@ -399,7 +516,9 @@ def compare_decision_runs(records: list[dict[str, Any]]) -> dict[str, Any]:
     count = len(records)
     pairs = count * (count - 1) // 2
     equal = sum(directions[i] == directions[j] for i in range(count) for j in range(i + 1, count)) if comparable else None
-    return {"schema_version": VERSION, "status": "comparable" if comparable else "not_comparable",
+    return {"schema_version": VERSION, "validator_version": VALIDATOR_VERSION,
+            "value_permission_policy": VALUE_PERMISSION_POLICY,
+            "status": "comparable" if comparable else "not_comparable",
             "run_count": count, "independent_match_count": 1 if comparable else None,
             "not_comparable_reasons": reasons,
             "primary_direction_pairwise_agreement": equal / pairs if comparable else None,

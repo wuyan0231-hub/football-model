@@ -15,7 +15,7 @@ from pathlib import Path
 
 from .data import APIClient, APIError, DataError, RequestBudgetError, _integer, _iso, _utc
 from .fundamentals import (build_features, collect_fixture_evidence,
-                           quantitative_scope, save_snapshot)
+                           failure_diagnostic, quantitative_scope, save_snapshot)
 from .integration import _entry_for_match
 
 
@@ -194,21 +194,37 @@ def collect_run(config, runtime, league="all", match_id=None, *, horizon_hours=2
             raise DataError("collection clock moved backwards")
         return value
 
+    def record_failure(item, diagnostic):
+        summary = {k: v for k, v in diagnostic.items() if k != "payload"}
+        try:
+            path = _immutable(root / "failures" / str(diagnostic["match_id"]), diagnostic)
+            summary["diagnostic_path"] = str(path.relative_to(runtime))
+        except (OSError, ValueError, TypeError):
+            summary["diagnostic_save_failed"] = True
+            item["missing"].append({"match_id": diagnostic["match_id"], "kind": diagnostic["kind"],
+                                    "reason": "diagnostic_save_failed", "stage": "diagnostic_save",
+                                    "category": "storage"})
+        item["diagnostics"].append(summary)
+
     halted = False
     metadata_cache, fixture_cache = {}, {}
     staged = []
+    initialization_stage = "candidate_lookup"
     try:
         candidates, report["issues"] = _candidates(runtime, config, league, match_id, started, horizon_hours)
         report["candidate_count"] = len(candidates)
         if candidates:
+            initialization_stage = "client_initialization"
             client = client or APIClient(runtime / "cache",
                 max_requests=config.get("max_requests_per_run"), daily_limit=config.get("api_daily_limit"),
                 max_run_seconds=min(900, config.get("api_max_run_seconds") or 900), clock=clock)
+            initialization_stage = "account_budget_check"
             client.status()
         for candidate in candidates:
             item = {k: candidate[k] for k in ("league", "forecast_status", "forecast_run_id")}
             item.update(match_id=candidate["fixture"]["match_id"], status="pending",
-                        snapshot_paths=[], fixture_context_paths=[], missing=[])
+                        snapshot_paths=[], fixture_context_paths=[], missing=[],
+                        diagnostics=[], quality_diagnostics=[])
             report["matches"].append(item)
             if halted:
                 item.update(status="deferred", reason="budget_deferred")
@@ -217,16 +233,26 @@ def collect_run(config, runtime, league="all", match_id=None, *, horizon_hours=2
 
             def context(expected):
                 mid = expected["match_id"]
-                if mid not in fixture_cache:
-                    fixture_cache[mid] = client.fetch_fixture(mid, force=True)
-                envelope = fixture_cache[mid]
-                fixture, coverage, season = _verified_fixture(envelope, expected, metadata, now())
-                evidence = {"provider": "api-football", "fixture_response": envelope,
-                            "coverage": coverage, "coverage_observed_at": metadata["fetched_at"],
-                            "league_id": metadata["league"]["id"], "season": season}
-                path = _immutable(root / "fixtures" / str(mid), evidence)
-                item["fixture_context_paths"].append(str(path.relative_to(runtime)))
-                return fixture, coverage
+                envelope, stage = None, "fixture_fetch"
+                try:
+                    if mid not in fixture_cache:
+                        fixture_cache[mid] = client.fetch_fixture(mid, force=True)
+                    envelope = fixture_cache[mid]
+                    stage = "fixture_validate"
+                    fixture, coverage, season = _verified_fixture(envelope, expected, metadata, now())
+                    evidence = {"provider": "api-football", "fixture_response": envelope,
+                                "coverage": coverage, "coverage_observed_at": metadata["fetched_at"],
+                                "league_id": metadata["league"]["id"], "season": season}
+                    stage = "fixture_save"
+                    path = _immutable(root / "fixtures" / str(mid), evidence)
+                    item["fixture_context_paths"].append(str(path.relative_to(runtime)))
+                    return fixture, coverage
+                except (APIError, ValueError, KeyError, TypeError, OSError) as exc:
+                    diagnostic = failure_diagnostic("fixture_history", expected, stage=stage,
+                        error=exc, checked_at=now(), envelope=envelope)
+                    diagnostic["endpoint"] = "/fixtures"
+                    record_failure(item, diagnostic)
+                    raise
 
             def collect(fixture, coverage, kinds):
                 nonlocal halted
@@ -237,24 +263,41 @@ def collect_run(config, runtime, league="all", match_id=None, *, horizon_hours=2
                         continue
                     try:
                         result = collect_fixture_evidence(client, fixture, coverage=coverage,
-                            observed_at=fixture["observed_at"], collection_at=now(), kinds=(kind,))
+                            observed_at=fixture["observed_at"], collection_at=now(), kinds=(kind,), clock=now)
+                        for diagnostic in result["diagnostics"]:
+                            record_failure(item, diagnostic)
+                        item["quality_diagnostics"].extend(result["quality_diagnostics"])
                         for snapshot in result["snapshots"]:
-                            path = save_snapshot(root / "snapshots", snapshot)
-                            item["snapshot_paths"].append(str(path.relative_to(runtime)))
+                            try:
+                                path = save_snapshot(root / "snapshots", snapshot)
+                                item["snapshot_paths"].append(str(path.relative_to(runtime)))
+                            except (ValueError, KeyError, TypeError, OSError) as exc:
+                                envelope = {"endpoint": snapshot["endpoint"], "params": snapshot["params"],
+                                    "fetched_at": snapshot["observed_at"], "response": snapshot["raw_response"]}
+                                record_failure(item, failure_diagnostic(kind, fixture, stage="snapshot_save",
+                                    error=exc, checked_at=now(), envelope=envelope,
+                                    context_observed_at=fixture["observed_at"]))
+                                item["missing"].append({"match_id": fixture["match_id"], "kind": kind,
+                                    "reason": "snapshot_save_failed", "stage": "snapshot_save"})
                         for missing in result["missing"]:
                             item["missing"].append({"match_id": fixture["match_id"], **missing})
                             if missing["reason"] == "budget_deferred":
                                 halted = True
-                    except (ValueError, KeyError, TypeError, OSError):
+                    except (ValueError, KeyError, TypeError, OSError) as exc:
+                        record_failure(item, failure_diagnostic(kind, fixture, stage="collection_dispatch",
+                            error=exc, checked_at=now()))
                         item["missing"].append({"match_id": fixture["match_id"], "kind": kind,
-                                                "reason": "invalid_evidence_or_save_failed"})
+                                                "reason": "collection_dispatch_failed"})
 
+            candidate_stage = "metadata_fetch"
             try:
                 if key not in metadata_cache:
                     metadata_cache[key] = client.resolve_league(candidate["competition"], force=True)
                 metadata = metadata_cache[key]
+                candidate_stage = "metadata_validate"
                 if _utc(metadata["fetched_at"]) > now():
                     raise DataError("coverage_observation_in_future")
+                candidate_stage = "target_context"
                 target, coverage = context(candidate["fixture"])
                 if target["status"] != "NS" or _utc(target["kickoff"]) <= now():
                     item.update(status="skipped", reason="target_not_confirmed_future_NS")
@@ -263,8 +306,10 @@ def collect_run(config, runtime, league="all", match_id=None, *, horizon_hours=2
                 observed_history = []
                 try:
                     prior_rows = _history_rows(runtime, key, target, now(), recent_matches)
-                except (ValueError, KeyError, TypeError, OSError):
+                except (ValueError, KeyError, TypeError, OSError) as exc:
                     prior_rows = []
+                    record_failure(item, failure_diagnostic("fixture_history", target,
+                        stage="saved_history_load", error=exc, checked_at=now()))
                     item["missing"].append({"kind": "fixture_history", "reason": "saved_history_missing_or_invalid"})
                 for prior in prior_rows:
                     if halted:
@@ -295,7 +340,12 @@ def collect_run(config, runtime, league="all", match_id=None, *, horizon_hours=2
             except RequestBudgetError:
                 halted = True
                 item.update(status="deferred", reason="budget_deferred")
-            except (APIError, ValueError, KeyError, TypeError, OSError):
+            except (APIError, ValueError, KeyError, TypeError, OSError) as exc:
+                if candidate_stage.startswith("metadata"):
+                    diagnostic = failure_diagnostic("coverage", candidate["fixture"],
+                        stage=candidate_stage, error=exc, checked_at=now())
+                    diagnostic["endpoint"] = "/leagues"
+                    record_failure(item, diagnostic)
                 item.update(status="failed", reason="fixture_or_coverage_unavailable_or_invalid")
         # This is the real end-of-requests time, never a caller-selected past date.
         cutoff = now()
@@ -303,6 +353,7 @@ def collect_run(config, runtime, league="all", match_id=None, *, horizon_hours=2
             if cutoff >= _utc(target["kickoff"]):
                 item.update(status="evidence_only", reason="match_started_before_feature_cutoff")
                 continue
+            feature_stage = "snapshot_load"
             try:
                 # Keep corruption in unrelated fixtures from discarding this match.
                 ids = {target["match_id"]} | {row["match_id"] for row in history}
@@ -311,22 +362,30 @@ def collect_run(config, runtime, league="all", match_id=None, *, horizon_hours=2
                     for mid in ids:
                         for path in sorted((root / "snapshots" / kind / str(mid)).glob("*.json")):
                             snapshots.append(_read(path))
+                feature_stage = "feature_build"
                 features = build_features(target, cutoff=cutoff, snapshots=snapshots,
                     fixture_history=history, recent_matches=recent_matches)
                 features["collection_provenance"] = {"run_id": run_id, "league": item["league"],
                     "forecast_run_id": item["forecast_run_id"], "fixture_context_paths": item["fixture_context_paths"],
                     "missing": item["missing"], "history_scope": "saved_same_competition_matches",
                     "all_competitions_complete": False}
+                feature_stage = "feature_save"
                 path = _immutable(root / "features" / str(target["match_id"]), features)
                 item.update(status="features_saved", feature_path=str(path.relative_to(runtime)),
                             feature_cutoff=_iso(cutoff), fundamentals_used_in_probabilities=False)
-            except (ValueError, KeyError, TypeError, OSError):
+            except (ValueError, KeyError, TypeError, OSError) as exc:
+                record_failure(item, failure_diagnostic("features", target, stage=feature_stage,
+                    error=exc, checked_at=now()))
                 item.update(status="evidence_only", reason="feature_build_or_save_failed")
         report["forecast_cutoff"] = _iso(cutoff)
-    except (APIError, ValueError, KeyError, TypeError, OSError):
-        report["issues"].append({"reason": "collection_initialization_or_clock_failed", "severity": "error"})
+    except (APIError, ValueError, KeyError, TypeError, OSError) as exc:
+        report["issues"].append({"reason": "collection_initialization_or_clock_failed", "severity": "error",
+            "stage": initialization_stage, "category": "budget" if isinstance(exc, RequestBudgetError)
+            else "provider" if isinstance(exc, APIError) else "storage" if isinstance(exc, OSError) else "validation"})
     errors = {"budget_deferred", "provider_error", "invalid_evidence_or_save_failed",
-              "prior_context_unavailable_or_invalid", "saved_history_missing_or_invalid"}
+              "prior_context_unavailable_or_invalid", "saved_history_missing_or_invalid",
+              "invalid_evidence", "evidence_fetch_failed", "snapshot_save_failed",
+              "diagnostic_save_failed", "collection_dispatch_failed"}
     partial = (any(i.get("severity") == "error" for i in report["issues"])
         or any(m["status"] in ("failed", "deferred", "evidence_only")
                or any(x["reason"] in errors for x in m["missing"]) for m in report["matches"]))

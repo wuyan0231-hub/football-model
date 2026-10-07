@@ -25,6 +25,8 @@ Python接口为 `validate_decision_record(record)` 和 `compare_decision_runs(re
 
 保留 `schema_version="match-archive-1.0"`，新记录追加 `decision_audit_version="decision-audit-1.0"`。既有归档字段不删除。缺失新字段的旧档按实际可检查范围审计，输出不足，不回填旧概率、条件、引文或原选择。
 
+2026-10-07 S2 对称权限修复保留上述**输入结构版本**，审计输出另记 `validator_version="decision-audit-validator-1.1"` 和 `value_permission_policy="s2-value-permissions-1.0"`。两者区分本次判定规则与旧验证器，不能仅凭输入结构版本把新旧审计当作同一政策。新规则复审另存新文件，旧报告、旧审计结论和已发表判断不追溯改写。完整契约与局限见 [S2正负价值权限](s2-value-permissions.md)。
+
 稳定ID全包唯一，支持可解析的 `sources/source_id`、`facts/fact_id`、`contracts/contract_id`、`quotes/quote_id`、`candidates/candidate_id`、`conditions/condition_id`、`model_records/model_record_id`、`calculation_records/calculation_record_id`、`versions/version_id`。`*_ref`/`*_refs`引用上述记录；外部记录需在 `external_references[]` 提供 `reference_id`、固定URL和description，记录其未打包限制。此模块检查引用关系，原件内容、哈希、可访问性由证据包核验另行检查。
 
 | 位置 | 新审计明确使用的字段 |
@@ -33,13 +35,14 @@ Python接口为 `validate_decision_record(record)` 和 `compare_decision_runs(re
 | quote | `contract_id`、`source_id`、`decimal_odds`、`status`；若重复记录市场/方向/线/范围，须与contract一致 |
 | candidate | `version_id`、`contract_id`、`quote_id`、`fit`、`support_refs`、`mechanism`、`payment_requirement`、`counterevidence`、`condition_ids`、`model_record_ids`、`value` |
 | condition | `state=satisfied/not_satisfied/unknown`（或中文三态）、`critical`布尔值、`observable`、`actions`（三态分别记录动作） |
-| value | `status=unquantified/unclear/confirmed_positive/negative`、`ev`、`breakeven_odds`、`calculation_record_id`、`disclosed_model_record_ids` |
-| model record | 本次候选价值评估绑定 `candidate_id/version_id`；`applicable`、`status`、`probability_role=F/MIX/MKT`；有依据的明确负面评估另标 `value_assessment=valid_negative` |
-| uncertainty | model record上记录 `uncertainty_assessed`、`uncertainty_support`、`uncertainty_refs`、`validation_refs`；`confirmed_positive`须有正EV、`uncertainty_support=positive`及可解析依据 |
+| value | `status=unquantified/unclear/confirmed_positive/negative/confirmed_adverse`、`ev`、`breakeven_odds`、`calculation_record_id`、`disclosed_model_record_ids`；旧 `negative` 仅兼容负点估计，不自带否决权限 |
+| model record | 本次候选价值评估绑定 `candidate_id/version_id`；`applicable`、`status`、`probability_role=F/MIX/MKT`；`valid_negative` 或 `confirmed_adverse` 均须通过对称权限检查才被视为充分不利 |
+| strong value permission | 正向确认及充分不利均要求 `model_decision_role=value_assessment`、`role_declaration_ref`、`model_output_refs`、`task_qualification`、绑定本模型同票的 `calculation_record_id`；具体冻结依据和资格范围见S2契约 |
+| uncertainty | model record上记录 `uncertainty_assessed`、`uncertainty_support`、`uncertainty_refs`、`validation_refs`；正向为 `positive`，充分不利为 `negative`，双方使用相同可解析依据要求 |
 | calculation | 绑定 `model_record_id/contract_id/quote_id`，保存 `ev/breakeven_odds`与原计算凭证；此模块只核字段对应，不取代真实五态计算 |
 | version | `primary_candidate_id`、`summary_decision`、`body_decision`；没有主方向须保留实际 `no_primary_reason` |
 
-`fit`仍为“适合／条件适合／不建议／暂无法判断”。没有模型或xG并不否决定性适合；无关键条件用空 `condition_ids`，不虚构“满足”。没有量化时，`ev/breakeven_odds/calculation_record_id`为null，不是0。`status=unclear`可保留已复算正或负点估计，不能改称已证明优势。
+`fit`仍为“适合／条件适合／不建议／暂无法判断”。没有模型或xG并不否决定性适合；无关键条件用空 `condition_ids`，不虚构“满足”。没有量化时，`ev/breakeven_odds/calculation_record_id`为null，不是0。`status=unclear`可保留已复算正或负点估计，不能改称已证明优势。旧 `negative` 也只兼容负点估计；新记录宜用 `unclear` 并呈现实际负数。若声称 `confirmed_positive`、`confirmed_adverse` 或 `valid_negative`，才检查额外权限、任务验收、不确定性和冻结引用；诊断模型或缺字段不能因此被升级成充分不利。无权限的强声明会被标出以供修正，不会转成 `adverse_model_fit_conflict` 自动否决定性适配。
 
 报价状态使用 `open_reference`（清楚的最新公开参考，不代表账户已接受）、`accepted`、`closed`、`superseded`、`hypothetical`、`unknown`；其他值不能默认为有效价。普通首发未知若不是改变该票判断的关键条件，不会由程序自动阻断。`counterevidence`必须为数组，各项记录 `source_refs`、`handling`、`reason`；处理或理由缺失记未评估，内容是否完整、处理是否合理仍需阅读原文判断。合约或报价绑定为null时保留未知并判资料不足，即使该票为“不建议”也不冒充完整核验。
 

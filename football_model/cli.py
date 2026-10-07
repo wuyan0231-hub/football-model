@@ -55,6 +55,29 @@ def atomic_json(path: Path, value) -> None:
         temporary.unlink(missing_ok=True)
 
 
+def preserve_model_evidence(runtime: Path, key: str, payload: bytes) -> dict:
+    """Keep exact legacy bytes before migration; never rewrite prior evidence."""
+    digest = hashlib.sha256(payload).hexdigest()
+    relative = Path("model_history") / key / "predecessors" / f"{digest}.json"
+    path = runtime / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile("wb", dir=path.parent, delete=False) as fp:
+            temporary = Path(fp.name)
+            fp.write(payload)
+        # Publish complete bytes atomically without replacing an existing file.
+        try:
+            os.link(temporary, path)
+        except FileExistsError:
+            if path.read_bytes() != payload:
+                raise ValueError("旧模型证据副本与其指纹不一致；停止迁移，不能覆盖。")
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+    return {"path": "runtime/" + relative.as_posix(), "sha256": digest}
+
+
 def safe_error(error: Exception) -> str:
     text = str(error)
     key = os.environ.get("FOOTBALL_API_KEY", "")
@@ -295,7 +318,8 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
         knobs = {k: settings[k] for k in ["half_life_days", "ridge", "min_train", "min_test"]}
         fingerprint = input_fingerprint(matches, knobs, competition)
         model_path = runtime / "models" / f"{key}.json"
-        old = json.loads(model_path.read_text(encoding="utf-8")) if model_path.exists() else None
+        old_bytes = model_path.read_bytes() if model_path.exists() else None
+        old = json.loads(old_bytes) if old_bytes is not None else None
         refresh_reasons = []
         if old and upcoming:
             previous_cutoff = parse_date(old["trained_at"])
@@ -305,16 +329,29 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
                    settings["max_model_age_days"] * 86400 for row in upcoming):
                 refresh_reasons.append("expires_before_kickoff")
         refresh_window = bool(refresh_reasons)
+        # A legacy cutoff is not evidence of when fitting actually completed.
+        # Migrate only when forecasts are needed, through the full original fit
+        # and holdout path; never copy today's date into the old model.
+        migrate_fit_time = bool(old and upcoming and old.get("model_fitted_at") is None)
+        if migrate_fit_time:
+            refresh_reasons.append("missing_model_fitted_at")
         data_changed = bool(old and old.get("data_fingerprint") != fingerprint)
-        result["model_refresh"] = {"required": bool(not old or data_changed or refresh_window),
+        result["model_refresh"] = {"required": bool(not old or data_changed or refresh_window or migrate_fit_time),
             "reasons": (["initial_fit"] if not old else (["training_inputs_changed"] if data_changed else [])) + refresh_reasons,
             "training_inputs_changed": data_changed,
             "data_changed": False if old and not data_changed else None,
             "performed": False, "prior_model_id": (old or {}).get("model_id")}
-        if old and old.get("data_fingerprint") == fingerprint and not refresh_window:
+        if migrate_fit_time:
+            result["model_refresh"]["time_evidence_migration"] = {"status": "required",
+                "policy": "refit_legacy_model_when_upcoming_v1", "stage": "preserve_prior_model"}
+        if old and old.get("data_fingerprint") == fingerprint and not refresh_window and not migrate_fit_time:
             bundle = old
             result["model_change"] = "数据未变，沿用参数"
         else:
+            migration = result["model_refresh"].get("time_evidence_migration")
+            if migration is not None:
+                migration["prior_model_evidence"] = preserve_model_evidence(runtime, key, old_bytes)
+                migration["stage"] = "evaluate_time_holdout"
             previous_validation = None
             previous_source = {"competition": (old or {}).get("competition", {}).get("key"),
                                "target_scope": ("regulation_time_90_plus_stoppage" if old and
@@ -334,6 +371,8 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
             evaluation = evaluate_time_holdout(matches, iso(now), **knobs)
             if not evaluation["report"]["meets_minimum_supported_test_matches"]:
                 raise ValueError("留出期已覆盖比赛不足；保留旧模型，不发布新的球队参数。")
+            if migration is not None:
+                migration["stage"] = "fit_model"
             fitted = fit_model(matches, iso(now), **{k: v for k, v in knobs.items() if k != "min_test"})
             fitted_at = observed_time(clock, data_observed)
             if fitted["optimizer"]["parameter_at_bound"]:
@@ -347,6 +386,13 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
                       "maturity": "exploratory_baseline", "lineup_effects": "未量化", "ev": "未量化",
                       "model": fitted, "validation": evaluation["report"],
                       "source_seasons": result["seasons"]}
+            if migration is not None:
+                bundle["time_evidence_migration"] = {"policy": migration["policy"],
+                    "reason": "missing_model_fitted_at", "prior_model_id": old.get("model_id"),
+                    "prior_model_fitted_at": None,
+                    "prior_model_evidence": migration["prior_model_evidence"],
+                    "new_model_fitted_at": iso(fitted_at)}
+                migration["stage"] = "save_model_and_validation"
             if national:
                 bundle["national_audit"] = national_audit
                 bundle["venue_policy"] = "Verified host football association using provider or match-bound official evidence; country-only scope; third-association neutral; unknown/conflict/away-host excluded."
@@ -368,10 +414,13 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
             atomic_json(runtime / "validation" / key / f"{run_id}.json", evaluation)
             atomic_json(model_path, bundle)
             result["model_refresh"]["performed"] = True
+            if migration is not None:
+                migration.update(status="completed", stage="completed", model_fitted_at=iso(fitted_at))
             prior_data_hash = (old or {}).get("model", {}).get("training_data_sha256")
             result["model_refresh"]["data_changed"] = (prior_data_hash != fitted["training_data_sha256"]
                                                         if prior_data_hash else None)
-            result["model_change"] = "按真实当前截点重拟合预测窗口" if refresh_window else "完成新拟合"
+            result["model_change"] = ("旧拟合时间证据缺失，已实际重新拟合" if migrate_fit_time else
+                                      "按真实当前截点重拟合预测窗口" if refresh_window else "完成新拟合")
         result["validation"] = bundle["validation"]
         result["model_id"] = bundle["model_id"]
         result["trained_at"] = bundle["trained_at"]
@@ -445,6 +494,9 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
         atomic_json(runtime / "predictions" / run_id / f"{key}.json", forecasts)
     except (APIError, ValueError, KeyError, TypeError, RuntimeError, OSError) as exc:
         result.update(status="未完成", detail=safe_error(exc))
+        migration = result.get("model_refresh", {}).get("time_evidence_migration")
+        if migration is not None and migration["status"] != "completed":
+            migration.update(status="failed", failure=safe_error(exc))
         result["forecast_availability"].update(status="failed", supported_count=None,
                                                unsupported_count=None, unsupported_reasons={})
     return result
