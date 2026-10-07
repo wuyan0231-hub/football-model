@@ -505,6 +505,7 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
 def run_pipeline(config, runtime, mode="audit", league="epl", now=None, client=None, *, clock=None,
                  record_replay=False, research_replay=False):
     clock = clock or (lambda: datetime.now(UTC))
+    capture_clock = clock  # Keep ledger side effects out of production replay clock events.
     recorder, recording_error = None, None
     if record_replay and not research_replay:
         try:
@@ -556,6 +557,26 @@ def run_pipeline(config, runtime, mode="audit", league="epl", now=None, client=N
                                        run_id, venue_reserve_requests=reserve, clock=clock, run_started=run_started,
                                        research_replay=research_replay)
             report["competitions"].append(item)
+            if mode == "train" and not research_replay:
+                # Final all-league reporting can happen after this match kicks off.
+                # Freeze now, before any later league/API work, from an immutable
+                # partial report linked to the eventual final report by run_id.
+                try:
+                    from .prospective import capture_report
+                    checkpoint = {key: report[key] for key in (
+                        "schema_version", "time_semantics", "run_started_at", "training_cutoff",
+                        "run_id", "mode", "program_version", "source_commit")}
+                    checkpoint.update(requested_competitions=[competition["key"]], competitions=[item],
+                        generated_at=iso(observed_time(capture_clock)),
+                        report_scope="completed_competition_checkpoint")
+                    captured = capture_report(runtime, config, checkpoint, clock=capture_clock)
+                    report.setdefault("prospective_captures", []).append(captured)
+                    if captured["exit_code"]:
+                        exit_code = max(exit_code, 1)
+                except (ValueError, KeyError, TypeError, RuntimeError, OSError) as exc:
+                    report.setdefault("prospective_captures", []).append({"competitions": [competition["key"]],
+                        "exit_code": 1, "errors": [safe_error(exc)], "status": "failed"})
+                    exit_code = max(exit_code, 1)
             print(f"{item['label']}：{item['status']}；{item.get('eligible_matches', 0)}场可用赛果。", flush=True)
             if item["status"] == "未完成":
                 exit_code = 1

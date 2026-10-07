@@ -73,6 +73,13 @@ def qualify_value(record, direction="positive"):
 
 
 class DecisionAuditTests(unittest.TestCase):
+    def test_reference_only_quote_requires_availability_unknown_and_no_authority_claim(self):
+        record = fixture()
+        record["quotes"][0].update(status="reference_only", reference_only=True, availability_status="unknown")
+        self.assertEqual(validate_decision_record(record)["status"], "structural_checks_passed")
+        record["quotes"][0]["current_open_claim"] = {"evidence": "not permitted here"}
+        self.assertIn("invalid_reference_only_authority", codes(record))
+
     def test_qualitative_suitable_remains_permitted_without_model_or_xg(self):
         record = fixture()
         untouched = copy.deepcopy(record)

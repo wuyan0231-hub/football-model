@@ -19,9 +19,11 @@ on:
       - 'football_model/fundamentals.py'
       - 'football_model/collect_fundamentals.py'
       - 'football_model/prospective.py'
+      - 'football_model/result_sync.py'
       - 'football_model/settlement.py'
       - 'football_model/production_replay.py'
       - 'football_model/run_summary.py'
+      - 'football_model/collect_quotes.py'
       - 'config.json'
   workflow_dispatch:
     inputs:
@@ -56,8 +58,9 @@ jobs:
       github.event.repository.private == true &&
       (github.event_name == 'workflow_dispatch' || github.event_name == 'push' || vars.ENABLE_SCHEDULE == 'true')
     runs-on: ubuntu-latest
-    # The client stops new network work at 60 minutes; leave time to save reports/state.
-    timeout-minutes: 90
+    # 60m model + 5m result sync + 10m quotes + 15m fundamentals soft limits;
+    # leave 20m for tests, setup, final checks and preserving partial state.
+    timeout-minutes: 110
     env:
       PYTHONUNBUFFERED: '1'
       MODE: ${{ github.event_name != 'workflow_dispatch' && 'train' || inputs.mode }}
@@ -128,7 +131,7 @@ jobs:
           print('已录制实际生产输入；离线重演是否匹配须另行核验。')
           PY
 
-      - name: 冻结真实赛前预测并评分已结束比赛
+      - name: 核对逐联赛冻结并评分已结束比赛
         id: prospective
         if: ${{ always() && steps.restore.outcome == 'success' && steps.model.outcome != 'skipped' && env.MODE == 'train' }}
         # Freeze before the separate evidence collector; preserve valid records
@@ -138,6 +141,32 @@ jobs:
           python -m football_model.run_summary mark --context "$RUNNER_TEMP/football-run-context.json" --stage prospective
           rm -f runtime/prospective/latest.json
           python -m football_model.prospective --runtime runtime --config config.json
+
+      - name: 独立同步待结算比赛的常规时间赛果
+        id: result_sync
+        if: ${{ always() && steps.restore.outcome == 'success' }}
+        # Independent of model/train/report success; preserve old forecast scores.
+        # Five-minute soft deadline, shared daily quota and original cache times.
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: |
+          python -m football_model.run_summary mark --context "$RUNNER_TEMP/football-run-context.json" --stage result_sync
+          rm -f runtime/result_sync/reports/latest.json
+          python -m football_model.result_sync --runtime runtime --config config.json
+
+      - name: 积累全赛事未来7天真实参考报价
+        id: quotes
+        if: ${{ always() && steps.restore.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        # Source schedules and fresh fixture checks are independent of training.
+        # No new polling schedule, automatic betting or strict-quote admission.
+        run: |
+          python -m football_model.run_summary mark --context "$RUNNER_TEMP/football-run-context.json" --stage quotes
+          rm -f runtime/quotes/reports/latest.json
+          python -m football_model.collect_quotes --runtime runtime --config config.json --league all --horizon-hours 168 --max-run-seconds 600
 
       - name: 采集未来24小时比赛的基本面证据
         id: fundamentals
@@ -154,7 +183,7 @@ jobs:
 
       - name: 检查输出是否可以保存和上传
         id: check
-        if: ${{ always() && steps.restore.outcome == 'success' && steps.model.outcome != 'skipped' }}
+        if: ${{ always() && steps.restore.outcome == 'success' }}
         continue-on-error: true
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
@@ -178,6 +207,8 @@ jobs:
           PERSIST_OUTCOME: ${{ steps.persist.outcome }}
           CHECK_OUTCOME: ${{ steps.check.outcome }}
           FUNDAMENTALS_OUTCOME: ${{ steps.fundamentals.outcome }}
+          RESULT_SYNC_OUTCOME: ${{ steps.result_sync.outcome }}
+          QUOTES_OUTCOME: ${{ steps.quotes.outcome }}
           PROSPECTIVE_OUTCOME: ${{ steps.prospective.outcome }}
           REPLAY_OUTCOME: ${{ steps.replay_check.outcome }}
         # Only whitelist-derived counts/enums enter the summary. It runs after
@@ -203,6 +234,8 @@ jobs:
             runtime/audits/unl/
             runtime/fundamentals/
             runtime/prospective/
+            runtime/result_sync/
+            runtime/quotes/
             runtime/replay/
           if-no-files-found: warn
           retention-days: 14
@@ -219,7 +252,7 @@ jobs:
           include-hidden-files: false
 
       - name: 将实际失败标记为失败
-        if: ${{ always() && (steps.model.outcome != 'success' || steps.persist.outcome != 'success' || steps.prospective.outcome == 'failure' || steps.replay_check.outcome == 'failure' || steps.summary.outcome != 'success') }}
+        if: ${{ always() && (steps.model.outcome != 'success' || steps.persist.outcome != 'success' || steps.prospective.outcome == 'failure' || steps.result_sync.outcome == 'failure' || steps.quotes.outcome == 'failure' || steps.replay_check.outcome == 'failure' || steps.summary.outcome != 'success') }}
         run: |
-          echo '本次检查/训练、回放录制、前瞻冻结评分或状态保存未完成。请查看运行摘要；不能将其视为全部成功。'
+          echo '本次检查/训练、回放录制、前瞻冻结、赛果同步、报价采集或状态保存未完成。请查看分层摘要；不能将其视为全部成功。'
           exit 1
