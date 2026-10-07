@@ -53,6 +53,25 @@ def codes(record):
     return {i["code"] for i in validate_decision_record(record)["issues"]}
 
 
+def qualify_value(record, direction="positive"):
+    """Synthetic declaration only; not evidence of real model/task acceptance."""
+    record["sources"].extend([
+        {"source_id": "role-source", "url": "https://example.invalid/frozen-role",
+         "sha256": "d" * 64, "observed_at": "2026-10-07T08:00:00+08:00",
+         "model_decision_role": "value_assessment", "model_settings_sha256": "c" * 64},
+        {"source_id": "output-source", "url": "https://example.invalid/model-output",
+         "sha256": "e" * 64, "observed_at": "2026-10-07T08:01:00+08:00"},
+    ])
+    record["model_records"][0].update(
+        model_decision_role="value_assessment", role_declaration_ref="role-source",
+        model_output_refs=["output-source"], calculation_record_id="calc1",
+        task_qualification={"status": "accepted", "contract_id": "ct1", "quote_id": "q1", "scope_refs": ["s1"]},
+        uncertainty_assessed=True, uncertainty_support=direction,
+        uncertainty_refs=["s1"], validation_refs=["s1"],
+    )
+    return record
+
+
 class DecisionAuditTests(unittest.TestCase):
     def test_qualitative_suitable_remains_permitted_without_model_or_xg(self):
         record = fixture()
@@ -187,12 +206,17 @@ class DecisionAuditTests(unittest.TestCase):
         self.assertIn("positive_without_uncertainty", codes(r))
         r["model_records"][0].update(uncertainty_assessed=True, uncertainty_support="positive",
                                      uncertainty_refs=["s1"], validation_refs=["s1"])
+        self.assertNotEqual(validate_decision_record(r)["status"], "structural_checks_passed")
+        qualify_value(r)
         self.assertEqual(validate_decision_record(r)["status"], "structural_checks_passed")
         self.assertFalse(validate_decision_record(r)["economic_advantage_verified"])
 
     def test_valid_negative_cannot_be_hidden_by_qualitative_fallback(self):
         r = numeric(fixture(), ev=-0.04, status="negative")
         r["model_records"][0]["value_assessment"] = "valid_negative"
+        self.assertIn("adverse_without_uncertainty", codes(r))
+        self.assertNotIn("adverse_model_fit_conflict", codes(r))
+        qualify_value(r, "negative")
         r["candidates"][0]["model_record_ids"] = []
         r["candidates"][0]["value"] = copy.deepcopy(fixture()["candidates"][0]["value"])
         self.assertIn("hidden_adverse_model", codes(r))
