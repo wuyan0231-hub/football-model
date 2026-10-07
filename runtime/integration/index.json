@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "status": "ready",
-  "generated_at": "2026-10-07T07:09:06.782111Z",
+  "generated_at": "2026-10-07T07:10:03.804598Z",
   "source_commit": "8e9a14126b9ebcebcb75170b2d79206e4ba4cce9",
-  "history_reports": 46,
+  "history_reports": 47,
   "competitions": [
     {
       "key": "epl",
@@ -2761,23 +2761,23 @@
       "label": "墨西超Liga MX",
       "mode": "domestic_baseline",
       "latest_attempt": {
-        "run_id": "20261007T013256771491Z",
-        "generated_at": "2026-10-07T01:33:10.946537Z",
+        "run_id": "20261007T071002868065Z",
+        "generated_at": "2026-10-07T07:10:03.709275Z",
         "mode": "train",
         "status": "探索性基线",
         "detail": "未含阵容伤停、xG与赛程；未证实预测或收益优势。",
-        "model_id": "liga_mx-20260929T013003365576Z",
-        "trained_at": "2026-09-29T01:30:03.365576Z",
-        "source_commit": "43605c07e45eac700d293938833ee5cc2c422440",
-        "report_file": "runtime/reports/history/20261007T013256771491Z.json",
+        "model_id": "liga_mx-20261007T071002868065Z",
+        "trained_at": "2026-10-07T07:10:02.868065Z",
+        "source_commit": "8e9a14126b9ebcebcb75170b2d79206e4ba4cce9",
+        "report_file": "runtime/reports/history/20261007T071002868065Z.json",
         "forecast_count": 9,
         "unsupported_forecasts": 0,
         "time_semantics": "observed_wall_clock_v1",
-        "run_started_at": "2026-10-07T01:32:56.771491Z",
-        "data_observed_at": "2026-10-07T01:33:09.676523Z",
-        "forecast_generated_at": "2026-10-07T01:33:09.682614Z",
-        "model_fitted_at": null,
-        "training_cutoff": "2026-09-29T01:30:03.365576Z",
+        "run_started_at": "2026-10-07T07:10:02.868065Z",
+        "data_observed_at": "2026-10-07T07:10:03.437143Z",
+        "forecast_generated_at": "2026-10-07T07:10:03.703748Z",
+        "model_fitted_at": "2026-10-07T07:10:03.602532Z",
+        "training_cutoff": "2026-10-07T07:10:02.868065Z",
         "forecast_availability": {
           "status": "available",
           "upcoming_count": 9,
@@ -2787,42 +2787,54 @@
         },
         "model_freshness": {
           "status": "current",
-          "evaluated_at": "2026-10-07T01:32:56.771491Z",
+          "evaluated_at": "2026-10-07T07:10:02.868065Z",
           "age_basis": "training_cutoff",
-          "age_days": 8.002007012905093,
+          "age_days": 0.0,
           "max_age_days": 14,
-          "latest_upcoming_model_age_days": 12.979127713240741,
+          "latest_upcoming_model_age_days": 4.743022360358797,
           "training_last_match_kickoff": "2026-09-28T03:10:00Z",
-          "training_data_age_days": 8.932601521886573,
+          "training_data_age_days": 9.166699861863426,
           "note": "真实重拟合可沿用相同历史样本；不代表取得新赛果、阵容或其他基本面。"
         },
         "model_refresh": {
-          "required": false,
-          "reasons": [],
+          "required": true,
+          "reasons": [
+            "missing_model_fitted_at"
+          ],
           "training_inputs_changed": false,
           "data_changed": false,
-          "performed": false,
-          "prior_model_id": "liga_mx-20260929T013003365576Z"
+          "performed": true,
+          "prior_model_id": "liga_mx-20260929T013003365576Z",
+          "time_evidence_migration": {
+            "status": "completed",
+            "policy": "refit_legacy_model_when_upcoming_v1",
+            "stage": "completed",
+            "prior_model_evidence": {
+              "path": "runtime/model_history/liga_mx/predecessors/e5d0eee19e72a5a7e98e91a73d680df6d66a7133dfcfd0c5aac8df9881bf911b.json",
+              "sha256": "e5d0eee19e72a5a7e98e91a73d680df6d66a7133dfcfd0c5aac8df9881bf911b"
+            },
+            "model_fitted_at": "2026-10-07T07:10:03.602532Z"
+          }
         }
       },
       "latest_train_attempt": {
-        "run_id": "20261007T013256771491Z",
-        "generated_at": "2026-10-07T01:33:10.946537Z",
+        "run_id": "20261007T071002868065Z",
+        "generated_at": "2026-10-07T07:10:03.709275Z",
         "mode": "train",
         "status": "探索性基线",
         "detail": "未含阵容伤停、xG与赛程；未证实预测或收益优势。",
-        "model_id": "liga_mx-20260929T013003365576Z",
-        "trained_at": "2026-09-29T01:30:03.365576Z",
-        "source_commit": "43605c07e45eac700d293938833ee5cc2c422440",
-        "report_file": "runtime/reports/history/20261007T013256771491Z.json",
+        "model_id": "liga_mx-20261007T071002868065Z",
+        "trained_at": "2026-10-07T07:10:02.868065Z",
+        "source_commit": "8e9a14126b9ebcebcb75170b2d79206e4ba4cce9",
+        "report_file": "runtime/reports/history/20261007T071002868065Z.json",
         "forecast_count": 9,
         "unsupported_forecasts": 0,
         "time_semantics": "observed_wall_clock_v1",
-        "run_started_at": "2026-10-07T01:32:56.771491Z",
-        "data_observed_at": "2026-10-07T01:33:09.676523Z",
-        "forecast_generated_at": "2026-10-07T01:33:09.682614Z",
-        "model_fitted_at": null,
-        "training_cutoff": "2026-09-29T01:30:03.365576Z",
+        "run_started_at": "2026-10-07T07:10:02.868065Z",
+        "data_observed_at": "2026-10-07T07:10:03.437143Z",
+        "forecast_generated_at": "2026-10-07T07:10:03.703748Z",
+        "model_fitted_at": "2026-10-07T07:10:03.602532Z",
+        "training_cutoff": "2026-10-07T07:10:02.868065Z",
         "forecast_availability": {
           "status": "available",
           "upcoming_count": 9,
@@ -2832,42 +2844,54 @@
         },
         "model_freshness": {
           "status": "current",
-          "evaluated_at": "2026-10-07T01:32:56.771491Z",
+          "evaluated_at": "2026-10-07T07:10:02.868065Z",
           "age_basis": "training_cutoff",
-          "age_days": 8.002007012905093,
+          "age_days": 0.0,
           "max_age_days": 14,
-          "latest_upcoming_model_age_days": 12.979127713240741,
+          "latest_upcoming_model_age_days": 4.743022360358797,
           "training_last_match_kickoff": "2026-09-28T03:10:00Z",
-          "training_data_age_days": 8.932601521886573,
+          "training_data_age_days": 9.166699861863426,
           "note": "真实重拟合可沿用相同历史样本；不代表取得新赛果、阵容或其他基本面。"
         },
         "model_refresh": {
-          "required": false,
-          "reasons": [],
+          "required": true,
+          "reasons": [
+            "missing_model_fitted_at"
+          ],
           "training_inputs_changed": false,
           "data_changed": false,
-          "performed": false,
-          "prior_model_id": "liga_mx-20260929T013003365576Z"
+          "performed": true,
+          "prior_model_id": "liga_mx-20260929T013003365576Z",
+          "time_evidence_migration": {
+            "status": "completed",
+            "policy": "refit_legacy_model_when_upcoming_v1",
+            "stage": "completed",
+            "prior_model_evidence": {
+              "path": "runtime/model_history/liga_mx/predecessors/e5d0eee19e72a5a7e98e91a73d680df6d66a7133dfcfd0c5aac8df9881bf911b.json",
+              "sha256": "e5d0eee19e72a5a7e98e91a73d680df6d66a7133dfcfd0c5aac8df9881bf911b"
+            },
+            "model_fitted_at": "2026-10-07T07:10:03.602532Z"
+          }
         }
       },
       "latest_successful_forecast": {
-        "run_id": "20261007T013256771491Z",
-        "generated_at": "2026-10-07T01:33:10.946537Z",
+        "run_id": "20261007T071002868065Z",
+        "generated_at": "2026-10-07T07:10:03.709275Z",
         "mode": "train",
         "status": "探索性基线",
         "detail": "未含阵容伤停、xG与赛程；未证实预测或收益优势。",
-        "model_id": "liga_mx-20260929T013003365576Z",
-        "trained_at": "2026-09-29T01:30:03.365576Z",
-        "source_commit": "43605c07e45eac700d293938833ee5cc2c422440",
-        "report_file": "runtime/reports/history/20261007T013256771491Z.json",
+        "model_id": "liga_mx-20261007T071002868065Z",
+        "trained_at": "2026-10-07T07:10:02.868065Z",
+        "source_commit": "8e9a14126b9ebcebcb75170b2d79206e4ba4cce9",
+        "report_file": "runtime/reports/history/20261007T071002868065Z.json",
         "forecast_count": 9,
         "unsupported_forecasts": 0,
         "time_semantics": "observed_wall_clock_v1",
-        "run_started_at": "2026-10-07T01:32:56.771491Z",
-        "data_observed_at": "2026-10-07T01:33:09.676523Z",
-        "forecast_generated_at": "2026-10-07T01:33:09.682614Z",
-        "model_fitted_at": null,
-        "training_cutoff": "2026-09-29T01:30:03.365576Z",
+        "run_started_at": "2026-10-07T07:10:02.868065Z",
+        "data_observed_at": "2026-10-07T07:10:03.437143Z",
+        "forecast_generated_at": "2026-10-07T07:10:03.703748Z",
+        "model_fitted_at": "2026-10-07T07:10:03.602532Z",
+        "training_cutoff": "2026-10-07T07:10:02.868065Z",
         "forecast_availability": {
           "status": "available",
           "upcoming_count": 9,
@@ -2877,42 +2901,54 @@
         },
         "model_freshness": {
           "status": "current",
-          "evaluated_at": "2026-10-07T01:32:56.771491Z",
+          "evaluated_at": "2026-10-07T07:10:02.868065Z",
           "age_basis": "training_cutoff",
-          "age_days": 8.002007012905093,
+          "age_days": 0.0,
           "max_age_days": 14,
-          "latest_upcoming_model_age_days": 12.979127713240741,
+          "latest_upcoming_model_age_days": 4.743022360358797,
           "training_last_match_kickoff": "2026-09-28T03:10:00Z",
-          "training_data_age_days": 8.932601521886573,
+          "training_data_age_days": 9.166699861863426,
           "note": "真实重拟合可沿用相同历史样本；不代表取得新赛果、阵容或其他基本面。"
         },
         "model_refresh": {
-          "required": false,
-          "reasons": [],
+          "required": true,
+          "reasons": [
+            "missing_model_fitted_at"
+          ],
           "training_inputs_changed": false,
           "data_changed": false,
-          "performed": false,
-          "prior_model_id": "liga_mx-20260929T013003365576Z"
+          "performed": true,
+          "prior_model_id": "liga_mx-20260929T013003365576Z",
+          "time_evidence_migration": {
+            "status": "completed",
+            "policy": "refit_legacy_model_when_upcoming_v1",
+            "stage": "completed",
+            "prior_model_evidence": {
+              "path": "runtime/model_history/liga_mx/predecessors/e5d0eee19e72a5a7e98e91a73d680df6d66a7133dfcfd0c5aac8df9881bf911b.json",
+              "sha256": "e5d0eee19e72a5a7e98e91a73d680df6d66a7133dfcfd0c5aac8df9881bf911b"
+            },
+            "model_fitted_at": "2026-10-07T07:10:03.602532Z"
+          }
         },
-        "prediction_file": "runtime/predictions/20261007T013256771491Z/liga_mx.json"
+        "prediction_file": "runtime/predictions/20261007T071002868065Z/liga_mx.json"
       },
       "current_model_file": "runtime/models/liga_mx.json",
-      "current_model_id": "liga_mx-20260929T013003365576Z",
+      "current_model_id": "liga_mx-20261007T071002868065Z",
       "usable_saved_forecasts": true,
-      "training_cutoff": "2026-09-29T01:30:03.365576Z",
+      "training_cutoff": "2026-10-07T07:10:02.868065Z",
       "validation_status": "exploratory_single_fixed_holdout",
       "forecast_count": 9,
       "unsupported_forecasts": 0,
       "status": "available",
       "model_freshness": {
         "status": "current",
-        "evaluated_at": "2026-10-07T01:32:56.771491Z",
+        "evaluated_at": "2026-10-07T07:10:02.868065Z",
         "age_basis": "training_cutoff",
-        "age_days": 8.002007012905093,
+        "age_days": 0.0,
         "max_age_days": 14,
-        "latest_upcoming_model_age_days": 12.979127713240741,
+        "latest_upcoming_model_age_days": 4.743022360358797,
         "training_last_match_kickoff": "2026-09-28T03:10:00Z",
-        "training_data_age_days": 8.932601521886573,
+        "training_data_age_days": 9.166699861863426,
         "note": "真实重拟合可沿用相同历史样本；不代表取得新赛果、阵容或其他基本面。"
       },
       "forecast_availability": {
