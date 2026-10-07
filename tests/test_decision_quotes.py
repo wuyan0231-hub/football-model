@@ -30,6 +30,18 @@ def evidence(selection="home", **changes):
 
 
 class DecisionQuotesTests(unittest.TestCase):
+    def test_reference_only_has_numbers_but_no_open_or_execution_authority(self):
+        source = row(status="reference_only", reference_only=True, availability_status="unknown")
+        result = adapt(source)
+        self.assertEqual(result["row_status"], "reference_only")
+        self.assertEqual([o["decimal_odds"] for o in result["offers"]], [1.92, 1.98])
+        self.assertTrue(all(o["status"] == "reference_only" and o["current_open_claim"] is None
+                            and o["actual_execution_claim"] is None for o in result["offers"]))
+        for updates in ({"reference_only": False}, {"availability_status": "open"},
+                        {"open_evidence": {}}, {"execution_evidence": {}}):
+            with self.assertRaises(QuoteAdapterError):
+                adapt({**source, **updates})
+
     def test_all_four_price_formats_and_both_signed_domains(self):
         for fmt, value, expected in (("decimal", 1.92, 1.92), ("hong_kong", .92, 1.92),
                                      ("malay", .8, 1.8), ("malay", -.8, 2.25),

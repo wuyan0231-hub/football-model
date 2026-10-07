@@ -123,3 +123,9 @@ python -m football_model.decision_record append-event --bundle new-decision --ev
 真实原文开发复核至少检查：萨瓦德尔原文已有定位球/传中与三球支付路径；马耳他r2撤回包含模型分歧、价格和转化多个因素；希腊—德国原文已写小3全输路径与最近替代。这些用于防止接口吞掉原语义或审计机械降级，不给旧报告追认新等级。原文有依据不等于依据充分，也不证明网站事实已在本轮重新核验。
 
 已用于设计的40场仍为开发样本。源文件指纹、结构测试、同输入一致性或历史重演都不能证明未来准确率、盈利优势或分级有效。下一阶段仍需F3同场同截点评价、真实前瞻样本及独立语义复判。
+
+## F3接续入口
+
+上述F2制品保持原格式和指纹；F3评分不回写 `scoring.json` 的 `UNASSIGNED`。现在可通过 [s2-decision-scoring](s2-decision-scoring.md) 另存采用版及三类报价用途评分，再由 [s2-policy-evaluation](s2-policy-evaluation.md) 比较同票正式/影子行动。新 `reference_only` 行只表示完整数值参考，原API开放状态仍未知，不能因此获得OPEN或ACTUAL权限。旧行输出与旧决定包重编译保持兼容。
+
+F3工具已实现不等于上述未来效果已验证；实际部署及运行按当次交接验收。全流程职责与剩余范围见 [F3执行入口](s2-f3-execution.md)。

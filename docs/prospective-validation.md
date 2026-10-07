@@ -6,7 +6,7 @@
 python -m football_model.prospective --runtime runtime --config config.json
 ```
 
-工作流在训练/采集后运行，保存整个 `runtime/prospective/`。返回 `0` 表示本次记录和评分流程完成，`1` 表示有局部拒绝或错误，`2` 表示全局失败。无论评分成功与否，模型和原预测文件均不由本模块修改。任务调用者必须单独保存和展示评分状态。没有 `--as-of` 参数；测试时的注入时钟不属于公开命令。
+生产CLI在每个联赛预测完成后即以真实时钟冻结，独立 `capture_checkpoints/` 与 `capture_runs/` 通过本次 `run_id` 关联最终报告；它们不宣称后续联赛或持久保存已经成功。工作流在全任务后仍运行上述命令核查补漏和评分，保存整个 `runtime/prospective/`。返回 `0` 表示本次记录和评分流程完成，`1` 表示有局部拒绝或错误，`2` 表示全局失败。无论评分成功与否，模型和原预测文件均不由本模块修改。任务调用者必须单独保存和展示评分状态。没有 `--as-of` 参数；测试时的注入时钟不属于公开命令。
 
 ## 冻结与资格
 
@@ -61,7 +61,7 @@ python -m football_model.prospective --runtime runtime --config config.json
 
 ## 实际报价登记与固定单位模拟
 
-尚无自动报价采集。取得真实赛前报价后，可使用已登记预测 ID 传入 JSON 列表：
+真实参考报价现在由独立 [Q采集器](quote-collection.md) 保存；API报价不会自动升级为本节严格模拟准入。另有 [采用版与三类协议评分](s2-decision-scoring.md)，与本节原300秒/3600秒协议分开。取得满足本节协议的真实赛前报价后，仍可使用已登记预测 ID 传入 JSON 列表：
 
 ```bash
 python -m football_model.prospective --runtime runtime --config config.json --quotes quotes.json

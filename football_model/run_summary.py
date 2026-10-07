@@ -14,10 +14,10 @@ import os
 from pathlib import Path
 import re
 
-VERSION = "layered-workflow-summary-v1"
+VERSION = "layered-workflow-summary-v2"
 LEAGUES = frozenset("epl laliga bundesliga serie_a ligue_1 bundesliga_2 ligue_2 ucl allsvenskan eredivisie primeira brazil_a j1 k1 mls unl liga_mx segunda argentina_a".split())
 OUTCOMES = frozenset(("success", "failure", "cancelled", "skipped", "unknown"))
-STAGES = ("restore", "model", "replay", "prospective", "fundamentals", "check", "persist")
+STAGES = ("restore", "model", "replay", "prospective", "result_sync", "quotes", "fundamentals", "check", "persist")
 COVERAGE_STATES = frozenset(("prospective", "rejected", "unsupported", "capture_error", "no_current_prediction_file", "no_upcoming_matches"))
 AVAILABILITY = frozenset(("available", "partial", "unavailable", "no_upcoming", "audit_only", "not_requested", "failed"))
 NORMAL_MISSING = frozenset(("coverage_false", "coverage_unknown", "lineup_window_not_open", "not_completed_90_minute_fixture"))
@@ -145,12 +145,45 @@ def _model_summary(report):
 
 def _current_capture(runtime, report, report_sha, context, now):
     source = _digest({"kind": "run_report", "original_bytes_sha256": report_sha, "content": report})
-    start = _time(context["stage_started_at"]["prospective"])
+    sources = {}
+    if "prospective" in context["stage_started_at"]:
+        sources[source] = (set(report["requested_competitions"]), _time(context["stage_started_at"]["prospective"]), now)
+    # Per-league captures precede the final reporting step. Verify each immutable
+    # checkpoint against the current completed league, instead of widening the
+    # old final-report time window or accepting an arbitrary report_source.
+    for capture in report.get("prospective_captures", []):
+        checkpoint_id = capture.get("checkpoint_id")
+        if checkpoint_id is None and capture.get("status") == "failed":
+            continue
+        capture_id = capture.get("capture_run_id")
+        if any(not isinstance(v, str) or not re.fullmatch(r"[0-9a-f]{64}", v)
+               for v in (checkpoint_id, capture_id)):
+            raise ValueError("invalid_checkpoint_binding")
+        checkpoint, checkpoint_sha = _read(runtime / "prospective" / "capture_checkpoints" / (checkpoint_id + ".json"))
+        capture_record, _ = _read(runtime / "prospective" / "capture_runs" / (capture_id + ".json"))
+        if (_digest(checkpoint) != checkpoint_id or _digest(capture_record) != capture_id
+                or capture_record != {k: v for k, v in capture.items() if k != "capture_run_id"}):
+            raise ValueError("checkpoint_integrity_failed")
+        keys = checkpoint.get("requested_competitions")
+        if (not isinstance(keys, list) or len(keys) != 1 or keys[0] not in report["requested_competitions"]
+                or checkpoint.get("report_scope") != "completed_competition_checkpoint"
+                or capture_record.get("competitions") != keys
+                or capture_record.get("run_id") != report["run_id"]
+                or any(checkpoint.get(k) != report.get(k) for k in ("run_id", "source_commit", "run_started_at", "mode"))
+                or checkpoint.get("competitions") != [r for r in report["competitions"] if r["key"] in keys]):
+            raise ValueError("checkpoint_association_failed")
+        start = _time(context["stage_started_at"]["model"])
+        if not start <= _time(checkpoint["generated_at"]) <= _time(capture_record["completed_at"]) <= _time(report["generated_at"]) <= now:
+            raise ValueError("checkpoint_time_invalid")
+        checkpoint_source = _digest({"kind": "run_report", "original_bytes_sha256": checkpoint_sha, "content": checkpoint})
+        sources[checkpoint_source] = (set(keys), _time(checkpoint["generated_at"]), _time(capture_record["completed_at"]))
     current, seen = [], set()
     for row in _objects(runtime / "prospective", "coverage"):
         if row.get("run_id") != report["run_id"]:
             continue
-        if row.get("report_source") != source or not start <= _time(row["captured_at"]) <= now:
+        binding = sources.get(row.get("report_source"))
+        if (binding is None or row.get("competition") not in binding[0]
+                or not binding[1] <= _time(row["captured_at"]) <= binding[2]):
             raise ValueError("coverage_association_failed")
         key = row.get("competition")
         mid = row.get("match_id")
@@ -167,7 +200,8 @@ def _current_capture(runtime, report, report_sha, context, now):
             forecast, _ = _read(runtime / "prospective" / "forecasts" / (fid + ".json"))
             if (_digest(forecast) != fid or forecast.get("run_id") != report["run_id"]
                     or forecast.get("competition") != key or forecast.get("match_id") != mid
-                    or forecast.get("report_source") != source):
+                    or forecast.get("report_source") != row.get("report_source")
+                    or forecast.get("captured_at") != row.get("captured_at")):
                 raise ValueError("accepted_forecast_unassociated")
         seen.add((key, mid))
         current.append(row)
@@ -259,12 +293,65 @@ def _fundamentals_summary(value, model_run_id):
             "fundamentals_used_in_probabilities": False, "is_model_probability_gate": False}
 
 
+def _independent_results(runtime, context, now):
+    value, _ = _associated(runtime / "result_sync" / "reports" / "latest.json", context, "result_sync", now)
+    if (not re.fullmatch(r"[0-9a-f]{40}", context.get("source_commit", ""))
+            or value.get("source_commit") != context["source_commit"]):
+        raise ValueError("independent_sync_source_mismatch")
+    allowed = ("result_appended", "result_unchanged", "pending_or_not_mature_at_observation", "not_due",
+               "outside_revision_recheck_window", "budget_deferred", "failed", "client_unavailable")
+    counts = value.get("counts", value.get("status_counts"))
+    if not isinstance(counts, dict):
+        raise ValueError("invalid_sync_counts")
+    unclassified = [_count(v) for k, v in counts.items() if k not in allowed]
+    summary = {"status": "associated_current_report", "target_matches": _count(value.get("target_matches")),
+               "api_requests": _count(value.get("api_requests")),
+               "status_counts": {k: _count(counts.get(k, 0)) for k in allowed},
+               "unknown_status_records": sum(unclassified) if all(v is not None for v in unclassified) else None,
+               "independent_of_model_training": True}
+    score_id = value.get("score_summary_id")
+    if isinstance(score_id, str) and re.fullmatch(r"[0-9a-f]{64}", score_id):
+        score, _ = _read(runtime / "prospective" / "result_sync_scores" / (score_id + ".json"))
+        if (_digest(score) != score_id or not _time(value["run_started_at"]) <= _time(score["generated_at"]) <= _time(value["generated_at"])):
+            raise ValueError("independent_score_summary_mismatch")
+        summary["cumulative"] = _cumulative(score)
+    return summary
+
+
+def _quote_collection(runtime, context, now):
+    value, _ = _associated(runtime / "quotes" / "reports" / "latest.json", context, "quotes", now)
+    if (not re.fullmatch(r"[0-9a-f]{40}", context.get("source_commit", ""))
+            or value.get("source_commit") != context["source_commit"]):
+        raise ValueError("quote_collection_source_mismatch")
+    counts, rows = value.get("counts"), value.get("matches")
+    if not isinstance(counts, dict) or not isinstance(rows, list):
+        raise ValueError("invalid_quote_collection_report")
+    allowed = ("collected", "empty", "deferred", "failed", "skipped", "evidence_only")
+    fields = ("rows", "unknown_rows", "closed_rows", "complete_reference_rows")
+    # Some skipped/deferred matches have no parsed snapshot. Do not silently
+    # count those as zero prices; totals describe only known parsed snapshots.
+    parsed = [r for r in rows if isinstance(r, dict) and r.get("snapshot_path")]
+    known = {k: [_count(r.get(k)) for r in parsed] for k in fields}
+    return {"status": value.get("status") if value.get("status") in ("complete", "partial", "no_upcoming") else "unknown",
+            "candidate_matches": _count(value.get("candidate_count")), "reported_matches": len(rows),
+            "api_requests": _count(value.get("api_requests")),
+            "status_counts": {k: _count(counts.get(k, 0)) for k in allowed},
+            "parsed_snapshots": len(parsed),
+            **{k: sum(v) if v and all(x is not None for x in v) else None for k, v in known.items()},
+            "totals_scope": "parsed_snapshots_only_missing_snapshots_not_zero",
+            "reference_prices_are_open_or_executed": False,
+            "quotation_effectiveness_validated": False}
+
+
 def build_summary(runtime, context, outcomes, *, now=None):
     """Return only fixed keys/enums, counts, verified timestamps and run identifiers."""
     now = now or datetime.now(timezone.utc)
     runtime = Path(runtime)
     states = {k: outcomes.get(k) if outcomes.get(k) in OUTCOMES else "unknown" for k in STAGES}
     required = ("restore", "model", "replay", "check", "persist") + (("prospective",) if context.get("mode") == "train" else ())
+    # Older summary contexts remain readable; newly wired independent stages
+    # become explicit required operations when their stage marker is present.
+    required += tuple(k for k in ("result_sync", "quotes") if k in context.get("stage_started_at", {}))
     not_successful = [k for k in required if states[k] != "success"]
     result = {"schema_version": VERSION, "generated_at": _iso(now), "step_outcomes": states,
               "required_steps": list(required), "necessary_steps_outcome": "failure" if not_successful else "success",
@@ -273,7 +360,19 @@ def build_summary(runtime, context, outcomes, *, now=None):
               "output_check_outcome": states["check"], "state_save_outcome": states["persist"],
               "summary_saved_in_same_model_state_commit": False,
               "model": _unknown(), "prospective_current": _unknown(), "prospective_cumulative": _unknown(),
-              "fundamentals": _unknown()}
+              "fundamentals": _unknown(), "result_sync": _unknown(), "quotes": _unknown()}
+    if states["result_sync"] in ("success", "failure"):
+        try:
+            result["result_sync"] = _independent_results(runtime, context, now)
+            if "cumulative" in result["result_sync"]:
+                result["prospective_cumulative"] = result["result_sync"]["cumulative"]
+        except (OSError, ValueError, TypeError, KeyError, AttributeError):
+            pass
+    if states["quotes"] in ("success", "failure"):
+        try:
+            result["quotes"] = _quote_collection(runtime, context, now)
+        except (OSError, ValueError, TypeError, KeyError, AttributeError):
+            pass
     if states["model"] not in ("success", "failure"):
         return result
     try:
@@ -290,7 +389,7 @@ def build_summary(runtime, context, outcomes, *, now=None):
         result["model_run_id"] = report["run_id"]
     except (OSError, ValueError, TypeError, KeyError, AttributeError):
         return result
-    if states["prospective"] in ("success", "failure"):
+    if states["prospective"] in ("success", "failure") or report.get("prospective_captures"):
         try:
             result["prospective_current"] = _current_capture(runtime, report, sha, context, now)
         except (OSError, ValueError, TypeError, KeyError, AttributeError):
@@ -299,7 +398,8 @@ def build_summary(runtime, context, outcomes, *, now=None):
             current, _ = _associated(runtime / "prospective" / "latest.json", context, "prospective", now)
             if current.get("current_run_id") != report["run_id"]:
                 raise ValueError("prospective_run_mismatch")
-            result["prospective_cumulative"] = _cumulative(current)
+            if "cumulative" not in result["result_sync"]:
+                result["prospective_cumulative"] = _cumulative(current)
         except (OSError, ValueError, TypeError, KeyError, AttributeError):
             pass
     if states["fundamentals"] in ("success", "failure"):
@@ -315,18 +415,22 @@ def markdown(value):
     def n(row, key):
         return str(row[key]) if row.get(key) is not None else "unknown"
     model, current, cumulative, facts = (value[k] for k in ("model", "prospective_current", "prospective_cumulative", "fundamentals"))
+    synced, quotes = value.get("result_sync", {}), value.get("quotes", {})
     lines = ["# 足球模型分层运行结果", "", "| 层次 | 本次实际结果 |", "|---|---|",
         f"| 必要步骤 | {value['necessary_steps_outcome']} |",
         f"| 模型 CLI | {value['step_outcomes']['model']}；已知支持 {n(model, 'known_supported_predictions')} 场；范围完整时合计 {n(model, 'supported_predictions')} 场 |",
         f"| 本轮前瞻 | {value['step_outcomes']['prospective']}；观测到接受 {n(current, 'observed_accepted_predictions')}、拒绝 {n(current, 'observed_rejected_predictions')}、原模型不支持 {n(current, 'observed_unsupported_predictions')} |",
         f"| 累计前瞻 | 版本 {n(cumulative, 'forecast_versions')}；协议内去重 {n(cumulative, 'unique_primary_matches_by_protocol')}；跨协议独立比赛 {n(cumulative, 'unique_matches_across_protocols')} |",
         f"| 累计成熟结果 | 协议内已评分 {n(cumulative, 'mature_scored_matches_by_protocol')}；待赛果 {n(cumulative, 'pending_matches_by_protocol')}；结果版本 {n(cumulative, 'result_versions')} |",
+        f"| 独立赛果同步 | {value['step_outcomes'].get('result_sync', 'unknown')}；目标 {n(synced, 'target_matches')}；新结果版本 {n(synced.get('status_counts', {}), 'result_appended')}；请求 {n(synced, 'api_requests')} |",
+        f"| 真实报价积累 | {value['step_outcomes'].get('quotes', 'unknown')}；候选 {n(quotes, 'candidate_matches')}；已解析快照 {n(quotes, 'parsed_snapshots')}；完整参考行 {n(quotes, 'complete_reference_rows')}；请求 {n(quotes, 'api_requests')} |",
         f"| 基本面采集 | {value['step_outcomes']['fundamentals']}；报告 {facts['status']}；采集完整 {n(facts, 'complete_collection_matches')}、部分 {n(facts, 'partial_collection_matches')}、正常缺失 {n(facts, 'normal_missing_matches')}、未知 {n(facts, 'unknown_collection_matches')} |",
         f"| 输出检查 | {value['output_check_outcome']} |",
         f"| 状态保存 | {value['state_save_outcome']} |",
         f"| 回放包检查 | {value['step_outcomes']['replay']} |", "",
         "本轮前瞻按关联的 coverage 对象计数；步骤未完成时仅表示已观测记录，不代表目标全集。累计数未用于相减推算本轮。",
         "基本面的完整仅指本次请求的采集操作；正常缺失不代表数值零，特征已保存不代表全字段完整或已经调整概率。",
+        "逐联赛冻结由独立checkpoint核关联；赛果同步与报价采集不要求本次训练成功。参考报价不代表开放可买或实际成交。",
         "模型支持、前瞻资格、保存成功与预测准确率验收分别处理。基本面局部失败不否决独立比分模型。", ""]
     for label, row in (("本轮前瞻原因", current), ("基本面原因", facts)):
         reasons = row.get("reason_counts")
@@ -342,7 +446,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="本轮关联与分层运行摘要；不接入认证、不改模型")
     parser.add_argument("command", choices=("begin", "mark", "render"))
     parser.add_argument("--context", required=True)
-    parser.add_argument("--stage", choices=("model", "prospective", "fundamentals"))
+    parser.add_argument("--stage", choices=("model", "prospective", "result_sync", "quotes", "fundamentals"))
     parser.add_argument("--runtime", default="runtime")
     parser.add_argument("--output")
     parser.add_argument("--summary")

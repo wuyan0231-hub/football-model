@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter, defaultdict
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
 import fcntl
@@ -315,14 +316,46 @@ def capture_current(runtime: Path, root: Path, report: dict, report_sha: str,
     return errors
 
 
+def append_result(root: Path, competition: str, row: dict, *, observed: datetime,
+                  captured: datetime, source_id: str, forecasts: list[dict],
+                  collection_method: str = "pipeline_normalized_data") -> str | None:
+    """Append a verified regulation result revision; never mutate original evidence."""
+    relevant = [r for r in forecasts if r["competition"] == competition and r["match_id"] == row["match_id"]]
+    if not relevant or not any(_same_identity(r, row) for r in relevant):
+        raise ValueError("result_identity_or_kickoff_mismatch")
+    if observed > captured:
+        raise ValueError("result_source_missing_or_future_observation")
+    if _timestamp(row["kickoff"], "kickoff") + RESULT_AVAILABILITY_DELAY > observed:
+        raise ValueError("result_observed_before_regulation_maturity")
+    scores = {field: _integer(row[field], field, 0) for field in ("home_goals", "away_goals")}
+    versions = [r for r in _objects(root, "results")
+                if r["competition"] == competition and r["match_id"] == row["match_id"]]
+    latest = max(versions, key=lambda v: (_timestamp(v["observed_at"], "observed_at"),
+        _timestamp(v["captured_at"], "captured_at"), v["object_id"]), default=None)
+    if latest:
+        previous_observed = _timestamp(latest["observed_at"], "previous observation")
+        if observed < previous_observed:
+            # An independent later observation supersedes older pipeline data;
+            # stale pipeline caches are neither errors nor a new revision.
+            if collection_method == "pipeline_normalized_data" and latest.get("collection_method") == "independent_fixture_sync":
+                return None
+            raise ValueError("result_source_observation_regressed")
+        if _same_identity(latest, row) and all(latest[field] == score for field, score in scores.items()):
+            return None
+        if observed == previous_observed:
+            raise ValueError("conflicting_result_same_observation_time")
+    result = {"schema_version": 1, "competition": competition, **_identity(row), **scores,
+        "observed_at": _iso(observed), "captured_at": _iso(captured), "source_id": source_id,
+        "score_scope": "normalized_API_Football_score_fulltime_90_plus_stoppage",
+        "collection_method": collection_method, "supersedes": latest["object_id"] if latest else None}
+    return _append(root, "results", result)
+
+
 def collect_results(runtime: Path, root: Path, forecasts: list[dict], clock) -> list[str]:
     errors = []
     by_competition = defaultdict(list)
     for forecast in forecasts:
         by_competition[forecast["competition"]].append(forecast)
-    prior = defaultdict(list)
-    for result in _objects(root, "results"):
-        prior[(result["competition"], result["match_id"])].append(result)
     for key, records in by_competition.items():
         try:
             data, data_sha = _read(runtime, "data", _name(key) + ".json")
@@ -338,29 +371,9 @@ def collect_results(runtime: Path, root: Path, forecasts: list[dict], clock) -> 
         for mid in sorted({record["match_id"] for record in records}):
             if mid not in rows:
                 continue
-            row = rows[mid]
-            relevant = [r for r in records if r["match_id"] == mid]
             try:
-                if not any(_same_identity(r, row) for r in relevant):
-                    raise ValueError("result_identity_or_kickoff_mismatch")
-                if row["_dt"] + RESULT_AVAILABILITY_DELAY > observed:
-                    raise ValueError("result_observed_before_regulation_maturity")
-                versions = sorted(prior[(key, mid)], key=lambda v: (_timestamp(v["observed_at"], "observed_at"), _timestamp(v["captured_at"], "captured_at"), v["object_id"]))
-                latest = versions[-1] if versions else None
-                scores = {field: row[field] for field in ("home_goals", "away_goals")}
-                if latest:
-                    if observed < _timestamp(latest["observed_at"], "previous observation"):
-                        raise ValueError("result_source_observation_regressed")
-                    if _same_identity(latest, row) and all(latest[field] == score for field, score in scores.items()):
-                        continue
-                    if observed == _timestamp(latest["observed_at"], "previous observation"):
-                        raise ValueError("conflicting_result_same_observation_time")
-                result = {"schema_version": 1, "competition": key, **_identity(row), **scores,
-                    "observed_at": _iso(observed), "captured_at": _iso(capture), "source_id": source_id,
-                    "score_scope": "normalized_API_Football_score_fulltime_90_plus_stoppage",
-                    "supersedes": latest["object_id"] if latest else None}
-                object_id = _append(root, "results", result)
-                prior[(key, mid)].append({**result, "object_id": object_id})
+                append_result(root, key, rows[mid], observed=observed, captured=capture,
+                              source_id=source_id, forecasts=records)
             except (ValueError, TypeError, KeyError) as exc:
                 errors.append(key + ":" + str(mid) + ":" + str(exc))
     return errors
@@ -564,17 +577,52 @@ def _run_locked(runtime: Path, config: dict | None = None, *, quotes: list | Non
 
 
 
-def run(runtime: Path, config: dict | None = None, *, quotes: list | None = None, clock=None) -> tuple[int, dict]:
-    """Serialize ledger writers; a second invocation fails without changing inputs."""
+@contextmanager
+def ledger_writer(runtime: Path):
+    """All independent ledger writers share one nonblocking OS lock."""
     runtime = Path(runtime)
+    if (_path(runtime, "RESEARCH_REPLAY.json").exists() or
+            (runtime.parent / "RESEARCH_REPLAY.json").exists()):
+        raise ValueError("research replay runtime cannot enter prospective ledger")
     root = _path(runtime, "prospective")
     root.mkdir(parents=True, exist_ok=True)
-    lock_path = _path(root, "writer-lock.txt")
-    with lock_path.open("a") as handle:
+    with _path(root, "writer-lock.txt").open("a") as handle:
         try:
             fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
             raise ValueError("prospective ledger writer already active") from exc
+        yield root
+
+
+def capture_report(runtime: Path, config: dict, report: dict, *, clock=None) -> dict:
+    """Freeze one completed competition immediately using its actual checkpoint.
+
+    The final run report is linked later by run_id; this immutable partial report
+    does not claim that later competitions or state persistence have succeeded.
+    """
+    runtime = Path(runtime)
+    clock = clock or (lambda: datetime.now(timezone.utc))
+    if report.get("research_replay"):
+        raise ValueError("research replay report cannot enter prospective ledger")
+    with ledger_writer(runtime) as root:
+        protocol_id = _append(root, "protocols", make_protocol(config))
+        report_bytes = _json_bytes(report)
+        checkpoint_id = _append(root, "capture_checkpoints", report)
+        errors = capture_current(runtime, root, report, hashlib.sha256(report_bytes).hexdigest(), protocol_id, clock)
+        coverage = [r for r in _objects(root, "coverage") if r["run_id"] == report["run_id"]
+                    and r["competition"] in report["requested_competitions"]]
+        summary = {"run_id": report["run_id"], "checkpoint_id": checkpoint_id,
+            "protocol_id": protocol_id, "completed_at": _iso(_now(clock)),
+            "competitions": report["requested_competitions"],
+            "coverage_status_counts": dict(Counter(r["status"] for r in coverage)),
+            "errors": errors, "exit_code": int(bool(errors))}
+        summary["capture_run_id"] = _append(root, "capture_runs", summary)
+        return summary
+
+
+def run(runtime: Path, config: dict | None = None, *, quotes: list | None = None, clock=None) -> tuple[int, dict]:
+    """Serialize ledger writers; a second invocation fails without changing inputs."""
+    with ledger_writer(Path(runtime)):
         return _run_locked(runtime, config, quotes=quotes, clock=clock)
 
 

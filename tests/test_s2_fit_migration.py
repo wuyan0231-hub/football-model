@@ -59,8 +59,25 @@ class FitTimeMigrationTests(unittest.TestCase):
                 original = self.seed_legacy(absent=absent)
                 old_bytes = (self.root / "models/epl.json").read_bytes()
                 old = json.loads(old_bytes)
+                # Seeding now performs a genuine timely capture before we turn
+                # the synthetic model into a legacy fixture. Preserve that
+                # capture, and inspect the missing-fit fixture as a separate
+                # historical run rather than mutating the frozen run identity.
+                seed_forecasts = prospective._objects(self.root / "prospective", "forecasts")
+                seed_ids = {row["object_id"] for row in seed_forecasts}
+                legacy_report = copy.deepcopy(original)
+                legacy_report["run_id"] += "_legacy_missing_fit"
+                legacy_rows = self.read("predictions/" + original["run_id"] + "/epl.json")
+                cli.atomic_json(self.root / "predictions" / legacy_report["run_id"] / "epl.json", legacy_rows)
+                cli.atomic_json(self.root / "reports" / "latest.json", legacy_report)
                 code, rejected = prospective.run(self.root, BASE_CONFIG, clock=lambda: NOW + timedelta(hours=1))
                 self.assertEqual(code, 1, rejected)
+                legacy_coverage = [row for row in prospective._objects(self.root / "prospective", "coverage")
+                                   if row["run_id"] == legacy_report["run_id"]]
+                self.assertEqual(len(legacy_coverage), 1)
+                self.assertEqual(legacy_coverage[0]["status"], "rejected")
+                self.assertIn("model_fitted_at", legacy_coverage[0]["reason"])
+                self.assertEqual(rejected["forecast_versions"], len(seed_ids))
                 old_coverage = {p.name: p.read_bytes() for p in (self.root / "prospective/coverage").glob("*.json")}
                 original_files = {p: p.read_bytes() for directory in ("predictions", "reports/history", "model_history")
                                   for p in (self.root / directory).rglob("*.json")}
@@ -96,7 +113,12 @@ class FitTimeMigrationTests(unittest.TestCase):
                     self.assertEqual(path.read_bytes(), payload)
                 code, captured = prospective.run(self.root, BASE_CONFIG, clock=lambda: later + timedelta(minutes=1))
                 self.assertEqual(code, 0, captured)
-                self.assertEqual(captured["forecast_versions"], 1)
+                all_forecasts = prospective._objects(self.root / "prospective", "forecasts")
+                current = [row for row in all_forecasts if row["run_id"] == report["run_id"]]
+                self.assertEqual(len(current), 1)
+                self.assertEqual(current[0]["competition"], "epl")
+                self.assertEqual(captured["forecast_versions"], len(seed_ids) + len(current))
+                self.assertTrue(seed_ids <= {row["object_id"] for row in all_forecasts})
                 for name, payload in old_coverage.items():
                     self.assertEqual((self.root / "prospective/coverage" / name).read_bytes(), payload)
                 with patch("football_model.cli.fit_model", side_effect=AssertionError("migration must happen once")):
@@ -169,6 +191,7 @@ class FitTimeMigrationTests(unittest.TestCase):
         config = copy.deepcopy(BASE_CONFIG)
         config["competitions"].append({**config["competitions"][0], "key": "second"})
         self.seed_legacy(config=config, league="all")
+        seed_ids = {r["object_id"] for r in prospective._objects(self.root / "prospective", "forecasts")}
         first_bytes = (self.root / "models/epl.json").read_bytes()
         calls = []
         def fail_first(*args, **kwargs):
@@ -186,7 +209,11 @@ class FitTimeMigrationTests(unittest.TestCase):
         self.assertTrue((self.root / "predictions" / report["run_id"] / "second.json").exists())
         code, captured = prospective.run(self.root, config, clock=lambda: NOW + timedelta(hours=3))
         self.assertEqual(code, 0, captured)
-        self.assertEqual(captured["forecast_versions"], 1)
+        all_forecasts = prospective._objects(self.root / "prospective", "forecasts")
+        current = [r for r in all_forecasts if r["run_id"] == report["run_id"]]
+        self.assertEqual([r["competition"] for r in current], ["second"])
+        self.assertEqual(captured["forecast_versions"], len(seed_ids) + len(current))
+        self.assertTrue(seed_ids <= {r["object_id"] for r in all_forecasts})
 
     def test_shared_national_path_migrates_without_loosening_venue_gate(self):
         self.seed_legacy(config=NATIONAL_CONFIG, client=NationalClient(), now=NATIONAL_NOW, league="unl")
@@ -203,13 +230,20 @@ class FitTimeMigrationTests(unittest.TestCase):
 
     def test_migration_research_output_still_cannot_enter_prospective_ledger(self):
         self.seed_legacy()
+        seed_ids = {r["object_id"] for r in prospective._objects(self.root / "prospective", "forecasts")}
         code, report = self.invoke(research_replay=True)
         self.assertEqual(code, 0, report)
         code, captured = prospective.run(self.root, BASE_CONFIG, clock=lambda: NOW + timedelta(hours=3))
         self.assertEqual(code, 1, captured)
-        self.assertEqual(captured["forecast_versions"], 0)
-        coverage = prospective._objects(self.root / "prospective", "coverage")
-        self.assertEqual(coverage[-1]["reason"], "research_replay_is_not_prospective")
+        all_forecasts = prospective._objects(self.root / "prospective", "forecasts")
+        self.assertEqual(captured["forecast_versions"], len(seed_ids))
+        self.assertEqual({r["object_id"] for r in all_forecasts}, seed_ids)
+        self.assertFalse(any(r["run_id"] == report["run_id"] for r in all_forecasts))
+        coverage = [r for r in prospective._objects(self.root / "prospective", "coverage")
+                    if r["run_id"] == report["run_id"]]
+        self.assertEqual(len(coverage), 1)
+        self.assertEqual(coverage[0]["status"], "rejected")
+        self.assertEqual(coverage[0]["reason"], "research_replay_is_not_prospective")
 
     def test_corrupt_preserved_predecessor_is_not_overwritten(self):
         self.seed_legacy()

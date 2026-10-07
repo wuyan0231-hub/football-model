@@ -279,8 +279,12 @@ def validate_decision_record(record: dict[str, Any]) -> dict[str, Any]:
             issue("quote_contract_mismatch", path + ".quote_id", "报价未绑定候选的同一合约。")
         if quote:
             need(quote, ("status", "decimal_odds", "source_id"), f"quotes[{quote.get('quote_id')}]")
-            if quote.get("status") not in (None, "open_reference", "accepted", "closed", "superseded", "hypothetical", "unknown", "封"):
+            if quote.get("status") not in (None, "open_reference", "reference_only", "accepted", "closed", "superseded", "hypothetical", "unknown", "封"):
                 issue("invalid_quote_status", path + ".quote_id", "未知报价状态不能当作当前有效价。")
+            if quote.get("status") == "reference_only" and (
+                    quote.get("reference_only") is not True or quote.get("availability_status") != "unknown"
+                    or quote.get("current_open_claim") is not None or quote.get("actual_execution_claim") is not None):
+                issue("invalid_reference_only_authority", path + ".quote_id", "仅参考数字须保留开放未知，不能同时声称开放或成交。")
             if "decimal_odds" in quote and (not _number(quote["decimal_odds"]) or quote["decimal_odds"] <= 1):
                 issue("invalid_quote_odds", path + ".quote_id", "采用的十进制赔率必须为大于1的有限数值。")
             if quote.get("status") in (None, "unknown"):

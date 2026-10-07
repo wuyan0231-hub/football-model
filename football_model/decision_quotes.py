@@ -179,7 +179,17 @@ def adapt_quote_row(row, *, match_id, forecast_id=None):
     digest = _digest(original)
     try:
         interval = _quote_interval(row)
-        state = _quote_state(row)
+        reference_only = row.get("status") == "reference_only"
+        if reference_only:
+            if (row.get("reference_only") is not True or row.get("availability_status") != "unknown"
+                    or row.get("open_evidence") is not None or row.get("execution_evidence") is not None):
+                raise QuoteAdapterError("reference_only_cannot_claim_open_or_execution")
+            # Validate complete numeric cells without changing the persisted
+            # source state or granting live-market/execution authority.
+            checked = _quote_state({**row, "status": "open"})
+            state = "reference_only" if checked == "open" else checked
+        else:
+            state = _quote_state(row)
         observed = _time(row["observed_at"]) if row.get("observed_at") is not None else None
         if observed is not None and interval is not None and interval[0] > observed:
             raise QuoteAdapterError("quote_change_after_observation")
@@ -199,7 +209,7 @@ def adapt_quote_row(row, *, match_id, forecast_id=None):
         contract = _contract(row, selection, match_id)
         if contract is not None:
             contracts.append(contract)
-        price = odds_to_decimal(row["odds"][selection], row["odds_format"]) if state == "open" else None
+        price = odds_to_decimal(row["odds"][selection], row["odds_format"]) if state in {"open", "reference_only"} else None
         if contract is None:
             price = None
         offer_id = "qo_" + _digest({"quote_row_id": row_id, "selection": selection})
@@ -209,7 +219,9 @@ def adapt_quote_row(row, *, match_id, forecast_id=None):
                        "market": {"1x2": "1x2", "asian_handicap": "ah", "totals": "ou"}[row["market"]],
                        "selection": selection, "line": contract["line"] if contract else None,
                        "settlement_basis": "REGULATION", "decimal_odds": price,
-                       "status": "open_reference" if price is not None else ("closed" if state == "closed" else "unknown"),
+                       "status": ("reference_only" if state == "reference_only" else "open_reference")
+                       if price is not None else ("closed" if state == "closed" else "unknown"),
+                       **({"reference_only": True, "availability_status": "unknown"} if reference_only else {}),
                        "row_status": state, "original_home_line": row.get("line") if row["market"] == "asian_handicap" else None,
                        "original_odds": deepcopy(row.get("odds", {}).get(selection)) if isinstance(row.get("odds"), dict) else None,
                        "current_open_claim": _claim(row, "open_evidence", selection, price),
