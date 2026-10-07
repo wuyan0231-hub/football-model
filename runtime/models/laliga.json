@@ -1,7 +1,12 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "time_semantics": "observed_wall_clock_v1",
+  "run_started_at": "2026-10-07T01:32:56.771491Z",
+  "training_cutoff": "2026-10-07T01:32:56.771491Z",
+  "data_observed_at": "2026-10-07T01:32:59.404414Z",
+  "model_fitted_at": "2026-10-07T01:32:59.547523Z",
   "program_version": "0.1.0",
-  "model_id": "laliga-20260922T135902719327Z",
+  "model_id": "laliga-20261007T013256771491Z",
   "competition": {
     "key": "laliga",
     "label": "西甲",
@@ -10,8 +15,8 @@
     "mode": "domestic_baseline"
   },
   "data_fingerprint": "3b275d1dde79a6632f757e137db65a2dc81078225c6e52d34f8b3bd4600c6dae",
-  "trained_at": "2026-09-22T13:59:02.719327Z",
-  "source": "API-Football FT score.fulltime",
+  "trained_at": "2026-10-07T01:32:56.771491Z",
+  "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
   "maturity": "exploratory_baseline",
   "lineup_effects": "未量化",
   "ev": "未量化",
@@ -21,7 +26,7 @@
     "fit_status": "converged",
     "trained": true,
     "validated_for_production": false,
-    "training_cutoff": "2026-09-22T13:59:02.719327Z",
+    "training_cutoff": "2026-10-07T01:32:56.771491Z",
     "last_match_kickoff": "2026-09-20T19:00:00Z",
     "last_result_assumed_available_at": "2026-09-20T23:00:00Z",
     "n_matches": 829,
@@ -33,177 +38,177 @@
     "training_data_sha256": "66488eb6fb233d348aa09cd4d764d4d78c422ecb1084aa8b658be6c3f3164992",
     "half_life_days": 180.0,
     "ridge": 3.0,
-    "effective_sample_size": 485.52754362448803,
-    "intercept": 0.11198433759298539,
-    "home_advantage": 0.30526387700120766,
+    "effective_sample_size": 485.52754362448826,
+    "intercept": 0.11288667413527549,
+    "home_advantage": 0.3052239424505512,
     "team_parameters": {
       "529": {
         "name": "Barcelona",
-        "attack": 0.7686319555662072,
-        "defence": 0.3082157971699492,
+        "attack": 0.7660173919266641,
+        "defence": 0.3061128195921529,
         "training_matches": 83
       },
       "530": {
         "name": "Atletico Madrid",
-        "attack": 0.32318089809694844,
-        "defence": 0.19715864162834126,
+        "attack": 0.32086255974738864,
+        "defence": 0.1959928420145875,
         "training_matches": 83
       },
       "531": {
         "name": "Athletic Club",
-        "attack": -0.0565667543930813,
-        "defence": 0.10629197684146466,
+        "attack": -0.05745980066777236,
+        "defence": 0.10536232168643479,
         "training_matches": 82
       },
       "532": {
         "name": "Valencia",
-        "attack": -0.11876410342473381,
-        "defence": -0.0319508745012799,
+        "attack": -0.11932292182351985,
+        "defence": -0.0322119154979593,
         "training_matches": 83
       },
       "533": {
         "name": "Villarreal",
-        "attack": 0.35912381329377174,
-        "defence": 0.01123822042078771,
+        "attack": 0.35692347550731973,
+        "defence": 0.011074979536391609,
         "training_matches": 83
       },
       "534": {
         "name": "Las Palmas",
-        "attack": -0.1463338228742513,
-        "defence": -0.07310982426397439,
+        "attack": -0.14334837300166742,
+        "defence": -0.07164954452887205,
         "training_matches": 38
       },
       "535": {
         "name": "Malaga",
-        "attack": -0.5431771437559663,
-        "defence": -0.06816880903415636,
+        "attack": -0.5318578341093453,
+        "defence": -0.0678926372232848,
         "training_matches": 7
       },
       "536": {
         "name": "Sevilla",
-        "attack": -0.030339015110153814,
-        "defence": -0.008047548561128031,
+        "attack": -0.03143626516096225,
+        "defence": -0.00838299551672476,
         "training_matches": 83
       },
       "537": {
         "name": "Leganes",
-        "attack": -0.09145594468285473,
-        "defence": -0.01836894070394865,
+        "attack": -0.08978431938370769,
+        "defence": -0.01801044014596532,
         "training_matches": 38
       },
       "538": {
         "name": "Celta Vigo",
-        "attack": 0.03698165559116583,
-        "defence": 0.12124597428175682,
+        "attack": 0.03598284099794049,
+        "defence": 0.12055748871007002,
         "training_matches": 83
       },
       "539": {
         "name": "Levante",
-        "attack": 0.04215647470728327,
-        "defence": -0.12322072546800643,
+        "attack": 0.04064264158259134,
+        "defence": -0.12279197293984732,
         "training_matches": 44
       },
       "540": {
         "name": "Espanyol",
-        "attack": -0.08825960371644871,
-        "defence": -0.002584228391712541,
+        "attack": -0.08892410006650314,
+        "defence": -0.0029231604795668985,
         "training_matches": 83
       },
       "541": {
         "name": "Real Madrid",
-        "attack": 0.483629596358579,
-        "defence": 0.29627763953534575,
+        "attack": 0.48094779359585976,
+        "defence": 0.2944595316458502,
         "training_matches": 83
       },
       "542": {
         "name": "Alaves",
-        "attack": -0.018744460906127573,
-        "defence": 0.05921491586373666,
+        "attack": -0.019615021677593925,
+        "defence": 0.05863547819068841,
         "training_matches": 83
       },
       "543": {
         "name": "Real Betis",
-        "attack": 0.15633463398281267,
-        "defence": 0.1555475048373055,
+        "attack": 0.15449837254086674,
+        "defence": 0.1544613592507856,
         "training_matches": 83
       },
       "544": {
         "name": "Deportivo La Coruna",
-        "attack": 0.05109414628833451,
-        "defence": 0.05408991309503901,
+        "attack": 0.04942120024236146,
+        "defence": 0.05395223259805037,
         "training_matches": 7
       },
       "546": {
         "name": "Getafe",
-        "attack": -0.4640916485756901,
-        "defence": 0.32859251440297027,
+        "attack": -0.4615807887555021,
+        "defence": 0.3264316793862546,
         "training_matches": 83
       },
       "547": {
         "name": "Girona",
-        "attack": -0.16650034638485994,
-        "defence": 0.034988486325382005,
+        "attack": -0.1663438183313749,
+        "defence": 0.03447889574917456,
         "training_matches": 76
       },
       "548": {
         "name": "Real Sociedad",
-        "attack": 0.13786098416312403,
-        "defence": -0.1313776910118635,
+        "attack": 0.13599479550309096,
+        "defence": -0.1312191410957568,
         "training_matches": 83
       },
       "718": {
         "name": "Oviedo",
-        "attack": -0.4476959023012281,
-        "defence": -0.06890772901977466,
+        "attack": -0.4437629308976489,
+        "defence": -0.06890015161565761,
         "training_matches": 38
       },
       "720": {
         "name": "Valladolid",
-        "attack": -0.28889429915684056,
-        "defence": -0.3973658778214102,
+        "attack": -0.28202469595862706,
+        "defence": -0.3911617583272475,
         "training_matches": 38
       },
       "727": {
         "name": "Osasuna",
-        "attack": -0.10854400998051968,
-        "defence": -0.06573096359201482,
+        "attack": -0.1091917930632469,
+        "defence": -0.06567547144764994,
         "training_matches": 83
       },
       "728": {
         "name": "Rayo Vallecano",
-        "attack": -0.03593613888158282,
-        "defence": 0.037595706043532656,
+        "attack": -0.036662962336253484,
+        "defence": 0.03694971893039285,
         "training_matches": 83
       },
       "797": {
         "name": "Elche",
-        "attack": 0.087811616522809,
-        "defence": -0.17133428959156075,
+        "attack": 0.08625275825979974,
+        "defence": -0.1711873004547048,
         "training_matches": 45
       },
       "798": {
         "name": "Mallorca",
-        "attack": -0.04600381263385341,
-        "defence": 0.004152625329773257,
+        "attack": -0.04679874962113474,
+        "defence": 0.00396146637374694,
         "training_matches": 76
       },
       "4665": {
         "name": "Racing Santander",
-        "attack": 0.20450123220715655,
-        "defence": -0.5544424138145546,
+        "attack": 0.20057054495097693,
+        "defence": -0.5504243243913434,
         "training_matches": 7
       }
     },
     "graph_connected": true,
     "constraints": {
-      "attack_sum": 8.326672684688674e-17,
-      "defence_sum": -1.1102230246251565e-16
+      "attack_sum": -1.1102230246251565e-16,
+      "defence_sum": 0.0
     },
     "optimizer": {
       "success": true,
       "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
-      "iterations": 33,
-      "objective": 697.3372955461645,
+      "iterations": 34,
+      "objective": 659.7550203589988,
       "parameter_at_bound": false
     },
     "warnings": [
@@ -218,7 +223,7 @@
     "is_rolling_backtest": false,
     "minimum_test_matches": 40,
     "meets_minimum_supported_test_matches": true,
-    "evaluation_data_cutoff": "2026-09-22T13:59:02.719327Z",
+    "evaluation_data_cutoff": "2026-10-07T01:32:56.771491Z",
     "split": {
       "method": "chronological_fixed_model_holdout",
       "grouped_by": "kickoff_utc_calendar_date",
@@ -322,8 +327,8 @@
     },
     "model_metrics": {
       "n": 148,
-      "log_loss": 0.9851099683447847,
-      "brier_score": 0.5842896550892052,
+      "log_loss": 0.9851099683448425,
+      "brier_score": 0.5842896550892365,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
@@ -342,8 +347,8 @@
       "same_scored_matches_as_model": true
     },
     "comparison": {
-      "model_minus_baseline_log_loss": -0.057073589782908996,
-      "model_minus_baseline_brier_score": -0.043511818441366534,
+      "model_minus_baseline_log_loss": -0.05707358978285115,
+      "model_minus_baseline_brier_score": -0.043511818441335226,
       "lower_is_better": true
     },
     "warnings": [
@@ -373,7 +378,8 @@
         "odds": true
       },
       "fixtures": 380,
-      "fetched_at": "2026-09-22T13:59:22.444698Z",
+      "fetched_at": "2026-10-07T01:32:58.707565Z",
+      "received_at": "2026-10-07T01:32:58.714430Z",
       "from_cache": false,
       "status_counts": {
         "FT": 69,
@@ -399,7 +405,8 @@
         "odds": false
       },
       "fixtures": 380,
-      "fetched_at": "2026-09-22T13:59:28.951268Z",
+      "fetched_at": "2026-10-07T01:32:59.103676Z",
+      "received_at": "2026-10-07T01:32:59.111272Z",
       "from_cache": false,
       "status_counts": {
         "FT": 380
@@ -424,7 +431,8 @@
         "odds": false
       },
       "fixtures": 380,
-      "fetched_at": "2026-09-22T13:59:35.448239Z",
+      "fetched_at": "2026-10-07T01:32:59.378713Z",
+      "received_at": "2026-10-07T01:32:59.395266Z",
       "from_cache": false,
       "status_counts": {
         "FT": 380

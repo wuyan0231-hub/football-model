@@ -1,7 +1,12 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "time_semantics": "observed_wall_clock_v1",
+  "run_started_at": "2026-10-07T01:32:56.771491Z",
+  "training_cutoff": "2026-10-07T01:32:56.771491Z",
+  "data_observed_at": "2026-10-07T01:32:58.074266Z",
+  "model_fitted_at": "2026-10-07T01:32:58.158006Z",
   "program_version": "0.1.0",
-  "model_id": "epl-20260922T115937749723Z",
+  "model_id": "epl-20261007T013256771491Z",
   "competition": {
     "key": "epl",
     "label": "英超",
@@ -10,8 +15,8 @@
     "mode": "domestic_baseline"
   },
   "data_fingerprint": "a2ed38a6e832afc9ddbb18aeac99d05eb1d30b056f3defea42e7650156a413a5",
-  "trained_at": "2026-09-22T11:59:37.749723Z",
-  "source": "API-Football FT score.fulltime",
+  "trained_at": "2026-10-07T01:32:56.771491Z",
+  "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
   "maturity": "exploratory_baseline",
   "lineup_effects": "未量化",
   "ev": "未量化",
@@ -21,7 +26,7 @@
     "fit_status": "converged",
     "trained": true,
     "validated_for_production": false,
-    "training_cutoff": "2026-09-22T11:59:37.749723Z",
+    "training_cutoff": "2026-10-07T01:32:56.771491Z",
     "last_match_kickoff": "2026-09-20T15:30:00Z",
     "last_result_assumed_available_at": "2026-09-20T19:30:00Z",
     "n_matches": 810,
@@ -33,171 +38,171 @@
     "training_data_sha256": "f16e5bee7a6826487306d4dab800f6f74466e1f0c440b0f6d29b84035eb93f4b",
     "half_life_days": 180.0,
     "ridge": 3.0,
-    "effective_sample_size": 480.554288594754,
-    "intercept": 0.17959400196552372,
-    "home_advantage": 0.17488150295681404,
+    "effective_sample_size": 480.5542885947545,
+    "intercept": 0.1809758112899677,
+    "home_advantage": 0.17491106497338865,
     "team_parameters": {
       "33": {
         "name": "Manchester United",
-        "attack": 0.258470352184752,
-        "defence": 0.03783907385834227,
+        "attack": 0.2559497588308315,
+        "defence": 0.03762303898877509,
         "training_matches": 81
       },
       "34": {
         "name": "Newcastle",
-        "attack": 0.1923035146417523,
-        "defence": -0.0728902841273359,
+        "attack": 0.18977640749681296,
+        "defence": -0.07260778916227868,
         "training_matches": 81
       },
       "35": {
         "name": "Bournemouth",
-        "attack": 0.11934334280081853,
-        "defence": 0.06773231517350735,
+        "attack": 0.1173043488016224,
+        "defence": 0.0671208169391016,
         "training_matches": 81
       },
       "36": {
         "name": "Fulham",
-        "attack": -0.09220151730391335,
-        "defence": 0.038908245888934094,
+        "attack": -0.09299588605012757,
+        "defence": 0.038491679971041,
         "training_matches": 81
       },
       "39": {
         "name": "Wolves",
-        "attack": -0.3386259905278672,
-        "defence": -0.1662493180697576,
+        "attack": -0.3369216338472049,
+        "defence": -0.16559769969150298,
         "training_matches": 76
       },
       "40": {
         "name": "Liverpool",
-        "attack": 0.23890934879040432,
-        "defence": 0.10649299019804329,
+        "attack": 0.236706181595025,
+        "defence": 0.10582014619799934,
         "training_matches": 81
       },
       "41": {
         "name": "Southampton",
-        "attack": -0.3265458559256438,
-        "defence": -0.33273019698067596,
+        "attack": -0.31862129486142976,
+        "defence": -0.32712546721383934,
         "training_matches": 38
       },
       "42": {
         "name": "Arsenal",
-        "attack": 0.26815839475103204,
-        "defence": 0.5089454404875139,
+        "attack": 0.26589862183982604,
+        "defence": 0.5051105833366606,
         "training_matches": 81
       },
       "44": {
         "name": "Burnley",
-        "attack": -0.21447787646324604,
-        "defence": -0.2820116039685935,
+        "attack": -0.2138896461247215,
+        "defence": -0.28074816295311467,
         "training_matches": 38
       },
       "45": {
         "name": "Everton",
-        "attack": -0.070696609997714,
-        "defence": 0.15825139530745314,
+        "attack": -0.07140513507774135,
+        "defence": 0.15721343597780757,
         "training_matches": 81
       },
       "46": {
         "name": "Leicester",
-        "attack": -0.26096191585987166,
-        "defence": -0.256416763497046,
+        "attack": -0.2549213122153256,
+        "defence": -0.2519284130771813,
         "training_matches": 38
       },
       "47": {
         "name": "Tottenham",
-        "attack": -0.14310453675811563,
-        "defence": -0.10773692931400103,
+        "attack": -0.14363143223930186,
+        "defence": -0.1074811917873281,
         "training_matches": 81
       },
       "48": {
         "name": "West Ham",
-        "attack": -0.02926432591284542,
-        "defence": -0.09951293870912305,
+        "attack": -0.030399309333526983,
+        "defence": -0.09913145780358981,
         "training_matches": 76
       },
       "49": {
         "name": "Chelsea",
-        "attack": 0.21571523178271398,
-        "defence": -0.09865114919330056,
+        "attack": 0.21302014248167972,
+        "defence": -0.0983480986257674,
         "training_matches": 81
       },
       "50": {
         "name": "Manchester City",
-        "attack": 0.4389354436350081,
-        "defence": 0.30112682173021366,
+        "attack": 0.4361496254164,
+        "defence": 0.29936248620099765,
         "training_matches": 81
       },
       "51": {
         "name": "Brighton",
-        "attack": 0.3108807049881759,
-        "defence": 0.12270191932737759,
+        "attack": 0.3082529168008084,
+        "defence": 0.12220691699439937,
         "training_matches": 81
       },
       "52": {
         "name": "Crystal Palace",
-        "attack": -0.09348979468015131,
-        "defence": -0.09362799873778066,
+        "attack": -0.09424072120623365,
+        "defence": -0.09338348224123581,
         "training_matches": 81
       },
       "55": {
         "name": "Brentford",
-        "attack": 0.18207087362328242,
-        "defence": 0.1027337673403163,
+        "attack": 0.17987363740363366,
+        "defence": 0.10203117351099619,
         "training_matches": 81
       },
       "57": {
         "name": "Ipswich",
-        "attack": -0.05084866733240581,
-        "defence": -0.37855518967680557,
+        "attack": -0.05125022923243202,
+        "defence": -0.3752957685559514,
         "training_matches": 43
       },
       "63": {
         "name": "Leeds",
-        "attack": 0.02291654805624288,
-        "defence": 0.16156690067337637,
+        "attack": 0.021377930234698396,
+        "defence": 0.16021891603716548,
         "training_matches": 43
       },
       "64": {
         "name": "Hull City",
-        "attack": -0.08435713180888042,
-        "defence": 0.3269256721054544,
+        "attack": -0.08337779157508493,
+        "defence": 0.3204104635013622,
         "training_matches": 5
       },
       "65": {
         "name": "Nottingham Forest",
-        "attack": -0.01172542532818322,
-        "defence": 0.1276004483593553,
+        "attack": -0.012927645650789622,
+        "defence": 0.12699598175815263,
         "training_matches": 81
       },
       "66": {
         "name": "Aston Villa",
-        "attack": 0.10245783072001095,
-        "defence": -0.006519901182079896,
+        "attack": 0.10032288191162612,
+        "defence": -0.006571131373142346,
         "training_matches": 81
       },
       "746": {
         "name": "Sunderland",
-        "attack": -0.07476769411362864,
-        "defence": -0.02065767138435555,
+        "attack": -0.07570201803642503,
+        "defence": -0.02086742394051824,
         "training_matches": 43
       },
       "1346": {
         "name": "Coventry",
-        "attack": -0.5590942439617269,
-        "defence": -0.14526504560903242,
+        "attack": -0.5443483973626193,
+        "defence": -0.1435195529890087,
         "training_matches": 5
       }
     },
     "graph_connected": true,
     "constraints": {
       "attack_sum": 0.0,
-      "defence_sum": 1.1102230246251565e-16
+      "defence_sum": -5.551115123125783e-17
     },
     "optimizer": {
       "success": true,
       "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
-      "iterations": 34,
-      "objective": 659.1134789882744,
+      "iterations": 33,
+      "objective": 623.3576734014543,
       "parameter_at_bound": false
     },
     "warnings": [
@@ -212,7 +217,7 @@
     "is_rolling_backtest": false,
     "minimum_test_matches": 40,
     "meets_minimum_supported_test_matches": true,
-    "evaluation_data_cutoff": "2026-09-22T11:59:37.749723Z",
+    "evaluation_data_cutoff": "2026-10-07T01:32:56.771491Z",
     "split": {
       "method": "chronological_fixed_model_holdout",
       "grouped_by": "kickoff_utc_calendar_date",
@@ -323,7 +328,8 @@
         "odds": true
       },
       "fixtures": 380,
-      "fetched_at": "2026-09-22T11:59:44.525146Z",
+      "fetched_at": "2026-10-07T01:32:57.543996Z",
+      "received_at": "2026-10-07T01:32:57.551042Z",
       "from_cache": false,
       "status_counts": {
         "FT": 50,
@@ -349,8 +355,9 @@
         "odds": false
       },
       "fixtures": 380,
-      "fetched_at": "2026-09-22T11:58:10.276009Z",
-      "from_cache": true,
+      "fetched_at": "2026-10-07T01:32:57.800752Z",
+      "received_at": "2026-10-07T01:32:57.807695Z",
+      "from_cache": false,
       "status_counts": {
         "FT": 380
       }
@@ -374,8 +381,9 @@
         "odds": false
       },
       "fixtures": 380,
-      "fetched_at": "2026-09-22T11:38:33.467033Z",
-      "from_cache": true,
+      "fetched_at": "2026-10-07T01:32:58.064015Z",
+      "received_at": "2026-10-07T01:32:58.070743Z",
+      "from_cache": false,
       "status_counts": {
         "FT": 380
       }

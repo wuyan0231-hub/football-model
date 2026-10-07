@@ -1,0 +1,525 @@
+{
+  "content": {
+    "competition": {
+      "country": "Spain",
+      "key": "segunda",
+      "label": "西乙",
+      "mode": "domestic_baseline",
+      "name": "Segunda División"
+    },
+    "data_fingerprint": "ba7b630c4adfead2b84cc879b532df2e696d65cca3817ebf78e67767f4466748",
+    "data_observed_at": "2026-10-06T01:31:40.299900Z",
+    "ev": "未量化",
+    "lineup_effects": "未量化",
+    "maturity": "exploratory_baseline",
+    "model": {
+      "constraints": {
+        "attack_sum": -1.1102230246251565e-16,
+        "defence_sum": -4.996003610813204e-16
+      },
+      "effective_sample_size": 594.6601516440992,
+      "excluded_after_cutoff_or_availability_delay": 0,
+      "fit_status": "converged",
+      "graph_connected": true,
+      "half_life_days": 180.0,
+      "home_advantage": 0.2287105532100442,
+      "intercept": 0.0781121262524917,
+      "last_match_kickoff": "2026-10-05T18:30:00Z",
+      "last_result_assumed_available_at": "2026-10-05T22:30:00Z",
+      "low_sample_team_ids": [],
+      "low_sample_team_threshold": 5,
+      "min_team_matches": 8,
+      "model_scope": "baseline_unadjusted_lineup",
+      "model_version": "independent_poisson_time_decay_l2_v1",
+      "n_matches": 1024,
+      "n_teams": 33,
+      "optimizer": {
+        "iterations": 38,
+        "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "objective": 845.1451656824105,
+        "parameter_at_bound": false,
+        "success": true
+      },
+      "ridge": 3.0,
+      "team_parameters": {
+        "10139": {
+          "attack": -0.09412066241042227,
+          "defence": -0.28002454224648793,
+          "name": "AD Ceuta FC",
+          "training_matches": 50
+        },
+        "4665": {
+          "attack": 0.4358600542460123,
+          "defence": -0.1424251902150059,
+          "name": "Racing Santander",
+          "training_matches": 86
+        },
+        "5254": {
+          "attack": 0.27508070641511256,
+          "defence": 0.1352886186900943,
+          "name": "Castellón",
+          "training_matches": 94
+        },
+        "5262": {
+          "attack": -0.20174721794962153,
+          "defence": -0.2701848324032409,
+          "name": "FC Cartagena",
+          "training_matches": 42
+        },
+        "534": {
+          "attack": 0.09692134264924218,
+          "defence": 0.0261381228540489,
+          "name": "Las Palmas",
+          "training_matches": 52
+        },
+        "535": {
+          "attack": 0.24186684480242424,
+          "defence": 0.11335085910706734,
+          "name": "Malaga",
+          "training_matches": 88
+        },
+        "537": {
+          "attack": -0.28201485486155176,
+          "defence": -0.028087572347123717,
+          "name": "Leganes",
+          "training_matches": 50
+        },
+        "539": {
+          "attack": 0.20522086507411297,
+          "defence": 0.14478271079812316,
+          "name": "Levante",
+          "training_matches": 42
+        },
+        "544": {
+          "attack": 0.11628093732158647,
+          "defence": 0.12328473477690445,
+          "name": "Deportivo La Coruna",
+          "training_matches": 84
+        },
+        "545": {
+          "attack": 0.14964815831144612,
+          "defence": 0.2890266139662196,
+          "name": "Eibar",
+          "training_matches": 92
+        },
+        "547": {
+          "attack": 0.2841664283128243,
+          "defence": 0.14540859610699267,
+          "name": "Girona",
+          "training_matches": 8
+        },
+        "713": {
+          "attack": 0.14360987903501005,
+          "defence": -0.2876331393696993,
+          "name": "Cordoba",
+          "training_matches": 92
+        },
+        "715": {
+          "attack": 0.08509649075664516,
+          "defence": -0.12096656856313302,
+          "name": "Granada CF",
+          "training_matches": 92
+        },
+        "718": {
+          "attack": -0.05011776237186527,
+          "defence": 0.1393676558433397,
+          "name": "Oviedo",
+          "training_matches": 54
+        },
+        "719": {
+          "attack": -0.10941097061333091,
+          "defence": -0.07321623352465717,
+          "name": "Tenerife",
+          "training_matches": 50
+        },
+        "720": {
+          "attack": -0.18093221253543204,
+          "defence": -0.08256123062341292,
+          "name": "Valladolid",
+          "training_matches": 50
+        },
+        "722": {
+          "attack": -0.079598586373652,
+          "defence": -0.07719054302763305,
+          "name": "Albacete",
+          "training_matches": 92
+        },
+        "723": {
+          "attack": 0.3259725101695235,
+          "defence": 0.010192657413348382,
+          "name": "Almeria",
+          "training_matches": 98
+        },
+        "724": {
+          "attack": -0.10917827691665642,
+          "defence": -0.11248856368149078,
+          "name": "Cadiz",
+          "training_matches": 92
+        },
+        "725": {
+          "attack": -0.29198353376907266,
+          "defence": -0.22045123824727034,
+          "name": "Cultural Leonesa",
+          "training_matches": 42
+        },
+        "726": {
+          "attack": -0.16608442646083868,
+          "defence": -0.1320550735650059,
+          "name": "Huesca",
+          "training_matches": 84
+        },
+        "731": {
+          "attack": 0.06048103156106291,
+          "defence": 0.028192880121677255,
+          "name": "Sporting Gijon",
+          "training_matches": 92
+        },
+        "732": {
+          "attack": -0.2865316167928986,
+          "defence": -0.09220270323559498,
+          "name": "Zaragoza",
+          "training_matches": 84
+        },
+        "797": {
+          "attack": 0.10846416261501526,
+          "defence": 0.24124046079111747,
+          "name": "Elche",
+          "training_matches": 42
+        },
+        "798": {
+          "attack": -0.18605658336222522,
+          "defence": 0.6858097568700193,
+          "name": "Mallorca",
+          "training_matches": 8
+        },
+        "799": {
+          "attack": -0.00487752362222872,
+          "defence": -0.15361123106417526,
+          "name": "Mirandes",
+          "training_matches": 88
+        },
+        "8157": {
+          "attack": 0.16375567194103327,
+          "defence": -0.135349382602921,
+          "name": "FC Andorra",
+          "training_matches": 50
+        },
+        "9409": {
+          "attack": -0.41430387564140797,
+          "defence": -0.11642964075582704,
+          "name": "Racing Ferrol",
+          "training_matches": 42
+        },
+        "9571": {
+          "attack": 0.04203492549885559,
+          "defence": -0.23433682719018364,
+          "name": "Celta de Vigo II",
+          "training_matches": 8
+        },
+        "9580": {
+          "attack": -0.08125487743067786,
+          "defence": 0.3356039968555673,
+          "name": "Burgos",
+          "training_matches": 92
+        },
+        "9585": {
+          "attack": -0.006455810367504224,
+          "defence": -0.17774376343213827,
+          "name": "Real Sociedad II",
+          "training_matches": 50
+        },
+        "9593": {
+          "attack": -0.14039391403583742,
+          "defence": 0.3801665224336064,
+          "name": "Sabadell",
+          "training_matches": 8
+        },
+        "9692": {
+          "attack": -0.04939730319468336,
+          "defence": -0.06089591053312526,
+          "name": "Eldense",
+          "training_matches": 50
+        }
+      },
+      "trained": true,
+      "training_cutoff": "2026-10-06T01:31:29.416454Z",
+      "training_data_sha256": "06907ab4bab1251d6ec8ccd59ccb9219113ae0d233be34805d7d2f495d3da33d",
+      "validated_for_production": false,
+      "warnings": [
+        "仅为球队比分基线，未量化伤停、预计阵容、球员、xG、天气及赛程因素。",
+        "已拟合不代表已通过有效性验证；参数须通过实际运行程序才能更新。",
+        "输入须由上游核准为常规时间终场比分，不能包含加时或点球大战。"
+      ]
+    },
+    "model_fitted_at": "2026-10-06T01:31:40.577983Z",
+    "model_id": "segunda-20261006T013129416454Z",
+    "program_version": "0.1.0",
+    "run_started_at": "2026-10-06T01:31:29.416454Z",
+    "schema_version": 2,
+    "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
+    "source_seasons": [
+      {
+        "coverage_flags": {
+          "fixtures": {
+            "events": true,
+            "lineups": true,
+            "statistics_fixtures": true,
+            "statistics_players": true
+          },
+          "injuries": false,
+          "odds": true,
+          "players": true,
+          "predictions": true,
+          "standings": true,
+          "top_assists": true,
+          "top_cards": true,
+          "top_scorers": true
+        },
+        "fetched_at": "2026-10-06T01:31:40.269603Z",
+        "fixtures": 462,
+        "from_cache": false,
+        "received_at": "2026-10-06T01:31:40.274898Z",
+        "status_counts": {
+          "FT": 88,
+          "NS": 374
+        },
+        "year": 2026
+      },
+      {
+        "coverage_flags": {
+          "fixtures": {
+            "events": true,
+            "lineups": true,
+            "statistics_fixtures": true,
+            "statistics_players": true
+          },
+          "injuries": true,
+          "odds": false,
+          "players": true,
+          "predictions": true,
+          "standings": true,
+          "top_assists": true,
+          "top_cards": true,
+          "top_scorers": true
+        },
+        "fetched_at": "2026-10-04T15:32:43.349074Z",
+        "fixtures": 468,
+        "from_cache": true,
+        "received_at": "2026-10-06T01:31:40.279860Z",
+        "status_counts": {
+          "FT": 468
+        },
+        "year": 2025
+      },
+      {
+        "coverage_flags": {
+          "fixtures": {
+            "events": true,
+            "lineups": true,
+            "statistics_fixtures": true,
+            "statistics_players": true
+          },
+          "injuries": false,
+          "odds": false,
+          "players": true,
+          "predictions": true,
+          "standings": true,
+          "top_assists": true,
+          "top_cards": true,
+          "top_scorers": true
+        },
+        "fetched_at": "2026-10-04T15:32:43.588357Z",
+        "fixtures": 468,
+        "from_cache": true,
+        "received_at": "2026-10-06T01:31:40.286059Z",
+        "status_counts": {
+          "AET": 1,
+          "FT": 467
+        },
+        "year": 2024
+      }
+    ],
+    "time_semantics": "observed_wall_clock_v1",
+    "trained_at": "2026-10-06T01:31:29.416454Z",
+    "training_cutoff": "2026-10-06T01:31:29.416454Z",
+    "validation": {
+      "baseline": {
+        "away_rate": 1.1230956733698965,
+        "home_rate": 1.4387568555758683,
+        "name": "training_league_home_away_mean_poisson",
+        "same_scored_matches_as_model": true,
+        "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)"
+      },
+      "baseline_metrics": {
+        "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+        "brier_score": 0.6430359085684186,
+        "log_loss": 1.0637277305596862,
+        "log_loss_probability_floor": 1e-15,
+        "n": 175
+      },
+      "comparison": {
+        "lower_is_better": true,
+        "model_minus_baseline_brier_score": -0.03463409944943485,
+        "model_minus_baseline_log_loss": -0.04826701499209318
+      },
+      "coverage": {
+        "excluded": 29,
+        "exclusions": [
+          {
+            "match_id": 1569874,
+            "reason": "未知球队 ID：[9571]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569879,
+            "reason": "未知球队 ID：[798]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569877,
+            "reason": "未知球队 ID：[547]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569876,
+            "reason": "未知球队 ID：[9593]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569886,
+            "reason": "未知球队 ID：[547]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569883,
+            "reason": "未知球队 ID：[9593]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569884,
+            "reason": "未知球队 ID：[9571]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569890,
+            "reason": "未知球队 ID：[798]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569902,
+            "reason": "未知球队 ID：[9593]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569899,
+            "reason": "未知球队 ID：[547]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569901,
+            "reason": "未知球队 ID：[798]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569897,
+            "reason": "未知球队 ID：[9571]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569909,
+            "reason": "未知球队 ID：[547]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569906,
+            "reason": "未知球队 ID：[9571]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569908,
+            "reason": "未知球队 ID：[798]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569913,
+            "reason": "未知球队 ID：[9593]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569921,
+            "reason": "未知球队 ID：[547]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569923,
+            "reason": "未知球队 ID：[798, 9593]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569918,
+            "reason": "未知球队 ID：[9571]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569935,
+            "reason": "未知球队 ID：[798]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569929,
+            "reason": "未知球队 ID：[547]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569936,
+            "reason": "未知球队 ID：[9593]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569927,
+            "reason": "未知球队 ID：[9571]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569941,
+            "reason": "未知球队 ID：[547]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569938,
+            "reason": "未知球队 ID：[9571, 9593]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569944,
+            "reason": "未知球队 ID：[798]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569954,
+            "reason": "未知球队 ID：[9571]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569955,
+            "reason": "未知球队 ID：[547, 798]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1569958,
+            "reason": "未知球队 ID：[9593]；缺少训练数据，当前模型不支持。"
+          }
+        ],
+        "ratio": 0.8578431372549019,
+        "scored": 175,
+        "total": 204
+      },
+      "deployment_approved": false,
+      "evaluation_data_cutoff": "2026-10-06T01:31:29.416454Z",
+      "is_rolling_backtest": false,
+      "meets_minimum_supported_test_matches": true,
+      "minimum_test_matches": 40,
+      "model_metrics": {
+        "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+        "brier_score": 0.6084018091189838,
+        "log_loss": 1.015460715567593,
+        "log_loss_probability_floor": 1e-15,
+        "n": 175
+      },
+      "split": {
+        "embargoed_count": 0,
+        "embargoed_match_ids": [],
+        "grouped_by": "kickoff_utc_calendar_date",
+        "method": "chronological_fixed_model_holdout",
+        "result_availability_delay_hours": 4,
+        "test_end": "2026-10-05T18:30:00Z",
+        "test_start": "2026-03-31T17:00:00Z",
+        "testing_count": 204,
+        "train_cutoff": "2026-03-31T00:00:00Z",
+        "train_last_kickoff": "2026-03-29T19:00:00Z",
+        "training_count": 820
+      },
+      "validation_status": "exploratory_single_fixed_holdout",
+      "warnings": [
+        "单次固定模型留出验证仅为探索性检查，不是滚动回测，也不构成上线或盈利证明。",
+        "不含赔率、投注收益、阵容修正或提前十小时伤停历史快照验证。",
+        "超参数为显式默认值，不能根据本留出期反复挑选参数后再声称独立验证。",
+        "未知球队比赛单独列为未覆盖，指标只针对 model_metrics.n 场已覆盖比赛。"
+      ]
+    }
+  },
+  "kind": "model_bundle",
+  "original_bytes_sha256": "ad76c1ce82c1366fbb7b317ead08db8d41bad9ed5696aa5c0324f810c776ae81"
+}

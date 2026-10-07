@@ -1,27 +1,27 @@
 # 模型接入索引
 
-索引生成：2026-10-06T15:54:46.737364Z
+索引生成：2026-10-07T01:33:11.067127Z
 
 索引仅标识已保存结果；运行成功不等于有可用预测。空窗、全部不支持和陈旧分别记录；单场仍须核查截点、赛程、场地和适用性。无自动质量验收。
 
 |联赛|接入状态|预测可用性|模型时效|最近尝试|当前模型|可用/不支持预测|
 |---|---|---|---|---|---|---|
-|英超|unsupported_only|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|epl-20260922T115937749723Z|0 / 10|
-|西甲|unsupported_only|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|laliga-20260922T135902719327Z|0 / 10|
-|德甲|unsupported_only|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|bundesliga-20260922T153512087121Z|0 / 9|
-|意甲|unsupported_only|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|serie_a-20260922T135902719327Z|0 / 10|
-|法甲|unsupported_only|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|ligue_1-20260922T153700576625Z|0 / 9|
-|德乙|unsupported_only|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|bundesliga_2-20260922T153858469514Z|0 / 9|
-|法乙|unsupported_only|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|ligue_2-20260922T154015767203Z|0 / 9|
-|欧冠|audit_only|legacy_unreported|legacy_unreported|20261006T013129416454Z / 仅审计|无|— / —|
-|瑞典超|unsupported_only|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|allsvenskan-20260922T135902719327Z|0 / 8|
-|荷甲|unsupported_only|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|eredivisie-20260922T154139511754Z|0 / 9|
-|葡超|unsupported_only|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|primeira-20260922T135902719327Z|0 / 9|
-|巴西甲|available|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|brazil_a-20261004T040143659093Z|20 / 0|
-|日职联J1|unsupported_only|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|j1-20260922T144950256594Z|0 / 10|
-|韩国K1|available|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|k1-20260928T012941903322Z|6 / 0|
-|美职联MLS|available|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|mls-20261003T013044865986Z|16 / 0|
-|欧洲国家联赛|available|available|current|20261006T155445177545Z / 探索性基线|unl-20261006T013129416454Z|9 / 0|
-|墨西超Liga MX|available|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|liga_mx-20260929T013003365576Z|9 / 0|
-|西乙|available|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|segunda-20261006T013129416454Z|11 / 0|
-|阿根廷甲级联赛|available|legacy_unreported|legacy_unreported|20261006T013129416454Z / 探索性基线|argentina_a-20261006T013129416454Z|15 / 0|
+|英超|available|available|current|20261007T013256771491Z / 探索性基线|epl-20261007T013256771491Z|10 / 0|
+|西甲|available|available|current|20261007T013256771491Z / 探索性基线|laliga-20261007T013256771491Z|10 / 0|
+|德甲|available|available|current|20261007T013256771491Z / 探索性基线|bundesliga-20261007T013256771491Z|9 / 0|
+|意甲|available|available|current|20261007T013256771491Z / 探索性基线|serie_a-20261007T013256771491Z|10 / 0|
+|法甲|available|available|current|20261007T013256771491Z / 探索性基线|ligue_1-20261007T013256771491Z|9 / 0|
+|德乙|available|available|current|20261007T013256771491Z / 探索性基线|bundesliga_2-20261007T013256771491Z|9 / 0|
+|法乙|available|available|current|20261007T013256771491Z / 探索性基线|ligue_2-20261007T013256771491Z|9 / 0|
+|欧冠|audit_only|audit_only|not_checked|20261007T013256771491Z / 仅审计|无|— / —|
+|瑞典超|available|available|current|20261007T013256771491Z / 探索性基线|allsvenskan-20261007T013256771491Z|8 / 0|
+|荷甲|available|available|current|20261007T013256771491Z / 探索性基线|eredivisie-20261007T013256771491Z|9 / 0|
+|葡超|available|available|current|20261007T013256771491Z / 探索性基线|primeira-20261007T013256771491Z|9 / 0|
+|巴西甲|available|available|current|20261007T013256771491Z / 探索性基线|brazil_a-20261004T040143659093Z|20 / 0|
+|日职联J1|available|available|current|20261007T013256771491Z / 探索性基线|j1-20261007T013256771491Z|10 / 0|
+|韩国K1|available|available|current|20261007T013256771491Z / 探索性基线|k1-20260928T012941903322Z|6 / 0|
+|美职联MLS|available|available|current|20261007T013256771491Z / 探索性基线|mls-20261003T013044865986Z|15 / 0|
+|欧洲国家联赛|no_upcoming|no_upcoming|current|20261007T013256771491Z / 探索性基线|unl-20261007T013256771491Z|0 / 0|
+|墨西超Liga MX|available|available|current|20261007T013256771491Z / 探索性基线|liga_mx-20260929T013003365576Z|9 / 0|
+|西乙|available|available|current|20261007T013256771491Z / 探索性基线|segunda-20261006T013129416454Z|11 / 0|
+|阿根廷甲级联赛|available|available|current|20261007T013256771491Z / 探索性基线|argentina_a-20261007T013256771491Z|15 / 0|
