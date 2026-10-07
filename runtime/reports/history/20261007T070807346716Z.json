@@ -1,0 +1,292 @@
+{
+  "schema_version": 2,
+  "time_semantics": "observed_wall_clock_v1",
+  "run_started_at": "2026-10-07T07:08:07.346716Z",
+  "training_cutoff": "2026-10-07T07:08:07.346716Z",
+  "run_id": "20261007T070807346716Z",
+  "mode": "train",
+  "program_version": "0.1.0",
+  "source_commit": "8e9a14126b9ebcebcb75170b2d79206e4ba4cce9",
+  "requested_competitions": [
+    "k1"
+  ],
+  "competitions": [
+    {
+      "key": "k1",
+      "label": "韩国K1",
+      "status": "探索性基线",
+      "seasons": [
+        {
+          "year": 2026,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": false,
+            "predictions": true,
+            "odds": true
+          },
+          "fixtures": 198,
+          "fetched_at": "2026-10-07T07:08:07.983867Z",
+          "received_at": "2026-10-07T07:08:07.990702Z",
+          "from_cache": false,
+          "status_counts": {
+            "FT": 180,
+            "NS": 18
+          }
+        },
+        {
+          "year": 2025,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "fixtures": 232,
+          "fetched_at": "2026-10-07T07:08:08.172378Z",
+          "received_at": "2026-10-07T07:08:08.179493Z",
+          "from_cache": false,
+          "status_counts": {
+            "FT": 232
+          }
+        },
+        {
+          "year": 2024,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": false,
+            "predictions": true,
+            "odds": false
+          },
+          "fixtures": 232,
+          "fetched_at": "2026-10-07T07:08:08.400145Z",
+          "received_at": "2026-10-07T07:08:08.407135Z",
+          "from_cache": false,
+          "status_counts": {
+            "FT": 231,
+            "AET": 1
+          }
+        }
+      ],
+      "configured": true,
+      "model_change": "旧拟合时间证据缺失，已实际重新拟合",
+      "lineup_model": "未实现",
+      "xg_model": "未实现",
+      "return_advantage": "未经验证",
+      "ev": "未量化",
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-07T07:08:07.346716Z",
+      "forecast_availability": {
+        "status": "available",
+        "upcoming_count": 6,
+        "supported_count": 6,
+        "unsupported_count": 0,
+        "unsupported_reasons": {}
+      },
+      "model_freshness": {
+        "status": "current",
+        "evaluated_at": "2026-10-07T07:08:07.346716Z",
+        "age_basis": "training_cutoff",
+        "age_days": 0.0,
+        "max_age_days": 14,
+        "latest_upcoming_model_age_days": 3.911026079675926,
+        "training_last_match_kickoff": "2026-09-27T10:00:00Z",
+        "training_data_age_days": 9.88064058699074,
+        "note": "真实重拟合可沿用相同历史样本；不代表取得新赛果、阵容或其他基本面。"
+      },
+      "metadata_received_at": "2026-10-07T07:08:07.778512Z",
+      "provider_league_id": 292,
+      "eligible_matches": 644,
+      "missing_seasons": [],
+      "last_match_kickoff": "2026-09-27T10:00:00Z",
+      "observed_at": "2026-10-07T07:08:08.411097Z",
+      "data_observed_at": "2026-10-07T07:08:08.411097Z",
+      "model_refresh": {
+        "required": true,
+        "reasons": [
+          "missing_model_fitted_at"
+        ],
+        "training_inputs_changed": false,
+        "data_changed": false,
+        "performed": true,
+        "prior_model_id": "k1-20260928T012941903322Z",
+        "time_evidence_migration": {
+          "status": "completed",
+          "policy": "refit_legacy_model_when_upcoming_v1",
+          "stage": "completed",
+          "prior_model_evidence": {
+            "path": "runtime/model_history/k1/predecessors/96662859bf1c416df276054e32392bcc3b01fb5f659b234828c0c713a76c0520.json",
+            "sha256": "96662859bf1c416df276054e32392bcc3b01fb5f659b234828c0c713a76c0520"
+          },
+          "model_fitted_at": "2026-10-07T07:08:08.510122Z"
+        }
+      },
+      "coverage_audit": {
+        "path": "runtime/audits/k1/20261007T070807346716Z-coverage.json",
+        "status": "noncomparable_diagnostic",
+        "counts": {
+          "old_total": 129,
+          "new_total": 129,
+          "old_scored": 129,
+          "new_scored": 129,
+          "common_scored": 129,
+          "paired_common_scored": 129,
+          "new_only_scored": 0,
+          "removed_scored": 0,
+          "unpaired_common_scored": 0,
+          "old_excluded": 0,
+          "new_excluded": 0
+        },
+        "comparison_eligibility": {
+          "same_evaluation_conditions": false,
+          "reasons": [
+            "different_or_unknown_evaluation_data_cutoff"
+          ],
+          "pure_repair_effect_validated": false,
+          "note": "共同样本配对评分仅为描述性检查；因果增量还需固定修复外的资料、实现和验证条件。"
+        },
+        "prospective_increment_validated": false
+      },
+      "validation": {
+        "validation_status": "exploratory_single_fixed_holdout",
+        "deployment_approved": false,
+        "is_rolling_backtest": false,
+        "minimum_test_matches": 40,
+        "meets_minimum_supported_test_matches": true,
+        "evaluation_data_cutoff": "2026-10-07T07:08:07.346716Z",
+        "split": {
+          "method": "chronological_fixed_model_holdout",
+          "grouped_by": "kickoff_utc_calendar_date",
+          "train_cutoff": "2026-04-22T00:00:00Z",
+          "train_last_kickoff": "2026-04-21T10:30:00Z",
+          "test_start": "2026-04-22T10:30:00Z",
+          "test_end": "2026-09-27T10:00:00Z",
+          "training_count": 515,
+          "testing_count": 129,
+          "result_availability_delay_hours": 4,
+          "embargoed_count": 0,
+          "embargoed_match_ids": []
+        },
+        "coverage": {
+          "total": 129,
+          "scored": 129,
+          "excluded": 0,
+          "ratio": 1.0,
+          "exclusions": []
+        },
+        "model_metrics": {
+          "n": 129,
+          "log_loss": 1.0835530808425058,
+          "brier_score": 0.6564374537592599,
+          "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+          "log_loss_probability_floor": 1e-15
+        },
+        "baseline_metrics": {
+          "n": 129,
+          "log_loss": 1.1217305548410492,
+          "brier_score": 0.6828928672699479,
+          "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+          "log_loss_probability_floor": 1e-15
+        },
+        "baseline": {
+          "name": "training_league_home_away_mean_poisson",
+          "home_rate": 1.3840931134820562,
+          "away_rate": 1.1668283220174587,
+          "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
+          "same_scored_matches_as_model": true
+        },
+        "comparison": {
+          "model_minus_baseline_log_loss": -0.03817747399854343,
+          "model_minus_baseline_brier_score": -0.02645541351068803,
+          "lower_is_better": true
+        },
+        "warnings": [
+          "单次固定模型留出验证仅为探索性检查，不是滚动回测，也不构成上线或盈利证明。",
+          "不含赔率、投注收益、阵容修正或提前十小时伤停历史快照验证。",
+          "超参数为显式默认值，不能根据本留出期反复挑选参数后再声称独立验证。",
+          "未知球队比赛单独列为未覆盖，指标只针对 model_metrics.n 场已覆盖比赛。"
+        ]
+      },
+      "model_id": "k1-20261007T070807346716Z",
+      "trained_at": "2026-10-07T07:08:07.346716Z",
+      "training_cutoff": "2026-10-07T07:08:07.346716Z",
+      "model_fitted_at": "2026-10-07T07:08:08.510122Z",
+      "detail": "未含阵容伤停、xG与赛程；未证实预测或收益优势。",
+      "forecast_generated_at": "2026-10-07T07:08:08.577910Z",
+      "forecast_count": 6,
+      "unsupported_forecasts": 0
+    }
+  ],
+  "api_requests": 4,
+  "api_budget": {
+    "configured_daily_limit": 5000,
+    "provider_daily_limit": 7500,
+    "provider_daily_used": 205,
+    "daily_remaining": 4795,
+    "daily_remaining_reported": 7295,
+    "minute_limit": 300,
+    "minute_remaining": 296,
+    "max_requests_per_run": null,
+    "requests_made": 4,
+    "min_interval_seconds": 0.21000000000000002,
+    "max_run_seconds": 3600,
+    "elapsed_seconds": 1.2198587399999994,
+    "quota_observed_at": "2026-10-07T07:08:08.365574Z",
+    "quota_source": "response_headers",
+    "daily_quota_status": "known"
+  },
+  "exit_code": 0,
+  "forecast_availability_summary": {
+    "competition_status_counts": {
+      "available": 1
+    },
+    "upcoming_count": 6,
+    "supported_count": 6,
+    "unsupported_count": 0,
+    "unknown_coverage_competitions": 0,
+    "usage": "流程成功不代表存在可用预测；空窗、全部不支持与失败分别计数。",
+    "requested_competitions": 1,
+    "unreported_competitions": []
+  },
+  "generated_at": "2026-10-07T07:08:08.582943Z",
+  "integration_index": {
+    "status": "updated",
+    "path": "runtime/integration/index.json"
+  },
+  "replay_recording": {
+    "status": "recorded",
+    "path": "replay/bundles/d604a58fa89a12df481a619b0830467f7569aa1a0906ed18e60aa1c6adda708c.json.gz",
+    "sha256": "d604a58fa89a12df481a619b0830467f7569aa1a0906ed18e60aa1c6adda708c",
+    "events": 28,
+    "initial_state_files": 2
+  }
+}
