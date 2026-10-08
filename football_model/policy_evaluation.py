@@ -4,6 +4,7 @@ No policy output, grade, probability, result, or missing return is manufactured.
 The comparison is descriptive; its bootstrap is not an automatic promotion gate.
 """
 from __future__ import annotations
+from copy import deepcopy
 
 import argparse
 from collections import Counter, defaultdict
@@ -279,6 +280,15 @@ def _side(selected, versions, ambiguous, policy, spec, registered_at):
     if score.get("quote_protocol") != spec["quote_protocol"] or score.get("usage") != spec["usage"]:
         result.update(status="unpaired", reason="quote_protocol_or_usage_mismatch")
         return result
+    from .decision_scoring import current_score_admission_reasons
+    admission_reasons = current_score_admission_reasons(score)
+    if admission_reasons:
+        value = (score.get("outcome") or {}).get(RETURN_FIELDS[spec["quote_protocol"]])
+        result.update(prospective=False, current_score_admission=False,
+                      admission_reasons=admission_reasons,
+                      historical_ticket_return=value if _finite(value) else None,
+                      historical_probability_metrics=deepcopy((score.get("probability") or {}).get("metrics")))
+        return result
     result["metrics"] = {name: _get(score, path) for name, path in METRIC_PATHS.items()}
     source_metrics = (score.get("probability") or {}).get("metrics") or {}
     result["probability_diagnostics"] = {market: {key: (source_metrics.get(market) or {}).get(key)
@@ -302,6 +312,9 @@ def _pair_reasons(left, right):
         reasons["process"].append("actual_pair_unavailable")
         return reasons
     a, b = left["score"], right["score"]
+    for side in (left, right):
+        reasons["probability"].extend(side.get("admission_reasons", []))
+        reasons["returns"].extend(side.get("admission_reasons", []))
     for field in ("contract", "quote_protocol", "usage"):
         if a.get(field) is None or b.get(field) is None:
             reasons["process"].append(field + "_missing")

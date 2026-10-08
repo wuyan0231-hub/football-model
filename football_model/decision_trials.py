@@ -15,7 +15,7 @@ from pathlib import Path
 
 from .decision_record import (PROTOCOL as DECISION_BUNDLE, _read_manifest,
                               _write_bundle, build_decision_bundle, verify_decision_bundle)
-from .decision_scoring import read_decision_score
+from .decision_scoring import current_score_admission_reasons, read_decision_score
 from .evidence import EvidenceError, _no_symlinks, _read_regular, _time
 from .policy_evaluation import IDENTITY, RETURN_FIELDS, cluster_interval
 
@@ -503,7 +503,14 @@ def compare_trials(root, protocol_id, scores, *, output_path=None):
             if score["source"]["protocol_sha256"] != spec["scoring_protocol"]["sha256"]:
                 raise EvidenceError("score_uses_different_preregistered_scoring_protocol")
             out["score"] = score
-            out["ticket_return"] = score["outcome"].get(RETURN_FIELDS[spec["quote_protocol"]])
+            admission_reasons = current_score_admission_reasons(score)
+            raw_ticket_return = score["outcome"].get(RETURN_FIELDS[spec["quote_protocol"]])
+            if admission_reasons:
+                out.update(current_score_admission=False, admission_reasons=admission_reasons,
+                           historical_ticket_return=raw_ticket_return,
+                           historical_probability_metrics=deepcopy((score.get("probability") or {}).get("metrics")))
+            else:
+                out["ticket_return"] = raw_ticket_return
             if out["action"] == "candidate":
                 out["strategy_return"] = out["ticket_return"]
         a, b = (row["sides"][s] for s in SIDES)
@@ -522,6 +529,9 @@ def compare_trials(root, protocol_id, scores, *, output_path=None):
         valid_scores = [s["score"] for s in (a, b) if s["score"] is not None]
         result_ids = {s["source"]["result_sha256"] for s in valid_scores}
         return_reasons = []
+        score_admission_reasons = sorted({reason for score in valid_scores
+                                          for reason in current_score_admission_reasons(score)})
+        return_reasons.extend(score_admission_reasons)
         if not comparable:
             return_reasons.append("process_pair_unavailable")
         for side in (a, b):
@@ -551,6 +561,12 @@ def compare_trials(root, protocol_id, scores, *, output_path=None):
                 if side["action"] == "abstain" and spec["abstention_zero_exposure"] and (known_zero or side["ticket_return"] is not None or other["ticket_return"] is not None):
                     side["strategy_return"] = 0.0
         row["return_comparison_reasons"] = sorted(set(return_reasons))
+        probability_reasons = list(score_admission_reasons)
+        if not comparable:
+            probability_reasons.append("process_pair_unavailable")
+        if len(valid_scores) != 2 or len(result_ids) != 1 or None in result_ids:
+            probability_reasons.append("same_verified_result_revision_required")
+        row["probability_comparison_reasons"] = sorted(set(probability_reasons))
         metric_set = metrics["prospective" if row["prospective_pair"] and (known_zero or all(s.get("qualification") == "prospective_decision_candidate" for s in valid_scores)) else "research"]
         if not return_reasons:
             metric_set["strategy_return"].append({**request, "left": a["strategy_return"], "right": b["strategy_return"]})
@@ -558,7 +574,7 @@ def compare_trials(root, protocol_id, scores, *, output_path=None):
                 metric_set["ticket_return"].append({**request, "left": a["ticket_return"], "right": b["ticket_return"]})
         # A different ticket changes the five-state outcome space: those scores
         # are not a fair accuracy comparison. Only full match 1X2 is comparable.
-        if comparable and len(valid_scores) == 2 and len(result_ids) == 1 and None not in result_ids:
+        if not probability_reasons:
             for field in ("brier_score", "log_loss"):
                 values = [(s.get("probability", {}).get("metrics", {}).get("one_x_two") or {}).get(field) for s in valid_scores]
                 metric_set["one_x_two_" + field].append({**request, "left": values[0], "right": values[1]})

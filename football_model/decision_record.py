@@ -14,6 +14,7 @@ import json
 import os
 from pathlib import Path
 from typing import Any
+import zipfile
 
 from .decision_audit import FITS, validate_decision_record
 from .evidence import EvidenceError, _no_symlinks, _read_regular, _relative, _time, _quote_interval
@@ -21,6 +22,10 @@ from .evidence import EvidenceError, _no_symlinks, _read_regular, _relative, _ti
 SCHEMA = "s2-decision-1.0"
 PROTOCOL = "s2-decision-bundle-1.0"
 EVENT_PROTOCOL = "s2-decision-event-1.0"
+CUMULATIVE_PROTOCOL = "s2-cumulative-archive-1.0"
+CUMULATIVE_INPUT_SCHEMA = "s2-cumulative-input-1.0"
+CUMULATIVE_ARTIFACT_ROLES = {"prematch_report", "update_report", "postmatch_report", "screenshot",
+                             "dialogue", "receipt", "original", "other"}
 ROLES = {"screenshot", "source", "model", "prediction", "rules", "code"}
 CLOCK_FIELDS = {"created_at", "generated_at", "freeze_started_at", "freeze_committed_at",
                 "report_generated_at", "publicly_published_at", "user_received_at"}
@@ -234,12 +239,16 @@ def _collect_evidence(record, source_root, now, issues):
     return entries, contents, reasons
 
 
-def _compile(record, entries, issues):
+def _compile(record, entries, issues, *, legacy_api_ah_replay=False):
     """Normalize once; downstream views only consume this canonical object."""
     from .decision_quotes import adapt_quote_row
     core = deepcopy(record)
     if core.get("schema_version") != SCHEMA:
         _issue(issues, "unsupported_decision_schema", "schema_version")
+    if core.get("membership_view_version") not in (None, "all_candidates_v1"):
+        _issue(issues, "unsupported_membership_view_version", "membership_view_version")
+    if core.get("api_ah_mapping_policy_version") not in (None, "api-ah-quarantine-v1"):
+        _issue(issues, "unsupported_api_ah_mapping_policy_version", "api_ah_mapping_policy_version")
     for field in ("match_id", "decision_id", "version_id", "policy_id"):
         if not _text(core.get(field)):
             _issue(issues, "required_identity", field)
@@ -276,7 +285,8 @@ def _compile(record, entries, issues):
     adapted_rows, offers, row_aliases = [], [], {}
     for row in _rows(core.get("quote_rows", []), issues, "quote_rows"):
         try:
-            adapted = adapt_quote_row(row, match_id=core.get("match_id"), forecast_id=core.get("forecast_id"))
+            adapted = adapt_quote_row(row, match_id=core.get("match_id"), forecast_id=core.get("forecast_id"),
+                                      legacy_replay_only=legacy_api_ah_replay)
             adapted_rows.append(adapted)
             row_aliases.setdefault(row.get("row_id"), []).append(adapted["quote_row_id"])
             if row.get("source_id") not in verified_sources:
@@ -512,6 +522,31 @@ def _views(core, validation, eligibility):
                   "formal_condition_ids": deepcopy(primary.get("formal_condition_ids")) if primary else None,
                   "shadow_grading": deepcopy(core.get("shadow_grading")),
                   "whole_parlay_assessed": False, "execution_status": "unknown", "executed": None}
+    if core.get("membership_view_version") == "all_candidates_v1":
+        # Retain legacy primary fields while deriving
+        # every original candidate and its independently stated usage from the same
+        # canonical object. A fit set is NOT a set of executed or selected tickets.
+        membership["schema_version"] = "s2-membership-all-candidates-1.0"
+        membership["view_scope"] = "all_archived_candidates_primary_fields_retained"
+        membership["candidate_order"] = [c.get("candidate_id") for c in archive["candidates"]]
+        membership["candidates"] = [
+            {key: deepcopy(c.get(key)) for key in (
+                "candidate_id", "label", "role", "action_status", "version_id",
+                "contract_id", "quote_row_id", "quote_offer_id", "formal_fit",
+                "formal_condition_ids", "condition_ids", "entry_gate",
+                "reassessment_triggers", "original_single_fit_text",
+                "original_parlay_fit_text")}
+            for c in archive["candidates"]
+        ]
+        membership["sets_by_usage"] = {
+            usage: {fit: [c.get("candidate_id") for c in archive["candidates"]
+                          if c.get("formal_fit", {}).get(usage) == value]
+                    for fit, value in [("适合", "适合"), ("条件适合", "条件适合"),
+                                       ("不建议", "不建议"), ("暂无法判断", "暂无法判断"),
+                                       ("未单独评级", None)]}
+            for usage in ("single", "parlay_leg")
+        }
+        membership["sets_scope"] = "fit_classification_only_not_recommendation_or_execution"
     scoring = {"match_id": core.get("match_id"), "decision_id": core.get("decision_id"), "version_id": core.get("version_id"),
                "policy_id": core.get("policy_id"), "forecast_id": core.get("forecast_id"),
             "forecast_missing_reason": core.get("forecast_missing_reason"),
@@ -537,6 +572,10 @@ def _html(core, views, validation, eligibility, times):
             "<h2>完整报价原行与单票映射</h2>", pre(core["adapted_quote_rows"]), "<h2>模型与实际计算记录</h2>", pre({k:core["archive"][k] for k in ("model_records","calculation_records")}),
             "<h2>来源与事实</h2>", pre({k:core["archive"][k] for k in ("sources","facts")}),
             "<h2>证据、时间资格和诊断</h2>", pre({"times":{k:v for k,v in times.items() if k != "report_generated_at"},"report_completion_record":"times.json/report_generated_at","eligibility":eligibility,"validation":validation}), "</html>"]
+    if core.get("membership_view_version") == "all_candidates_v1":
+        body[-1:-1] = ["<h2>全部候选适配清单：分类不代表已推荐或执行</h2>", pre(views["membership"]),
+                        "<h2>原始评分绑定（赛后追加另存）</h2>", pre(views["scoring"]),
+                        "<h2>未采用为确认报价的原声明</h2>", pre(core.get("unadopted_quote_declarations", []))]
     return "".join(body).encode("utf-8")
 
 
@@ -554,6 +593,12 @@ def _write_bundle(output, contents, protocol):
     return _sha(blob)
 
 
+def _output_policy(record):
+    return {key: record.get(key) if record.get(key) is not None else default
+            for key, default in (("membership_view_version", "all_candidates_v1"),
+                                 ("api_ah_mapping_policy_version", "api-ah-quarantine-v1"))}
+
+
 def build_decision_bundle(record, output_dir, *, source_root):
     """Create a new diagnostic or review bundle; never overwrite inputs or outputs."""
     if not isinstance(record, dict):
@@ -564,10 +609,13 @@ def build_decision_bundle(record, output_dir, *, source_root):
     root = _no_symlinks(source_root)
     source_record = deepcopy(record)
     original_bytes = _bytes(source_record)  # rejects non-JSON and NaN
+    # Preserve the actual submitted object. Builder defaults belong to a separate
+    # immutable output policy, not the independent producer's original output.
+    output_policy = _output_policy(source_record)
     started = _now()
     issues = []
     entries, originals, reasons = _collect_evidence(source_record, root, started, issues)
-    core = _compile(source_record, entries, issues)
+    core = _compile({**source_record, **output_policy}, entries, issues)
     validation = _validation(core, issues)
     if any(i["code"] in {"quote_not_proven_at_cutoff", "quote_claim_observed_after_cutoff", "quote_observation_conflicts_with_frozen_source", "quote_claim_observation_conflict", "source_not_frozen", "quote_source_not_frozen", "quote_claim_source_not_frozen", "adopted_forecast_evidence_missing", "forecast_reference_is_not_frozen_prediction", "forecast_match_scope_unknown", "adopted_forecast_match_mismatch", "adopted_forecast_kickoff_mismatch"} for i in issues):
         reasons.append("decision_evidence_not_fully_frozen_at_cutoff")
@@ -590,7 +638,8 @@ def build_decision_bundle(record, output_dir, *, source_root):
     views = _views(core, validation, eligibility)
     times = {"freeze_started_at":_iso(started),"freeze_committed_at":_iso(committed),
              "report_generated_at":None,"publicly_published_at":None,"user_received_at":None}
-    contents = {**originals, "input_record.json": original_bytes, "decision.json": _bytes(core), "evidence.json":_bytes(entries),
+    contents = {**originals, "input_record.json": original_bytes, "output_policy.json": _bytes(output_policy),
+                "decision.json": _bytes(core), "evidence.json":_bytes(entries),
                 "validation.json":_bytes(validation), "eligibility.json":_bytes(eligibility),"times.json":_bytes(times)}
     contents.update({name+".json":_bytes(value) for name,value in views.items()})
     contents["report.html"] = _html(core, views, validation, eligibility, times)
@@ -654,7 +703,16 @@ def verify_decision_bundle(bundle_dir, expected_manifest_sha256=None):
         replay_entries, _, reasons = _collect_evidence(original, _no_symlinks(bundle_dir) / "originals", ordered[0], issues)
         if entries != replay_entries:
             raise EvidenceError("evidence_binding_mismatch")
-        expected = _compile(original,replay_entries,issues)
+        effective = original
+        if "output_policy.json" in contents:
+            policy = json.loads(contents["output_policy.json"])
+            if policy != _output_policy(original):
+                raise EvidenceError("output_policy_replay_mismatch")
+            effective = {**original, **policy}
+        # Old, already sealed API rows replay their original adapter output only.
+        # A new build always freezes quarantine and cannot take this path.
+        expected = _compile(effective, replay_entries, issues,
+                            legacy_api_ah_replay=effective.get("api_ah_mapping_policy_version") is None)
         if core != expected:
             raise EvidenceError("canonical_decision_mismatch")
         replay_validation = _validation(expected,issues)
@@ -683,6 +741,242 @@ def verify_decision_bundle(bundle_dir, expected_manifest_sha256=None):
     return {"status":"verified","manifest_sha256":digest,"externally_anchored":expected_manifest_sha256 is not None,
             "decision_status":validation["status"],"qualification":eligibility["qualification"],
             "historical_blindness_proven":False,"manual_semantic_review_required":True}
+
+
+def _cumulative_html(archive):
+    links = "".join(
+        "<li><a href='" + escape(item["path"] + "/report.html", quote=True) + "'>"
+        + escape(item["version_id"]) + "</a>：" + escape(item["decision_id"]) + "</li>"
+        for item in archive["decisions"]
+    )
+    originals = "".join(
+        "<li><a href='" + escape(item["saved_path"], quote=True) + "'>"
+        + escape(item["artifact_id"]) + "</a>（" + escape(item["role"]) + "）</li>"
+        for item in archive["artifacts"]
+    )
+    return ("<!doctype html><html lang='zh-CN'><meta charset='utf-8'>"
+            "<title>比赛累计归档</title><h1>比赛累计归档</h1>"
+            "<p>全部候选在各版本决定阅读页中显示。版本按提交清单保存，顺序不替代真实发表时间；"
+            "原件、赛后追加、未知发表及未知执行均保持原值。此归档不重新预测、不推定成交或收益。</p>"
+            "<h2>决定版本</h2><ul>" + links + "</ul><h2>完整原件与追加资料</h2><ul>"
+            + originals + "</ul><h2>保存记录</h2><pre>"
+            + escape(json.dumps(archive, ensure_ascii=False, sort_keys=True, indent=2,
+                                allow_nan=False)) + "</pre></html>").encode("utf-8")
+
+
+def _check_cumulative_artifact(item, versions):
+    if (not _text(item.get("artifact_id")) or item.get("role") not in CUMULATIVE_ARTIFACT_ROLES
+            or not _hash(item.get("sha256"))):
+        raise EvidenceError("cumulative_artifact_metadata_required")
+    if item.get("version_id") is not None and item["version_id"] not in versions:
+        raise EvidenceError("cumulative_artifact_unknown_version")
+    for field in ("occurred_at", "observed_at"):
+        if item.get(field) is not None:
+            try:
+                if _time(item[field]) > _now():
+                    raise EvidenceError("cumulative_artifact_time_in_future")
+            except (ValueError, TypeError) as exc:
+                if isinstance(exc, EvidenceError):
+                    raise
+                raise EvidenceError("cumulative_artifact_invalid_time") from None
+
+
+def _check_cumulative_append(parent, archive):
+    if parent["match_id"] != archive["match_id"]:
+        raise EvidenceError("cumulative_cross_match_predecessor")
+    if len(archive["decisions"]) < len(parent["decisions"]):
+        raise EvidenceError("cumulative_previous_version_omitted")
+    for old, new in zip(parent["decisions"], archive["decisions"]):
+        if any(old[key] != new[key] for key in ("path", "decision_id", "version_id", "manifest_sha256")):
+            raise EvidenceError("cumulative_previous_version_rewritten_or_reordered")
+    current = {item["artifact_id"]: item for item in archive["artifacts"]}
+    if any(current.get(item["artifact_id"]) != item for item in parent["artifacts"]):
+        raise EvidenceError("cumulative_previous_artifact_omitted_or_rewritten")
+
+
+def build_cumulative_archive(record, output_dir, *, source_root, output_zip=None):
+    """Save explicitly named versions and originals without editing old outputs.
+
+    Later calls name all prior versions plus additions and create a new archive.
+    A saved inventory does not prove that every real source has been supplied.
+    """
+    if not isinstance(record, dict) or record.get("schema_version") != CUMULATIVE_INPUT_SCHEMA:
+        raise EvidenceError("unsupported_cumulative_input")
+    if not _text(record.get("match_id")):
+        raise EvidenceError("cumulative_match_id_required")
+    root = _no_symlinks(source_root).resolve()
+    output = _no_symlinks(output_dir).resolve()
+    archive_zip = _no_symlinks(output_zip if output_zip is not None else str(output) + ".zip").resolve()
+    if output.exists() or archive_zip.exists():
+        raise EvidenceError("destination_exists_no_overwrite")
+    if archive_zip == output or archive_zip.is_relative_to(output):
+        raise EvidenceError("zip_must_be_outside_cumulative_directory")
+    decisions, artifacts = record.get("decisions"), record.get("artifacts", [])
+    if not isinstance(decisions, list) or not decisions or any(not isinstance(x, dict) for x in decisions):
+        raise EvidenceError("cumulative_decisions_required")
+    if not isinstance(artifacts, list) or any(not isinstance(x, dict) for x in artifacts):
+        raise EvidenceError("cumulative_artifact_array_required")
+    contents, saved_decisions, saved_artifacts = {}, [], []
+    identities, versions = set(), set()
+    for number, item in enumerate(decisions, 1):
+        anchor = item.get("manifest_sha256")
+        if not _hash(anchor):
+            raise EvidenceError("cumulative_decision_anchor_required")
+        source = _no_symlinks(root / _relative(item.get("path")))
+        if output.is_relative_to(source) or archive_zip.is_relative_to(source):
+            raise EvidenceError("cumulative_output_overlaps_source")
+        verified = verify_decision_bundle(source, anchor)
+        original_contents, _ = _read_manifest(source, anchor, PROTOCOL)
+        core = json.loads(original_contents["decision.json"])
+        if core.get("match_id") != record["match_id"]:
+            raise EvidenceError("cumulative_cross_match_decision")
+        identity, version = core.get("decision_id"), core.get("version_id")
+        if identity in identities or version in versions:
+            raise EvidenceError("cumulative_duplicate_decision_or_version")
+        identities.add(identity)
+        versions.add(version)
+        prefix = f"decisions/{number:04d}"
+        for relative, blob in original_contents.items():
+            contents[prefix + "/" + relative] = blob
+        contents[prefix + "/manifest.json"] = _read_regular(source, "manifest.json")
+        saved_decisions.append({"path": prefix, "source_path": item["path"],
+                                "decision_id": identity, "version_id": version,
+                                "manifest_sha256": anchor,
+                                "membership_view_version": core.get("membership_view_version"),
+                                "decision_status": verified["decision_status"]})
+    artifact_ids, artifact_paths = set(), set()
+    for item in artifacts:
+        identity, relative = item.get("artifact_id"), str(_relative(item.get("path")))
+        if not _text(identity) or identity in artifact_ids or relative in artifact_paths:
+            raise EvidenceError("cumulative_duplicate_or_missing_artifact")
+        _check_cumulative_artifact(item, versions)
+        try:
+            blob = _read_regular(root, relative)
+        except OSError:
+            raise EvidenceError("cumulative_artifact_missing_or_unreadable") from None
+        if _sha(blob) != item["sha256"]:
+            raise EvidenceError("cumulative_artifact_hash_mismatch")
+        artifact_ids.add(identity)
+        artifact_paths.add(relative)
+        saved = {**deepcopy(item), "saved_path": "originals/" + relative, "bytes": len(blob)}
+        contents[saved["saved_path"]] = blob
+        saved_artifacts.append(saved)
+    archive = {"schema_version": CUMULATIVE_PROTOCOL, "match_id": record["match_id"],
+               "decisions": saved_decisions, "artifacts": saved_artifacts,
+               "created_at": _iso(_now()), "publicly_published_at": None,
+               "execution_status": "unknown", "realized_return": None,
+               "source_completeness_verified": False,
+               "preservation": "named_original_bytes_and_sealed_decisions_unchanged"}
+    previous = record.get("previous_archive")
+    if previous is not None:
+        if not isinstance(previous, dict) or not _hash(previous.get("manifest_sha256")):
+            raise EvidenceError("cumulative_predecessor_anchor_required")
+        parent_root = _no_symlinks(root / _relative(previous.get("path")))
+        if output.is_relative_to(parent_root) or archive_zip.is_relative_to(parent_root):
+            raise EvidenceError("cumulative_output_overlaps_source")
+        verify_cumulative_archive(parent_root, previous["manifest_sha256"])
+        parent_contents, _ = _read_manifest(parent_root, previous["manifest_sha256"], CUMULATIVE_PROTOCOL)
+        parent = json.loads(parent_contents["cumulative_archive.json"])
+        _check_cumulative_append(parent, archive)
+        prefix = "lineage/" + previous["manifest_sha256"]
+        parent_manifest = _read_regular(parent_root, "manifest.json")
+        archive["previous_archive"] = {"manifest_path": prefix + "/manifest.json",
+                                      "archive_path": prefix + "/cumulative_archive.json",
+                                      "manifest_sha256": previous["manifest_sha256"]}
+        contents[prefix + "/manifest.json"] = parent_manifest
+        contents[prefix + "/cumulative_archive.json"] = parent_contents["cumulative_archive.json"]
+        # Preserve prior metadata chains without recursively copying old reports.
+        contents.update({path: blob for path, blob in parent_contents.items() if path.startswith("lineage/")})
+        archive["lineage_artifacts"] = [{"path": path, "sha256": _sha(blob), "bytes": len(blob)}
+                                       for path, blob in sorted(contents.items()) if path.startswith("lineage/")]
+    contents["cumulative_archive.json"] = _bytes(archive)
+    contents["report.html"] = _cumulative_html(archive)
+    manifest_sha256 = _write_bundle(output, contents, CUMULATIVE_PROTOCOL)
+    verify_cumulative_archive(output, manifest_sha256)
+    archive_zip.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(archive_zip, "x", compression=zipfile.ZIP_DEFLATED) as zipped:
+        for relative in sorted(contents.keys() | {"manifest.json"}):
+            zipped.write(output / relative, relative)
+    return {"status": "cumulative_archive_created", "output_dir": str(output),
+            "manifest_sha256": manifest_sha256, "zip_path": str(archive_zip),
+            "zip_sha256": _sha(archive_zip.read_bytes()),
+            "decision_count": len(decisions), "artifact_count": len(artifacts),
+            "source_completeness_verified": False}
+
+
+def verify_cumulative_archive(bundle_dir, expected_manifest_sha256=None):
+    contents, digest = _read_manifest(bundle_dir, expected_manifest_sha256, CUMULATIVE_PROTOCOL)
+    try:
+        archive = json.loads(contents["cumulative_archive.json"])
+        if (archive["schema_version"] != CUMULATIVE_PROTOCOL or not _text(archive["match_id"])
+                or _time(archive["created_at"]) > _now()
+                or archive.get("publicly_published_at") is not None
+                or archive.get("execution_status") != "unknown"
+                or archive.get("realized_return") is not None
+                or archive.get("source_completeness_verified") is not False):
+            raise EvidenceError("invalid_cumulative_archive_record")
+        identities, versions, covered = set(), set(), {"cumulative_archive.json", "report.html"}
+        for item in archive["decisions"]:
+            relative = str(_relative(item["path"]))
+            child = _no_symlinks(Path(bundle_dir) / relative)
+            verified = verify_decision_bundle(child, item["manifest_sha256"])
+            child_contents, _ = _read_manifest(child, item["manifest_sha256"], PROTOCOL)
+            core = json.loads(child_contents["decision.json"])
+            if (core["match_id"] != archive["match_id"] or core["decision_id"] != item["decision_id"]
+                    or core["version_id"] != item["version_id"]
+                    or core.get("membership_view_version") != item.get("membership_view_version")
+                    or verified["decision_status"] != item["decision_status"]
+                    or core["decision_id"] in identities or core["version_id"] in versions):
+                raise EvidenceError("cumulative_decision_binding_mismatch")
+            identities.add(core["decision_id"])
+            versions.add(core["version_id"])
+            covered.update(relative + "/" + path for path in child_contents.keys() | {"manifest.json"})
+        artifact_ids = set()
+        for item in archive["artifacts"]:
+            _check_cumulative_artifact(item, versions)
+            relative = str(_relative(item["saved_path"]))
+            if (relative != "originals/" + str(_relative(item["path"]))
+                    or relative in covered or item["artifact_id"] in artifact_ids
+                    or item["sha256"] != _sha(contents[relative])
+                    or item["bytes"] != len(contents[relative])
+                    or (item.get("version_id") is not None and item["version_id"] not in versions)):
+                raise EvidenceError("cumulative_artifact_binding_mismatch")
+            artifact_ids.add(item["artifact_id"])
+            covered.add(relative)
+        predecessor = archive.get("previous_archive")
+        if predecessor is not None:
+            parent_manifest_bytes = contents[str(_relative(predecessor["manifest_path"]))]
+            parent_archive_bytes = contents[str(_relative(predecessor["archive_path"]))]
+            if _sha(parent_manifest_bytes) != predecessor["manifest_sha256"]:
+                raise EvidenceError("cumulative_predecessor_anchor_mismatch")
+            parent_manifest = json.loads(parent_manifest_bytes)
+            parent_archive_row = next(row for row in parent_manifest["files"] if row["path"] == "cumulative_archive.json")
+            if (parent_manifest["protocol"] != CUMULATIVE_PROTOCOL
+                    or parent_archive_row["sha256"] != _sha(parent_archive_bytes)
+                    or parent_archive_row["bytes"] != len(parent_archive_bytes)):
+                raise EvidenceError("cumulative_predecessor_metadata_mismatch")
+            _check_cumulative_append(json.loads(parent_archive_bytes), archive)
+            for item in archive["lineage_artifacts"]:
+                relative = str(_relative(item["path"]))
+                if (not relative.startswith("lineage/") or relative in covered
+                        or item["sha256"] != _sha(contents[relative])
+                        or item["bytes"] != len(contents[relative])):
+                    raise EvidenceError("cumulative_lineage_binding_mismatch")
+                covered.add(relative)
+            if predecessor["manifest_path"] not in covered or predecessor["archive_path"] not in covered:
+                raise EvidenceError("cumulative_predecessor_not_in_lineage")
+        elif archive.get("lineage_artifacts"):
+            raise EvidenceError("cumulative_unbound_lineage")
+        if not identities or set(contents) != covered or contents["report.html"] != _cumulative_html(archive):
+            raise EvidenceError("cumulative_view_or_inventory_mismatch")
+    except (KeyError, TypeError, ValueError, StopIteration) as exc:
+        if isinstance(exc, EvidenceError):
+            raise
+        raise EvidenceError("malformed_cumulative_archive") from None
+    return {"status": "verified", "manifest_sha256": digest,
+            "externally_anchored": expected_manifest_sha256 is not None,
+            "decision_count": len(archive["decisions"]), "artifact_count": len(archive["artifacts"]),
+            "source_completeness_verified": False}
 
 
 def append_decision_event(bundle_dir,event,events_dir,*,source_root):
@@ -770,6 +1064,14 @@ def main(argv=None):
     verify=commands.add_parser("verify")
     verify.add_argument("--bundle",required=True)
     verify.add_argument("--manifest-sha256")
+    cumulative = commands.add_parser("archive")
+    cumulative.add_argument("--record", required=True)
+    cumulative.add_argument("--source-root", required=True)
+    cumulative.add_argument("--output", required=True)
+    cumulative.add_argument("--zip")
+    cumulative_verify = commands.add_parser("verify-archive")
+    cumulative_verify.add_argument("--bundle", required=True)
+    cumulative_verify.add_argument("--manifest-sha256")
     append=commands.add_parser("append-event")
     append.add_argument("--bundle",required=True)
     append.add_argument("--event",required=True)
@@ -784,12 +1086,17 @@ def main(argv=None):
             result=build_decision_bundle(read(args.record),args.output,source_root=args.source_root)
         elif args.command=="verify":
             result=verify_decision_bundle(args.bundle,args.manifest_sha256)
+        elif args.command == "archive":
+            result = build_cumulative_archive(read(args.record), args.output,
+                                              source_root=args.source_root, output_zip=args.zip)
+        elif args.command == "verify-archive":
+            result = verify_cumulative_archive(args.bundle, args.manifest_sha256)
         else:
             result=append_decision_event(args.bundle,read(args.event),args.events_dir,source_root=args.source_root)
     except (ValueError,TypeError,KeyError,OSError) as exc:
         result={"status":"rejected","reason":str(exc) if isinstance(exc,EvidenceError) else "malformed_or_unreadable_input"}
     print(_bytes(result).decode(),end="")
-    return 0 if result["status"] in {"structural_checks_passed","verified","event_appended"} else 2
+    return 0 if result["status"] in {"structural_checks_passed","verified","event_appended","cumulative_archive_created"} else 2
 
 
 if __name__ == "__main__":

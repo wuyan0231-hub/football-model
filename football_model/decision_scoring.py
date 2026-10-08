@@ -24,6 +24,16 @@ SCHEMA = "s2-decision-score-1.0"
 SCORE_BUNDLE = "s2-decision-score-bundle-1.0"
 PROTOCOL_SCHEMA = "s2-decision-scoring-protocol-1.0"
 REGULATION = "regulation_time_90_plus_stoppage"
+API_AH_SCORING_POLICY = "api-ah-scoring-quarantine-v1"
+
+
+def current_score_admission_reasons(score):
+    """Historical replay can be viewed without admitting its numbers anew."""
+    if (score.get("historical_api_ah_mapping_unverified") is True
+            or score.get("new_api_ah_admission_allowed") is False
+            or "api_asian_handicap_mapping_not_certified" in score.get("unavailable_reasons", [])):
+        return ["api_asian_handicap_mapping_not_certified"]
+    return []
 
 
 def _now():
@@ -55,6 +65,28 @@ def _cost(value):
     if value is not None and (not _number(value) or not 0 <= value < 1):
         raise EvidenceError("invalid_explicit_fixed_cost")
     return value
+
+
+def _candidate_uses_unverified_api_ah(core, candidate):
+    """Find the adopted offer's original provider row, including sealed old cores.
+
+    Historical adapter reproduction does not certify the provider convention.
+    The policy is shared with the new row adapter, while immutable source review
+    remains responsible for stripped or falsely relabeled provenance.
+    """
+    if candidate is None:
+        return False
+    from .decision_quotes import _unverified_api_asian_handicap
+    for row in core.get("adapted_quote_rows", []):
+        original = row.get("original_row", {})
+        if not _unverified_api_asian_handicap(original):
+            continue
+        matches = (candidate.get("quote_row_id") in {row.get("quote_row_id"), original.get("row_id")}
+                   or candidate.get("quote_offer_id") in {o.get("quote_offer_id") for o in row.get("offers", [])}
+                   or candidate.get("contract_id") in {c.get("contract_id") for c in row.get("contracts", [])})
+        if matches:
+            return True
+    return False
 
 
 def register_scoring_protocol(spec, root):
@@ -378,15 +410,19 @@ def _result_parents(descriptor, value, root, now, evidence_copies):
     return status, sorted(hashes)
 
 
-def score_decision(bundle_dir, *, expected_manifest_sha256, protocol_root, protocol_id,
+def _score_decision(bundle_dir, *, expected_manifest_sha256, protocol_root, protocol_id,
                    result=None, result_source_root=None, events=(), quote_evidence=None,
-                   quote_source_root=None, output_dir=None):
+                   quote_source_root=None, output_dir=None, _legacy_api_ah_score_replay=False):
     """Score an immutable F2 bundle; result and execution layers remain independent.
 
     result/quote_evidence are {path, sha256} descriptors. QUOTE_OPEN additionally
     needs a semantic_review bound to that hash. Events are {path, manifest_sha256,
     semantic_review?}. Unknown prices/costs/conditions remain unavailable.
+    The private legacy switch is used only to reproduce an already sealed score
+    after its entire manifest has been checked. Fresh scoring never sets it.
     """
+    if not isinstance(_legacy_api_ah_score_replay, bool):
+        raise EvidenceError("legacy_score_replay_flag_must_be_boolean")
     if not _hash(expected_manifest_sha256):
         raise EvidenceError("external_decision_manifest_anchor_required")
     now = _now()
@@ -410,6 +446,7 @@ def score_decision(bundle_dir, *, expected_manifest_sha256, protocol_root, proto
         qualification_reasons.append("decision_structurally_blocked")
     events_read, event_sources = _events(events, base_digest, core, contents, now)
     candidate = next((c for c in core["archive"]["candidates"] if c["candidate_id"] == core.get("primary_candidate_id")), None)
+    api_ah_quarantine = not _legacy_api_ah_score_replay and _candidate_uses_unverified_api_ah(core, candidate)
     record = {"schema_version": SCHEMA, "scored_at": _iso(now), "quote_protocol": spec["quote_protocol"],
               "decision_times": json.loads(contents["times.json"]),
               "usage": spec["usage"], "binding": {**identity, **{k: core.get(k) for k in
@@ -432,6 +469,8 @@ def score_decision(bundle_dir, *, expected_manifest_sha256, protocol_root, proto
               "source_authenticity": "semantic_reviews_are_attributed_declarations_not_provider_authentication",
               "original_decision_unmodified": True, "predictive_quality_verified": False,
               "whole_parlay_assessed": False}
+    if not _legacy_api_ah_score_replay:
+        record["api_ah_scoring_policy_version"] = API_AH_SCORING_POLICY
     evidence_copies = {"protocol.json": protocol_blob}
     for key in ("candidate_id", "contract_id", "quote_row_id", "quote_offer_id"):
         record["binding"][key] = candidate.get(key) if candidate else None
@@ -467,6 +506,12 @@ def score_decision(bundle_dir, *, expected_manifest_sha256, protocol_root, proto
     elif verified["decision_status"] == "blocked":
         record["outcome"]["status"] = "blocked"
         record["unavailable_reasons"].append("decision_structurally_blocked")
+    elif api_ah_quarantine:
+        record["outcome"]["status"] = "not_available"
+        record["unavailable_reasons"].append("api_asian_handicap_mapping_not_certified")
+        record["probability"]["reason"] = "api_asian_handicap_mapping_not_certified"
+        record["return_eligible"] = False
+        qualification_reasons.append("api_asian_handicap_mapping_not_certified")
     else:
         raw_contract = next((r for r in core["archive"]["contracts"] if r["contract_id"] == candidate.get("contract_id")), None)
         if raw_contract is None:
@@ -639,6 +684,21 @@ def score_decision(bundle_dir, *, expected_manifest_sha256, protocol_root, proto
     return record
 
 
+def score_decision(bundle_dir, *, expected_manifest_sha256, protocol_root, protocol_id,
+                   result=None, result_source_root=None, events=(), quote_evidence=None,
+                   quote_source_root=None, output_dir=None):
+    """Fresh scoring always applies the current API AH quarantine policy.
+
+    Historical replay is deliberately absent from this public/CLI interface.
+    Only the sealed-score reader invokes the private legacy computation path.
+    """
+    return _score_decision(bundle_dir, expected_manifest_sha256=expected_manifest_sha256,
+                           protocol_root=protocol_root, protocol_id=protocol_id,
+                           result=result, result_source_root=result_source_root,
+                           events=events, quote_evidence=quote_evidence,
+                           quote_source_root=quote_source_root, output_dir=output_dir)
+
+
 def read_decision_score(path, expected_manifest_sha256):
     """Read a content-checked score and check its immutable parent identities."""
     if not _hash(expected_manifest_sha256):
@@ -647,6 +707,8 @@ def read_decision_score(path, expected_manifest_sha256):
     score = json.loads(files["score.json"])
     if score.get("schema_version") != SCHEMA:
         raise EvidenceError("unsupported_score_schema")
+    if score.get("api_ah_scoring_policy_version") not in {None, API_AH_SCORING_POLICY}:
+        raise EvidenceError("unsupported_api_ah_scoring_policy_version")
     source = score["source"]
     verify_decision_bundle(_no_symlinks(path) / "decision", source["decision_manifest_sha256"])
     if _sha(files["evidence/protocol.json"]) != source["protocol_sha256"]:
@@ -689,9 +751,10 @@ def read_decision_score(path, expected_manifest_sha256):
                     destination = quote_root / _relative(relative[len("evidence/open_sources/"):])
                     destination.parent.mkdir(parents=True, exist_ok=True)
                     destination.write_bytes(blob)
-        replay = score_decision(_no_symlinks(path) / "decision", expected_manifest_sha256=source["decision_manifest_sha256"],
+        replay = _score_decision(_no_symlinks(path) / "decision", expected_manifest_sha256=source["decision_manifest_sha256"],
                                 protocol_root=root, protocol_id=source["protocol_sha256"], result=result,
-                                result_source_root=result_root, events=event_args, quote_evidence=quote, quote_source_root=quote_root)
+                                result_source_root=result_root, events=event_args, quote_evidence=quote, quote_source_root=quote_root,
+                                _legacy_api_ah_score_replay=score.get("api_ah_scoring_policy_version") is None)
     scored_at = _time(score.get("scored_at"))
     earliest = max(_time(score["decision_times"]["report_generated_at"]),
                    _time(json.loads(files["evidence/protocol.json"])["registered_at"]))
@@ -706,7 +769,14 @@ def read_decision_score(path, expected_manifest_sha256):
         replay["result_evidence_descriptor"]["path"] = score["result_evidence_descriptor"]["path"]
     if replay != score:
         raise EvidenceError("score_replay_mismatch")
-    return {**score, "manifest_sha256": digest, "verification_status": "verified"}
+    parent_core = json.loads(files["decision/decision.json"])
+    parent_candidate = next((c for c in parent_core["archive"]["candidates"]
+                             if c["candidate_id"] == parent_core.get("primary_candidate_id")), None)
+    unverified_api_parent = _candidate_uses_unverified_api_ah(parent_core, parent_candidate)
+    return {**score, "manifest_sha256": digest, "verification_status": "verified",
+            **({"historical_api_ah_mapping_unverified": True, "new_api_ah_admission_allowed": False,
+                "verification_scope": "sealed_historical_score_replay_not_provider_mapping_certification"}
+               if unverified_api_parent else {})}
 
 
 def main(argv=None):

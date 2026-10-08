@@ -132,7 +132,10 @@ class QuoteParsingTests(unittest.TestCase):
         self.assertEqual(ah["raw_values"]["away"]["value"], "Away -0.25")
         self.assertEqual(ah["line_mapping_status"], "empirical_inference_pending_provider_confirmation")
         adapted = adapt_quote_row(ah, match_id="10")
-        self.assertEqual([c["line"] for c in adapted["contracts"]], [-.25, .25])
+        self.assertEqual(adapted["contracts"], [])
+        self.assertEqual(adapted["original_row"], ah)
+        self.assertTrue(all(o["contract_id"] is None and o["line"] is None
+                            and o["decimal_odds"] is None for o in adapted["offers"]))
 
     def test_opposite_label_signs_are_not_silently_paired(self):
         raw = record()

@@ -1,0 +1,151 @@
+{
+  "schema_version": "s2-framework-comparison-prepared-1.0",
+  "status": "prepared_not_active",
+  "study_id": "S2-FRAMEWORK-R4-R5-PILOT-1",
+  "study_name": "S2 r4与r5同截点独立分析政策包流程试验",
+  "pilot_counts_as_confirmation": false,
+  "automatic_production_promotion": false,
+  "source_binding_rule": "The prepared JSON is a preparation specification. freeze captures the actual full original bytes of both packages, records real time and external manifest SHA; final source tree must be independently authenticated before any real request.",
+  "capture_source_paths": [
+    "docs/football-framework-v1.7.md",
+    "docs/odds-screenshot-reading-v1.2.md",
+    "docs/s2-pretest-protocols.md",
+    "football_model/decision_record.py",
+    "football_model/decision_quotes.py",
+    "football_model/decision_audit.py",
+    "football_model/decision_trials.py",
+    "football_model/decision_scoring.py",
+    "football_model/settlement.py",
+    "football_model/pretest_protocols.py",
+    "AGENTS.md",
+    "docs/model-integration.md",
+    "docs/s2-pretest.md",
+    "football_model/pretest.py"
+  ],
+  "policies": {
+    "left": {
+      "policy_id": "football_v1.7_r4_odds_v1.2_r4",
+      "name": "上传全文v1.7修订批次4＋图规v1.2修订批次4",
+      "expected_original_sha256s": {
+        "framework": "21c61dcd9dd51eb67af8e520925cc8868791d2a046d6b7c066a0305f68638f09",
+        "odds": "c666cff8c70e08a455f2446754f3ffcba65409815766461c90a4745cbcddeec1"
+      }
+    },
+    "right": {
+      "policy_id": "football_v1.7_r5_pretest_outputs_v1",
+      "name": "当前全文v1.7修订批次5＋图规v1.2修订批次5＋本次已验收报告输出与开测工程"
+    }
+  },
+  "intervention": {
+    "only_changed_variable": "frozen_analysis_policy_package",
+    "causal_claim_limit": "Compare the complete declared packages. Differences inside a package are not separate causal factors; a single-rule ablation needs another prospectively frozen study. Neutral factual collection, quote interpretation and scoring are held common.",
+    "production_behavior": "left and right are experimental runs; existing production four-state analysis is unchanged by registration"
+  },
+  "model_control": "same_frozen_model_and_forecast",
+  "target_task": "从共同完整三市场证据与报价池选择一张常规时间相对主票，保留最强备选、反证、条件，并独立给单关适配；未评估的串关腿保持未知",
+  "scope": {
+    "competitions": [
+      "epl",
+      "laliga",
+      "bundesliga",
+      "serie_a",
+      "ligue_1",
+      "bundesliga_2",
+      "ligue_2",
+      "allsvenskan",
+      "eredivisie",
+      "primeira",
+      "brazil_a",
+      "j1",
+      "k1",
+      "mls",
+      "unl",
+      "liga_mx",
+      "segunda",
+      "argentina_a"
+    ],
+    "description": "activation以后本用户在本项目首次请求的真实赛前单场分析，限这18赛事；条件是请求而不是推荐或赛果成功",
+    "sampling_rule": "record every intake before filtering; first pre-kickoff request per competition+match_id is primary. Unsupported, missing image/model, abstention, failure, unresolved condition, late registration and abandoned runs remain in the universe. Later versions are append-only updates and not new matches.",
+    "inference_limit": "user-requested matches are a selected population, not all fixtures or all football bettors",
+    "requests_currently_registered": 0
+  },
+  "neutral_pool": {
+    "source": "a genuine prospective F2 evidence-only bundle with no main ticket, no candidates, no earlier analysis and no outcome",
+    "requirements": [
+      "match identity and actual current kickoff",
+      "all actual original screenshots and whole market rows; snapshot_latest/as_of_latest separated",
+      "actual observed/published/cutoff/frozen/persisted times, unknown separate",
+      "same fixed production source/state hashes, full score matrix axes/tail normalization and actual integration match replay",
+      "same up-to-cutoff football facts; missing freshness reasons remain",
+      "unverified API Asian handicap excluded from settleable pool",
+      "one shared manifest and complete model/forecast parent lineage"
+    ],
+    "quote_control": "The policy comparison uses the same independently verified neutral quote rows. If a run changes interpretation or omits a row, record a pool violation instead of silently repairing its output. OCR extraction quality is a separate blinded benchmark.",
+    "score_model_rule": "same actual complete regulation score matrix is supplied to both sides; no personnel/xG/manual lambda adjustment, no refitting, no F5 candidate substitution"
+  },
+  "independent_execution": {
+    "context": "fresh isolated context for each side; no conversation history, sibling outputs, result/gold OCR truth or previous recommendations",
+    "fixed_engine": "same actually available GPT model/version and declared execution parameters; record unavailable properties as unknown. Changed engine or prompts starts a new version or is non-comparable",
+    "attempts_per_side": 1,
+    "first_output": "first_registered_actual_output_including_failure",
+    "failure": "write the actual failure or partial slot immediately; retries append and never replace the first output",
+    "abstention": "explicit no_qualifying_contract or purpose_mismatch only; missing, conditional, failure and unknown are not zero-return abstentions",
+    "independence_limit": "different ids, hashes or fresh sessions alone cannot prove unexposed independent cognition; retain producer/session/input exposure records",
+    "adapter": "preserve full raw original output; translate only explicitly present fields. r4 absent grades/times/probabilities remain null, not inferentially filled"
+  },
+  "shadow_grades": {
+    "policy_version": "s2-shadow-grading-1.0",
+    "mode": "shadow",
+    "automatic_formal_action": false,
+    "single_usage": "A/B/C/D/U and reasons recorded for selected contract, separately from formal four-state action and price value",
+    "parlay_leg_usage": "evaluate contract fit and fragile branches as an individual possible leg; no automatic one-grade downgrade, no whole-parlay return or suitability inferred",
+    "grade_meaning": {
+      "A": "完整支持、支付边界、最强反证/替代、普通分支稳定性及脆弱假设；定性候选不等于固定命中率或正EV",
+      "B": "决定链完整，仍有明确弱点；不借等级省略条件",
+      "C": "观察，明确区分证据链未完成与不符合当前用途；待条件须另记awaiting_condition且当前等级为空",
+      "D": "依据支持不建议，不与未选为主票混同",
+      "U": "无法判断/必要证据不足，缺失不填0"
+    },
+    "evaluation": "coverage, admission/wait/abstain, calibration and realized contract returns by declared objective; value-focused A need not beat low-price B raw hit rate"
+  },
+  "metrics": {
+    "primary": "流程试运行：完整请求中真正独立首输出、共同池/模型/时间绑定、正确合约结算和全过程保存率；失败按真实类型披露",
+    "guardrail": "No overwritten originals, hindsight qualification, invented unknown fields, non-neutral pool, sign/time mistakes or undeclared engine/rule drift. Any such error blocks the affected opportunity and is appended for repair.",
+    "policy_effect": "QUOTE_REF unit return difference right-left per opportunity, at a declared fee-free paper contract; explicit true abstention zero exposure, missing/failed/unresolved not zero. This is a gross reference simulation, not tradable ROI or real profit. Cost_per_unit=0 is a definition of this paper estimand, not a claim that real costs are zero.",
+    "secondary": [
+      "per-bet reference ROI with its own stake denominator",
+      "coverage/restored/lost/both-abstain/unpaired",
+      "selected-contract full/half win/push/loss, P(R>0) vs P(R>=0) vs EV separately if actually computed",
+      "same full-match 1X2 Brier/log loss only as a shared-model consistency check, usually equal; five-state losses of different contracts are not comparable accuracy spaces"
+    ],
+    "interval": "existing decision_trials within-match averaging and competition+match_id clustered bootstrap 2000 seed 20261007, descriptive only. Time/teams/season dependence is unresolved; no confirmatory promotion from these intervals.",
+    "reporting": "single is main target. Parlay-leg grades are secondary descriptive; no whole-parlay outcomes. QUOTE_OPEN/ACTUAL require separate original evidence and protocol, not this controlled reference trial."
+  },
+  "stopping": {
+    "cohort_target": 30,
+    "maximum_days": 90,
+    "rule": "The first 30 unique intake opportunities after a separately registered future start, or 90 calendar days after that start, whichever first. Include first failures, unavailable pairs and abstentions; never replace them until 30 successful pairs. Only operational counts/time choose closure.",
+    "review": "Validity can be monitored continuously; close once at the frozen count/calendar node, then 14 days result grace for already-enrolled requests. All policy return/accuracy/grade effects are descriptive.",
+    "claim_limit": "30 only diagnoses flow and implementation; no model accuracy, profitability or grade effectiveness claim. A confirmatory policy study needs a new protocol, candidate-specific power/dependence plan, future activation and new cohort before any confirmatory observation."
+  },
+  "ocr_benchmark": {
+    "status": "prepared_not_active",
+    "training_test_split": "split by unique competition+match_id and exact image SHA before readings; multiple crops/versions of one match stay together; 40 historical development matches and six regression cases never enter clean acceptance",
+    "gold": "independent human-checked complete market row/state/time/line/sign/odds format/company truth, with disagreements adjudicated and raw evidence preserved",
+    "isolation": "gold files and result files are absent from reader context; the benchmark reads real original images, not reference transcript",
+    "primary": "exact complete-row correctness; also line/sign/state/top-latest/time/format field errors; all failures and unreadable rows reported",
+    "comparison": "both read the same held-out original image under frozen r4/r5 rules; no majority vote or repeated agreement treated as truth",
+    "eligibility": "synthetic engineering tests and second visual reread are separately labelled and do not count as measured OCR accuracy",
+    "effect_claim": "sample size and held-out scope must be frozen in a new separate OCR protocol before claiming improvement"
+  },
+  "activation_rules": {
+    "required_gate_kinds": [
+      "deployed_policy_source_binding",
+      "neutral_input_and_model_readback",
+      "independent_context_and_attempt_logging",
+      "durable_output_and_restore"
+    ],
+    "start": "future exact start_at; durable registration before every real analysis_cutoff, no retrospective registration",
+    "current": "no genuine next-match request/neutral pool/independent output exists this turn; preparation only"
+  }
+}

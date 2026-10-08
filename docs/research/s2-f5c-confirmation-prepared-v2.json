@@ -1,0 +1,343 @@
+{
+  "schema_version": "f5c_confirmation_protocol_independent_preparation_v2",
+  "status": "prepared_not_active",
+  "reviewed_at_utc": null,
+  "study_name": "F5-C每日生产总球收缩前瞻政策对照",
+  "pilot_counts_as_confirmation": false,
+  "frozen_algorithm_ancestor": "F5-B total_shrink_v1; daily baseline and actual observed-result selector form a new prospective implementation version",
+  "historical_effect_is_not_deployment_effect": true,
+  "inputs": [
+    {
+      "path": "sources/status/02_下一步执行计划.json",
+      "sha256": "60f67301f0250ff1a4f3ca6674ce71e349f79b04672e56f533dfe0ecc7ea8d9d"
+    },
+    {
+      "path": "sources/status/01_检查与问题总台账.json",
+      "sha256": "c957dd6fa104a314f7aadb6d03e7a71695022da84fc3eb7f2b49bd65aaa9c3b1"
+    },
+    {
+      "path": "sources/f5/repo/docs/s2-f5-execution.md",
+      "sha256": "4a107bab549abd6a87b1712515b8931324130b176215ab071fa8870c3e3276dd"
+    },
+    {
+      "path": "sources/f5/experiments/f5_total_shrink_protocol_v1.json",
+      "sha256": "1c33941404b83233e0007d37b3598c86d7ab856d2dcd43e22c74789539f4cd3c"
+    },
+    {
+      "path": "sources/f5/experiments/total_shrink_v1/summary.json",
+      "sha256": "349d9da4dd15b4254f091a28a6417fb1e0f735077c42e438d456762f684fb1c2"
+    },
+    {
+      "path": "sources/f5/repo/scripts/s2_f5_total_shrink.py",
+      "sha256": "b8e3c5c1b66d1446abdf8eaa48b8815a846a9df1d464c1233117c812b75b7c0c"
+    },
+    {
+      "path": "sources/f5/repo/football_model/model.py",
+      "sha256": "bb1373a867d8afa903465ca77ca61f314b4ea01957dbc25382f48f7033581995"
+    },
+    {
+      "path": "sources/f5/repo/football_model/shadow_models.py",
+      "sha256": "029936302d34f2e68bdca72b058c3b2071bbb8246fba7a4e4cc8b562c9f0b92b"
+    }
+  ],
+  "candidate": {
+    "id": "f5c_daily180_past_selected_v1",
+    "baseline": "the exact same daily production 180-day forecast, no second fitting, no weekly-research substitution",
+    "grid": [
+      0,
+      0.25,
+      0.5,
+      0.75,
+      1
+    ],
+    "transform": "Tprime=(1-alpha)*T+alpha*m; new_h=old_h*Tprime/T; new_a=old_a*Tprime/T",
+    "mean": {
+      "eligible_set": "exact parent production fitter eligible training rows; ordered training digest must match",
+      "home": "(sum_training_home_goals+0.5)/(n_training_matches+0.5)",
+      "away": "(sum_training_away_goals+0.5)/(n_training_matches+0.5)",
+      "total": "home+away",
+      "not_allowed": [
+        "fitted intercept substitute",
+        "all saved match rows",
+        "time weighted mean",
+        "post-cutoff training rows"
+      ]
+    },
+    "alpha_zero": "reuse saved production probabilities exactly; reconstructed matrix only from original rates and original function",
+    "production_unchanged": true,
+    "operational_fallback": "if same-cutoff mean/grid/selection unavailable, predeclare alpha=0 and persist the production forecast as candidate before kickoff with typed reason; never after-result impute",
+    "UNL_MLS_v2": "separate exploratory protocols; never replace this main candidate after results"
+  },
+  "selector": {
+    "same_competition": true,
+    "lookback_days": 180,
+    "minimum_unique_matches": 40,
+    "maturity_delay_hours": 48,
+    "loss": "exact untruncated total Poisson negative log probability",
+    "weighting": "one equal weight per unique competition+match_id",
+    "tie_tolerance": 1e-12,
+    "tie_break": "smallest alpha within minimum_loss+1e-12",
+    "forecast_requirement": "new F5 grid durably captured before kickoff; no reconstructed historical forecasts or old F4 records without genuine F5 grid receipts",
+    "available_time": "first_valid_result_observed_and_durably_saved_at + 48h <= current input_cutoff",
+    "latest_result_version": "only result versions with their own observed_and_saved_at <= current input_cutoff; retain raw hash and identity",
+    "previous_origin": "pool forecast origin strictly earlier than current origin",
+    "deduplication": "first baseline-valid F5 opportunity per competition+match_id in selector-support cohort; all grid scores use that same source",
+    "cold_start": "alpha=0 is a policy forecast; retain in main results and report pool size, excluded reasons and fallback",
+    "same_origin": "freeze one choice for all current league matches; never revise halfway through a batch",
+    "support_population": "pilot and confirmation grids may support selection only when truly mature; pilot never joins confirmation denominator",
+    "audit_fields": [
+      "eligible_match_ids",
+      "forecast_receipt_ids",
+      "result_id_and_version",
+      "first_valid_result_observed_at",
+      "mature_at",
+      "loss_by_alpha",
+      "selected_alpha",
+      "fallback_reason",
+      "excluded_pool_by_reason",
+      "latest_included_result_time"
+    ]
+  },
+  "stages": {
+    "pilot": "this first implementation and real-cloud acceptance are engineering only; no confirmation activation this turn",
+    "engineering_gate": [
+      "same daily parent input/model/eligible-training mean binding",
+      "alpha-zero exact production reuse",
+      "genuine new cloud capture receipt",
+      "complete archived state load",
+      "native cross-environment recomputation",
+      "result revision preserves original forecast",
+      "capacity-budget check and final cloud state commit receipt",
+      "complete request, fallback and late-save logs"
+    ],
+    "activation_requirement": "separate immutable activation record after pilot acceptance; bind finalized source/module/protocol hashes and a future exact start_at. No automatic activation from preparation or a successful pilot.",
+    "start_requirement": "activation durable timestamp precedes exact start_at and first confirmation input_cutoff; begin from the first later lawful opportunity, never reclassify pilot receipts",
+    "maximum_duration_days": 548,
+    "official_check": "Exactly once: close at the first outcome-blind scheduled daily checkpoint where both enrolled unique baseline opportunities >=10000 and elapsed calendar time >=365 days, or at 548 days from actual activated start, whichever earlier. Continue the complete intake stream until closure; count is a minimum target, not a 10000 hard cap. Never use scored-pair count or observed effect to choose enrollment or closure.",
+    "result_close_grace_days": 14,
+    "grace_rule": "after the outcome-blind cohort closure, allow 14 days for already-enrolled results and revisions; no new enrollment, parameter changes, or second success check",
+    "minimum_valid_unique_pairs_for_success": 9000,
+    "minimum_elapsed_calendar_days": 365,
+    "minimum_nonempty_nonoverlapping_28day_blocks": 13,
+    "time_block_anchor": "exact activated start_at",
+    "partial_block": "keep and report partial final block; do not count it toward minimum full-block support",
+    "sample_planning": "historical paired SD=0.167573; true delta -0.01 vs zero, one-sided alpha .025, 80% normal planning requires ~2205 IID or ~8817 at design effect 4. 9000 is planning, not power assurance.",
+    "insufficient_action": "After one fixed14-day result grace, fewer than9000 validated unique FT pairs, fewer than365days, fewer than13 full nonempty28day blocks, failed coverage or dependence support means inconclusive. Do not top up on observed scoring completeness, restart clock, retroactively recruit pilot or extend on favorable results.",
+    "impossible_old_combination_corrected": "40 disjoint 28-day blocks require >=1120 days; they cannot fit a 548-day maximum. Moving overlapping windows must not be counted as independent blocks.",
+    "target_enrolled_unique_baseline_opportunities": 10000,
+    "planning_slack": "10000 lawful enrollments allows a prespecified planning margin of 10% for predeclared voids or unavailable results relative to 9000 valid pairs. This is a feasibility assumption, not an allowed 10% silent capture failure or a power guarantee.",
+    "cohort_at_count_time_closure": "Keep every lawful opportunity through the predeclared daily closure checkpoint; disclose overshoot. If 10000 arrives before day365, continue the complete intake stream to day365. If day365 arrives first, continue until count reaches10000 or day548. At day548 close even if sample short."
+  },
+  "cohort": {
+    "competitions": [
+      "epl",
+      "laliga",
+      "bundesliga",
+      "serie_a",
+      "ligue_1",
+      "bundesliga_2",
+      "ligue_2",
+      "allsvenskan",
+      "eredivisie",
+      "primeira",
+      "brazil_a",
+      "j1",
+      "k1",
+      "mls",
+      "unl",
+      "liga_mx",
+      "segunda",
+      "argentina_a"
+    ],
+    "full_scope": "all daily next-7-day requests in these 18 competitions after activated start; register requests before filtering",
+    "primary_unit": "competition+match_id, not saved version or arm",
+    "primary_forecast": "first request with an eligible durably pre-kickoff production baseline in confirmation; candidate success is not used to choose the request",
+    "candidate_failure": "first selected baseline-valid request fixes the candidate opportunity; no substitution by a later successful version",
+    "later_versions": "retain as updates with parent identity, outside main sample count",
+    "late_commit": "local fsync before kickoff but durable cloud state commit completion at/after kickoff is a late-cloud-persistence record; not authenticated confirmation",
+    "reschedule": "preserve old identity and append revision; only forecasts actually calculated and durably completed before real kickoff can qualify; no retrospective identity repair",
+    "regulation_time": "90 minutes plus injury time; excludes extra time and penalties; ambiguity stays unknown",
+    "voids": "Cancelled/abandoned without a certified regulation result are predeclared voids, separately counted; they need not make the entire study inconclusive if >=9000 valid pairs and remaining gates pass. No zero score.",
+    "unresolved": "At final close all unresolved-result opportunities remain in the enrolled denominator and unscored. Predeclared unresolved-result limit is1% of enrolled baseline opportunities. Even within this limit, primary effect claim applies only to the verified-regulation-result population; no unsupported all-opportunity effectiveness claim.",
+    "report_request_outcomes": [
+      "both",
+      "baseline_only",
+      "candidate_only",
+      "neither",
+      "predeclared_fallback",
+      "late",
+      "source_missing",
+      "capacity_deferred",
+      "unsupported_identity",
+      "pending_result",
+      "void",
+      "scored"
+    ],
+    "coverage_success": "Every validated-FT baseline-eligible opportunity in the main inferential population must have a genuine before-kickoff selected candidate or genuine alpha0 policy fallback and valid remote receipt. Any missing candidate on a verifiedFT blocks main success; report the scored-pair subset descriptively. Voids are separate operational outcomes.",
+    "estimand": "Equal-match total log-loss difference for enrolled baseline opportunities with independently verified regulation FT and genuine complete captured pair. Outcome-incomplete opportunities and voids are separately enumerated; operational quality is measured on the full enrolled opportunity stream.",
+    "missing_sensitivity": {
+      "required": [
+        "outcome/void/capture/late/missing counts and rates by league, lead time, selected-alpha/cold-start, calendar block",
+        "baseline distribution and forecast covariates for scored versus absent-result opportunities",
+        "the complete main paired estimate plus prespecified finite adverse-missing scenarios: mean absent-result deltas +0.1,+0.25,+0.5; never actual imputed primary outcomes"
+      ],
+      "limit": "total Poisson log loss is unbounded, so finite adverse scenarios are sensitivity analyses only; they cannot prove the missing all-opportunity effect is nonnegative/negative. If missingness mechanism, source continuity or dependence support is doubtful, retain shadow and report inconclusive."
+    }
+  },
+  "score": {
+    "primary": "equal-match mean of candidate total_log_loss minus baseline total_log_loss",
+    "total_ll": "T-g*log(T)+gammaln(g+1), exact untruncated Poisson rates",
+    "over2_5": "Brier from original normalized matrix, same as F5-B; retain original tail mass",
+    "one_x_two": "-log(max(1e-15,p_actual)) from saved normalized matrix; retain floor counts and mathematical zero diagnostics",
+    "joint_score_ll": "analytic independent-Poisson joint score; paired difference equals total_LL delta under fixed home/away ratio, not independent evidence",
+    "accuracy": "argmax 1X2 accuracy, descriptive and separate from probability quality",
+    "fixed_grid_results": "exploratory, all reported; cannot replace past_selected main candidate",
+    "strata": [
+      "competition",
+      "frozen lead-time bins [0,24,72,168] hours",
+      "selected alpha",
+      "cold-start/fallback",
+      "shared UTC calendar block"
+    ],
+    "calibration": "event scores use every opportunity; realized 0-goal or 8+-goal subsets only diagnostic decomposition",
+    "ROI_EV": "not evaluated here; requires independent lawful decision, quote and execution evidence"
+  },
+  "dependence": {
+    "unit": "one shared UTC calendar for all competitions; paired ratio of sums",
+    "primary_interval": "shared nonoverlapping 28-day calendar block bootstrap, 2000 replicates, seed 20261008, two-sided percentile 95%",
+    "sensitivity_interval": "shared 56-day contiguous moving-block bootstrap over daily vectors, 2000 replicates, same seed; moving windows are not extra independent blocks",
+    "conservative_upper": "max(primary 97.5% upper, 56-day sensitivity 97.5% upper), for every main/guardrail metric",
+    "empty_days": "retain zero sums/counts; never omit calendar gaps before resampling",
+    "resample_sharing": "same sampled global blocks for all metrics and all leagues, preserving within-block cross-league dependence",
+    "scope_limit": "13 blocks remain few; recurring teams, season changes and cross-block dependence are not proven eliminated. Unstable or longer-range dependence means inconclusive, not promotion.",
+    "equal_league_weight": "separate predeclared sensitivity estimand, never replaces equal-match primary"
+  },
+  "final_decision": {
+    "success_requires_all": [
+      "engineering, prespecified conditional verified-FT cohort, candidate-capture coverage, <=1% unresolved-result rate and dependence-support gates passed",
+      ">=9000 unique validated FT pairs and >=365 days and >=13 nonempty full nonoverlapping 28-day blocks",
+      "primary point delta <= -0.01 and conservative upper < 0",
+      "over2.5 Brier point delta <= 0 and conservative upper <= 0",
+      "1X2 Log loss point delta <= +0.005 and conservative upper <= +0.005",
+      "equal-league primary mean delta <= 0, with all 18 league strata completely disclosed",
+      "no unresolved hash/identity/time invalidity in the main verifiedFT population; all excluded, void, capture failure and absent-result opportunities disclosed; missing sensitivity and source-continuity review passed"
+    ],
+    "allowed_claim": "Probability quality improved in the prospectively captured verified-regulation-result opportunity population under the frozen daily policy; observed mean meets worthwhile0.01 target. At least0.01 confirmed improvement requires upper<=-0.01. Full opportunity operation and missingness are separately disclosed; no proof of effect on unresolved opportunities or profit.",
+    "per_league": "aggregate success does not authorize blanket replacement of all 18 leagues; per-league effects require separate sufficient evidence",
+    "promotion": "no automatic production or betting promotion; final independent review and concrete deployment decision are separate",
+    "failure": "retain candidate shadow-only and seal results; no retuning this run",
+    "inconclusive": "production unchanged; no outcome-based extension or selective promotion",
+    "automatic_production_promotion": false
+  },
+  "monitoring": {
+    "allowed": "validity, full requests, parent hashes, result errors, capacity, authentication, elapsed time and sample counts",
+    "selector_access": "the frozen adaptive selector uses its prescribed mature scores, but interim aggregate effects cannot trigger adoption, retuning, early success or selective suspension",
+    "hard_stop": "hash/time/identity corruption stops affected candidate capture with an explicit failure; production continues",
+    "ordinary_failure": "before-kickoff alpha0 fallback if possible; otherwise retain failure, never zero score",
+    "algorithm_bug_change": "seal attempt and start a new version for changed predictions, selection, cohort or scores; only proof-preserving reader fixes may retain existing artifacts after exact outcome-invariance review"
+  },
+  "risk_register": [
+    {
+      "id": "F5C-P-R01",
+      "risk": "每日原点与每周开发不同",
+      "impact": "不能归属历史改善到生产，必须做新前瞻"
+    },
+    {
+      "id": "F5C-P-R02",
+      "risk": "实际观察后48h比开赛后48h更保守",
+      "impact": "冷启动更慢，α0必须进入主指标"
+    },
+    {
+      "id": "F5C-P-R03",
+      "risk": "9000及设计效应4只是规划假设",
+      "impact": "未来较强依赖仍可能无法确认"
+    },
+    {
+      "id": "F5C-P-R04",
+      "risk": "只有13至19个完整28天块",
+      "impact": "统计区间受限，56天敏感性也不能证明全部依赖消除"
+    },
+    {
+      "id": "F5C-P-R05",
+      "risk": "各赛事未来占比、赛季改变",
+      "impact": "披露等赛事及全部分层，不能后选获益赛事"
+    },
+    {
+      "id": "F5C-P-R06",
+      "risk": "MLS或欧国联v2可能改善",
+      "impact": "不得插入主v1；另立确认"
+    },
+    {
+      "id": "F5C-P-R07",
+      "risk": "严格缺失及结果门槛可能使结论不足",
+      "impact": "保留完整分母，用真实赛前回退减少可避免缺口"
+    },
+    {
+      "id": "F5C-P-R08",
+      "risk": "本地保存不是云端长期保存",
+      "impact": "需要提交完成时刻和回执，迟到不能声称前瞻准入"
+    }
+  ],
+  "execution_priority": [
+    "bind daily production parent and same eligible training mean, no second fit",
+    "persist all new grid forecasts, selected candidate and requests/gaps",
+    "actual observed result versions and 48-hour maturity, selector deduplication",
+    "real cloud load/capture/score/save acceptance strictly as pilot",
+    "leave confirmation prepared_not_active this turn",
+    "later separate durable activation before lawful new cohort; UNL/MLS v2 stays separate"
+  ],
+  "pre_activation_corrections": [
+    {
+      "corrected_at_utc": "2026-10-08T10:09:44.988926+00:00",
+      "status": "prepared draft amended before activation; no production or live confirmation protocol changed",
+      "reason": "A stop triggered by 9000 scored pairs can extend enrollment based on outcome availability and completeness. Use 9000 lawful enrolled independent baseline opportunities, including candidate failures and missing results. Missing valid pairs remain insufficient after the fixed grace period.",
+      "previous_wording": "9000 valid unique scored pairs or 548 days, whichever first",
+      "current_wording": "9000 lawful unique enrolled baseline opportunities or 548 days, whichever first",
+      "no_automatic_ITT_imputation": "A prospective pre-kickoff baseline fallback is valid if saved under policy; retrospective failure-to-zero ITT is not introduced. Any alternative missing/fallback design must be set before activation."
+    },
+    {
+      "status": "v2 preparation only; v1 original retained, no live protocol changed",
+      "reason": "Separate prespecified enrollment planning margin from valid-pair support; require both calendar support and count before closure, with a548day hard end. Explicit voids do not each force failure; missing FT stays unknown, limited inference, independent sensitivity and operational denominator.",
+      "no_relaxation": "grid, means, selector180day/40/48h, main worthwhile0.01, Brier/1X2 guardrails, >=9000 FT pairs, >=365days,13 full blocks and dependence limitations remain."
+    }
+  ],
+  "predecessor": {
+    "path": "docs/research/s2-f5c-confirmation-prepared-v1.json",
+    "sha256": "85fb5aa98579018f6406b06e108d2f114340c03759317951b062a3d9a6bcb4b6",
+    "unchanged": true
+  },
+  "capture_source_paths": [
+    "docs/research/s2-f5c-confirmation-prepared-v1.json",
+    "docs/research/s2-f5-total-shrink-protocol-v1.json",
+    "docs/s2-f5c-shadow.md",
+    "docs/s2-pretest-protocols.md",
+    "football_model/model.py",
+    "football_model/total_shrink_shadow.py",
+    "football_model/shadow_models.py",
+    "football_model/prospective.py",
+    "football_model/result_sync.py",
+    "football_model/pretest_protocols.py",
+    "config.json"
+  ],
+  "development_screen_unchanged": {
+    "purpose": "decide_whether_to_invest_in_new_prospective_candidate_not_accuracy_confirmation_or_production_promotion",
+    "all_conditions_required": true,
+    "max_mean_total_log_loss_delta": -0.01,
+    "max_mean_over_2_5_brier_delta": 0.0,
+    "max_mean_one_x_two_log_loss_delta": 0.005,
+    "max_mean_score_log_loss_delta": 0.005,
+    "screen_applies_only_to": "past_selected",
+    "fixed_alpha_secondary_results": "exploratory_all_reported_no_posthoc_replacement",
+    "failure_action": "seal_results_no_retuning_grid_lookback_minimum_or_guards_until_new_study_version"
+  },
+  "activation_rules": {
+    "required_gate_kinds": [
+      "deployed_policy_source_binding",
+      "genuine_result_maturity_chain",
+      "long_term_capacity_and_restore",
+      "confirmation_capture_gate_acceptance"
+    ],
+    "requirement": "new immutable durable activation record bound to finalized preparation/source hashes and future exact start. Prepared JSON/freeze/readiness receipt is not activation. Pilot records cannot be reclassified.",
+    "current": "total_shrink_shadow remains pilot with confirmation_eligible=false; current real scored/mature pair and sustainable whole-horizon capacity are not established, so activation is blocked."
+  }
+}

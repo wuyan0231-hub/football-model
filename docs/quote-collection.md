@@ -65,6 +65,18 @@ S1真实响应反复出现 `Home -0.5` 与 `Away -0.5` 同号成对、主侧赔�
 
 本轮官方文档网页未取得可读的盘口语义正文，不能宣称供应商文字定义已经核实。所有亚洲盘记录明确标 `line_mapping_status=empirical_inference_pending_provider_confirmation`，不能直接作为已验证合约自动结算。反号标签不自行重配。此缺口应通过供应商定义或可回核的对应公司原页面进一步确认，不能用事后赛果或单纯价格直觉证明映射正确。
 
+2026-10-08 开测前复核再次检索供应商官方 Football v3 文档，取得的滚球 Asian Handicap 示例使用独立 `handicap` 字段和反号，但它属于 `/odds/live` 的市场33，不能认证本入口 `/odds` 市场4的同号文字标签。其他体育项目的同号例也不能替代足球赛前定义。本次没有取得直接解释市场4符号的独立供应商说明或对应公司核定原页，语义确认继续未完成。
+
+此前显式 `adapt_api_reference_row` 已拒绝API亚洲盘，但通用 `adapt_quote_row` 仍能生成主线/客线两张合约，而且手工把原行 `status` 改为 `open/reference_only` 可绕过显式桥接。现已在通用入口补充 `api-ah-quarantine-v1`：识别保留的采集版本、API来源/序列/行ID、市场4身份或待核符号标记，原行原字节含义保留，返回观察offers；`contracts=[]`，offers的 `contract_id/line/decimal_odds` 均为null并带隔离状态。尝试上调开放/参考价状态直接拒绝。手写 `provider_confirmed` 或 `mapping_certificate` 不解除隔离；现阶段全部API亚洲盘保持隔离。
+
+已认证截图或其他非API来源的整行主队坐标转换保持原行为。原封存包保留原件与原适配结果，可用对应旧代码回核；新准入使用当前隔离政策，不能把旧可复算输出当作供应商语义验收。若删掉所有来源标记再冒充截图，适配器不能凭数字认证来源，仍须由冻结原件/来源绑定复核拒绝。未来解除隔离须另立版本，保存直接针对足球赛前 `/odds` 市场4的供应商独立定义、定义版本及取得时间、原字节指纹、适用公司/范围、原行与定义绑定和正负线反例；本次不开放自声明证书入口。
+
+累计归档核验需区别历史与新准入。新决定build固定 `api_ah_mapping_policy_version=api-ah-quarantine-v1`，永不根据来稿缺该字段启用旧转换。已封存旧包由verify先核完整manifest与字节，再对没有本策略版本的原input启用适配器 `legacy_replay_only=True`，重放旧输出以验证原件；该参数不意味着报价可信、可新准入或可成交。旧结果保存原样，新输入与开测检查仍使用默认隔离；不回写旧manifest或补造认证状态。
+
+评分入口也隔离历史API映射。新 `score_decision` 在三类 `QUOTE_REF/QUOTE_OPEN/QUOTE_ACTUAL` 中均检查采用票所绑定的原始API行；未认证亚洲盘不生成合约支付、数值概率或收益，记录 `api_asian_handicap_mapping_not_certified`，`return_eligible=false`。新评分保存 `api_ah_scoring_policy_version=api-ah-scoring-quarantine-v1`。公共评分与CLI没有历史回放开关；`read_decision_score` 在完整封存评分manifest核验后私下重放旧计算，只证明原字节一致，返回 `historical_api_ah_mapping_unverified=true/new_api_ah_admission_allowed=false`。旧已封评分不改写，旧可复算状态不能升级为新准入或供应商符号认证。
+
+独立决定比較和同票分级比较也应用该准入状态：`decision_trials` 与 `policy_evaluation` 保留旧纸面值为 `historical_ticket_return`、旧概率为 `historical_probability_metrics`，当前收益和概率配对均排除并列明确原因，不将历史回读成功升级为当前有效收益，也不补零。机械过程、原行动和失败记录可继续展示；所有未认证合约相关数值不能进入新的效果结论。
+
 ## 参考数字、当前开放与实际成交分离
 
 API赔率响应通常没有可认证的当前开放字段。因此即便数字完整，整行 `status=unknown`，`availability_status=unknown`；明确 `blocked/suspended/closed` 则保留关闭。缺侧、坏价或冲突是 `incomplete`。**永远不因数字存在写 `open`，不生成 `open_evidence` 或 `execution_evidence`。**

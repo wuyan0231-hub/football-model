@@ -49,6 +49,30 @@ def _digest(value):
     return hashlib.sha256(data).hexdigest()
 
 
+def _unverified_api_asian_handicap(row):
+    """Recognize persisted API provenance without trusting handwritten approval.
+
+    The pre-match provider convention has not been independently certified.
+    All provider AH observations stay lossless but are not economic contracts.
+    Screenshot rows that already use an explicitly reviewed home coordinate are
+    unaffected. This is not a provenance authenticator: removing every original
+    source marker must still be caught by the separate frozen-source review.
+    """
+    if row.get("market") != "asian_handicap":
+        return False
+    def starts(field, prefix):
+        value = row.get(field)
+        return isinstance(value, str) and value.startswith(prefix)
+    return (starts("collector_version", "quote-collection-")
+            or starts("sequence", "api-football:")
+            or starts("source_id", "api_odds_")
+            or starts("row_id", "api_row_")
+            or starts("row_id", "api_reference_")
+            or row.get("line_mapping_status") == "empirical_inference_pending_provider_confirmation"
+            or row.get("provider_line_convention") == "home_line_for_both_labels"
+            or (row.get("market_id") == 4 and row.get("market_name") == "Asian Handicap"))
+
+
 def odds_to_decimal(value, odds_format):
     """Convert a supplied numeric price; null is missing, never zero or even money."""
     if not isinstance(odds_format, str) or odds_format not in {"decimal", "hong_kong", "malay", "indonesian"}:
@@ -144,7 +168,7 @@ def _claim(row, field, selection, reference_price):
             "evidence": deepcopy(claim)}
 
 
-def adapt_quote_row(row, *, match_id, forecast_id=None):
+def adapt_quote_row(row, *, match_id, forecast_id=None, legacy_replay_only=False):
     """Preserve one complete source row and derive its single-selection offers.
 
     Input follows evidence.select_quotes: market, row_id, source_id, sequence,
@@ -156,7 +180,12 @@ def adapt_quote_row(row, *, match_id, forecast_id=None):
     This function does not select a latest/as-of row. Use select_quotes first
     when historical cutoff selection is required. Missing/closed/incomplete
     row states yield null prices even if some old numeric cells remain visible.
+    legacy_replay_only reproduces previously sealed adapter outputs only; the
+    sealed-bundle verifier owns that choice after verifying the whole manifest.
+    New builders and admission checks must never set it for fresh API input.
     """
+    if not isinstance(legacy_replay_only, bool):
+        raise QuoteAdapterError("legacy_replay_flag_must_be_boolean")
     match_id = _name(match_id)
     if forecast_id is not None:
         _name(forecast_id)
@@ -177,6 +206,7 @@ def adapt_quote_row(row, *, match_id, forecast_id=None):
         raise QuoteAdapterError("invalid_row_order")
     original = deepcopy(row)
     digest = _digest(original)
+    api_ah_quarantine = not legacy_replay_only and _unverified_api_asian_handicap(row)
     try:
         interval = _quote_interval(row)
         reference_only = row.get("status") == "reference_only"
@@ -199,6 +229,10 @@ def adapt_quote_row(row, *, match_id, forecast_id=None):
         # Legacy row validators assume scalar statuses/formats and machine-sized
         # numerics. Malformed input must not escape the public adapter boundary.
         raise QuoteAdapterError("invalid_quote_scalar_or_numeric_domain") from None
+    if api_ah_quarantine and state in {"open", "reference_only"}:
+        # Renaming unknown to open/reference_only, or attaching a self-declared
+        # certificate, cannot authorize unverified provider settlement semantics.
+        raise QuoteAdapterError("api_asian_handicap_mapping_not_certified")
     # Retain original quote precision and timezone. Do not create synthetic :00 times.
     provenance = {field: deepcopy(row.get(field)) for field in
                   ("source_id", "company", "image_id", "row_id", "sequence", "row_order",
@@ -206,7 +240,7 @@ def adapt_quote_row(row, *, match_id, forecast_id=None):
     row_id = "qr_" + _digest({"match_id": match_id, "row_sha256": digest})
     contracts, offers = [], []
     for selection in SELECTIONS[row["market"]]:
-        contract = _contract(row, selection, match_id)
+        contract = None if api_ah_quarantine else _contract(row, selection, match_id)
         if contract is not None:
             contracts.append(contract)
         price = odds_to_decimal(row["odds"][selection], row["odds_format"]) if state in {"open", "reference_only"} else None
@@ -226,8 +260,14 @@ def adapt_quote_row(row, *, match_id, forecast_id=None):
                        "original_odds": deepcopy(row.get("odds", {}).get(selection)) if isinstance(row.get("odds"), dict) else None,
                        "current_open_claim": _claim(row, "open_evidence", selection, price),
                        "actual_execution_claim": _claim(row, "execution_evidence", selection, price),
-                       "provenance": deepcopy(provenance), "source_id": row["source_id"]})
+                       "provenance": deepcopy(provenance), "source_id": row["source_id"],
+                       **({"mapping_quarantine": True,
+                           "line_mapping_status": "quarantined_unverified_api_asian_handicap"}
+                          if api_ah_quarantine else {})})
     return {"quote_adapter_version": VERSION, "match_id": match_id, "forecast_id": forecast_id,
             "quote_row_id": row_id, "row_sha256": digest, "original_row": original,
             "contracts": contracts, "offers": offers, "row_status": state,
-            "scope": "structured_row_conversion_only_no_live_check_or_execution_verification"}
+            "scope": "structured_row_conversion_only_no_live_check_or_execution_verification",
+            **({"api_ah_quarantine_version": "api-ah-quarantine-v1",
+                "line_mapping_status": "quarantined_unverified_api_asian_handicap"}
+               if api_ah_quarantine else {})}
