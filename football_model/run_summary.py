@@ -14,10 +14,10 @@ import os
 from pathlib import Path
 import re
 
-VERSION = "layered-workflow-summary-v3"
+VERSION = "layered-workflow-summary-v4"
 LEAGUES = frozenset("epl laliga bundesliga serie_a ligue_1 bundesliga_2 ligue_2 ucl allsvenskan eredivisie primeira brazil_a j1 k1 mls unl liga_mx segunda argentina_a".split())
 OUTCOMES = frozenset(("success", "failure", "cancelled", "skipped", "unknown"))
-STAGES = ("restore", "model", "replay", "prospective", "result_sync", "quotes", "fundamentals", "shadow_models", "check", "persist")
+STAGES = ("restore", "model", "replay", "prospective", "result_sync", "quotes", "fundamentals", "shadow_models", "total_shrink_shadow", "check", "persist")
 COVERAGE_STATES = frozenset(("prospective", "rejected", "unsupported", "capture_error", "no_current_prediction_file", "no_upcoming_matches"))
 AVAILABILITY = frozenset(("available", "partial", "unavailable", "no_upcoming", "audit_only", "not_requested", "failed"))
 NORMAL_MISSING = frozenset(("coverage_false", "coverage_unknown", "lineup_window_not_open", "not_completed_90_minute_fixture"))
@@ -533,15 +533,157 @@ def _shadow_scores(runtime, context, now, capture):
         "accuracy_or_profit_improvement_verified": False}
 
 
+def _total_shrink_current(runtime, context, now, operation, capture=None):
+    """Bind this stage to immutable F5-C reports, not a restored latest pointer."""
+    root = runtime / "total_shrink_shadow"
+    filename, collection, excluded = (("latest.json", "runs", "competitions") if operation == "capture"
+                                       else ("score-latest.json", "score_runs", "matches"))
+    latest, latest_sha = _read(root / "reports" / filename)
+    start = _time(context["stage_started_at"]["total_shrink_shadow"])
+    if (not re.fullmatch(r"[0-9a-f]{40}", context.get("source_commit", ""))
+            or latest.get("source_commit") != context["source_commit"]):
+        raise ValueError("total_shrink_source_commit_mismatch")
+    if latest.get("status") == "capacity_deferred":
+        generated = _time(latest["generated_at"])
+        if not start <= generated <= now or latest.get("operation") != operation:
+            raise ValueError("total_shrink_capacity_stage_mismatch")
+        event_id = latest.get("capacity_event_id")
+        if event_id is not None:
+            event = _shadow_object(root, "capacity_events", event_id)
+            if event != {k: v for k, v in latest.items() if k != "capacity_event_id"}:
+                raise ValueError("total_shrink_capacity_event_mismatch")
+        elif latest.get("immutable_event_saved") is not False:
+            raise ValueError("total_shrink_capacity_evidence_missing")
+        return {"status": "capacity_deferred", "operation": operation, "latest_sha256": latest_sha,
+            "capacity_event_id": event_id, "immutable_event_saved": event_id is not None,
+            "captured_pair_versions": None, "captured_matches_this_run": None,
+            "estimated_persisted_bytes": _count(latest.get("estimated_persisted_bytes")),
+            "logical_bytes": _count(latest.get("logical_bytes")),
+            "accuracy_or_profit_improvement_verified": False}
+    run = _shadow_object(root, collection, latest.get("report_id"))
+    if {k: v for k, v in run.items() if k != excluded} != {k: v for k, v in latest.items() if k != "report_id"}:
+        raise ValueError("total_shrink_latest_parent_mismatch")
+    if (run.get("confirmation_eligible") is not False or run.get("production_models_changed") is not False
+            or type(run.get("new_fits")) is not int or run["new_fits"] != 0
+            or type(run.get("new_api_calls")) is not int or run["new_api_calls"] != 0
+            or not isinstance(run.get("errors"), list)):
+        raise ValueError("total_shrink_scope_or_counts_invalid")
+    common = {"source_commit": run["source_commit"], "report_id": latest["report_id"],
+        "latest_sha256": latest_sha, "error_count": len(run["errors"]), "new_fits": 0, "new_api_calls": 0,
+        "production_models_changed": False, "confirmation_eligible": False,
+        "accuracy_or_profit_improvement_verified": False}
+    if operation == "capture":
+        began, completed = _time(run["started_at"]), _time(run["completed_at"])
+        if not start <= began <= completed <= now:
+            raise ValueError("total_shrink_capture_outside_current_stage")
+        protocol = _shadow_object(root, "protocols", run["protocol_id"])
+        if _time(protocol["registered_at"]) > completed:
+            raise ValueError("total_shrink_protocol_registered_after_capture")
+        entries = run.get("competitions")
+        if not isinstance(entries, list):
+            raise ValueError("total_shrink_competitions_missing")
+        seen_competitions, seen, captured = set(), set(), set()
+        counts, reasons, competition_status = Counter(), Counter(), Counter()
+        for entry in entries:
+            key, rows = entry.get("competition"), entry.get("coverage")
+            if (key not in LEAGUES or key in seen_competitions or not isinstance(rows, list)
+                    or entry.get("status") not in ("completed", "source_rejected")):
+                raise ValueError("total_shrink_competition_invalid")
+            seen_competitions.add(key)
+            competition_status[entry["status"]] += 1
+            for row in rows:
+                mid, state = row.get("match_id"), row.get("status")
+                identity = (key, mid)
+                if (type(mid) is not int or mid < 1 or row.get("competition") != key or identity in seen
+                        or state not in ("captured", "already_captured", "rejected")):
+                    raise ValueError("total_shrink_coverage_invalid")
+                seen.add(identity)
+                counts[state] += 1
+                if state == "rejected":
+                    reason = row.get("reason", "")
+                    code = reason.split(":", 1)[0] if isinstance(reason, str) else ""
+                    allowed = ("no_native_recorded_production_forecast", "production_source_unsupported",
+                        "production_model_expires_before_kickoff", "not_future_at_real_capture",
+                        "outside_registered_forecast_window", "native_production_neutral_conflict",
+                        "completed_at_or_after_kickoff", "storage_completed_at_or_after_kickoff")
+                    reasons[code if code in allowed else "unclassified_reason"] += 1
+                if state in ("captured", "already_captured"):
+                    forecast = _shadow_object(root, "forecasts", row.get("forecast_id"))
+                    if (forecast.get("protocol_id") != run["protocol_id"] or forecast.get("competition") != key
+                            or forecast.get("match_id") != mid or _time(forecast["captured_at"]) > completed):
+                        raise ValueError("total_shrink_forecast_identity_mismatch")
+                    if state == "captured":
+                        if (forecast.get("input_id") != entry.get("input_id")
+                                or forecast.get("source_commit") != run["source_commit"]
+                                or not began <= _time(forecast["captured_at"]) <= completed):
+                            raise ValueError("total_shrink_forecast_run_mismatch")
+                        captured.add(identity)
+        if (_count(run.get("captured_forecasts")) != counts["captured"]
+                or _count(run.get("captured_matches")) != len(captured)
+                or run.get("coverage_status_counts") != dict(counts)):
+            raise ValueError("total_shrink_capture_count_mismatch")
+        return {**common, "status": "associated_current_capture", "protocol_id": run["protocol_id"],
+            "started_at": run["started_at"], "completed_at": run["completed_at"],
+            "competition_count": len(entries), "captured_pair_versions": counts["captured"],
+            "captured_matches_this_run": len(captured), "already_recorded_pair_versions": counts["already_captured"],
+            "coverage_status_counts": dict(counts), "coverage_rejection_reasons": dict(reasons),
+            "source_rejected_competitions": competition_status["source_rejected"],
+            "competition_status_counts": dict(competition_status), "forecast_admission_is_quality_acceptance": False,
+            "count_basis": "this_run_saved_pair_receipts_not_new_independent_matches"}
+    began, scored, completed = (_time(run["run_started_at"]), _time(run["scored_at"]), _time(run["generated_at"]))
+    if not start <= began <= scored <= completed <= now:
+        raise ValueError("total_shrink_score_outside_current_stage")
+    if capture and capture.get("status") == "associated_current_capture" and began < _time(capture["completed_at"]):
+        raise ValueError("total_shrink_score_predates_current_capture")
+    rows = run.get("matches")
+    if not isinstance(rows, list):
+        raise ValueError("total_shrink_score_matches_missing")
+    seen = set()
+    counts = Counter()
+    for row in rows:
+        identity = (row.get("protocol_id"), row.get("competition"), row.get("match_id"))
+        state = row.get("status")
+        if (not isinstance(identity[0], str) or not re.fullmatch(r"[0-9a-f]{64}", identity[0])
+                or identity[1] not in LEAGUES or type(identity[2]) is not int or identity[2] < 1
+                or identity in seen or state not in ("scored", "pending", "rejected")):
+            raise ValueError("total_shrink_score_identity_invalid")
+        seen.add(identity)
+        counts[state] += 1
+        if state in ("scored", "pending"):
+            forecast = _shadow_object(root, "forecasts", row.get("forecast_id"))
+            if ((forecast.get("protocol_id"), forecast.get("competition"), forecast.get("match_id")) != identity
+                    or _time(forecast["captured_at"]) > scored):
+                raise ValueError("total_shrink_score_forecast_unbound")
+        if state == "scored":
+            score = _shadow_object(root, "scores", row.get("score_id"))
+            if score != {k: v for k, v in row.items() if k != "score_id"}:
+                raise ValueError("total_shrink_score_original_unbound")
+    forecast_versions = _count(run.get("forecast_versions"))
+    if (forecast_versions is None or forecast_versions < len(rows)
+            or _count(run.get("selected_matches")) != len(rows)
+            or _count(run.get("n_scored_matches")) != counts["scored"]
+            or run.get("status_counts") != dict(counts)):
+        raise ValueError("total_shrink_score_count_mismatch")
+    return {**common, "status": "associated_current_score_snapshot", "scored_at": run["scored_at"],
+        "forecast_versions": forecast_versions, "selected_matches_by_protocol": len(rows),
+        "independent_matches_across_protocols": len({i[1:] for i in seen}),
+        "scored_matches_by_protocol": counts["scored"], "pending_matches_by_protocol": counts["pending"],
+        "rejected_matches_by_protocol": counts["rejected"], "status_counts": dict(counts),
+        "inferential_status": "engineering_pilot_descriptive_only_not_confirmation_or_promotion"}
+
+
 def build_summary(runtime, context, outcomes, *, now=None):
     """Return only fixed keys/enums, counts, verified timestamps and run identifiers."""
     now = now or datetime.now(timezone.utc)
     runtime = Path(runtime)
     states = {k: outcomes.get(k) if outcomes.get(k) in OUTCOMES else "unknown" for k in STAGES}
-    required = ("restore", "model", "replay", "check", "persist") + (("prospective",) if context.get("mode") == "train" else ())
+    if context.get("mode") == "shadow_only":
+        required = ("restore", "total_shrink_shadow", "check", "persist")
+    else:
+        required = ("restore", "model", "replay", "check", "persist") + (("prospective",) if context.get("mode") == "train" else ())
     # Older summary contexts remain readable; newly wired independent stages
     # become explicit required operations when their stage marker is present.
-    required += tuple(k for k in ("result_sync", "quotes", "shadow_models") if k in context.get("stage_started_at", {}))
+    required += tuple(k for k in ("result_sync", "quotes", "shadow_models", "total_shrink_shadow") if k not in required and k in context.get("stage_started_at", {}))
     not_successful = [k for k in required if states[k] != "success"]
     result = {"schema_version": VERSION, "generated_at": _iso(now), "step_outcomes": states,
               "required_steps": list(required), "necessary_steps_outcome": "failure" if not_successful else "success",
@@ -551,7 +693,15 @@ def build_summary(runtime, context, outcomes, *, now=None):
               "summary_saved_in_same_model_state_commit": False,
               "model": _unknown(), "prospective_current": _unknown(), "prospective_cumulative": _unknown(),
               "fundamentals": _unknown(), "result_sync": _unknown(), "quotes": _unknown(),
-              "shadow_models": {"capture": _unknown(), "scoring": _unknown()}}
+              "shadow_models": {"capture": _unknown(), "scoring": _unknown()},
+              "total_shrink_shadow": {"capture": _unknown(), "scoring": _unknown()}}
+    if states["total_shrink_shadow"] in ("success", "failure"):
+        for operation, field in (("capture", "capture"), ("score", "scoring")):
+            try:
+                result["total_shrink_shadow"][field] = _total_shrink_current(runtime, context, now, operation,
+                    result["total_shrink_shadow"]["capture"])
+            except (OSError, ValueError, TypeError, KeyError, AttributeError):
+                pass
     if states["shadow_models"] in ("success", "failure"):
         try:
             result["shadow_models"]["capture"] = _shadow_capture(runtime, context, now)
@@ -618,6 +768,8 @@ def markdown(value):
     synced, quotes = value.get("result_sync", {}), value.get("quotes", {})
     shadow = value.get("shadow_models", {})
     shadow_capture, shadow_score = shadow.get("capture", {}), shadow.get("scoring", {})
+    shrink = value.get("total_shrink_shadow", {})
+    shrink_capture, shrink_score = shrink.get("capture", {}), shrink.get("scoring", {})
     lines = ["# 足球模型分层运行结果", "", "| 层次 | 本次实际结果 |", "|---|---|",
         f"| 必要步骤 | {value['necessary_steps_outcome']} |",
         f"| 模型 CLI | {value['step_outcomes']['model']}；已知支持 {n(model, 'known_supported_predictions')} 场；范围完整时合计 {n(model, 'supported_predictions')} 场 |",
@@ -628,6 +780,8 @@ def markdown(value):
         f"| 真实报价积累 | {value['step_outcomes'].get('quotes', 'unknown')}；候选 {n(quotes, 'candidate_matches')}；已解析快照 {n(quotes, 'parsed_snapshots')}；完整参考行 {n(quotes, 'complete_reference_rows')}；请求 {n(quotes, 'api_requests')} |",
         f"| F4 模型影子记录 | {value['step_outcomes'].get('shadow_models', 'unknown')}；记录状态 {shadow_capture.get('status', 'unknown')}；本次预测版本 {n(shadow_capture, 'captured_forecast_versions')}；覆盖比赛 {n(shadow_capture, 'captured_matches_this_run')}；90/180配对版本 {n(shadow_capture, 'primary_pair_captures_this_run')}；准入拒绝 {n(shadow_capture, 'eligibility_rejections')} |",
         f"| F4 影子累计评分 | 预测版本 {n(shadow_score, 'forecast_versions')}；协议内配对比赛 {n(shadow_score, 'selected_matches_by_protocol')}；跨协议独立比赛 {n(shadow_score, 'independent_matches_across_protocols')} |",
+        f"| F5-C 总球收缩记录 | {value['step_outcomes'].get('total_shrink_shadow', 'unknown')}；记录状态 {shrink_capture.get('status', 'unknown')}；本次配对版本 {n(shrink_capture, 'captured_pair_versions')}；覆盖比赛 {n(shrink_capture, 'captured_matches_this_run')}；已存在版本 {n(shrink_capture, 'already_recorded_pair_versions')}；原件拒绝赛事 {n(shrink_capture, 'source_rejected_competitions')} |",
+        f"| F5-C 累计评分 | 状态 {shrink_score.get('status', 'unknown')}；预测版本 {n(shrink_score, 'forecast_versions')}；协议内比赛 {n(shrink_score, 'selected_matches_by_protocol')}；独立比赛 {n(shrink_score, 'independent_matches_across_protocols')}；已评分 {n(shrink_score, 'scored_matches_by_protocol')}；待赛果 {n(shrink_score, 'pending_matches_by_protocol')} |",
         f"| 基本面采集 | {value['step_outcomes']['fundamentals']}；报告 {facts['status']}；采集完整 {n(facts, 'complete_collection_matches')}、部分 {n(facts, 'partial_collection_matches')}、正常缺失 {n(facts, 'normal_missing_matches')}、未知 {n(facts, 'unknown_collection_matches')} |",
         f"| 输出检查 | {value['output_check_outcome']} |",
         f"| 状态保存 | {value['state_save_outcome']} |",
@@ -636,10 +790,14 @@ def markdown(value):
         "基本面的完整仅指本次请求的采集操作；正常缺失不代表数值零，特征已保存不代表全字段完整或已经调整概率。",
         "逐联赛冻结由独立checkpoint核关联；赛果同步与报价采集不要求本次训练成功。参考报价不代表开放可买或实际成交。",
         "F4本次配对版本不等于新增独立比赛；90/180与365/180评分分别统计，不能把两组相加当比赛数。影子评分按本stage时间和不可变评分指纹关联，评分原件未单列执行源码提交；不强迫历史预测使用本次源码。",
+        "F5-C只派生已有生产180天预测，不新增拟合或API请求；一份对照回执包含两版概率及各固定力度，不能把版本数当独立比赛数。工程先导不自动进入确认样本或替换生产模型。",
         "模型支持、前瞻资格、保存成功与预测准确率验收分别处理。基本面局部失败不否决独立比分模型。", ""]
     for label, row in (("本轮前瞻原因", current), ("基本面原因", facts)):
         reasons = row.get("reason_counts")
         lines.append(label + "：" + ("；".join(f"{key}={count}" for key, count in sorted(reasons.items())) if reasons else "unknown / 未记录原因"))
+    shrink_reasons = shrink_capture.get("coverage_rejection_reasons")
+    lines.append("F5-C本轮准入拒绝原因：" + ("；".join(f"{key}={count}" for key, count in sorted(shrink_reasons.items()))
+        if shrink_reasons else "unknown / 未记录拒绝原因"))
     if facts.get("global_issue_counts"):
         lines.append("基本面全局事项：" + "；".join(f"{key}={count}" for key, count in sorted(facts["global_issue_counts"].items())))
     lines.extend(["", "这些是步骤真实 outcome，不是 continue-on-error 处理后的 conclusion；必要步骤结果不是最终 GitHub job conclusion。",
@@ -651,7 +809,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="本轮关联与分层运行摘要；不接入认证、不改模型")
     parser.add_argument("command", choices=("begin", "mark", "render"))
     parser.add_argument("--context", required=True)
-    parser.add_argument("--stage", choices=("model", "prospective", "result_sync", "quotes", "fundamentals", "shadow_models"))
+    parser.add_argument("--stage", choices=("model", "prospective", "result_sync", "quotes", "fundamentals", "shadow_models", "total_shrink_shadow"))
     parser.add_argument("--runtime", default="runtime")
     parser.add_argument("--output")
     parser.add_argument("--summary")
@@ -660,7 +818,7 @@ def main(argv=None):
     now = datetime.now(timezone.utc)
     if args.command == "begin":
         sha, mode, league = os.environ.get("GITHUB_SHA", ""), os.environ.get("MODE"), os.environ.get("LEAGUE")
-        if not re.fullmatch(r"[0-9a-f]{40}", sha) or mode not in ("audit", "train") or league not in LEAGUES | {"all"}:
+        if not re.fullmatch(r"[0-9a-f]{40}", sha) or mode not in ("audit", "train", "shadow_only") or league not in LEAGUES | {"all"}:
             raise SystemExit("invalid_workflow_context")
         value = {"schema_version": VERSION, "started_at": _iso(now), "source_commit": sha,
                  "mode": mode, "league": league, "stage_started_at": {}}

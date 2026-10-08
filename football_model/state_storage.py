@@ -188,7 +188,7 @@ def should_archive(relative_path: str, retained_inline=frozenset()) -> bool:
     if name in retained_inline or not name.endswith(".json"):
         return False
     return (name.startswith(("quotes/raw/", "quotes/snapshots/", "validation/"))
-            or (name.startswith("shadow_models/") and name.split("/")[1] != "reports"
+            or (name.startswith(("shadow_models/", "total_shrink_shadow/")) and name.split("/")[1] != "reports"
                 and bool(re.fullmatch(r"[0-9a-f]{64}\.json", name.split("/")[-1]))))
 
 
