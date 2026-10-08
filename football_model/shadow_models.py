@@ -34,6 +34,7 @@ ARMS = (("baseline180", 180), ("candidate90", 90), ("candidate365", 365))
 STORAGE_LIMIT_BYTES = 400 * 1024 * 1024
 CAPACITY_REPORT_RESERVE_BYTES = 256 * 1024
 NUMERIC_REPLAY_MATRIX_ABS_TOL = 1e-15
+NUMERIC_REPLAY_PROBABILITY_ABS_TOL = 1e-15
 _BUDGET = ContextVar("shadow_storage_budget", default=None)
 
 
@@ -43,11 +44,26 @@ def _numerical_environment():
 
 
 def _numeric_replay_equivalent(recomputed, saved):
-    """Only matrix floats tolerate bounded roundoff; all other fields stay exact."""
+    """Only computed matrix, 1X2 and tail probabilities allow bounded roundoff."""
+    probability_fields = {"home_win", "draw", "away_win"}
+    rounded_fields = {"score_matrix", "probabilities", "tail_mass_before_normalization"}
     if (not isinstance(recomputed, dict) or not isinstance(saved, dict)
-            or "score_matrix" not in recomputed or "score_matrix" not in saved
-            or {k: v for k, v in recomputed.items() if k != "score_matrix"}
-               != {k: v for k, v in saved.items() if k != "score_matrix"}):
+            or not rounded_fields <= recomputed.keys() or not rounded_fields <= saved.keys()
+            or {k: v for k, v in recomputed.items() if k not in rounded_fields}
+               != {k: v for k, v in saved.items() if k not in rounded_fields}):
+        return False
+    scalar_values = []
+    for value in (recomputed, saved):
+        probabilities = value["probabilities"]
+        if not isinstance(probabilities, dict) or probabilities.keys() != probability_fields:
+            return False
+        scalars = [probabilities[k] for k in ("home_win", "draw", "away_win")]
+        scalars.append(value["tail_mass_before_normalization"])
+        if any(type(v) not in (int, float) or not 0 <= v <= 1 or not np.isfinite(v) for v in scalars):
+            return False
+        scalar_values.append(scalars)
+    if any(abs(a - b) > NUMERIC_REPLAY_PROBABILITY_ABS_TOL
+           for a, b in zip(*scalar_values)):
         return False
     arrays = []
     for value in (recomputed["score_matrix"], saved["score_matrix"]):
@@ -592,6 +608,7 @@ def _score(runtime, *, clock=None):
         report = {"version": VERSION, "scored_at": _iso(now), "selection": "first_pair_capture_matching_final_identity_no_extra_match",
             "numerical_environment": _numerical_environment(),
             "numeric_replay_matrix_abs_tol": NUMERIC_REPLAY_MATRIX_ABS_TOL,
+            "numeric_replay_probability_abs_tol": NUMERIC_REPLAY_PROBABILITY_ABS_TOL,
             "forecast_versions": len(forecasts), "selected_matches": 0, "incomplete_groups": [],
             "matches": [], "errors": [], "profit_evaluation": False, "accuracy_improvement_verified": False}
         selected_matches = set()
@@ -679,6 +696,7 @@ def _capacity_report(runtime, operation, error, started, clock, source_commit=No
     if operation == "score":
         value["scored_at"] = completed
         value["numeric_replay_matrix_abs_tol"] = NUMERIC_REPLAY_MATRIX_ABS_TOL
+        value["numeric_replay_probability_abs_tol"] = NUMERIC_REPLAY_PROBABILITY_ABS_TOL
     latest_path = _path(root, "reports", "latest.json" if operation == "capture" else "score-latest.json")
     previous = latest_path.read_bytes() if latest_path.exists() else None
     previous_cost = storage_cost(latest_path.relative_to(runtime).as_posix(), previous) if previous is not None else 0

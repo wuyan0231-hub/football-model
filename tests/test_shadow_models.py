@@ -475,9 +475,91 @@ class ShadowModelTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'prediction_does_not_recompute'):
                 score(self.runtime, clock=self.clock)
 
+    def test_1x2_and_tail_nextafter_scores_legacy_forecasts_without_rewriting(self):
+        from football_model.model import score_distribution
+        self.run_capture()
+        before = {p.name:p.read_bytes() for p in (self.root / 'forecasts').glob('*.json')}
+        protocol_before = {p.name:p.read_bytes() for p in (self.root / 'protocols').glob('*.json')}
+        def nearby(*args, **kwargs):
+            value = score_distribution(*args, **kwargs)
+            for key in ('home_win', 'draw', 'away_win'):
+                value['probabilities'][key] = float(np.nextafter(value['probabilities'][key], np.inf))
+            key = 'tail_mass_before_normalization'
+            value[key] = float(np.nextafter(value[key], np.inf))
+            return value
+        with patch('football_model.shadow_models.score_distribution', side_effect=nearby):
+            code, report = score(self.runtime, clock=self.clock)
+        self.assertEqual(code, 0)
+        self.assertEqual(report['status_counts'], {'pending':2})
+        self.assertEqual(report['numeric_replay_probability_abs_tol'], 1e-15)
+        self.assertEqual(before, {p.name:p.read_bytes() for p in (self.root / 'forecasts').glob('*.json')})
+        self.assertEqual(protocol_before, {p.name:p.read_bytes() for p in (self.root / 'protocols').glob('*.json')})
+
+    def test_1x2_and_tail_actual_drift_is_rejected(self):
+        from football_model.model import score_distribution
+        from football_model.shadow_models import _numeric_replay_equivalent
+        self.run_capture()
+        saved = _objects(self.root, 'forecasts')[0]['prediction']
+        for key in ('home_win', 'draw', 'away_win', 'tail_mass_before_normalization'):
+            with self.subTest(field=key):
+                drift = copy.deepcopy(saved)
+                target = drift if key == 'tail_mass_before_normalization' else drift['probabilities']
+                target[key] += 1e-12
+                self.assertFalse(_numeric_replay_equivalent(drift, saved))
+                self.assertFalse(_numeric_replay_equivalent(saved, drift))
+
+    def test_1x2_and_tail_malformed_values_or_keys_are_rejected(self):
+        from football_model.shadow_models import _numeric_replay_equivalent
+        self.run_capture()
+        saved = _objects(self.root, 'forecasts')[0]['prediction']
+        for key in ('home_win', 'draw', 'away_win', 'tail_mass_before_normalization'):
+            for invalid in (True, False, '0.2', None, float('nan'), float('inf'), -1e-17, 1 + 1e-10, [], {}):
+                with self.subTest(field=key, invalid_type=type(invalid).__name__):
+                    bad = copy.deepcopy(saved)
+                    target = bad if key == 'tail_mass_before_normalization' else bad['probabilities']
+                    target[key] = invalid
+                    self.assertFalse(_numeric_replay_equivalent(bad, saved))
+                    self.assertFalse(_numeric_replay_equivalent(saved, bad))
+        invalid = []
+        for key in ('probabilities', 'tail_mass_before_normalization'):
+            bad = copy.deepcopy(saved)
+            del bad[key]
+            invalid.append(bad)
+        for key in ('home_win', 'draw', 'away_win'):
+            bad = copy.deepcopy(saved)
+            del bad['probabilities'][key]
+            invalid.append(bad)
+        bad = copy.deepcopy(saved)
+        bad['probabilities']['extra'] = 0.0
+        invalid.append(bad)
+        bad = copy.deepcopy(saved)
+        bad['probabilities'] = [0.25, 0.5, 0.25]
+        invalid.append(bad)
+        for bad in invalid:
+            self.assertFalse(_numeric_replay_equivalent(bad, saved))
+            self.assertFalse(_numeric_replay_equivalent(saved, bad))
+
+    def test_probability_roundoff_keeps_axes_and_all_other_metadata_exact(self):
+        from football_model.shadow_models import _numeric_replay_equivalent
+        self.run_capture()
+        saved = _objects(self.root, 'forecasts')[0]['prediction']
+        changes = [('score_matrix_axes', {'rows':'away_goals_from_0', 'columns':'home_goals_from_0'}),
+                   ('model_age_days', float(np.nextafter(saved['model_age_days'], np.inf))),
+                   ('tail_tolerance', float(np.nextafter(saved['tail_tolerance'], np.inf))),
+                   ('model_version', 'changed'), ('home_name', 'changed'), ('lineup_adjusted', True)]
+        for field, changed in changes:
+            with self.subTest(field=field):
+                bad = copy.deepcopy(saved)
+                bad['probabilities']['home_win'] = float(np.nextafter(bad['probabilities']['home_win'], np.inf))
+                bad[field] = changed
+                self.assertFalse(_numeric_replay_equivalent(bad, saved))
+                self.assertFalse(_numeric_replay_equivalent(saved, bad))
+
     def test_numeric_replay_rejects_shape_nan_probability_and_nonnumeric_cells(self):
         from football_model.shadow_models import _numeric_replay_equivalent
-        saved = {'score_matrix':[[0.25,0.25],[0.25,0.25]], 'other':{'exact':1}}
+        saved = {'score_matrix':[[0.25,0.25],[0.25,0.25]], 'other':{'exact':1},
+                 'probabilities':{'home_win':0.25, 'draw':0.5, 'away_win':0.25},
+                 'tail_mass_before_normalization':0.0}
         self.assertTrue(_numeric_replay_equivalent(copy.deepcopy(saved), saved))
         invalid = [ [[1.0]], [[0.25,0.25,0.0],[0.25,0.25,0.0]],
                     [[float('nan'),0.25],[0.25,0.25]], [[-1e-17,0.5],[0.25,0.25]],
@@ -486,7 +568,7 @@ class ShadowModelTests(unittest.TestCase):
                     np.asarray(saved['score_matrix']) ]
         for matrix in invalid:
             with self.subTest(matrix_type=type(matrix).__name__):
-                malformed = {'score_matrix':matrix, 'other':{'exact':1}}
+                malformed = {**saved, 'score_matrix':matrix}
                 self.assertFalse(_numeric_replay_equivalent(malformed, saved))
                 self.assertFalse(_numeric_replay_equivalent(saved, malformed))
         self.assertFalse(_numeric_replay_equivalent({'other':1}, {'other':1}))
@@ -522,6 +604,7 @@ class ShadowModelTests(unittest.TestCase):
         protocol = _objects(self.root, 'protocols')[0]
         self.assertNotIn('numerical_environment', protocol['spec'])
         self.assertNotIn('numeric_replay_matrix_abs_tol', protocol['spec'])
+        self.assertNotIn('numeric_replay_probability_abs_tol', protocol['spec'])
         self.assertTrue(all('numerical_environment' not in f for f in _objects(self.root, 'forecasts')))
         before = {p.name:p.read_bytes() for p in (self.root / 'protocols').glob('*.json')}
         self.clock = lambda: NOW + timedelta(hours=1)
