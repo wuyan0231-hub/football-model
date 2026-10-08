@@ -197,8 +197,13 @@ jobs:
           python -m football_model.run_summary mark --context "$RUNNER_TEMP/football-run-context.json" --stage shadow_models
           python - <<'PYSHADOW'
           import os
+          from pathlib import Path
           import subprocess
           import sys
+          # These are mutable current-run pointers; immutable prior reports
+          # remain available if capture or score fails this time.
+          for name in ('latest.json', 'score-latest.json'):
+              (Path('runtime/shadow_models/reports') / name).unlink(missing_ok=True)
           capture = subprocess.call([sys.executable, '-m', 'football_model.shadow_models', 'capture',
               '--runtime', 'runtime', '--config', 'config.json', '--league', 'all',
               '--source-commit', os.environ['GITHUB_SHA']])

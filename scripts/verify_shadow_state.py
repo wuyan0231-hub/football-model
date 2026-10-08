@@ -27,7 +27,7 @@ import numpy as np
 from football_model.model import _iso, _timestamp, score_distribution
 from football_model.prospective import _digest, _name, _path, _read
 from football_model.shadow_models import (
-    NUMERIC_REPLAY_MATRIX_ABS_TOL, _numerical_environment,
+    NUMERIC_REPLAY_MATRIX_ABS_TOL, NUMERIC_REPLAY_PROBABILITY_ABS_TOL, _numerical_environment,
     _numeric_replay_equivalent, _saved_forecast_valid,
 )
 
@@ -171,6 +171,7 @@ def verify(runtime, *, state_marker=None, now=None):
               "github_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT") if os.environ.get("GITHUB_RUN_ATTEMPT", "").isdigit() else None,
               "numerical_environment": _numerical_environment(),
               "numeric_replay_matrix_abs_tol": NUMERIC_REPLAY_MATRIX_ABS_TOL,
+              "numeric_replay_probability_abs_tol": NUMERIC_REPLAY_PROBABILITY_ABS_TOL,
               "fit_attempts": 0, "api_requests": 0, "state_writes": 0,
               "forecast_count": 0, "passed_count": 0, "failed_count": 0,
               "failure_detail_limit": DETAIL_LIMIT, "failures": [], "failure_counts": {},
