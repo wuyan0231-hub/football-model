@@ -1,21 +1,54 @@
 {
   "version": "s2-shadow-models-1.0",
-  "status": "capacity_deferred",
-  "operation": "score",
-  "run_started_at": "2026-10-08T03:07:06.912770Z",
-  "started_at": "2026-10-08T03:07:06.912770Z",
-  "generated_at": "2026-10-08T03:07:07.028934Z",
-  "completed_at": "2026-10-08T03:07:07.028934Z",
-  "source_commit": null,
-  "reason": "shadow_storage_capacity_deferred",
-  "runtime_bytes": 499711528,
-  "limit_bytes": 419430400,
-  "capacity_report_reserve_bytes": 262144,
-  "partial_objects_preserved": true,
-  "counts_for_partial_capture": null,
-  "production_models_changed": false,
+  "scored_at": "2026-10-08T03:37:05.794107Z",
+  "selection": "first_pair_capture_matching_final_identity_no_extra_match",
+  "forecast_versions": 555,
+  "selected_matches": 185,
+  "incomplete_groups": [],
+  "errors": [],
+  "profit_evaluation": false,
   "accuracy_improvement_verified": false,
-  "scored_at": "2026-10-08T03:07:07.028934Z",
-  "capacity_event_id": null,
-  "immutable_event_saved": false
+  "status_counts": {
+    "pending": 370
+  },
+  "comparisons": [
+    {
+      "comparison": "candidate90_vs_baseline180",
+      "status_counts": {
+        "pending": 185
+      },
+      "n_scored_matches": 0,
+      "mean_candidate_minus_baseline": {
+        "brier_1x2": null,
+        "log_loss_1x2": null,
+        "over_2_5_brier": null
+      },
+      "inferential_status": "descriptive_only_no_promotion_or_significance_claim"
+    },
+    {
+      "comparison": "candidate365_vs_baseline180",
+      "status_counts": {
+        "pending": 185
+      },
+      "n_scored_matches": 0,
+      "mean_candidate_minus_baseline": {
+        "brier_1x2": null,
+        "log_loss_1x2": null,
+        "over_2_5_brier": null
+      },
+      "inferential_status": "descriptive_only_no_promotion_or_significance_claim"
+    }
+  ],
+  "storage_budget": {
+    "runtime_bytes": 625031205,
+    "logical_bytes": 734783108,
+    "estimated_persisted_bytes": 316913506,
+    "limit_bytes": 419430400,
+    "logical_limit_bytes": 2147483648,
+    "file_limit_bytes": 62914560,
+    "logical_capture_limit_bytes": 2147221504,
+    "capacity_measurement": "lossless_archive_conservative_persisted_and_original_logical_bytes",
+    "observation": "before_score_run_and_latest_report_writes"
+  },
+  "report_id": "7a4a696a51aeac12b2fd81b8ed31303f84db53d72060aa3d692e46ada6c6d114"
 }
