@@ -340,9 +340,35 @@ def append_result(root: Path, competition: str, row: dict, *, observed: datetime
             if collection_method == "pipeline_normalized_data" and latest.get("collection_method") == "independent_fixture_sync":
                 return None
             raise ValueError("result_source_observation_regressed")
-        if _same_identity(latest, row) and all(latest[field] == score for field, score in scores.items()):
+        unchanged = _same_identity(latest, row) and all(latest[field] == score for field, score in scores.items())
+        evidence_upgrade = (unchanged and latest.get("collection_method") == "pipeline_normalized_data"
+                            and collection_method == "independent_fixture_sync")
+        if unchanged and not evidence_upgrade:
             return None
-        if observed == previous_observed:
+        if evidence_upgrade:
+            # Same goals can still add materially stronger independent evidence.
+            # Preserve the old result and require actual immutable raw bytes;
+            # changing only the method label cannot upgrade its provenance.
+            source, _ = _read(root, "sources", _name(source_id) + ".json")
+            envelope = source.get("content", {})
+            if (_digest(source) != source_id or source.get("kind") != "independent_fixture_result_response"
+                    or source.get("request") != {"fixture_id": row["match_id"]}
+                    or source.get("client_response_sha256") != _digest(envelope)
+                    or _timestamp(envelope.get("fetched_at"), "upgrade.fetched_at") != observed
+                    or envelope.get("errors") or envelope.get("endpoint", "/fixtures") != "/fixtures"
+                    or envelope.get("params", {"id": row["match_id"]}) != {"id": row["match_id"]}):
+                raise ValueError("independent_result_upgrade_source_mismatch")
+            items, paging = envelope.get("response"), envelope.get("paging", {})
+            if (not isinstance(items, list) or len(items) != 1 or type(envelope.get("results", 1)) is not int
+                    or envelope.get("results", 1) != 1 or not isinstance(paging, dict)
+                    or any(type(paging.get(k, 1)) is not int or paging.get(k, 1) != 1 for k in ("current", "total"))):
+                raise ValueError("independent_result_upgrade_response_incomplete")
+            from .data import normalize_fixtures
+            normalized = normalize_fixtures(items, observed)
+            if (len(normalized) != 1 or not _same_identity(normalized[0], row)
+                    or any(normalized[0][field] != value for field, value in scores.items())):
+                raise ValueError("independent_result_upgrade_raw_score_mismatch")
+        if observed == previous_observed and not evidence_upgrade:
             raise ValueError("conflicting_result_same_observation_time")
     result = {"schema_version": 1, "competition": competition, **_identity(row), **scores,
         "observed_at": _iso(observed), "captured_at": _iso(captured), "source_id": source_id,
