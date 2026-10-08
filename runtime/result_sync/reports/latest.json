@@ -1,14 +1,14 @@
 {
   "schema": "independent_regulation_result_sync_v1",
-  "started_at": "2026-10-08T03:33:23.778355Z",
-  "run_started_at": "2026-10-08T03:33:23.778355Z",
-  "source_commit": "a169fd3f1ae3797bf8d680e8d95d8e913ac1fcf8",
+  "started_at": "2026-10-08T04:04:27.546882Z",
+  "run_started_at": "2026-10-08T04:04:27.546882Z",
+  "source_commit": "0dfcbfbb1341eace4366fa18ced3902a38f304b6",
   "time_semantics": "observed_wall_clock_v1",
   "forecast_versions": 381,
   "target_matches": 14,
   "production_forecast_versions": 381,
-  "verified_shadow_forecast_versions": 0,
-  "target_forecast_versions": 381,
+  "verified_shadow_forecast_versions": 436,
+  "target_forecast_versions": 817,
   "shadow_forecasts_added_to_production": false,
   "revision_recheck_days": 7,
   "cache_max_age_seconds": 600,
@@ -945,18 +945,970 @@
       "status": "not_due"
     },
     {
+      "forecast_id": "0191c12c3f3d7b3c66a55bdb67765ba3c3f8662d5907c3748567f15921dccf55",
+      "target_ledger": "shadow_models",
+      "competition": "bundesliga",
+      "match_id": 1575176,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "02fd1b64113d0c454f116d5f9c21540c934252eb965417a546904da409392776",
+      "target_ledger": "shadow_models",
+      "competition": "segunda",
+      "match_id": 1569966,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "041aab06b6f78e1cdc360b8c59d9d8499c5d164c7cb08a445317dac828113157",
+      "target_ledger": "shadow_models",
+      "competition": "serie_a",
+      "match_id": 1550137,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "0616976cdd1f44fb48cabb37010954c844eda8bf10ec9266fa8b6966d5bad436",
+      "target_ledger": "shadow_models",
+      "competition": "epl",
+      "match_id": 1557422,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "07a4232f97326ab116cba23b5d5aed25f29051f5c1ddada6706abbe8ea942759",
+      "target_ledger": "shadow_models",
+      "competition": "serie_a",
+      "match_id": 1550138,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "0cfc24cefddc2678fa88263ca647715c30bd19e16dff500cfc7fcc00c07fcae2",
+      "target_ledger": "shadow_models",
+      "competition": "bundesliga",
+      "match_id": 1575181,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "0e0f90b1b44b297520879b0e3126e370b3afb12a53a04c2052267c0ad06da2fe",
+      "target_ledger": "shadow_models",
+      "competition": "segunda",
+      "match_id": 1569961,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "0f74d13146568d77378597bcb679ebbe88184f50de66ff127a6b734a907b14d2",
+      "target_ledger": "shadow_models",
+      "competition": "mls",
+      "match_id": 1490531,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "11868ae070c66e74584a9b5a317911eab5d156da2447d7fa4919121eb23d6ef9",
+      "target_ledger": "shadow_models",
+      "competition": "mls",
+      "match_id": 1490537,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "11f98c2faba71b6f7c0a9b1f0d008121034ab420c0d8a3119aaa8f455a36b860",
+      "target_ledger": "shadow_models",
+      "competition": "mls",
+      "match_id": 1490525,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "1200739f4b781c0f78894c6bc4b98f19285eb53f15b78f6b9b4c430bc6d6c0bb",
+      "target_ledger": "shadow_models",
+      "competition": "laliga",
+      "match_id": 1570409,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "127f560a786ac0aef868077aaea1df380405536f76e554d78d91c82dc6ee890d",
+      "target_ledger": "shadow_models",
+      "competition": "mls",
+      "match_id": 1490535,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "13731380bf3f1ea217f55b037ff7a52a3c7aca768bd340efce8287dd4f27bca1",
+      "target_ledger": "shadow_models",
+      "competition": "k1",
+      "match_id": 1507081,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "15daabc1ebb37853b9ec88a2e7e67871ef41a28028fcf41f1d39efee796ed6d2",
+      "target_ledger": "shadow_models",
+      "competition": "mls",
+      "match_id": 1490513,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "165a52639969b896e65bf3519d5d912e89bc032f7396b2301f7b952b8d71ecc1",
+      "target_ledger": "shadow_models",
+      "competition": "segunda",
+      "match_id": 1569959,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "170d956d0516d6afa3e2319bcbd066751196af6fc9f831974412e48da48af6e1",
+      "target_ledger": "shadow_models",
+      "competition": "bundesliga_2",
+      "match_id": 1576191,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "1a4586379155b756e50fcc4229bf6b184345d7d773f5b2c9fb37af4da2dcfc97",
+      "target_ledger": "shadow_models",
+      "competition": "mls",
+      "match_id": 1490512,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "1f0e752bb2b62ae6ace6b13e1e716cb27791fdb94a815882676fcc1c2a7637a9",
+      "target_ledger": "shadow_models",
+      "competition": "mls",
+      "match_id": 1490519,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "1f3b1f96683974ec8026daa1b4ee1a2405340a7bfc22aeee7f0fc5ad9d9c28f6",
+      "target_ledger": "shadow_models",
+      "competition": "serie_a",
+      "match_id": 1550145,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "2577ce2219e5648878beeb593f9e007b40ea06e9688e36ac04fd91d658d0d5fd",
+      "target_ledger": "shadow_models",
+      "competition": "epl",
+      "match_id": 1557417,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "2885570c489c95851d58a1b24ad44079e36f3f43bc3e56c0257d4fccdf1450db",
+      "target_ledger": "shadow_models",
+      "competition": "j1",
+      "match_id": 1556082,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "28c7459c453cf9ab3f2c76b7ef7e82c75b2244a568faa9e08a74b4214c75aa6e",
+      "target_ledger": "shadow_models",
+      "competition": "ligue_1",
+      "match_id": 1552775,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "2e3899badeddb96c3dca913828e6e1e3ebc5bada80f841d76a53bcd73a4f5e06",
+      "target_ledger": "shadow_models",
+      "competition": "segunda",
+      "match_id": 1569963,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "30a129c6b0c920a80b58f0e7b2b553b1745541abba831887be33fa6d1f97123e",
+      "target_ledger": "shadow_models",
+      "competition": "laliga",
+      "match_id": 1570407,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "3247fce0d6894ecbdcc644cc62f9d8cf3bc1379391f71151804bd16b9c792fd1",
+      "target_ledger": "shadow_models",
+      "competition": "liga_mx",
+      "match_id": 1550991,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "329434cc67a3509cabbbb181e89866e91e3cc9e0f2a8c877c328a78f759f54f0",
+      "target_ledger": "shadow_models",
+      "competition": "eredivisie",
+      "match_id": 1552183,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "34b8879764244fe5233ca08c53e385ed2fab9c1c7d1475648a9f05b45712ff44",
+      "target_ledger": "shadow_models",
+      "competition": "mls",
+      "match_id": 1490533,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "380043ed3657120357ceac261957b696de3fdbb1c215551dd784b0f1cf5f2c34",
+      "target_ledger": "shadow_models",
+      "competition": "ligue_1",
+      "match_id": 1552777,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "3868d41573a20da9f9aeeee25e9660be028362362c17d9cd14098f4bd64a9c1e",
+      "target_ledger": "shadow_models",
+      "competition": "mls",
+      "match_id": 1490517,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "38dfaca90b9c24fd3d38380b25861bb0396873c1315c70561e6b70f399f90820",
+      "target_ledger": "shadow_models",
+      "competition": "liga_mx",
+      "match_id": 1550990,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "3ab53316696219c4810ba87e446d3d5be616ca093869335cfbf9f42f2f5e99be",
+      "target_ledger": "shadow_models",
+      "competition": "bundesliga_2",
+      "match_id": 1576190,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "3c3311df6cae2927e2d43cb5bc05ee4918072eeb4970bee2b71bd405202dbf3d",
+      "target_ledger": "shadow_models",
+      "competition": "brazil_a",
+      "match_id": 1492402,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "3e09d07eb63333263cf4bfd1532207b9f0df7750560df43a5e78eb01a999ffa4",
+      "target_ledger": "shadow_models",
+      "competition": "bundesliga",
+      "match_id": 1575181,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "40a6c9ea816132a07082ed5178e6014e8e0aa5fe0206715f944447ba95561d60",
+      "target_ledger": "shadow_models",
+      "competition": "brazil_a",
+      "match_id": 1492394,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "42eb734b1e9ace017f507faa48a3bac1861195728b1de579ac58dc1ef51da4c5",
+      "target_ledger": "shadow_models",
+      "competition": "segunda",
+      "match_id": 1569962,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "48d3f2b8276edddc5e1c961c4813e0b897a96b43bb7e461488b27583f196b2de",
+      "target_ledger": "shadow_models",
+      "competition": "bundesliga_2",
+      "match_id": 1576188,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "496d94957d4e0bc596bb1dea5c924aa3c45d1542cded121d4519d037c845dacc",
+      "target_ledger": "shadow_models",
+      "competition": "ligue_1",
+      "match_id": 1552782,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "4c7a7cf1c7ee397ab93876fb2322b08a817ab21cd04b920fa7918fa01a2abb58",
+      "target_ledger": "shadow_models",
+      "competition": "brazil_a",
+      "match_id": 1492407,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "4cc22598bc561fc7569f6b47a8ac98f3c92b99604709cd6cfd9e0306bc33c13f",
+      "target_ledger": "shadow_models",
+      "competition": "mls",
+      "match_id": 1490526,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "4ec164f27c887786c679d31d6aca07740846e57f68f1f4fc075f73ae11c4fef8",
+      "target_ledger": "shadow_models",
+      "competition": "brazil_a",
+      "match_id": 1492394,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "4ed6293e5d070be69e943b9c226f1dbff6468d2791fdc53feee232d193e3e0fe",
+      "target_ledger": "shadow_models",
+      "competition": "liga_mx",
+      "match_id": 1550985,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "5293bf8eaa9d46f437056e160677587dbd85215a6611785ff074282205638164",
+      "target_ledger": "shadow_models",
+      "competition": "primeira",
+      "match_id": 1575514,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "53813ee73da3624abf87184422263629a07bbf5764215874338b90891347163d",
+      "target_ledger": "shadow_models",
+      "competition": "segunda",
+      "match_id": 1569964,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "5524fb166276cecf669458036d43f26f023f78471e52d9d270c73b206dc44ab6",
+      "target_ledger": "shadow_models",
+      "competition": "k1",
+      "match_id": 1507078,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "5c4d56b5afd68fc4309f2250a95507d0713f58823970a05afe56c2a4b9b11f4b",
+      "target_ledger": "shadow_models",
+      "competition": "ligue_2",
+      "match_id": 1552494,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "600ebe0f294a5f6cacbc5414089eff3bb634197ba70b84a8e63d9a5c06790f61",
+      "target_ledger": "shadow_models",
+      "competition": "serie_a",
+      "match_id": 1550143,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "60f342a1978970a7c169f19c6971eeca6b1bbaa6da68548e790ea6554d9a85d7",
+      "target_ledger": "shadow_models",
+      "competition": "epl",
+      "match_id": 1557425,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "6a5bcb964b134324bb44886d9d9debb3e875b39f47b24f84799d74c36e402495",
+      "target_ledger": "shadow_models",
+      "competition": "k1",
+      "match_id": 1507081,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "6b64faca9a0aba977859e8cd3035c6530a647a24652a858766672a8a5d2c2a46",
+      "target_ledger": "shadow_models",
+      "competition": "mls",
+      "match_id": 1490520,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "6d7ab6f358a069208a0f1c27e9d8f1f257c0ed85a58a35c47fcd44858c20d041",
+      "target_ledger": "shadow_models",
+      "competition": "mls",
+      "match_id": 1490522,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "6d8115b331aa9517fd536b6cd317b5efc9fe429bfdd747f06189f76e8bd7b7ff",
+      "target_ledger": "shadow_models",
+      "competition": "laliga",
+      "match_id": 1570403,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "716bb6880190a082cedff3a4f49c13249b9930f58195db8fe567ec508c8de43e",
+      "target_ledger": "shadow_models",
+      "competition": "eredivisie",
+      "match_id": 1552181,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "71ee1455addde6081ce9b3e30883e9f1681a0af06d11540fc058c5c3acdd2a42",
+      "target_ledger": "shadow_models",
+      "competition": "j1",
+      "match_id": 1556085,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "7300680bab1d9d5695155b03f774faa2fa01d80a40d6b540581d41682a7dcf8d",
+      "target_ledger": "shadow_models",
+      "competition": "serie_a",
+      "match_id": 1550139,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "794779373abcae176f1dd472ecede5f3991c55611d16a6b1e3d6c2fb58764038",
+      "target_ledger": "shadow_models",
+      "competition": "argentina_a",
+      "match_id": 1493169,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "79e43c1f1fba4b571951c26f9cc800842729296d06b2a1c84801826b866a51cf",
+      "target_ledger": "shadow_models",
+      "competition": "laliga",
+      "match_id": 1570406,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "7ca0b5d8706976c6f7b9c5744f6fe24ba51e8dc688698cd67b20aa4ff2138f15",
+      "target_ledger": "shadow_models",
+      "competition": "eredivisie",
+      "match_id": 1552188,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "7d6ac1057123d2a1648f0145a45192f966ed5b1131381ccbc7a3f4f754da5372",
+      "target_ledger": "shadow_models",
+      "competition": "j1",
+      "match_id": 1556087,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "7efd5fe88af0d59fafd3605fe9d0704bad4a196e01b694e6f5fc8480b31a1ca5",
+      "target_ledger": "shadow_models",
+      "competition": "bundesliga_2",
+      "match_id": 1576190,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "7f01161fbc45657327014712d83fe041347ac7101a6317b7ba2d813c63ac9077",
+      "target_ledger": "shadow_models",
+      "competition": "epl",
+      "match_id": 1557423,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "81397baa58e42fa7246ba8f9f3506f4ce6d2557ae219655377d1d37debd07d52",
+      "target_ledger": "shadow_models",
+      "competition": "primeira",
+      "match_id": 1575515,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "81f5f1a31f7f301ef966290c2f7509a536f7b7e08e6815ee9eda835ff8a8a222",
+      "target_ledger": "shadow_models",
+      "competition": "serie_a",
+      "match_id": 1550141,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "834451b2e560ac601e4f3703393a82168ea67285a7a38a8082230ec2a2e2e8e9",
+      "target_ledger": "shadow_models",
+      "competition": "eredivisie",
+      "match_id": 1552184,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "84d777683d09acad389e4245dea83346ac64baf5b20a3ce0bb9c378edcc63d95",
+      "target_ledger": "shadow_models",
+      "competition": "ligue_2",
+      "match_id": 1552492,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "8683b89c3850c21acc1ebbbc699515a40cbe664ede75f541e04a7d778e34d758",
+      "target_ledger": "shadow_models",
+      "competition": "argentina_a",
+      "match_id": 1493176,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "89092e1156b14dff0b87e3ae73bea143b28c309a321a31b4ed1de1dc306f805a",
+      "target_ledger": "shadow_models",
+      "competition": "k1",
+      "match_id": 1507080,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "892186e1807e6c866c0f1efca1ab262563aae7db687826188d288a79bccb01cc",
+      "target_ledger": "shadow_models",
+      "competition": "bundesliga_2",
+      "match_id": 1576194,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "893a30a86373113361e7468d87e4fd826a10e9c703c3b66d6a52e9c9d7f64061",
+      "target_ledger": "shadow_models",
+      "competition": "j1",
+      "match_id": 1556089,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "894932f18b809670df640e701b9b625f2931ef594854de609035e6591b5058ba",
+      "target_ledger": "shadow_models",
+      "competition": "liga_mx",
+      "match_id": 1550984,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "89bd585179aaa925c68568f72c95217e293c614592c8c5f8327cef3937df2ff2",
+      "target_ledger": "shadow_models",
+      "competition": "brazil_a",
+      "match_id": 1492401,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "8c22dea0367e778fef5f04da61735911f135029313c0c49a201394dfd6c9c086",
+      "target_ledger": "shadow_models",
+      "competition": "ligue_1",
+      "match_id": 1552780,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "91e7fcfb5770efd81dd0cfb63d2926894fe190784e86a08e1f49d500ae4c79fe",
+      "target_ledger": "shadow_models",
+      "competition": "liga_mx",
+      "match_id": 1550988,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "91f31a01284d4efefb67c6d6c89502cd95a6b47f5d5c1f09c6302cba41d8c393",
+      "target_ledger": "shadow_models",
+      "competition": "segunda",
+      "match_id": 1569969,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "928bc99fb7315582e5b61cfd2db1b1632dd5c29d84c955102f754dd73fc53d05",
+      "target_ledger": "shadow_models",
+      "competition": "bundesliga_2",
+      "match_id": 1576195,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "9296bd2e6f0122fd165402cfd8957c2a35a3a902650de7296602567e40075bd8",
+      "target_ledger": "shadow_models",
+      "competition": "j1",
+      "match_id": 1556082,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "964e6262ebd616209668603d286afa5a4b94071c1e0a883d308063adecd8b580",
+      "target_ledger": "shadow_models",
+      "competition": "argentina_a",
+      "match_id": 1493164,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "99c5f3286ab7e8a2b587b98ea14d97d4a70ac3642475c5be8d6b853c981e6b41",
+      "target_ledger": "shadow_models",
+      "competition": "allsvenskan",
+      "match_id": 1494295,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "9ccbbb1591ca637355ca84fab22cbde982037f2289a2d29fa862fa5eca86704a",
+      "target_ledger": "shadow_models",
+      "competition": "allsvenskan",
+      "match_id": 1494291,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "9ed0fac6d2c1b6287cd9532b2d6ce037a4a8bf0b847f841338b37a7e4185d0c6",
+      "target_ledger": "shadow_models",
+      "competition": "laliga",
+      "match_id": 1570403,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "a074cfc929ef157ae552223e8a6e10544d8f5d72b1fafc3d0a8d2add1cf6b1ec",
+      "target_ledger": "shadow_models",
+      "competition": "ligue_1",
+      "match_id": 1552781,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "a23e07910118b10107addaa27c2a33903d74365eb1bd46e58ee3a6734e757a53",
+      "target_ledger": "shadow_models",
+      "competition": "mls",
+      "match_id": 1490526,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "a449d9a59120ffaee572789e9e413ec0823cb35ba67a5f6a65c78aaa49571883",
+      "target_ledger": "shadow_models",
+      "competition": "brazil_a",
+      "match_id": 1492409,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "a7a92fa3040c6610fdfbace089026ccdfb5380e841330c4d69e52de821b26aca",
+      "target_ledger": "shadow_models",
+      "competition": "argentina_a",
+      "match_id": 1493173,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "a8a0ab8f4fc3acdf995b21266f2c5ecb57e27816b6a93afcd682fb0f42a60c52",
+      "target_ledger": "shadow_models",
+      "competition": "primeira",
+      "match_id": 1575513,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "aa76785eb2e4432761756da3248418b1849cd539dcda687f98de64660e782acc",
+      "target_ledger": "shadow_models",
+      "competition": "segunda",
+      "match_id": 1569963,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "ab961190c6feb80aadd3a12b7fb5c002a4b215c750676ee4a95a75b5b6408f0e",
+      "target_ledger": "shadow_models",
+      "competition": "eredivisie",
+      "match_id": 1552182,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "ae7a0525892597d08f909f41bf1f48c86b50a723d0578dd63ab6728ffc34f25a",
+      "target_ledger": "shadow_models",
+      "competition": "mls",
+      "match_id": 1490535,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "b743b6df056626c24910eb2081e6245826e0d619b8c1155c6bcc931af5430752",
+      "target_ledger": "shadow_models",
+      "competition": "brazil_a",
+      "match_id": 1492401,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "b75f971183aec046f0fc8f016004e44c96836b6c25b0104b9256110aed056233",
+      "target_ledger": "shadow_models",
+      "competition": "mls",
+      "match_id": 1490518,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "b8fb04af75ae8312410209933e84b7c51b8243dc37dd6e0fb78c563330018292",
+      "target_ledger": "shadow_models",
+      "competition": "liga_mx",
+      "match_id": 1550984,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "ba4abd7b0b2ee377c45b5cc43ebe54babdeb06687043c761e62bcf11c972cf88",
+      "target_ledger": "shadow_models",
+      "competition": "epl",
+      "match_id": 1557420,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "bb6d91d7f80cc2019a74da28c6303a4c5b8839ea03e5e970496f3d0a5ccc3ba2",
+      "target_ledger": "shadow_models",
+      "competition": "bundesliga",
+      "match_id": 1575176,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "bc4391f8add6ca5c39506d2503d5a5970ae122cca47f01c600b3f56f1e69e715",
+      "target_ledger": "shadow_models",
+      "competition": "laliga",
+      "match_id": 1570406,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "c0509bbaa0bbca2452747760400b40a30e1af8be3723b89b33ac6de9ee1b28b0",
+      "target_ledger": "shadow_models",
+      "competition": "serie_a",
+      "match_id": 1550139,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "c2030dbbd7c9a954a8e8b13d5632df051c638b04615d44ab5171bea1ccba5794",
+      "target_ledger": "shadow_models",
+      "competition": "segunda",
+      "match_id": 1569967,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "c27e416275371e05ba027d718fd4ffc417013654d1bfbccb3281b86624e847a3",
+      "target_ledger": "shadow_models",
+      "competition": "ligue_1",
+      "match_id": 1552774,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "c2bc7e22fb69ad8a749b7397a49ea5237fe0b3818edddf7b8aae22eb26285b54",
+      "target_ledger": "shadow_models",
+      "competition": "serie_a",
+      "match_id": 1550144,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "c3895466c6380419e6a43a9debbad035e2626d39cd8fc6f40a70493e4b7704df",
+      "target_ledger": "shadow_models",
+      "competition": "mls",
+      "match_id": 1490532,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "c3da2ebb366dd422b030ff1d4afd023d5041763e51e7ee3d44b8d4238a066a31",
+      "target_ledger": "shadow_models",
+      "competition": "bundesliga",
+      "match_id": 1575176,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "c462f7eac7b6912349ad7c50f679ba2376e6d0adf438fc81316f3856277920ae",
+      "target_ledger": "shadow_models",
+      "competition": "k1",
+      "match_id": 1507077,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "c63ce9ab080363912d46e49d3a7c541e00c30e2cbae008a3468bb488b0f41bbf",
+      "target_ledger": "shadow_models",
+      "competition": "brazil_a",
+      "match_id": 1492404,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "c9a8b776535c5f7e4608dda422ea56c98188605c42db34f8bcb6af04bd8e3541",
+      "target_ledger": "shadow_models",
+      "competition": "epl",
+      "match_id": 1557424,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "ce290d0bd9ce0ef8027e03b15461a41cd504cd7faf8fb126e43d69334005fea7",
+      "target_ledger": "shadow_models",
+      "competition": "epl",
+      "match_id": 1557420,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "d2e8ccea4c54d5c42a918f3dcb2ed503e5e0e9ed31f37b008dd292ca80a1770c",
+      "target_ledger": "shadow_models",
+      "competition": "mls",
+      "match_id": 1490512,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "d5250ddd12139f45df9d5acc82409ba75f36f584fe05c6beee2352ecaf4cb9f7",
+      "target_ledger": "shadow_models",
+      "competition": "bundesliga",
+      "match_id": 1575177,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "d5588320db8fee0e0fb6d41c74cfae82ab412ef78d70ea0626c62cb03375687e",
+      "target_ledger": "shadow_models",
+      "competition": "epl",
+      "match_id": 1557417,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "d688eddc3be94dbc79c4f1d8cada131ed6ccbee7a7aee582c7ad457d93be80c1",
+      "target_ledger": "shadow_models",
+      "competition": "ligue_2",
+      "match_id": 1552486,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "d8e5179b03f6aba249cc48caad0190a784869af76af4e966f4de3cbe3b72a07c",
+      "target_ledger": "shadow_models",
+      "competition": "segunda",
+      "match_id": 1569966,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "e0157fa28a45644de109187af663acedac0eb97b5dc2a66907b54f96e007a74d",
+      "target_ledger": "shadow_models",
+      "competition": "mls",
+      "match_id": 1490514,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "e5c8153d1ed3e6ebb8ccb16c61b36f25e1c9d6e09bdf6f27a336cece85b1f7a4",
+      "target_ledger": "shadow_models",
+      "competition": "ligue_2",
+      "match_id": 1552488,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "e73314017cf5badcd9671d4094dda2257dce9a5a1993103e4b886cf2de14637f",
+      "target_ledger": "shadow_models",
+      "competition": "ligue_1",
+      "match_id": 1552774,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "e804438f0ecaafadade9564b2e834765665808bd155cad823b53666226e9a774",
+      "target_ledger": "shadow_models",
+      "competition": "ligue_2",
+      "match_id": 1552494,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "e8f45c0fedd0019b86723f3fee966e8faa18578e50c644f4fd176f93cf75d644",
+      "target_ledger": "shadow_models",
+      "competition": "epl",
+      "match_id": 1557418,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "eb4aa573fa9516870a9f4dc7e5397c652776058212105062f8b8a70d70b8f636",
+      "target_ledger": "shadow_models",
+      "competition": "ligue_1",
+      "match_id": 1552777,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "ed4ac3b69f9e8d44d1d07c9db9c4a28f799ab09a3f55d38e7a366636ccae5fc3",
+      "target_ledger": "shadow_models",
+      "competition": "allsvenskan",
+      "match_id": 1494292,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "ee6fb2974f407c4f1fba542b6f66b1028f49f852e918873b130a14a6356aa37b",
+      "target_ledger": "shadow_models",
+      "competition": "primeira",
+      "match_id": 1575515,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "f77c80866cc66e64d5811aa80c6a7c9d7541af08c0c9ae51a7eaeda0ce0469f5",
+      "target_ledger": "shadow_models",
+      "competition": "j1",
+      "match_id": 1556084,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "fc10321d409c2a5032c199a4ff1542e2ef85b0e9e1ee2dafd7efd717891e5213",
+      "target_ledger": "shadow_models",
+      "competition": "eredivisie",
+      "match_id": 1552187,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
+      "forecast_id": "fd2539d1de7b509bb813b4a3db8962f24270221e6658f7932f476760d17099d8",
+      "target_ledger": "shadow_models",
+      "competition": "serie_a",
+      "match_id": 1550138,
+      "status": "shadow_target_rejected",
+      "reason": "shadow_prediction_does_not_recompute"
+    },
+    {
       "competition": "brazil_a",
       "match_id": 1492391,
       "target_ledgers": [
         "prospective"
       ],
-      "source_id": "9dd5e75057d5b35ce2ed942e26ef2e92d51cf330ac0d08fac859bc8f276ffa23",
-      "received_at": "2026-10-08T03:33:24.856912Z",
+      "source_id": "19b626d7a49091c69df4b3976a3f0bf5a364b03377009e48c4766caf13f06d61",
+      "received_at": "2026-10-08T04:05:39.531782Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T03:33:24.855931Z",
+      "observed_at": "2026-10-08T04:05:39.530403Z",
       "provider_status": "FT",
-      "status": "result_appended",
-      "result_id": "bcacd5eaf596f37de573a74a77d7cde8d8054d2f324d6eb31bd6d5152f093cf6"
+      "status": "result_unchanged",
+      "result_id": null
     },
     {
       "competition": "brazil_a",
@@ -964,10 +1916,10 @@
       "target_ledgers": [
         "prospective"
       ],
-      "source_id": "682ef21b25762082e27d32a558d627f95e34c63c28dac65aa50c6d5f4d0ef534",
-      "received_at": "2026-10-08T03:33:25.094380Z",
+      "source_id": "83f49e77ce69004810e9fce1976e5756c45bdd9e70a51bcce6b06fcc5b2a45b1",
+      "received_at": "2026-10-08T04:05:39.789813Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T03:33:25.093272Z",
+      "observed_at": "2026-10-08T04:05:39.788489Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -978,10 +1930,10 @@
       "target_ledgers": [
         "prospective"
       ],
-      "source_id": "d37150de56ad0444716712ad3eef039ac2d91c49c7b637a74ee32a7c23054fdf",
-      "received_at": "2026-10-08T03:33:25.575497Z",
+      "source_id": "49d242a4b6576ea0928f20ce07f02b897022224a2137791936cc67b60ccc8492",
+      "received_at": "2026-10-08T04:05:40.036884Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T03:33:25.574371Z",
+      "observed_at": "2026-10-08T04:05:40.035523Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -992,10 +1944,10 @@
       "target_ledgers": [
         "prospective"
       ],
-      "source_id": "63312235f7706e76e0ae0b1276b55481a718a6b25c8e0b3fe10c1d06236181c0",
-      "received_at": "2026-10-08T03:33:25.825062Z",
+      "source_id": "16436d9d55bbd15546538b25e99c6c570f1f838c06c7314882257e5361bb5482",
+      "received_at": "2026-10-08T04:05:40.285685Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T03:33:25.823997Z",
+      "observed_at": "2026-10-08T04:05:40.284324Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -1006,10 +1958,10 @@
       "target_ledgers": [
         "prospective"
       ],
-      "source_id": "4b8b0e66a1567adae7875df0ed6c409bd82861d83b413a1e68156af7af4fa38e",
-      "received_at": "2026-10-08T03:33:26.059536Z",
+      "source_id": "103185ccbab80020e6e7905e49b812f45738e92487973464bf605de15ff2b0c9",
+      "received_at": "2026-10-08T04:05:40.541097Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T03:33:26.058387Z",
+      "observed_at": "2026-10-08T04:05:40.539699Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -1020,10 +1972,10 @@
       "target_ledgers": [
         "prospective"
       ],
-      "source_id": "3d0964ccb886661ab752d52333b71dac6cc6da158a4ac4c2d5e7f9a1982f57c7",
-      "received_at": "2026-10-08T03:33:26.315437Z",
+      "source_id": "1a409db8e4ffc8f830935b2b05d42b58952bd405cd427e4c4500ab3418770897",
+      "received_at": "2026-10-08T04:05:40.804719Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T03:33:26.314332Z",
+      "observed_at": "2026-10-08T04:05:40.803369Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -1034,10 +1986,10 @@
       "target_ledgers": [
         "prospective"
       ],
-      "source_id": "62553c32d8e7d0e15430231999fa92acdcf95c4729cd1df2ed7053763ea96b94",
-      "received_at": "2026-10-08T03:33:26.813903Z",
+      "source_id": "3131ad3132dccdd0a08fd707f7e782f85fef02bfa65419bbd90a92fde620feeb",
+      "received_at": "2026-10-08T04:05:41.057462Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T03:33:26.812788Z",
+      "observed_at": "2026-10-08T04:05:41.056151Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -1048,10 +2000,10 @@
       "target_ledgers": [
         "prospective"
       ],
-      "source_id": "1c402eb9d664d2936ebc5b95332e20b6bf1f4c620d6161d4da05c7896fef5e9d",
-      "received_at": "2026-10-08T03:33:27.053789Z",
+      "source_id": "8347cefc89f80d9d65c07cd32cf3507eeb33f55e2e5704b6adcf1cc3a4655235",
+      "received_at": "2026-10-08T04:05:41.318316Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T03:33:27.052672Z",
+      "observed_at": "2026-10-08T04:05:41.316935Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -1062,10 +2014,10 @@
       "target_ledgers": [
         "prospective"
       ],
-      "source_id": "d154dcdd053a49c7e375de7a479e4b0ebd341d0152f399fd63532d1cc370c3fb",
-      "received_at": "2026-10-08T03:33:27.282868Z",
+      "source_id": "ce5455362d31313732d5a2cd0542de998118c879976e3b4f46d950d73f784bbc",
+      "received_at": "2026-10-08T04:05:41.572815Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T03:33:27.281780Z",
+      "observed_at": "2026-10-08T04:05:41.571493Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -1076,10 +2028,10 @@
       "target_ledgers": [
         "prospective"
       ],
-      "source_id": "8e45d7dad4e48f5effbafd3af05419443563c254c41d062c0bba7038eea9ff8d",
-      "received_at": "2026-10-08T03:33:27.542962Z",
+      "source_id": "b9a87e2405ec5e50c841730c2de5715eac443f87e6130798183794af1b18ef9d",
+      "received_at": "2026-10-08T04:05:41.830100Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T03:33:27.541820Z",
+      "observed_at": "2026-10-08T04:05:41.828676Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -1090,10 +2042,10 @@
       "target_ledgers": [
         "prospective"
       ],
-      "source_id": "7000cd45369214890a8baf7fdbc9c9409b0319b65bb97493dbe413e51c7ddd1c",
-      "received_at": "2026-10-08T03:33:27.778502Z",
+      "source_id": "7587b9c08d5d75d76afe02aa81e67dd5820d63d2c23bab3b76f8cb9e63f549e6",
+      "received_at": "2026-10-08T04:05:42.097743Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T03:33:27.777449Z",
+      "observed_at": "2026-10-08T04:05:42.096471Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -1104,10 +2056,10 @@
       "target_ledgers": [
         "prospective"
       ],
-      "source_id": "ce2413a800b4c854689874f7f45651f2d7f0fdd991c008508f051c3468d65910",
-      "received_at": "2026-10-08T03:33:28.250895Z",
+      "source_id": "9fdda41445c061d137e4efdd1555a7d0656c6a745ce14865894b733dfbc490bd",
+      "received_at": "2026-10-08T04:05:42.370301Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T03:33:28.249754Z",
+      "observed_at": "2026-10-08T04:05:42.368946Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -1118,10 +2070,10 @@
       "target_ledgers": [
         "prospective"
       ],
-      "source_id": "12be21eb0b0f0d8c82ccce8739ee486914abeafa3cb3c2531c6f1f0660e9d0e1",
-      "received_at": "2026-10-08T03:33:28.490904Z",
+      "source_id": "a94ee7f4475adbfea032c4efab516718356a852ba8122b0984b969eee6cedb79",
+      "received_at": "2026-10-08T04:05:42.625653Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T03:33:28.489756Z",
+      "observed_at": "2026-10-08T04:05:42.624370Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -1132,10 +2084,10 @@
       "target_ledgers": [
         "prospective"
       ],
-      "source_id": "efd8ac245f0f42ae4a69fec899d057b5adb682f01d9ba00dbe55a9a62691c688",
-      "received_at": "2026-10-08T03:33:28.754141Z",
+      "source_id": "f710d219c1528139a4989e664d2ad6841c4695fbb05cd218559b3f86dd4636dd",
+      "received_at": "2026-10-08T04:05:42.877802Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T03:33:28.752989Z",
+      "observed_at": "2026-10-08T04:05:42.876462Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -1143,39 +2095,159 @@
   ],
   "model_or_training_required": false,
   "changes_training_data": false,
-  "completed_at": "2026-10-08T03:33:29.475009Z",
+  "completed_at": "2026-10-08T04:05:43.529500Z",
   "status_counts": {
     "not_due": 186,
-    "result_appended": 1,
-    "result_unchanged": 13
+    "shadow_target_rejected": 119,
+    "result_unchanged": 14
   },
   "api_requests": 15,
-  "errors": [],
-  "exit_code": 0,
-  "collection_completed_at": "2026-10-08T03:33:28.773072Z",
+  "errors": [
+    "shadow_target:0191c12c3f3d7b3c66a55bdb67765ba3c3f8662d5907c3748567f15921dccf55:shadow_prediction_does_not_recompute",
+    "shadow_target:02fd1b64113d0c454f116d5f9c21540c934252eb965417a546904da409392776:shadow_prediction_does_not_recompute",
+    "shadow_target:041aab06b6f78e1cdc360b8c59d9d8499c5d164c7cb08a445317dac828113157:shadow_prediction_does_not_recompute",
+    "shadow_target:0616976cdd1f44fb48cabb37010954c844eda8bf10ec9266fa8b6966d5bad436:shadow_prediction_does_not_recompute",
+    "shadow_target:07a4232f97326ab116cba23b5d5aed25f29051f5c1ddada6706abbe8ea942759:shadow_prediction_does_not_recompute",
+    "shadow_target:0cfc24cefddc2678fa88263ca647715c30bd19e16dff500cfc7fcc00c07fcae2:shadow_prediction_does_not_recompute",
+    "shadow_target:0e0f90b1b44b297520879b0e3126e370b3afb12a53a04c2052267c0ad06da2fe:shadow_prediction_does_not_recompute",
+    "shadow_target:0f74d13146568d77378597bcb679ebbe88184f50de66ff127a6b734a907b14d2:shadow_prediction_does_not_recompute",
+    "shadow_target:11868ae070c66e74584a9b5a317911eab5d156da2447d7fa4919121eb23d6ef9:shadow_prediction_does_not_recompute",
+    "shadow_target:11f98c2faba71b6f7c0a9b1f0d008121034ab420c0d8a3119aaa8f455a36b860:shadow_prediction_does_not_recompute",
+    "shadow_target:1200739f4b781c0f78894c6bc4b98f19285eb53f15b78f6b9b4c430bc6d6c0bb:shadow_prediction_does_not_recompute",
+    "shadow_target:127f560a786ac0aef868077aaea1df380405536f76e554d78d91c82dc6ee890d:shadow_prediction_does_not_recompute",
+    "shadow_target:13731380bf3f1ea217f55b037ff7a52a3c7aca768bd340efce8287dd4f27bca1:shadow_prediction_does_not_recompute",
+    "shadow_target:15daabc1ebb37853b9ec88a2e7e67871ef41a28028fcf41f1d39efee796ed6d2:shadow_prediction_does_not_recompute",
+    "shadow_target:165a52639969b896e65bf3519d5d912e89bc032f7396b2301f7b952b8d71ecc1:shadow_prediction_does_not_recompute",
+    "shadow_target:170d956d0516d6afa3e2319bcbd066751196af6fc9f831974412e48da48af6e1:shadow_prediction_does_not_recompute",
+    "shadow_target:1a4586379155b756e50fcc4229bf6b184345d7d773f5b2c9fb37af4da2dcfc97:shadow_prediction_does_not_recompute",
+    "shadow_target:1f0e752bb2b62ae6ace6b13e1e716cb27791fdb94a815882676fcc1c2a7637a9:shadow_prediction_does_not_recompute",
+    "shadow_target:1f3b1f96683974ec8026daa1b4ee1a2405340a7bfc22aeee7f0fc5ad9d9c28f6:shadow_prediction_does_not_recompute",
+    "shadow_target:2577ce2219e5648878beeb593f9e007b40ea06e9688e36ac04fd91d658d0d5fd:shadow_prediction_does_not_recompute",
+    "shadow_target:2885570c489c95851d58a1b24ad44079e36f3f43bc3e56c0257d4fccdf1450db:shadow_prediction_does_not_recompute",
+    "shadow_target:28c7459c453cf9ab3f2c76b7ef7e82c75b2244a568faa9e08a74b4214c75aa6e:shadow_prediction_does_not_recompute",
+    "shadow_target:2e3899badeddb96c3dca913828e6e1e3ebc5bada80f841d76a53bcd73a4f5e06:shadow_prediction_does_not_recompute",
+    "shadow_target:30a129c6b0c920a80b58f0e7b2b553b1745541abba831887be33fa6d1f97123e:shadow_prediction_does_not_recompute",
+    "shadow_target:3247fce0d6894ecbdcc644cc62f9d8cf3bc1379391f71151804bd16b9c792fd1:shadow_prediction_does_not_recompute",
+    "shadow_target:329434cc67a3509cabbbb181e89866e91e3cc9e0f2a8c877c328a78f759f54f0:shadow_prediction_does_not_recompute",
+    "shadow_target:34b8879764244fe5233ca08c53e385ed2fab9c1c7d1475648a9f05b45712ff44:shadow_prediction_does_not_recompute",
+    "shadow_target:380043ed3657120357ceac261957b696de3fdbb1c215551dd784b0f1cf5f2c34:shadow_prediction_does_not_recompute",
+    "shadow_target:3868d41573a20da9f9aeeee25e9660be028362362c17d9cd14098f4bd64a9c1e:shadow_prediction_does_not_recompute",
+    "shadow_target:38dfaca90b9c24fd3d38380b25861bb0396873c1315c70561e6b70f399f90820:shadow_prediction_does_not_recompute",
+    "shadow_target:3ab53316696219c4810ba87e446d3d5be616ca093869335cfbf9f42f2f5e99be:shadow_prediction_does_not_recompute",
+    "shadow_target:3c3311df6cae2927e2d43cb5bc05ee4918072eeb4970bee2b71bd405202dbf3d:shadow_prediction_does_not_recompute",
+    "shadow_target:3e09d07eb63333263cf4bfd1532207b9f0df7750560df43a5e78eb01a999ffa4:shadow_prediction_does_not_recompute",
+    "shadow_target:40a6c9ea816132a07082ed5178e6014e8e0aa5fe0206715f944447ba95561d60:shadow_prediction_does_not_recompute",
+    "shadow_target:42eb734b1e9ace017f507faa48a3bac1861195728b1de579ac58dc1ef51da4c5:shadow_prediction_does_not_recompute",
+    "shadow_target:48d3f2b8276edddc5e1c961c4813e0b897a96b43bb7e461488b27583f196b2de:shadow_prediction_does_not_recompute",
+    "shadow_target:496d94957d4e0bc596bb1dea5c924aa3c45d1542cded121d4519d037c845dacc:shadow_prediction_does_not_recompute",
+    "shadow_target:4c7a7cf1c7ee397ab93876fb2322b08a817ab21cd04b920fa7918fa01a2abb58:shadow_prediction_does_not_recompute",
+    "shadow_target:4cc22598bc561fc7569f6b47a8ac98f3c92b99604709cd6cfd9e0306bc33c13f:shadow_prediction_does_not_recompute",
+    "shadow_target:4ec164f27c887786c679d31d6aca07740846e57f68f1f4fc075f73ae11c4fef8:shadow_prediction_does_not_recompute",
+    "shadow_target:4ed6293e5d070be69e943b9c226f1dbff6468d2791fdc53feee232d193e3e0fe:shadow_prediction_does_not_recompute",
+    "shadow_target:5293bf8eaa9d46f437056e160677587dbd85215a6611785ff074282205638164:shadow_prediction_does_not_recompute",
+    "shadow_target:53813ee73da3624abf87184422263629a07bbf5764215874338b90891347163d:shadow_prediction_does_not_recompute",
+    "shadow_target:5524fb166276cecf669458036d43f26f023f78471e52d9d270c73b206dc44ab6:shadow_prediction_does_not_recompute",
+    "shadow_target:5c4d56b5afd68fc4309f2250a95507d0713f58823970a05afe56c2a4b9b11f4b:shadow_prediction_does_not_recompute",
+    "shadow_target:600ebe0f294a5f6cacbc5414089eff3bb634197ba70b84a8e63d9a5c06790f61:shadow_prediction_does_not_recompute",
+    "shadow_target:60f342a1978970a7c169f19c6971eeca6b1bbaa6da68548e790ea6554d9a85d7:shadow_prediction_does_not_recompute",
+    "shadow_target:6a5bcb964b134324bb44886d9d9debb3e875b39f47b24f84799d74c36e402495:shadow_prediction_does_not_recompute",
+    "shadow_target:6b64faca9a0aba977859e8cd3035c6530a647a24652a858766672a8a5d2c2a46:shadow_prediction_does_not_recompute",
+    "shadow_target:6d7ab6f358a069208a0f1c27e9d8f1f257c0ed85a58a35c47fcd44858c20d041:shadow_prediction_does_not_recompute",
+    "shadow_target:6d8115b331aa9517fd536b6cd317b5efc9fe429bfdd747f06189f76e8bd7b7ff:shadow_prediction_does_not_recompute",
+    "shadow_target:716bb6880190a082cedff3a4f49c13249b9930f58195db8fe567ec508c8de43e:shadow_prediction_does_not_recompute",
+    "shadow_target:71ee1455addde6081ce9b3e30883e9f1681a0af06d11540fc058c5c3acdd2a42:shadow_prediction_does_not_recompute",
+    "shadow_target:7300680bab1d9d5695155b03f774faa2fa01d80a40d6b540581d41682a7dcf8d:shadow_prediction_does_not_recompute",
+    "shadow_target:794779373abcae176f1dd472ecede5f3991c55611d16a6b1e3d6c2fb58764038:shadow_prediction_does_not_recompute",
+    "shadow_target:79e43c1f1fba4b571951c26f9cc800842729296d06b2a1c84801826b866a51cf:shadow_prediction_does_not_recompute",
+    "shadow_target:7ca0b5d8706976c6f7b9c5744f6fe24ba51e8dc688698cd67b20aa4ff2138f15:shadow_prediction_does_not_recompute",
+    "shadow_target:7d6ac1057123d2a1648f0145a45192f966ed5b1131381ccbc7a3f4f754da5372:shadow_prediction_does_not_recompute",
+    "shadow_target:7efd5fe88af0d59fafd3605fe9d0704bad4a196e01b694e6f5fc8480b31a1ca5:shadow_prediction_does_not_recompute",
+    "shadow_target:7f01161fbc45657327014712d83fe041347ac7101a6317b7ba2d813c63ac9077:shadow_prediction_does_not_recompute",
+    "shadow_target:81397baa58e42fa7246ba8f9f3506f4ce6d2557ae219655377d1d37debd07d52:shadow_prediction_does_not_recompute",
+    "shadow_target:81f5f1a31f7f301ef966290c2f7509a536f7b7e08e6815ee9eda835ff8a8a222:shadow_prediction_does_not_recompute",
+    "shadow_target:834451b2e560ac601e4f3703393a82168ea67285a7a38a8082230ec2a2e2e8e9:shadow_prediction_does_not_recompute",
+    "shadow_target:84d777683d09acad389e4245dea83346ac64baf5b20a3ce0bb9c378edcc63d95:shadow_prediction_does_not_recompute",
+    "shadow_target:8683b89c3850c21acc1ebbbc699515a40cbe664ede75f541e04a7d778e34d758:shadow_prediction_does_not_recompute",
+    "shadow_target:89092e1156b14dff0b87e3ae73bea143b28c309a321a31b4ed1de1dc306f805a:shadow_prediction_does_not_recompute",
+    "shadow_target:892186e1807e6c866c0f1efca1ab262563aae7db687826188d288a79bccb01cc:shadow_prediction_does_not_recompute",
+    "shadow_target:893a30a86373113361e7468d87e4fd826a10e9c703c3b66d6a52e9c9d7f64061:shadow_prediction_does_not_recompute",
+    "shadow_target:894932f18b809670df640e701b9b625f2931ef594854de609035e6591b5058ba:shadow_prediction_does_not_recompute",
+    "shadow_target:89bd585179aaa925c68568f72c95217e293c614592c8c5f8327cef3937df2ff2:shadow_prediction_does_not_recompute",
+    "shadow_target:8c22dea0367e778fef5f04da61735911f135029313c0c49a201394dfd6c9c086:shadow_prediction_does_not_recompute",
+    "shadow_target:91e7fcfb5770efd81dd0cfb63d2926894fe190784e86a08e1f49d500ae4c79fe:shadow_prediction_does_not_recompute",
+    "shadow_target:91f31a01284d4efefb67c6d6c89502cd95a6b47f5d5c1f09c6302cba41d8c393:shadow_prediction_does_not_recompute",
+    "shadow_target:928bc99fb7315582e5b61cfd2db1b1632dd5c29d84c955102f754dd73fc53d05:shadow_prediction_does_not_recompute",
+    "shadow_target:9296bd2e6f0122fd165402cfd8957c2a35a3a902650de7296602567e40075bd8:shadow_prediction_does_not_recompute",
+    "shadow_target:964e6262ebd616209668603d286afa5a4b94071c1e0a883d308063adecd8b580:shadow_prediction_does_not_recompute",
+    "shadow_target:99c5f3286ab7e8a2b587b98ea14d97d4a70ac3642475c5be8d6b853c981e6b41:shadow_prediction_does_not_recompute",
+    "shadow_target:9ccbbb1591ca637355ca84fab22cbde982037f2289a2d29fa862fa5eca86704a:shadow_prediction_does_not_recompute",
+    "shadow_target:9ed0fac6d2c1b6287cd9532b2d6ce037a4a8bf0b847f841338b37a7e4185d0c6:shadow_prediction_does_not_recompute",
+    "shadow_target:a074cfc929ef157ae552223e8a6e10544d8f5d72b1fafc3d0a8d2add1cf6b1ec:shadow_prediction_does_not_recompute",
+    "shadow_target:a23e07910118b10107addaa27c2a33903d74365eb1bd46e58ee3a6734e757a53:shadow_prediction_does_not_recompute",
+    "shadow_target:a449d9a59120ffaee572789e9e413ec0823cb35ba67a5f6a65c78aaa49571883:shadow_prediction_does_not_recompute",
+    "shadow_target:a7a92fa3040c6610fdfbace089026ccdfb5380e841330c4d69e52de821b26aca:shadow_prediction_does_not_recompute",
+    "shadow_target:a8a0ab8f4fc3acdf995b21266f2c5ecb57e27816b6a93afcd682fb0f42a60c52:shadow_prediction_does_not_recompute",
+    "shadow_target:aa76785eb2e4432761756da3248418b1849cd539dcda687f98de64660e782acc:shadow_prediction_does_not_recompute",
+    "shadow_target:ab961190c6feb80aadd3a12b7fb5c002a4b215c750676ee4a95a75b5b6408f0e:shadow_prediction_does_not_recompute",
+    "shadow_target:ae7a0525892597d08f909f41bf1f48c86b50a723d0578dd63ab6728ffc34f25a:shadow_prediction_does_not_recompute",
+    "shadow_target:b743b6df056626c24910eb2081e6245826e0d619b8c1155c6bcc931af5430752:shadow_prediction_does_not_recompute",
+    "shadow_target:b75f971183aec046f0fc8f016004e44c96836b6c25b0104b9256110aed056233:shadow_prediction_does_not_recompute",
+    "shadow_target:b8fb04af75ae8312410209933e84b7c51b8243dc37dd6e0fb78c563330018292:shadow_prediction_does_not_recompute",
+    "shadow_target:ba4abd7b0b2ee377c45b5cc43ebe54babdeb06687043c761e62bcf11c972cf88:shadow_prediction_does_not_recompute",
+    "shadow_target:bb6d91d7f80cc2019a74da28c6303a4c5b8839ea03e5e970496f3d0a5ccc3ba2:shadow_prediction_does_not_recompute",
+    "shadow_target:bc4391f8add6ca5c39506d2503d5a5970ae122cca47f01c600b3f56f1e69e715:shadow_prediction_does_not_recompute",
+    "shadow_target:c0509bbaa0bbca2452747760400b40a30e1af8be3723b89b33ac6de9ee1b28b0:shadow_prediction_does_not_recompute",
+    "shadow_target:c2030dbbd7c9a954a8e8b13d5632df051c638b04615d44ab5171bea1ccba5794:shadow_prediction_does_not_recompute",
+    "shadow_target:c27e416275371e05ba027d718fd4ffc417013654d1bfbccb3281b86624e847a3:shadow_prediction_does_not_recompute",
+    "shadow_target:c2bc7e22fb69ad8a749b7397a49ea5237fe0b3818edddf7b8aae22eb26285b54:shadow_prediction_does_not_recompute",
+    "shadow_target:c3895466c6380419e6a43a9debbad035e2626d39cd8fc6f40a70493e4b7704df:shadow_prediction_does_not_recompute",
+    "shadow_target:c3da2ebb366dd422b030ff1d4afd023d5041763e51e7ee3d44b8d4238a066a31:shadow_prediction_does_not_recompute",
+    "shadow_target:c462f7eac7b6912349ad7c50f679ba2376e6d0adf438fc81316f3856277920ae:shadow_prediction_does_not_recompute",
+    "shadow_target:c63ce9ab080363912d46e49d3a7c541e00c30e2cbae008a3468bb488b0f41bbf:shadow_prediction_does_not_recompute",
+    "shadow_target:c9a8b776535c5f7e4608dda422ea56c98188605c42db34f8bcb6af04bd8e3541:shadow_prediction_does_not_recompute",
+    "shadow_target:ce290d0bd9ce0ef8027e03b15461a41cd504cd7faf8fb126e43d69334005fea7:shadow_prediction_does_not_recompute",
+    "shadow_target:d2e8ccea4c54d5c42a918f3dcb2ed503e5e0e9ed31f37b008dd292ca80a1770c:shadow_prediction_does_not_recompute",
+    "shadow_target:d5250ddd12139f45df9d5acc82409ba75f36f584fe05c6beee2352ecaf4cb9f7:shadow_prediction_does_not_recompute",
+    "shadow_target:d5588320db8fee0e0fb6d41c74cfae82ab412ef78d70ea0626c62cb03375687e:shadow_prediction_does_not_recompute",
+    "shadow_target:d688eddc3be94dbc79c4f1d8cada131ed6ccbee7a7aee582c7ad457d93be80c1:shadow_prediction_does_not_recompute",
+    "shadow_target:d8e5179b03f6aba249cc48caad0190a784869af76af4e966f4de3cbe3b72a07c:shadow_prediction_does_not_recompute",
+    "shadow_target:e0157fa28a45644de109187af663acedac0eb97b5dc2a66907b54f96e007a74d:shadow_prediction_does_not_recompute",
+    "shadow_target:e5c8153d1ed3e6ebb8ccb16c61b36f25e1c9d6e09bdf6f27a336cece85b1f7a4:shadow_prediction_does_not_recompute",
+    "shadow_target:e73314017cf5badcd9671d4094dda2257dce9a5a1993103e4b886cf2de14637f:shadow_prediction_does_not_recompute",
+    "shadow_target:e804438f0ecaafadade9564b2e834765665808bd155cad823b53666226e9a774:shadow_prediction_does_not_recompute",
+    "shadow_target:e8f45c0fedd0019b86723f3fee966e8faa18578e50c644f4fd176f93cf75d644:shadow_prediction_does_not_recompute",
+    "shadow_target:eb4aa573fa9516870a9f4dc7e5397c652776058212105062f8b8a70d70b8f636:shadow_prediction_does_not_recompute",
+    "shadow_target:ed4ac3b69f9e8d44d1d07c9db9c4a28f799ab09a3f55d38e7a366636ccae5fc3:shadow_prediction_does_not_recompute",
+    "shadow_target:ee6fb2974f407c4f1fba542b6f66b1028f49f852e918873b130a14a6356aa37b:shadow_prediction_does_not_recompute",
+    "shadow_target:f77c80866cc66e64d5811aa80c6a7c9d7541af08c0c9ae51a7eaeda0ce0469f5:shadow_prediction_does_not_recompute",
+    "shadow_target:fc10321d409c2a5032c199a4ff1542e2ef85b0e9e1ee2dafd7efd717891e5213:shadow_prediction_does_not_recompute",
+    "shadow_target:fd2539d1de7b509bb813b4a3db8962f24270221e6658f7932f476760d17099d8:shadow_prediction_does_not_recompute"
+  ],
+  "exit_code": 1,
+  "collection_completed_at": "2026-10-08T04:05:42.895320Z",
   "counts": {
     "not_due": 186,
-    "result_appended": 1,
-    "result_unchanged": 13
+    "shadow_target_rejected": 119,
+    "result_unchanged": 14
   },
   "api_budget": {
     "configured_daily_limit": 5000,
     "provider_daily_limit": 7500,
-    "provider_daily_used": 1030,
-    "daily_remaining": 3970,
-    "daily_remaining_reported": 6470,
+    "provider_daily_used": 1456,
+    "daily_remaining": 3544,
+    "daily_remaining_reported": 6044,
     "minute_limit": 300,
-    "minute_remaining": 283,
+    "minute_remaining": 285,
     "max_requests_per_run": null,
     "requests_made": 15,
     "min_interval_seconds": 0.21000000000000002,
     "max_run_seconds": 300,
-    "elapsed_seconds": 4.553862729000002,
-    "quota_observed_at": "2026-10-08T03:33:28.749661Z",
+    "elapsed_seconds": 3.8010850670000025,
+    "quota_observed_at": "2026-10-08T04:05:42.873234Z",
     "quota_source": "response_headers",
     "daily_quota_status": "known"
   },
-  "score_summary_id": "9945624b9854e31e6c78690f1765f1753490bd8509a5b800b22eb0269d965e91",
-  "generated_at": "2026-10-08T03:33:29.475009Z",
-  "report_id": "a928dc6fdac5b49cd0cf51bf3d125354bd129c0df2d534c4a6c0ca9540cec1b5"
+  "score_summary_id": "6e344e361d18a368aa3658cb5b9e2ba6f77cf55367f893c347bd383b90996cc1",
+  "generated_at": "2026-10-08T04:05:43.529500Z",
+  "report_id": "99290134a79aece78203736cd5a64c26e90e0eb2fbcb371da5b9a344288f3f6c"
 }
