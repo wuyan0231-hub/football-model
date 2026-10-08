@@ -56,6 +56,34 @@ class StateStorageTests(unittest.TestCase):
         self.assertEqual(original, {p.relative_to(restored).as_posix(): p.read_bytes() for p in restored.rglob("*") if p.is_file()})
         self.assertEqual(original, {p.relative_to(self.runtime).as_posix(): p.read_bytes() for p in self.runtime.rglob("*") if p.is_file()})
 
+    def test_total_shrink_cold_evidence_restores_exact_original_bytes(self):
+        content = b'{  "freeze" : "' + b"x" * 12000 + b'" }\n'
+        raw = self.write("total_shrink_shadow/forecasts/" + "a" * 64 + ".json", content)
+        run = self.write("total_shrink_shadow/runs/" + "b" * 64 + ".json", content)
+        report = self.write("total_shrink_shadow/reports/latest.json", b'{"status":"observed"}\n')
+        ordinary = self.write("total_shrink_shadow/local-unaddressed.json", b'{"keep":"inline"}')
+        estimate = storage.estimate_runtime(self.runtime)
+        stats = self.pack()
+        self.assertEqual(stats["archived_file_count"], 2)
+        self.assertFalse((self.tree / "runtime" / raw.relative_to(self.runtime)).exists())
+        for path in (report, ordinary):
+            self.assertEqual((self.tree / "runtime" / path.relative_to(self.runtime)).read_bytes(), path.read_bytes())
+        actual = storage.validate_storage_tree(self.tree)
+        self.assertGreaterEqual(estimate["persisted_bytes"], actual["physical_bytes"])
+        restored = self.root / "restored"
+        storage.restore_runtime(self.tree, restored)
+        for path in (raw, run, report, ordinary):
+            self.assertEqual((restored / path.relative_to(self.runtime)).read_bytes(), path.read_bytes())
+        self.assertEqual(storage.read_archive_bytes(self.tree, raw.relative_to(self.runtime).as_posix()), content)
+
+    def test_total_shrink_reports_even_digest_named_stay_inline(self):
+        name = "total_shrink_shadow/reports/" + "a" * 64 + ".json"
+        self.assertFalse(storage.should_archive(name))
+        self.assertFalse(storage.should_archive("total_shrink_shadow/runs/not-a-digest.json"))
+        self.assertTrue(storage.should_archive("total_shrink_shadow/runs/" + "a" * 64 + ".json"))
+        self.assertFalse(storage.should_archive("total_shrink_shadow/runs/" + "a" * 64 + ".json",
+                                               retained_inline={"total_shrink_shadow/runs/" + "a" * 64 + ".json"}))
+
     def test_latest_quote_and_access_validation_closure_stays_inline(self):
         self.write("quotes/raw/2/current.json")
         self.write("quotes/raw/2/old.json")

@@ -1,0 +1,152 @@
+name: 足球F5-C：仅派生已有预测的影子验收
+
+# This route is deliberately separate from the production train/API workflow.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'football_model/total_shrink_shadow.py'
+      - 'tests/test_total_shrink_shadow.py'
+      - 'docs/s2-f5c-shadow.md'
+      - 'docs/f5c-workflow.md'
+      - '.github/workflows/football-total-shrink.yml'
+      - '.github/workflows/football.yml'
+      - 'football_model/state_storage.py'
+      - 'tests/test_state_storage.py'
+      - 'football_model/run_summary.py'
+      - 'tests/test_f5c_run_summary.py'
+      - 'tests/test_f5c_workflow.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# All writers, including the original daily train workflow, share one lock.
+concurrency:
+  group: football-model-state
+  cancel-in-progress: false
+
+jobs:
+  total-shrink-shadow:
+    if: ${{ github.event.repository.private == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PYTHONUNBUFFERED: '1'
+      MODE: shadow_only
+      LEAGUE: all
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+    steps:
+      - name: 读取程序
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: 准备 Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: 安装依赖
+        run: python -m pip install -r requirements.txt
+
+      - name: 检查本次发布
+        run: python -m unittest discover -s tests -v
+
+      - name: 建立本轮摘要关联
+        run: python -m football_model.run_summary begin --context "$RUNNER_TEMP/football-run-context.json"
+
+      - name: 恢复完整已有状态
+        id: restore
+        run: python scripts/cloud_state.py load --runtime runtime
+
+      - name: 仅从生产180天预测派生F5-C并评分
+        id: total_shrink_shadow
+        if: ${{ always() && steps.restore.outcome == 'success' }}
+        continue-on-error: true
+        # Intentionally no API key and no model/collector/replay invocation.
+        run: |
+          python -m football_model.run_summary mark --context "$RUNNER_TEMP/football-run-context.json" --stage total_shrink_shadow
+          python - <<'PYSHRINK'
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+          git_dir = subprocess.check_output(['git', 'rev-parse', '--absolute-git-dir'], text=True).strip()
+          marker = json.loads((Path(git_dir) / 'football-cloud-state.json').read_text(encoding='utf-8'))
+          if marker.get('source_sha') != os.environ['GITHUB_SHA']:
+              raise SystemExit('F5-C恢复标记的源码版本与本轮不一致。')
+          state_args = ['--state-commit', marker['state_oid']] if marker.get('state_oid') is not None else []
+          for name in ('latest.json', 'score-latest.json'):
+              (Path('runtime/total_shrink_shadow/reports') / name).unlink(missing_ok=True)
+          capture = subprocess.call([sys.executable, '-m', 'football_model.total_shrink_shadow', 'capture',
+              '--runtime', 'runtime', '--config', 'config.json', '--league', 'all',
+              '--source-commit', os.environ['GITHUB_SHA'], *state_args])
+          score = subprocess.call([sys.executable, '-m', 'football_model.total_shrink_shadow', 'score',
+              '--runtime', 'runtime', '--source-commit', os.environ['GITHUB_SHA']])
+          raise SystemExit(0 if capture == 0 and score == 0 else 1)
+          PYSHRINK
+
+      - name: 检查完整状态可安全保存
+        id: check
+        if: ${{ always() && steps.restore.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          # Only detect accidental credentials in files, never print or call API.
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python scripts/cloud_state.py check --runtime runtime
+
+      - name: 保存完整状态和影子证据
+        id: persist
+        if: ${{ always() && steps.check.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          # Only used by the output credential scan.
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python scripts/cloud_state.py save --runtime runtime
+
+      - name: 显示实际分层结果
+        id: summary
+        if: ${{ always() }}
+        env:
+          RESTORE_OUTCOME: ${{ steps.restore.outcome }}
+          CHECK_OUTCOME: ${{ steps.check.outcome }}
+          PERSIST_OUTCOME: ${{ steps.persist.outcome }}
+          TOTAL_SHRINK_SHADOW_OUTCOME: ${{ steps.total_shrink_shadow.outcome }}
+        run: >-
+          python -m football_model.run_summary render
+          --context "$RUNNER_TEMP/football-run-context.json"
+          --runtime runtime
+          --output "$RUNNER_TEMP/football-run-summary.json"
+          --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: 上传F5-C证据便捷副本
+        if: ${{ always() && steps.check.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: football-total-shrink-${{ github.run_id }}-${{ github.run_attempt }}
+          path: runtime/total_shrink_shadow/
+          if-no-files-found: error
+          retention-days: 14
+          include-hidden-files: false
+
+      - name: 上传分层摘要
+        if: ${{ always() && steps.summary.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: football-total-shrink-summary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/football-run-summary.json
+          if-no-files-found: error
+          retention-days: 14
+          include-hidden-files: false
+
+      - name: 将实际失败标记为失败
+        if: ${{ always() && (steps.restore.outcome != 'success' || steps.total_shrink_shadow.outcome != 'success' || steps.check.outcome != 'success' || steps.persist.outcome != 'success' || steps.summary.outcome != 'success') }}
+        run: |
+          echo 'F5-C恢复、派生/评分、输出检查、保存或摘要步骤未完成；不能视为全部成功。'
+          exit 1

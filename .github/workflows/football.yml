@@ -22,10 +22,8 @@ on:
       - 'football_model/result_sync.py'
       - 'football_model/settlement.py'
       - 'football_model/production_replay.py'
-      - 'football_model/run_summary.py'
       - 'football_model/collect_quotes.py'
       - 'football_model/shadow_models.py'
-      - 'football_model/state_storage.py'
       - 'scripts/cloud_state.py'
       - 'config.json'
   workflow_dispatch:
@@ -211,6 +209,38 @@ jobs:
           raise SystemExit(0 if capture == 0 and score == 0 else 1)
           PYSHADOW
 
+      - name: 保存F5-C总球收缩对照并评分已有记录
+        id: total_shrink_shadow
+        if: ${{ always() && steps.restore.outcome == 'success' && env.MODE == 'train' }}
+        # Derive only from already saved production180 predictions. No fit,
+        # network, API credentials, production mutation or added schedule.
+        continue-on-error: true
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '1'
+        run: |
+          python -m football_model.run_summary mark --context "$RUNNER_TEMP/football-run-context.json" --stage total_shrink_shadow
+          python - <<'PYSHRINK'
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+          git_dir = subprocess.check_output(['git', 'rev-parse', '--absolute-git-dir'], text=True).strip()
+          marker = json.loads((Path(git_dir) / 'football-cloud-state.json').read_text(encoding='utf-8'))
+          if marker.get('source_sha') != os.environ['GITHUB_SHA']:
+              raise SystemExit('F5-C恢复标记的源码版本与本轮不一致。')
+          state_args = ['--state-commit', marker['state_oid']] if marker.get('state_oid') is not None else []
+          for name in ('latest.json', 'score-latest.json'):
+              (Path('runtime/total_shrink_shadow/reports') / name).unlink(missing_ok=True)
+          capture = subprocess.call([sys.executable, '-m', 'football_model.total_shrink_shadow', 'capture',
+              '--runtime', 'runtime', '--config', 'config.json', '--league', 'all',
+              '--source-commit', os.environ['GITHUB_SHA'], *state_args])
+          score = subprocess.call([sys.executable, '-m', 'football_model.total_shrink_shadow', 'score',
+              '--runtime', 'runtime', '--source-commit', os.environ['GITHUB_SHA']])
+          raise SystemExit(0 if capture == 0 and score == 0 else 1)
+          PYSHRINK
+
       - name: 检查输出是否可以保存和上传
         id: check
         if: ${{ always() && steps.restore.outcome == 'success' }}
@@ -240,6 +270,7 @@ jobs:
           RESULT_SYNC_OUTCOME: ${{ steps.result_sync.outcome }}
           QUOTES_OUTCOME: ${{ steps.quotes.outcome }}
           SHADOW_MODELS_OUTCOME: ${{ steps.shadow_models.outcome }}
+          TOTAL_SHRINK_SHADOW_OUTCOME: ${{ steps.total_shrink_shadow.outcome }}
           PROSPECTIVE_OUTCOME: ${{ steps.prospective.outcome }}
           REPLAY_OUTCOME: ${{ steps.replay_check.outcome }}
         # Only whitelist-derived counts/enums enter the summary. It runs after
@@ -268,6 +299,7 @@ jobs:
             runtime/result_sync/
             runtime/quotes/
             runtime/shadow_models/
+            runtime/total_shrink_shadow/
             runtime/replay/
           if-no-files-found: warn
           retention-days: 14
@@ -284,7 +316,7 @@ jobs:
           include-hidden-files: false
 
       - name: 将实际失败标记为失败
-        if: ${{ always() && (steps.model.outcome != 'success' || steps.persist.outcome != 'success' || steps.prospective.outcome == 'failure' || steps.result_sync.outcome == 'failure' || steps.quotes.outcome == 'failure' || steps.shadow_models.outcome == 'failure' || steps.replay_check.outcome == 'failure' || steps.summary.outcome != 'success') }}
+        if: ${{ always() && (steps.model.outcome != 'success' || steps.persist.outcome != 'success' || steps.prospective.outcome == 'failure' || steps.result_sync.outcome == 'failure' || steps.quotes.outcome == 'failure' || steps.shadow_models.outcome == 'failure' || steps.total_shrink_shadow.outcome == 'failure' || steps.replay_check.outcome == 'failure' || steps.summary.outcome != 'success') }}
         run: |
-          echo '本次检查/训练、回放录制、前瞻冻结、赛果同步、报价采集、影子模型实验或状态保存未完成。请查看分层摘要；不能将其视为全部成功。'
+          echo '本次检查/训练、回放录制、前瞻冻结、赛果同步、报价采集、F4/F5-C影子实验或状态保存未完成。请查看分层摘要；不能将其视为全部成功。'
           exit 1
