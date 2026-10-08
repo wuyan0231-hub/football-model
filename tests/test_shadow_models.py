@@ -290,8 +290,8 @@ class ShadowModelTests(unittest.TestCase):
         self.assertEqual(report['forecast_versions'], 6)
 
     def test_capacity_preflight_stops_fit_and_reports_deferral_without_zero_counts(self):
-        from football_model.shadow_models import _runtime_bytes
-        threshold = _runtime_bytes(self.runtime) - 1
+        from football_model.state_storage import estimate_runtime
+        threshold = estimate_runtime(self.runtime)['persisted_bytes'] - 1
         with patch('football_model.shadow_models.STORAGE_LIMIT_BYTES', threshold), patch('football_model.shadow_models.fit_model') as fit:
             code, report = self.run_capture()
         fit.assert_not_called()
@@ -302,12 +302,14 @@ class ShadowModelTests(unittest.TestCase):
         self.assertIsNotNone(report['capacity_event_id'])
 
     def test_incremental_capacity_blocks_crossing_and_duplicate_objects_are_free(self):
-        from football_model.shadow_models import _runtime_bytes, _writer, _append as guarded_append, ShadowCapacityError
+        from football_model.shadow_models import _writer, _append as guarded_append, ShadowCapacityError
+        from football_model.state_storage import estimate_runtime, storage_cost
         from football_model.prospective import _json_bytes
         first = {'already_saved': True}
-        start = _runtime_bytes(self.runtime)
-        with patch('football_model.shadow_models.STORAGE_LIMIT_BYTES', start + len(_json_bytes(first))), \
-                patch('football_model.shadow_models._runtime_bytes', wraps=_runtime_bytes) as scans:
+        first_path = 'shadow_models/sources/' + _digest(first) + '.json'
+        start = estimate_runtime(self.runtime)['persisted_bytes']
+        with patch('football_model.shadow_models.STORAGE_LIMIT_BYTES', start + storage_cost(first_path, _json_bytes(first))), \
+                patch('football_model.shadow_models.estimate_runtime', wraps=estimate_runtime) as scans:
             with _writer(self.runtime) as root:
                 oid = guarded_append(root, 'sources', first)
                 self.assertEqual(guarded_append(root, 'sources', first), oid)
@@ -317,8 +319,8 @@ class ShadowModelTests(unittest.TestCase):
         self.assertEqual(len(_objects(self.root, 'sources')), 1)
 
     def test_capacity_mid_capture_preserves_objects_and_current_failure_report(self):
-        from football_model.shadow_models import _runtime_bytes
-        start = _runtime_bytes(self.runtime)
+        from football_model.state_storage import estimate_runtime
+        start = estimate_runtime(self.runtime)['persisted_bytes']
         with patch('football_model.shadow_models.STORAGE_LIMIT_BYTES', start + 5000):
             code, report = self.run_capture()
         self.assertEqual(code, 1)
@@ -328,16 +330,110 @@ class ShadowModelTests(unittest.TestCase):
         self.assertEqual(json.loads((self.root / 'reports/latest.json').read_text())['status'], 'capacity_deferred')
 
     def test_score_attempts_existing_forecasts_after_capture_capacity_deferral(self):
-        from football_model.shadow_models import _runtime_bytes
+        from football_model.state_storage import estimate_runtime
         self.run_capture()
         before = {p.name: p.read_bytes() for p in (self.root / 'forecasts').glob('*.json')}
-        with patch('football_model.shadow_models.STORAGE_LIMIT_BYTES', _runtime_bytes(self.runtime) - 1):
+        with patch('football_model.shadow_models.STORAGE_LIMIT_BYTES', estimate_runtime(self.runtime)['persisted_bytes'] - 1):
             with patch('football_model.shadow_models._saved_forecast_valid', wraps=__import__('football_model.shadow_models', fromlist=['_saved_forecast_valid'])._saved_forecast_valid) as checked:
                 code, report = score(self.runtime, clock=self.clock)
             self.assertEqual(checked.call_count, 3)
         self.assertEqual(code, 1)
         self.assertEqual(report['status'], 'capacity_deferred')
         self.assertEqual(before, {p.name: p.read_bytes() for p in (self.root / 'forecasts').glob('*.json')})
+
+    def test_compressible_history_above_raw_threshold_allows_real_capture(self):
+        from football_model.state_storage import estimate_runtime
+        from football_model.prospective import _json_bytes
+        value = {'cold_evidence': 'a' * (3 * 1024 * 1024)}
+        path = self.runtime / 'quotes/raw/1001' / (_digest(value) + '.json')
+        path.parent.mkdir(parents=True)
+        original = _json_bytes(value)
+        path.write_bytes(original)
+        estimate = estimate_runtime(self.runtime)
+        threshold = estimate['persisted_bytes'] + 1024 * 1024
+        self.assertGreater(estimate['raw_bytes'], threshold)
+        with patch('football_model.shadow_models.STORAGE_LIMIT_BYTES', threshold):
+            code, report = self.run_capture()
+        self.assertEqual(code, 0)
+        self.assertEqual(report['captured_forecasts'], 3)
+        self.assertGreater(report['storage_budget']['runtime_bytes'], threshold)
+        self.assertLess(report['storage_budget']['estimated_persisted_bytes'], threshold)
+        self.assertEqual(path.read_bytes(), original)
+
+    def test_logical_guard_stops_highly_compressible_capture(self):
+        from football_model.state_storage import estimate_runtime
+        from football_model.shadow_models import CAPACITY_REPORT_RESERVE_BYTES
+        estimate = estimate_runtime(self.runtime)
+        logical_limit = estimate['raw_bytes'] + CAPACITY_REPORT_RESERVE_BYTES - 1
+        with patch('football_model.shadow_models.MAX_LOGICAL_BYTES', logical_limit), \
+                patch('football_model.shadow_models.fit_model') as fit:
+            code, report = self.run_capture()
+        fit.assert_not_called()
+        self.assertEqual(code, 1)
+        self.assertEqual(report['status'], 'capacity_deferred')
+        self.assertLess(report['estimated_persisted_bytes'], report['limit_bytes'])
+        self.assertEqual(report['logical_limit_bytes'], logical_limit)
+        self.assertEqual(report['logical_capture_limit_bytes'], logical_limit - CAPACITY_REPORT_RESERVE_BYTES)
+
+    def test_replay_expansion_is_in_logical_guard_but_not_runtime_bytes(self):
+        import gzip
+        from football_model.state_storage import estimate_runtime
+        from football_model.shadow_models import CAPACITY_REPORT_RESERVE_BYTES
+        from football_model.prospective import _json_bytes
+        value = {'cold_replay': 'a' * (1024 * 1024)}
+        path = self.runtime / 'replay/bundles' / (_digest(value) + '.json.gz')
+        path.parent.mkdir(parents=True)
+        path.write_bytes(gzip.compress(_json_bytes(value), mtime=0))
+        estimate = estimate_runtime(self.runtime)
+        logical_limit = estimate['logical_bytes'] + CAPACITY_REPORT_RESERVE_BYTES - 1
+        with patch('football_model.shadow_models.MAX_LOGICAL_BYTES', logical_limit), \
+                patch('football_model.shadow_models.fit_model') as fit:
+            code, report = self.run_capture()
+        fit.assert_not_called()
+        self.assertEqual(code, 1)
+        self.assertEqual(report['runtime_bytes'], estimate['raw_bytes'])
+        self.assertEqual(report['logical_bytes'], estimate['logical_bytes'])
+        self.assertGreater(report['logical_bytes'], report['runtime_bytes'])
+
+    def test_failed_append_does_not_charge_raw_or_persisted_budget(self):
+        from football_model.shadow_models import _writer, _BUDGET, _append as guarded_append
+        with _writer(self.runtime) as root:
+            before = {k: _BUDGET.get()[k] for k in ('runtime_bytes', 'estimated_persisted_bytes')}
+            with patch('football_model.shadow_models._ledger_append', side_effect=OSError('disk rejected')):
+                with self.assertRaises(OSError):
+                    guarded_append(root, 'sources', {'new': True})
+            self.assertEqual(before, {k: _BUDGET.get()[k] for k in before})
+
+    def test_single_file_guard_prevents_compressible_object_unsavable_by_cloud(self):
+        from football_model.shadow_models import _writer, _append as guarded_append, ShadowCapacityError
+        with _writer(self.runtime) as root, patch('football_model.shadow_models.MAX_FILE_BYTES', 100):
+            with self.assertRaises(ShadowCapacityError) as raised:
+                guarded_append(root, 'sources', {'large_but_compressible': 'a' * 1000})
+        self.assertEqual(raised.exception.budget['capacity_constraint'], 'file_limit')
+        self.assertEqual(len(_objects(self.root, 'sources')), 0)
+
+    def test_inline_latest_charges_actual_serialized_bytes_without_gzip_discount(self):
+        from football_model.shadow_models import _writer, _BUDGET, _latest
+        value = {'z': 'x' * 3000, 'a': 1}
+        with _writer(self.runtime) as root:
+            raw_before, persisted_before = (_BUDGET.get()[k] for k in ('runtime_bytes', 'estimated_persisted_bytes'))
+            _latest(root, 'latest.json', value)
+            written = (root / 'reports/latest.json').read_bytes()
+            self.assertEqual(_BUDGET.get()['runtime_bytes'] - raw_before, len(written))
+            self.assertEqual(_BUDGET.get()['estimated_persisted_bytes'] - persisted_before, len(written))
+
+    def test_exhausted_diagnostic_reserve_still_publishes_explicit_bounded_deferral(self):
+        from football_model.state_storage import estimate_runtime
+        from football_model.shadow_models import CAPACITY_REPORT_RESERVE_BYTES
+        threshold = estimate_runtime(self.runtime)['persisted_bytes'] - CAPACITY_REPORT_RESERVE_BYTES - 1
+        with patch('football_model.shadow_models.STORAGE_LIMIT_BYTES', threshold):
+            code, report = self.run_capture()
+        self.assertEqual(code, 1)
+        self.assertFalse(report['immutable_event_saved'])
+        self.assertIsNone(report['capacity_event_id'])
+        self.assertEqual(report['diagnostic_evidence'], 'bounded_current_latest_only')
+        self.assertEqual(len(_objects(self.root, 'capacity_events')), 0)
+        self.assertEqual(json.loads((self.root / 'reports/latest.json').read_text()), report)
 
 
 if __name__ == '__main__':
