@@ -1,11 +1,15 @@
 {
   "schema": "independent_regulation_result_sync_v1",
-  "started_at": "2026-10-08T01:34:17.286910Z",
-  "run_started_at": "2026-10-08T01:34:17.286910Z",
-  "source_commit": "ece3400d230b8728a7d0a81c21ffc7b1dfacfd61",
+  "started_at": "2026-10-08T03:05:19.913116Z",
+  "run_started_at": "2026-10-08T03:05:19.913116Z",
+  "source_commit": "f6f65551a3a90b60aadf155cbfdc124b45b6f198",
   "time_semantics": "observed_wall_clock_v1",
   "forecast_versions": 381,
-  "target_matches": 9,
+  "target_matches": 13,
+  "production_forecast_versions": 381,
+  "verified_shadow_forecast_versions": 0,
+  "target_forecast_versions": 381,
+  "shadow_forecasts_added_to_production": false,
   "revision_recheck_days": 7,
   "cache_max_age_seconds": 600,
   "max_run_seconds": 300,
@@ -142,11 +146,6 @@
     },
     {
       "competition": "brazil_a",
-      "match_id": 1492392,
-      "status": "not_due"
-    },
-    {
-      "competition": "brazil_a",
       "match_id": 1492393,
       "status": "not_due"
     },
@@ -157,27 +156,12 @@
     },
     {
       "competition": "brazil_a",
-      "match_id": 1492395,
-      "status": "not_due"
-    },
-    {
-      "competition": "brazil_a",
       "match_id": 1492396,
       "status": "not_due"
     },
     {
       "competition": "brazil_a",
-      "match_id": 1492397,
-      "status": "not_due"
-    },
-    {
-      "competition": "brazil_a",
       "match_id": 1492398,
-      "status": "not_due"
-    },
-    {
-      "competition": "brazil_a",
-      "match_id": 1492399,
       "status": "not_due"
     },
     {
@@ -966,12 +950,71 @@
       "status": "not_due"
     },
     {
+      "competition": "brazil_a",
+      "match_id": 1492392,
+      "target_ledgers": [
+        "prospective"
+      ],
+      "source_id": "35f380d107e829481a7c626607903b64e083fd1198d32430db2c43974ecc3f24",
+      "received_at": "2026-10-08T03:05:20.850250Z",
+      "from_cache": false,
+      "observed_at": "2026-10-08T03:05:20.849301Z",
+      "provider_status": "FT",
+      "status": "result_appended",
+      "result_id": "e2ab365542a81b27e3d11d041ee40f6ec6697b8ad158c659cb7fb8539184238b"
+    },
+    {
+      "competition": "brazil_a",
+      "match_id": 1492395,
+      "target_ledgers": [
+        "prospective"
+      ],
+      "source_id": "d308df537b1636fbda308becf347afd26e85cfe6a7b77316126d40ad57e62e7d",
+      "received_at": "2026-10-08T03:05:21.132156Z",
+      "from_cache": false,
+      "observed_at": "2026-10-08T03:05:21.131154Z",
+      "provider_status": "FT",
+      "status": "result_appended",
+      "result_id": "61f404afdfa4290225e495dec9761b3b2fafce23e020c50c9355fcf8e548428c"
+    },
+    {
+      "competition": "brazil_a",
+      "match_id": 1492397,
+      "target_ledgers": [
+        "prospective"
+      ],
+      "source_id": "5c52d04530254798d268488598f8fe1e2f0ec51f4864dcbbcc39645960062d06",
+      "received_at": "2026-10-08T03:05:21.365183Z",
+      "from_cache": false,
+      "observed_at": "2026-10-08T03:05:21.364175Z",
+      "provider_status": "FT",
+      "status": "result_appended",
+      "result_id": "9bf93ccb12eba4032b76955c4c0b875589b3e109ba692fca2e4447bece94072c"
+    },
+    {
+      "competition": "brazil_a",
+      "match_id": 1492399,
+      "target_ledgers": [
+        "prospective"
+      ],
+      "source_id": "8a34442cbfb99d5bf6dcaf36472bbce6a46d9cb75e58d52cde2fb5352057a512",
+      "received_at": "2026-10-08T03:05:21.601204Z",
+      "from_cache": false,
+      "observed_at": "2026-10-08T03:05:21.600225Z",
+      "provider_status": "FT",
+      "status": "result_appended",
+      "result_id": "a753c8ecca9d80491fea186d87dec0ca79514e1d8de06d99189225ad01eaf940"
+    },
+    {
       "competition": "unl",
       "match_id": 1528952,
-      "source_id": "ef5440fdab52f2bace782463c8d115365ec70993faadfd68c7e8dbf84bf8b5c8",
-      "received_at": "2026-10-08T01:34:18.069992Z",
+      "target_ledgers": [
+        "prospective"
+      ],
+      "source_id": "328bf29e12014403907dc7d1c95c080cf04fc8aa8eb1e44cff691769f62e3eb1",
+      "received_at": "2026-10-08T03:05:21.860995Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T01:34:18.068709Z",
+      "observed_at": "2026-10-08T03:05:21.859849Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -979,10 +1022,13 @@
     {
       "competition": "unl",
       "match_id": 1528953,
-      "source_id": "a8e749e3290ef3106a93f270dd23c26fd37e709d914aa9bb3c5451774e0b8b11",
-      "received_at": "2026-10-08T01:34:18.279944Z",
+      "target_ledgers": [
+        "prospective"
+      ],
+      "source_id": "2c66fb1045f62c0ce234482b7d990e98998bbece151983fbfdeba75d76bd14fd",
+      "received_at": "2026-10-08T03:05:22.393110Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T01:34:18.278635Z",
+      "observed_at": "2026-10-08T03:05:22.392006Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -990,10 +1036,13 @@
     {
       "competition": "unl",
       "match_id": 1528954,
-      "source_id": "2d8f7d0affc5b649c8c7cf3424fffd65ae22a0592409a4fe60ecfc4bb25a78d5",
-      "received_at": "2026-10-08T01:34:18.493935Z",
+      "target_ledgers": [
+        "prospective"
+      ],
+      "source_id": "e2fe1da90d1b22898614aded468c00726f180b3199a703d100c250449e6581a7",
+      "received_at": "2026-10-08T03:05:22.640794Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T01:34:18.492680Z",
+      "observed_at": "2026-10-08T03:05:22.639735Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -1001,10 +1050,13 @@
     {
       "competition": "unl",
       "match_id": 1528955,
-      "source_id": "e9a4f09e45d083ad32fe275938e21092702f668f6d9a2bd68f96333350482387",
-      "received_at": "2026-10-08T01:34:18.708756Z",
+      "target_ledgers": [
+        "prospective"
+      ],
+      "source_id": "5f1fc3abe2379bcddcb32864ac53ad845a929b77c07f9078023396f098d61358",
+      "received_at": "2026-10-08T03:05:22.891207Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T01:34:18.707475Z",
+      "observed_at": "2026-10-08T03:05:22.890032Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -1012,10 +1064,13 @@
     {
       "competition": "unl",
       "match_id": 1528956,
-      "source_id": "ac5344148b971ca63c31c23c930f146a655734c85d0154cea7c64645599fb874",
-      "received_at": "2026-10-08T01:34:18.910231Z",
+      "target_ledgers": [
+        "prospective"
+      ],
+      "source_id": "f350c01d52010dd251f729c2a6a50cb4023c5172d9bce08c90c17ac464667d9c",
+      "received_at": "2026-10-08T03:05:23.134043Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T01:34:18.908897Z",
+      "observed_at": "2026-10-08T03:05:23.132895Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -1023,10 +1078,13 @@
     {
       "competition": "unl",
       "match_id": 1528957,
-      "source_id": "24f78711a07b5acdf4e56f8d3c5430258ca01290f742a0072da629c2b1d6fb79",
-      "received_at": "2026-10-08T01:34:19.117753Z",
+      "target_ledgers": [
+        "prospective"
+      ],
+      "source_id": "98a7069c9b040a944e3849ce6a708e2f8eb0a13d13eacce304df631d250f16d7",
+      "received_at": "2026-10-08T03:05:23.385065Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T01:34:19.116490Z",
+      "observed_at": "2026-10-08T03:05:23.383967Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -1034,10 +1092,13 @@
     {
       "competition": "unl",
       "match_id": 1545612,
-      "source_id": "dacbc84b830c792ae383dd1354c877891d3f15db3697f313f15db2730c986776",
-      "received_at": "2026-10-08T01:34:19.331270Z",
+      "target_ledgers": [
+        "prospective"
+      ],
+      "source_id": "702d09c4b0df64d40a2950dc3f1efb5eb2f5f5534938fe499321598bf7f3209f",
+      "received_at": "2026-10-08T03:05:23.628847Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T01:34:19.329975Z",
+      "observed_at": "2026-10-08T03:05:23.627691Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -1045,10 +1106,13 @@
     {
       "competition": "unl",
       "match_id": 1545655,
-      "source_id": "8271bf9a8352d616419372a11a5480b93a758cfab1889dcc15d20b198dc688e8",
-      "received_at": "2026-10-08T01:34:19.538003Z",
+      "target_ledgers": [
+        "prospective"
+      ],
+      "source_id": "6ce802a7c073828170446d54ff39cd2fe675a4fc9c82c1cc59f66990b9ccf050",
+      "received_at": "2026-10-08T03:05:23.880668Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T01:34:19.536790Z",
+      "observed_at": "2026-10-08T03:05:23.879541Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -1056,10 +1120,13 @@
     {
       "competition": "unl",
       "match_id": 1545657,
-      "source_id": "c298c9aa016d05c6caa7e71043ebb03c28c49ab4dc5476143abee2151c82447c",
-      "received_at": "2026-10-08T01:34:19.749560Z",
+      "target_ledgers": [
+        "prospective"
+      ],
+      "source_id": "d0f5746a2da399a2f0b57d21cfd51581f90ab6a967faf7949c926e60373a6ab5",
+      "received_at": "2026-10-08T03:05:24.140223Z",
       "from_cache": false,
-      "observed_at": "2026-10-08T01:34:19.748293Z",
+      "observed_at": "2026-10-08T03:05:24.139070Z",
       "provider_status": "FT",
       "status": "result_unchanged",
       "result_id": null
@@ -1067,37 +1134,39 @@
   ],
   "model_or_training_required": false,
   "changes_training_data": false,
-  "completed_at": "2026-10-08T01:34:20.422495Z",
+  "completed_at": "2026-10-08T03:05:24.897845Z",
   "status_counts": {
-    "not_due": 191,
+    "not_due": 187,
+    "result_appended": 4,
     "result_unchanged": 9
   },
-  "api_requests": 10,
+  "api_requests": 14,
   "errors": [],
   "exit_code": 0,
-  "collection_completed_at": "2026-10-08T01:34:19.768240Z",
+  "collection_completed_at": "2026-10-08T03:05:24.159654Z",
   "counts": {
-    "not_due": 191,
+    "not_due": 187,
+    "result_appended": 4,
     "result_unchanged": 9
   },
   "api_budget": {
     "configured_daily_limit": 5000,
     "provider_daily_limit": 7500,
-    "provider_daily_used": 22,
-    "daily_remaining": 4978,
-    "daily_remaining_reported": 7478,
+    "provider_daily_used": 603,
+    "daily_remaining": 4397,
+    "daily_remaining_reported": 6897,
     "minute_limit": 300,
-    "minute_remaining": 278,
+    "minute_remaining": 284,
     "max_requests_per_run": null,
-    "requests_made": 10,
+    "requests_made": 14,
     "min_interval_seconds": 0.21000000000000002,
     "max_run_seconds": 300,
-    "elapsed_seconds": 2.0301726399999893,
-    "quota_observed_at": "2026-10-08T01:34:19.745929Z",
+    "elapsed_seconds": 3.7128494140000043,
+    "quota_observed_at": "2026-10-08T03:05:24.136771Z",
     "quota_source": "response_headers",
     "daily_quota_status": "known"
   },
-  "score_summary_id": "82c3c913f41729e1c626c6cf5cfb238928dba33f38d769189c599f296b5a14c6",
-  "generated_at": "2026-10-08T01:34:20.422495Z",
-  "report_id": "7dc53d196120596767faa4b9d4c28413b357b6021e5491d6add789946614ec3b"
+  "score_summary_id": "79af6d9865332f55bf0c23e1a178e0d5e19e978a473adab3f70746e8d57ff9fa",
+  "generated_at": "2026-10-08T03:05:24.897845Z",
+  "report_id": "2af1a260bfe4d8b4a18a846cca309758136cd7dbf19f3fedfccfed69df7bca0d"
 }
