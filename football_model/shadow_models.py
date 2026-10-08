@@ -14,7 +14,11 @@ import fcntl
 import hashlib
 import json
 from pathlib import Path
+import platform
 import re
+
+import numpy as np
+import scipy
 
 from .data import normalize_fixtures
 from .model import (RESULT_AVAILABILITY_DELAY, fit_model, score_distribution,
@@ -29,7 +33,37 @@ TIME = "observed_wall_clock_v1"
 ARMS = (("baseline180", 180), ("candidate90", 90), ("candidate365", 365))
 STORAGE_LIMIT_BYTES = 400 * 1024 * 1024
 CAPACITY_REPORT_RESERVE_BYTES = 256 * 1024
+NUMERIC_REPLAY_MATRIX_ABS_TOL = 1e-15
 _BUDGET = ContextVar("shadow_storage_budget", default=None)
+
+
+def _numerical_environment():
+    return {"python_version": platform.python_version(), "numpy_version": np.__version__,
+            "scipy_version": scipy.__version__, "platform_machine": platform.machine()}
+
+
+def _numeric_replay_equivalent(recomputed, saved):
+    """Only matrix floats tolerate bounded roundoff; all other fields stay exact."""
+    if (not isinstance(recomputed, dict) or not isinstance(saved, dict)
+            or "score_matrix" not in recomputed or "score_matrix" not in saved
+            or {k: v for k, v in recomputed.items() if k != "score_matrix"}
+               != {k: v for k, v in saved.items() if k != "score_matrix"}):
+        return False
+    arrays = []
+    for value in (recomputed["score_matrix"], saved["score_matrix"]):
+        if (not isinstance(value, list) or not value
+                or any(not isinstance(row, list) or not row
+                       or any(type(cell) not in (int, float) for cell in row) for row in value)):
+            return False
+        try:
+            array = matrix_array(value)
+        except (ValueError, TypeError):
+            return False
+        if np.any(array > 1):
+            return False
+        arrays.append(array)
+    return (arrays[0].shape == arrays[1].shape
+            and bool(np.all(np.abs(arrays[0] - arrays[1]) <= NUMERIC_REPLAY_MATRIX_ABS_TOL)))
 
 
 class ShadowCapacityError(RuntimeError):
@@ -284,6 +318,7 @@ def _capture(runtime, config, *, source_commit, state_commit=None, league="all",
                            for name in ("shadow_models.py", "model.py", "nations.py", "venue_registry.py")}
         report = {"version": VERSION, "started_at": _iso(started), "protocol_id": protocol_id,
             "source_commit": source_commit, "state_commit": state_commit,
+            "numerical_environment": _numerical_environment(),
             "implementation_sha256": implementations, "config_source": config_id,
             "index_source": index_id, "purpose": "prospective_model_experiment",
             "schedule_scope": "saved_daily_schedule_checked_against_available_quote_fixture_responses_not_live_official_confirmation",
@@ -526,7 +561,7 @@ def _saved_forecast_valid(root, forecast, now):
     if p["neutral"] != neutral:
         raise ValueError("shadow_neutral_does_not_match_source")
     recomputed = score_distribution(model["model"], forecast["home_id"], forecast["away_id"], forecast["kickoff"], neutral)
-    if recomputed != p:
+    if not _numeric_replay_equivalent(recomputed, p):
         raise ValueError("shadow_prediction_does_not_recompute")
 
 
@@ -555,6 +590,8 @@ def _score(runtime, *, clock=None):
             _saved_forecast_valid(root, forecast, now)
             grouped[(forecast["protocol_id"], forecast["competition"], forecast["match_id"])].append(forecast)
         report = {"version": VERSION, "scored_at": _iso(now), "selection": "first_pair_capture_matching_final_identity_no_extra_match",
+            "numerical_environment": _numerical_environment(),
+            "numeric_replay_matrix_abs_tol": NUMERIC_REPLAY_MATRIX_ABS_TOL,
             "forecast_versions": len(forecasts), "selected_matches": 0, "incomplete_groups": [],
             "matches": [], "errors": [], "profit_evaluation": False, "accuracy_improvement_verified": False}
         selected_matches = set()
@@ -632,6 +669,7 @@ def _capacity_report(runtime, operation, error, started, clock, source_commit=No
     root = _path(runtime, "shadow_models")
     completed = _iso(_now(clock))
     value = {"version": VERSION, "status": "capacity_deferred", "operation": operation,
+        "numerical_environment": _numerical_environment(),
         "run_started_at": _iso(started), "started_at": _iso(started), "generated_at": completed,
         "completed_at": completed, "source_commit": source_commit,
         "reason": "shadow_storage_capacity_deferred", **error.budget,
@@ -640,6 +678,7 @@ def _capacity_report(runtime, operation, error, started, clock, source_commit=No
         "production_models_changed": False, "accuracy_improvement_verified": False}
     if operation == "score":
         value["scored_at"] = completed
+        value["numeric_replay_matrix_abs_tol"] = NUMERIC_REPLAY_MATRIX_ABS_TOL
     latest_path = _path(root, "reports", "latest.json" if operation == "capture" else "score-latest.json")
     previous = latest_path.read_bytes() if latest_path.exists() else None
     previous_cost = storage_cost(latest_path.relative_to(runtime).as_posix(), previous) if previous is not None else 0
