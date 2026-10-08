@@ -1,0 +1,52 @@
+name: Football saved shadow state offline verification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/football-state-verify.yml'
+      - 'scripts/verify_shadow_state.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: football-model-state
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.event.repository.private == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONUNBUFFERED: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+    steps:
+      - name: Read source
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+      - name: Prepare Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Restore complete saved state
+        run: python scripts/cloud_state.py load --runtime runtime
+      - name: Verify every immutable shadow forecast without collecting or fitting
+        run: python scripts/verify_shadow_state.py --runtime runtime --state-marker "$GITHUB_WORKSPACE/.git/football-cloud-state.json" --output "$RUNNER_TEMP/shadow-state-diagnostic.json"
+      - name: Retain diagnostic report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: shadow-state-diagnostic-${{ github.run_id }}
+          path: ${{ runner.temp }}/shadow-state-diagnostic.json
+          if-no-files-found: warn
+          retention-days: 14
