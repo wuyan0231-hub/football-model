@@ -10,11 +10,17 @@ Python发布接口为 `build_decision_bundle(record, output_dir, *, source_root)
 python -m football_model.decision_record build --record record.json --source-root evidence --output new-decision
 python -m football_model.decision_record verify --bundle new-decision --manifest-sha256 EXPECTED_SHA256
 python -m football_model.decision_record append-event --bundle new-decision --event event.json --source-root event-evidence --events-dir events
+python -m football_model.decision_record archive --record cumulative-input.json --source-root match-work --output new-cumulative --zip new-cumulative.zip
+python -m football_model.decision_record verify-archive --bundle new-cumulative --manifest-sha256 EXPECTED_SHA256
 ```
 
 `verify_decision_bundle(bundle_dir, expected_manifest_sha256=None)`检查真实文件、清单、决定重编译、审计重放与全部阅读视图。提供独立保存的清单摘要才能核对外部锚点；包内自洽不证明历史时点确实存在过该包。`append_decision_event(bundle_dir, event, events_dir, *, source_root)`另存事件及证据，不改变基础决定包。
 
 本入口的HTML是由同一决定生成的阅读视图。完整比赛报告要求的事实原件、真实模型复算、完整截图、赛后记录与累计ZIP仍须由原归档流程保存。不得把一个视图包称为已经完成全部赛前研究或累计归档。
+
+新构建默认冻结 `membership_view_version="all_candidates_v1"`，在独立 `output_policy.json` 和有效 `decision.json` 中保存，由生产 `build` 入口生成完整候选 JSON 与 HTML；不再要求调用者为展示备选另开离线工具。真实提交的 `input_record.json` 与调用者的 Python 对象均保持原样。原封存包缺少输出政策文件时，`verify` 按其原版本视图重放，不升级旧文件或改其指纹。未知输出版本拒绝。输出政策同时冻结 `api_ah_mapping_policy_version="api-ah-quarantine-v1"`：未核API亚洲盘只保留隔离声明；旧API合约只用于已封存包的字节重放，不授权新引用或评分。
+
+`membership.json` 保留旧主票字段，同时包含原候选顺序、全部候选的角色/行动/报价合约/独立用途/条件/重评触发，以及按单关和候选腿分别派生的四态与“未单独评级”分类。分类集合不是推荐清单或成交清单：比较票、不建议票、观察票的原行动保持原值；次选适合也不会变成主票。重评提醒不自动变成入场条件，未评单关不从候选腿复制。
 
 ## 一个正式决定
 
@@ -112,7 +118,7 @@ python -m football_model.decision_record append-event --bundle new-decision --ev
 | `input_record.json`、`decision.json` | 提交对象及一次编译后的唯一决定，后者是下游视图来源 |
 | `originals/`、`evidence.json`、`manifest.json` | 原字节、输入与依赖清单、逐文件摘要；外部摘要另存 |
 | `times.json`、`eligibility.json`、`validation.json` | 真实程序时钟、时点资格和结构/语义待核问题，三者分别解释 |
-| `main_card.json`、`membership.json` | 唯一主卡及主候选的用途与影子状态；不代表整张串关已评估或执行 |
+| `main_card.json`、`membership.json` | 唯一主卡及完整候选用途分类，旧主票字段保留；不代表候选已推荐、整串已评估或已执行 |
 | `scoring.json` | 绑定比赛、决定、预测、合约、行和单票；协议为`UNASSIGNED`，结果与收益为空 |
 | `audit_archives.json`、`report.html` | 按单关/候选腿派生的旧审计视图，以及含原行、反证、备选和诊断的决定阅读视图 |
 
@@ -129,3 +135,36 @@ python -m football_model.decision_record append-event --bundle new-decision --ev
 上述F2制品保持原格式和指纹；F3评分不回写 `scoring.json` 的 `UNASSIGNED`。现在可通过 [s2-decision-scoring](s2-decision-scoring.md) 另存采用版及三类报价用途评分，再由 [s2-policy-evaluation](s2-policy-evaluation.md) 比较同票正式/影子行动。新 `reference_only` 行只表示完整数值参考，原API开放状态仍未知，不能因此获得OPEN或ACTUAL权限。旧行输出与旧决定包重编译保持兼容。
 
 F3工具已实现不等于上述未来效果已验证；实际部署及运行按当次交接验收。全流程职责与剩余范围见 [F3执行入口](s2-f3-execution.md)。
+
+## 生产累计归档入口
+
+`build_cumulative_archive(record, output_dir, *, source_root, output_zip=None)` 和 CLI `archive` 在新目录中保存完整决定包、完整原文及指定追加资料，并生成导航 HTML、累计清单、逐文件摘要和 ZIP。ZIP 默认位于输出目录旁的同名 `.zip`，不得位于待打包目录内。`verify_cumulative_archive` 同时核验累计清单、各版原决定的独立清单锚点、决定重编译、候选视图、原件指纹及母链追加约束；解压后可调用同一核验入口。
+
+输入使用以下结构，路径均相对 `source_root`；每个决定包必须是真实保存并通过原生 `verify` 的包：
+
+```json
+{
+  "schema_version": "s2-cumulative-input-1.0",
+  "match_id": "实际比赛ID",
+  "decisions": [
+    {"path": "decisions/r1", "manifest_sha256": "64位真实清单摘要"}
+  ],
+  "artifacts": [
+    {
+      "artifact_id": "prematch-r1-original",
+      "path": "reports/赛前_r1.html",
+      "sha256": "64位真实原件摘要",
+      "role": "prematch_report",
+      "version_id": "r1",
+      "occurred_at": null,
+      "observed_at": null
+    }
+  ]
+}
+```
+
+完整原文、截图、更新、复盘、原消息、事件回执等均须逐文件显式列入 `artifacts`，允许角色 `prematch_report/update_report/postmatch_report/screenshot/dialogue/receipt/original/other`。事件目录的 `event.json`、`manifest.json` 和证据各文件均列入，不只收事件摘要。文件仅复制原字节，不凭创建时间填发表/取得/成交；未知时间可为空，赛后材料不会反向进入原决定的冻结输入。原文与决定视图分别保留，不把主卡当完整原报告。
+
+追加 r2 或赛后资料时，重新列出全部旧决定与旧原件，再加新内容，并填写 `previous_archive={"path":"上一累计目录","manifest_sha256":"上一累计清单摘要"}`。程序校验上一累计原件、保持其决定顺序及独立指纹，拒绝省略、改写或重排旧版本，拒绝省略或改写旧原件；母链元数据另存，既有包保持原字节。不因赛后资料存在而造一个原来没有的 r2，不补造历史发表或实际交易。首次归档没有母链字段，新增版本ID须唯一、比赛ID须一致。
+
+源路径越界、符号链接、同名输出、缺件、错误摘要、跨比赛或重复版本均拒绝；输出也不能放入原决定或上一累计目录内。清单和 ZIP 保存回执是真实归档证据，但 `source_completeness_verified=false`：程序只能核验显式提供的原件，完整报告的事实、语义、时点和应有附件仍由每场实际复核。六例历史重新归档继续属于开发验收，不能升级成前瞻预测或收益样本。
