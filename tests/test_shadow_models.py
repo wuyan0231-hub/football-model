@@ -8,6 +8,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+import numpy as np
+
 from football_model.shadow_models import capture, score, main
 from football_model.prospective import _append, _digest, _objects
 from tests.test_model import synthetic_matches
@@ -434,6 +436,97 @@ class ShadowModelTests(unittest.TestCase):
         self.assertEqual(report['diagnostic_evidence'], 'bounded_current_latest_only')
         self.assertEqual(len(_objects(self.root, 'capacity_events')), 0)
         self.assertEqual(json.loads((self.root / 'reports/latest.json').read_text()), report)
+
+    def test_matrix_nextafter_roundoff_scores_legacy_forecasts_without_rewriting(self):
+        from football_model.model import score_distribution
+        self.run_capture()
+        before = {p.name:p.read_bytes() for p in (self.root / 'forecasts').glob('*.json')}
+        def nearby(*args, **kwargs):
+            value = score_distribution(*args, **kwargs)
+            value['score_matrix'][0][0] = float(np.nextafter(value['score_matrix'][0][0], np.inf))
+            return value
+        with patch('football_model.shadow_models.score_distribution', side_effect=nearby):
+            code, report = score(self.runtime, clock=self.clock)
+        self.assertEqual(code, 0)
+        self.assertEqual(report['status_counts'], {'pending':2})
+        self.assertEqual(report['numeric_replay_matrix_abs_tol'], 1e-15)
+        self.assertEqual(before, {p.name:p.read_bytes() for p in (self.root / 'forecasts').glob('*.json')})
+
+    def test_matrix_actual_probability_drift_is_rejected(self):
+        from football_model.model import score_distribution
+        self.run_capture()
+        def drift(*args, **kwargs):
+            value = score_distribution(*args, **kwargs)
+            value['score_matrix'][0][0] += 1e-12
+            value['score_matrix'][0][1] -= 1e-12
+            return value
+        with patch('football_model.shadow_models.score_distribution', side_effect=drift):
+            with self.assertRaisesRegex(ValueError, 'prediction_does_not_recompute'):
+                score(self.runtime, clock=self.clock)
+
+    def test_nonmatrix_nextafter_remains_exactly_rejected(self):
+        from football_model.model import score_distribution
+        self.run_capture()
+        def drift(*args, **kwargs):
+            value = score_distribution(*args, **kwargs)
+            value['expected_goals']['home'] = float(np.nextafter(value['expected_goals']['home'], np.inf))
+            return value
+        with patch('football_model.shadow_models.score_distribution', side_effect=drift):
+            with self.assertRaisesRegex(ValueError, 'prediction_does_not_recompute'):
+                score(self.runtime, clock=self.clock)
+
+    def test_numeric_replay_rejects_shape_nan_probability_and_nonnumeric_cells(self):
+        from football_model.shadow_models import _numeric_replay_equivalent
+        saved = {'score_matrix':[[0.25,0.25],[0.25,0.25]], 'other':{'exact':1}}
+        self.assertTrue(_numeric_replay_equivalent(copy.deepcopy(saved), saved))
+        invalid = [ [[1.0]], [[0.25,0.25,0.0],[0.25,0.25,0.0]],
+                    [[float('nan'),0.25],[0.25,0.25]], [[-1e-17,0.5],[0.25,0.25]],
+                    [['0.25',0.25],[0.25,0.25]], [[True,0.0],[0.0,0.0]],
+                    [[0.5],[0.25,0.25]], [[0.25,0.25],[0.25,0.3]],
+                    np.asarray(saved['score_matrix']) ]
+        for matrix in invalid:
+            with self.subTest(matrix_type=type(matrix).__name__):
+                malformed = {'score_matrix':matrix, 'other':{'exact':1}}
+                self.assertFalse(_numeric_replay_equivalent(malformed, saved))
+                self.assertFalse(_numeric_replay_equivalent(saved, malformed))
+        self.assertFalse(_numeric_replay_equivalent({'other':1}, {'other':1}))
+        self.assertFalse(_numeric_replay_equivalent({'score_matrix':[[1+1e-10]]}, {'score_matrix':[[1.0]]}))
+
+    def test_matrix_roundoff_does_not_relax_parent_hash(self):
+        from football_model.shadow_models import _saved_forecast_valid
+        self.run_capture()
+        forecast = _objects(self.root, 'forecasts')[0]
+        parent = self.root / 'models' / (forecast['model_id'] + '.json')
+        value = json.loads(parent.read_text())
+        value['input_id'] = '0' * 64
+        parent.write_text(json.dumps(value))
+        with self.assertRaisesRegex(ValueError, 'parent_hash_mismatch'):
+            _saved_forecast_valid(self.root, forecast, NOW)
+
+    def test_numeric_replay_keeps_actual_clock_order_gate(self):
+        from football_model.shadow_models import _saved_forecast_valid
+        self.run_capture()
+        forecast = _objects(self.root, 'forecasts')[0]
+        with self.assertRaisesRegex(ValueError, 'actual_time_order_invalid'):
+            _saved_forecast_valid(self.root, forecast, NOW - timedelta(seconds=1))
+
+    def test_numerical_environment_is_report_metadata_and_protocol_is_unchanged(self):
+        import platform
+        import scipy
+        _, capture_report = self.run_capture()
+        _, score_report = score(self.runtime, clock=self.clock)
+        expected = {'python_version':platform.python_version(), 'numpy_version':np.__version__,
+                    'scipy_version':scipy.__version__, 'platform_machine':platform.machine()}
+        self.assertEqual(capture_report['numerical_environment'], expected)
+        self.assertEqual(score_report['numerical_environment'], expected)
+        protocol = _objects(self.root, 'protocols')[0]
+        self.assertNotIn('numerical_environment', protocol['spec'])
+        self.assertNotIn('numeric_replay_matrix_abs_tol', protocol['spec'])
+        self.assertTrue(all('numerical_environment' not in f for f in _objects(self.root, 'forecasts')))
+        before = {p.name:p.read_bytes() for p in (self.root / 'protocols').glob('*.json')}
+        self.clock = lambda: NOW + timedelta(hours=1)
+        self.run_capture()
+        self.assertEqual(before, {p.name:p.read_bytes() for p in (self.root / 'protocols').glob('*.json')})
 
 
 if __name__ == '__main__':
