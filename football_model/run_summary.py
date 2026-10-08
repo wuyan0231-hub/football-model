@@ -14,10 +14,10 @@ import os
 from pathlib import Path
 import re
 
-VERSION = "layered-workflow-summary-v2"
+VERSION = "layered-workflow-summary-v3"
 LEAGUES = frozenset("epl laliga bundesliga serie_a ligue_1 bundesliga_2 ligue_2 ucl allsvenskan eredivisie primeira brazil_a j1 k1 mls unl liga_mx segunda argentina_a".split())
 OUTCOMES = frozenset(("success", "failure", "cancelled", "skipped", "unknown"))
-STAGES = ("restore", "model", "replay", "prospective", "result_sync", "quotes", "fundamentals", "check", "persist")
+STAGES = ("restore", "model", "replay", "prospective", "result_sync", "quotes", "fundamentals", "shadow_models", "check", "persist")
 COVERAGE_STATES = frozenset(("prospective", "rejected", "unsupported", "capture_error", "no_current_prediction_file", "no_upcoming_matches"))
 AVAILABILITY = frozenset(("available", "partial", "unavailable", "no_upcoming", "audit_only", "not_requested", "failed"))
 NORMAL_MISSING = frozenset(("coverage_false", "coverage_unknown", "lineup_window_not_open", "not_completed_90_minute_fixture"))
@@ -343,6 +343,173 @@ def _quote_collection(runtime, context, now):
             "quotation_effectiveness_validated": False}
 
 
+def _shadow_object(root, collection, object_id):
+    if not isinstance(object_id, str) or not re.fullmatch(r"[0-9a-f]{64}", object_id):
+        raise ValueError("invalid_shadow_object_id")
+    value, digest = _read(root / collection / (object_id + ".json"))
+    if _digest(value) != object_id or digest != object_id:
+        raise ValueError("shadow_immutable_object_hash_mismatch")
+    return value
+
+
+def _shadow_capacity(root, value, digest, operation):
+    event = _shadow_object(root, "capacity_events", value.get("capacity_event_id"))
+    if event != {k: v for k, v in value.items() if k != "capacity_event_id"} or event.get("operation") != operation:
+        raise ValueError("shadow_capacity_event_binding_mismatch")
+    fields = ("runtime_bytes", "limit_bytes", "capacity_report_reserve_bytes")
+    if any(_count(event.get(k)) is None for k in fields):
+        raise ValueError("shadow_capacity_count_missing")
+    return {"status": "capacity_deferred", "reason": "shadow_storage_capacity_deferred",
+        "capacity_event_id": value["capacity_event_id"], "latest_sha256": digest,
+        **{k: event[k] for k in fields}, "partial_objects_preserved": True,
+        "captured_forecast_versions": None, "captured_matches_this_run": None,
+        "primary_pair_captures_this_run": None, "accuracy_or_profit_improvement_verified": False}
+
+
+def _shadow_capture(runtime, context, now):
+    root = runtime / "shadow_models"
+    latest, latest_sha = _associated(root / "reports" / "latest.json", context, "shadow_models", now)
+    if (not re.fullmatch(r"[0-9a-f]{40}", context.get("source_commit", ""))
+            or latest.get("source_commit") != context["source_commit"]):
+        raise ValueError("shadow_source_commit_mismatch")
+    if latest.get("status") == "capacity_deferred":
+        return _shadow_capacity(root, latest, latest_sha, "capture")
+    run = _shadow_object(root, "runs", latest.get("report_id"))
+    for key in ("source_commit", "protocol_id", "started_at", "completed_at", "captured_forecasts", "captured_matches"):
+        if run.get(key) != latest.get(key):
+            raise ValueError("shadow_latest_run_binding_mismatch")
+    if (run.get("purpose") != "prospective_model_experiment" or
+            latest.get("run_started_at") != run["started_at"] or latest.get("generated_at") != run["completed_at"]):
+        raise ValueError("shadow_run_scope_or_time_mismatch")
+    protocol = _shadow_object(root, "protocols", run["protocol_id"])
+    if _time(protocol["registered_at"]) > _time(run["started_at"]):
+        # First registration can occur after stage/run begin but before input
+        # freeze. Do not falsely require it to predate the first task start.
+        if _time(protocol["registered_at"]) > _time(run["completed_at"]):
+            raise ValueError("shadow_protocol_registration_after_run")
+    entries = run.get("competitions")
+    if not isinstance(entries, list) or any(not isinstance(e, dict) or e.get("competition") not in LEAGUES for e in entries):
+        raise ValueError("invalid_shadow_competitions")
+    if len({e["competition"] for e in entries}) != len(entries):
+        raise ValueError("duplicate_shadow_competition")
+    arms = ("baseline180", "candidate90", "candidate365")
+    captured = Counter({arm: 0 for arm in arms})
+    rejected = Counter({arm: 0 for arm in arms})
+    failed = Counter({arm: 0 for arm in arms})
+    matches, primary_pairs = set(), set()
+    eligibility_rejections = 0
+    competition_status = Counter()
+    for entry in entries:
+        key = entry["competition"]
+        if entry.get("status") not in ("completed", "completed_with_failures", "source_rejected", "no_eligible_future_matches"):
+            raise ValueError("unrecognized_shadow_competition_status")
+        competition_status[entry["status"]] += 1
+        coverage, arm_entries = entry.get("coverage"), entry.get("arms")
+        if not isinstance(coverage, list) or not isinstance(arm_entries, list):
+            raise ValueError("missing_shadow_coverage")
+        eligibility_rejections += len(coverage)
+        seen_arms, pair_ids = set(), {arm: set() for arm in arms}
+        for arm_entry in arm_entries:
+            arm = arm_entry.get("arm")
+            if arm not in arms or arm in seen_arms or arm_entry.get("status") not in ("fitted", "fit_failed"):
+                raise ValueError("invalid_shadow_arm")
+            seen_arms.add(arm)
+            failed[arm] += arm_entry["status"] == "fit_failed"
+            rows = arm_entry.get("forecasts")
+            if not isinstance(rows, list):
+                raise ValueError("shadow_arm_forecast_rows_missing")
+            seen_matches = set()
+            for row in rows:
+                mid = row.get("match_id")
+                if type(mid) is not int or mid < 1 or mid in seen_matches or row.get("status") not in ("captured", "rejected"):
+                    raise ValueError("invalid_shadow_forecast_coverage")
+                seen_matches.add(mid)
+                if row["status"] == "rejected":
+                    rejected[arm] += 1
+                    continue
+                forecast = _shadow_object(root, "forecasts", row.get("forecast_id"))
+                if (forecast.get("competition") != key or forecast.get("match_id") != mid
+                        or forecast.get("arm") != arm or forecast.get("input_id") != entry.get("input_id")
+                        or forecast.get("protocol_id") != run["protocol_id"]
+                        or forecast.get("source_commit") != run["source_commit"]
+                        or not _time(run["started_at"]) <= _time(forecast["captured_at"]) <= _time(run["completed_at"])):
+                    raise ValueError("shadow_forecast_run_binding_mismatch")
+                captured[arm] += 1
+                matches.add((key, mid))
+                pair_ids[arm].add(mid)
+            if arm_entry["status"] == "fit_failed" and rows:
+                raise ValueError("failed_shadow_fit_cannot_have_forecasts")
+        primary_pairs.update((key, mid) for mid in pair_ids["baseline180"] & pair_ids["candidate90"])
+    for field, actual in (("captured_forecasts", sum(captured.values())), ("captured_matches", len(matches)),
+                          ("competition_count", len(entries)), ("primary_pair_captures_this_run", len(primary_pairs)),
+                          ("eligibility_rejections", eligibility_rejections)):
+        if _count(latest.get(field)) != actual:
+            raise ValueError("shadow_count_binding_mismatch")
+    if latest.get("captured_by_arm") != dict(captured):
+        raise ValueError("shadow_arm_count_binding_mismatch")
+    return {"status": "associated_current_capture", "source_commit": run["source_commit"],
+        "run_id": latest["report_id"], "protocol_id": run["protocol_id"], "latest_sha256": latest_sha,
+        "started_at": run["started_at"], "completed_at": run["completed_at"],
+        "competition_count": len(entries), "competition_status_counts": dict(competition_status),
+        "captured_forecast_versions": sum(captured.values()), "captured_matches_this_run": len(matches),
+        "captured_by_arm": dict(captured), "arm_fit_failures": dict(failed), "arm_forecast_rejections": dict(rejected),
+        "eligibility_rejections": eligibility_rejections, "primary_pair_captures_this_run": len(primary_pairs),
+        "count_basis": "this_run_pair_versions_not_new_independent_matches_or_settled_results",
+        "production_models_changed": False, "accuracy_or_profit_improvement_verified": False}
+
+
+def _shadow_scores(runtime, context, now, capture):
+    root = runtime / "shadow_models"
+    latest, latest_sha = _read(root / "reports" / "score-latest.json")
+    if latest.get("status") == "capacity_deferred":
+        if not _time(context["stage_started_at"]["shadow_models"]) <= _time(latest["scored_at"]) <= now:
+            raise ValueError("shadow_capacity_score_outside_current_stage")
+        return _shadow_capacity(root, latest, latest_sha, "score")
+    score = _shadow_object(root, "score_runs", latest.get("report_id"))
+    if {k: v for k, v in score.items() if k != "matches"} != {k: v for k, v in latest.items() if k != "report_id"}:
+        raise ValueError("shadow_score_latest_parent_mismatch")
+    scored = _time(score["scored_at"])
+    if not _time(context["stage_started_at"]["shadow_models"]) <= scored <= now:
+        raise ValueError("shadow_score_outside_current_stage")
+    if capture.get("status") == "associated_current_capture" and scored < _time(capture["completed_at"]):
+        raise ValueError("shadow_score_predates_current_capture")
+    rows = score.get("matches")
+    if not isinstance(rows, list):
+        raise ValueError("shadow_score_rows_missing")
+    allowed = ("candidate90_vs_baseline180", "candidate365_vs_baseline180")
+    statuses = ("scored", "pending", "rejected")
+    seen, identities = set(), set()
+    for row in rows:
+        identity = (row.get("protocol_id"), row.get("competition"), row.get("match_id"))
+        if (not isinstance(identity[0], str) or not re.fullmatch(r"[0-9a-f]{64}", identity[0]) or
+                identity[1] not in LEAGUES or type(identity[2]) is not int or identity[2] < 1 or
+                row.get("comparison") not in allowed or row.get("status") not in statuses or
+                (identity, row["comparison"]) in seen):
+            raise ValueError("invalid_shadow_score_identity")
+        seen.add((identity, row["comparison"]))
+        identities.add(identity)
+    if (_count(score.get("selected_matches")) != len(identities)
+            or score.get("status_counts") != dict(Counter(r["status"] for r in rows))):
+        raise ValueError("shadow_score_count_mismatch")
+    if _count(score.get("forecast_versions")) is None:
+        raise ValueError("shadow_score_forecast_count_missing")
+    comparisons = []
+    for comparison in allowed:
+        selected = [r for r in rows if r["comparison"] == comparison]
+        comparisons.append({"comparison": comparison,
+            "paired_matches_by_protocol": len(selected),
+            "status_counts": dict(Counter(r["status"] for r in selected)),
+            "scored_matches_by_protocol": sum(r["status"] == "scored" for r in selected)})
+    return {"status": "associated_current_score_snapshot", "scored_at": score["scored_at"],
+        "score_run_id": latest["report_id"], "latest_sha256": latest_sha,
+        "association": "current_stage_timestamp_and_immutable_score_hash_no_score_source_commit_field",
+        "score_source_commit_provided": False, "forecast_versions": score["forecast_versions"],
+        "selected_matches_by_protocol": len(identities),
+        "independent_matches_across_protocols": len({i[1:] for i in identities}),
+        "comparisons": comparisons, "comparison_rows_are_not_independent_matches": True,
+        "accuracy_or_profit_improvement_verified": False}
+
+
 def build_summary(runtime, context, outcomes, *, now=None):
     """Return only fixed keys/enums, counts, verified timestamps and run identifiers."""
     now = now or datetime.now(timezone.utc)
@@ -351,7 +518,7 @@ def build_summary(runtime, context, outcomes, *, now=None):
     required = ("restore", "model", "replay", "check", "persist") + (("prospective",) if context.get("mode") == "train" else ())
     # Older summary contexts remain readable; newly wired independent stages
     # become explicit required operations when their stage marker is present.
-    required += tuple(k for k in ("result_sync", "quotes") if k in context.get("stage_started_at", {}))
+    required += tuple(k for k in ("result_sync", "quotes", "shadow_models") if k in context.get("stage_started_at", {}))
     not_successful = [k for k in required if states[k] != "success"]
     result = {"schema_version": VERSION, "generated_at": _iso(now), "step_outcomes": states,
               "required_steps": list(required), "necessary_steps_outcome": "failure" if not_successful else "success",
@@ -360,7 +527,17 @@ def build_summary(runtime, context, outcomes, *, now=None):
               "output_check_outcome": states["check"], "state_save_outcome": states["persist"],
               "summary_saved_in_same_model_state_commit": False,
               "model": _unknown(), "prospective_current": _unknown(), "prospective_cumulative": _unknown(),
-              "fundamentals": _unknown(), "result_sync": _unknown(), "quotes": _unknown()}
+              "fundamentals": _unknown(), "result_sync": _unknown(), "quotes": _unknown(),
+              "shadow_models": {"capture": _unknown(), "scoring": _unknown()}}
+    if states["shadow_models"] in ("success", "failure"):
+        try:
+            result["shadow_models"]["capture"] = _shadow_capture(runtime, context, now)
+        except (OSError, ValueError, TypeError, KeyError, AttributeError):
+            pass
+        try:
+            result["shadow_models"]["scoring"] = _shadow_scores(runtime, context, now, result["shadow_models"]["capture"])
+        except (OSError, ValueError, TypeError, KeyError, AttributeError):
+            pass
     if states["result_sync"] in ("success", "failure"):
         try:
             result["result_sync"] = _independent_results(runtime, context, now)
@@ -416,6 +593,8 @@ def markdown(value):
         return str(row[key]) if row.get(key) is not None else "unknown"
     model, current, cumulative, facts = (value[k] for k in ("model", "prospective_current", "prospective_cumulative", "fundamentals"))
     synced, quotes = value.get("result_sync", {}), value.get("quotes", {})
+    shadow = value.get("shadow_models", {})
+    shadow_capture, shadow_score = shadow.get("capture", {}), shadow.get("scoring", {})
     lines = ["# 足球模型分层运行结果", "", "| 层次 | 本次实际结果 |", "|---|---|",
         f"| 必要步骤 | {value['necessary_steps_outcome']} |",
         f"| 模型 CLI | {value['step_outcomes']['model']}；已知支持 {n(model, 'known_supported_predictions')} 场；范围完整时合计 {n(model, 'supported_predictions')} 场 |",
@@ -424,6 +603,8 @@ def markdown(value):
         f"| 累计成熟结果 | 协议内已评分 {n(cumulative, 'mature_scored_matches_by_protocol')}；待赛果 {n(cumulative, 'pending_matches_by_protocol')}；结果版本 {n(cumulative, 'result_versions')} |",
         f"| 独立赛果同步 | {value['step_outcomes'].get('result_sync', 'unknown')}；目标 {n(synced, 'target_matches')}；新结果版本 {n(synced.get('status_counts', {}), 'result_appended')}；请求 {n(synced, 'api_requests')} |",
         f"| 真实报价积累 | {value['step_outcomes'].get('quotes', 'unknown')}；候选 {n(quotes, 'candidate_matches')}；已解析快照 {n(quotes, 'parsed_snapshots')}；完整参考行 {n(quotes, 'complete_reference_rows')}；请求 {n(quotes, 'api_requests')} |",
+        f"| F4 模型影子记录 | {value['step_outcomes'].get('shadow_models', 'unknown')}；记录状态 {shadow_capture.get('status', 'unknown')}；本次预测版本 {n(shadow_capture, 'captured_forecast_versions')}；覆盖比赛 {n(shadow_capture, 'captured_matches_this_run')}；90/180配对版本 {n(shadow_capture, 'primary_pair_captures_this_run')}；准入拒绝 {n(shadow_capture, 'eligibility_rejections')} |",
+        f"| F4 影子累计评分 | 预测版本 {n(shadow_score, 'forecast_versions')}；协议内配对比赛 {n(shadow_score, 'selected_matches_by_protocol')}；跨协议独立比赛 {n(shadow_score, 'independent_matches_across_protocols')} |",
         f"| 基本面采集 | {value['step_outcomes']['fundamentals']}；报告 {facts['status']}；采集完整 {n(facts, 'complete_collection_matches')}、部分 {n(facts, 'partial_collection_matches')}、正常缺失 {n(facts, 'normal_missing_matches')}、未知 {n(facts, 'unknown_collection_matches')} |",
         f"| 输出检查 | {value['output_check_outcome']} |",
         f"| 状态保存 | {value['state_save_outcome']} |",
@@ -431,6 +612,7 @@ def markdown(value):
         "本轮前瞻按关联的 coverage 对象计数；步骤未完成时仅表示已观测记录，不代表目标全集。累计数未用于相减推算本轮。",
         "基本面的完整仅指本次请求的采集操作；正常缺失不代表数值零，特征已保存不代表全字段完整或已经调整概率。",
         "逐联赛冻结由独立checkpoint核关联；赛果同步与报价采集不要求本次训练成功。参考报价不代表开放可买或实际成交。",
+        "F4本次配对版本不等于新增独立比赛；90/180与365/180评分分别统计，不能把两组相加当比赛数。影子评分按本stage时间和不可变评分指纹关联，评分原件未单列执行源码提交；不强迫历史预测使用本次源码。",
         "模型支持、前瞻资格、保存成功与预测准确率验收分别处理。基本面局部失败不否决独立比分模型。", ""]
     for label, row in (("本轮前瞻原因", current), ("基本面原因", facts)):
         reasons = row.get("reason_counts")
@@ -446,7 +628,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="本轮关联与分层运行摘要；不接入认证、不改模型")
     parser.add_argument("command", choices=("begin", "mark", "render"))
     parser.add_argument("--context", required=True)
-    parser.add_argument("--stage", choices=("model", "prospective", "result_sync", "quotes", "fundamentals"))
+    parser.add_argument("--stage", choices=("model", "prospective", "result_sync", "quotes", "fundamentals", "shadow_models"))
     parser.add_argument("--runtime", default="runtime")
     parser.add_argument("--output")
     parser.add_argument("--summary")

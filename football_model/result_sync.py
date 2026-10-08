@@ -1,7 +1,9 @@
 """Independently observe and append 90-minute results for frozen forecasts.
 
 This path never trains, changes model/data files, or creates forecasts. Provider
-responses and every result revision are retained under the prospective ledger.
+responses and every result revision are retained under the prospective result
+ledger. Valid live shadow targets share result collection, never production
+forecast membership.
 """
 from __future__ import annotations
 
@@ -25,9 +27,14 @@ SCHEMA = "independent_regulation_result_sync_v1"
 def _provider_league(root: Path, records: list[dict], config: dict) -> int:
     ids = set()
     for forecast in records:
-        source, _ = _read(root, "sources", forecast["report_source"] + ".json")
-        if _digest(source) != forecast["report_source"]:
+        origin = forecast.get("_result_sync_ledger", "prospective")
+        source_root = root if origin == "prospective" else _path(root.parent, "shadow_models")
+        source_id = forecast["report_source"] if origin == "prospective" else forecast["parents"]["report_source"]
+        source, _ = _read(source_root, "sources", source_id + ".json")
+        if _digest(source) != source_id:
             raise ValueError("report_source_integrity_mismatch")
+        if origin == "shadow_models":
+            ids.add(_integer(forecast["parents"]["provider_league_id"], "shadow.provider_league_id", 1))
         for item in source.get("content", {}).get("competitions", []):
             if item.get("key") == forecast["competition"] and item.get("provider_league_id") is not None:
                 ids.add(_integer(item["provider_league_id"], "provider_league_id", 1))
@@ -38,6 +45,40 @@ def _provider_league(root: Path, records: list[dict], config: dict) -> int:
     if len(ids) != 1:
         raise ValueError("provider_league_identity_missing_or_conflicting")
     return next(iter(ids))
+
+
+def _shadow_targets(runtime: Path, now: datetime) -> tuple[list, list, list]:
+    """Read live shadow receipts through their native integrity/recompute gate.
+
+    Failures are retained in this sync report and never become target identities.
+    Nothing from this reader is appended to the production forecast collection.
+    """
+    directory = _path(runtime, "shadow_models", "forecasts")
+    if not directory.exists():
+        return [], [], []
+    from .shadow_models import _saved_forecast_valid, _writer
+    valid, diagnostics, errors = [], [], []
+    try:
+        # Stabilize append-only receipts while capture/score writers may run.
+        with _writer(runtime) as shadow_root:
+            for path in sorted(directory.glob("*.json")):
+                identity = {"forecast_id": path.stem, "target_ledger": "shadow_models"}
+                try:
+                    value, _ = _read(shadow_root, "forecasts", path.name)
+                    if not isinstance(value, dict) or path.stem != _digest(value):
+                        raise ValueError("shadow_forecast_object_hash_mismatch")
+                    forecast = {**value, "object_id": path.stem}
+                    _identity(forecast)
+                    identity.update(competition=forecast.get("competition"), match_id=forecast["match_id"])
+                    _saved_forecast_valid(shadow_root, forecast, now)
+                    valid.append({**forecast, "_result_sync_ledger": "shadow_models"})
+                except (ValueError, KeyError, TypeError, AttributeError, OSError) as exc:
+                    diagnostics.append({**identity, "status": "shadow_target_rejected", "reason": safe_error(exc)})
+                    errors.append("shadow_target:" + path.stem + ":" + safe_error(exc))
+    except (ValueError, KeyError, TypeError, RuntimeError, OSError) as exc:
+        diagnostics.append({"target_ledger": "shadow_models", "status": "shadow_targets_unavailable", "reason": safe_error(exc)})
+        errors.append("shadow_targets:" + safe_error(exc))
+    return valid, diagnostics, errors
 
 
 def _targets(root: Path, forecasts: list[dict], now: datetime, recheck_days: int) -> tuple[list, list]:
@@ -59,7 +100,9 @@ def _targets(root: Path, forecasts: list[dict], now: datetime, recheck_days: int
             continue
         latest = max(results[key], key=lambda r: (_timestamp(r["observed_at"], "observed_at"),
             _timestamp(r["captured_at"], "captured_at"), r["object_id"]), default=None)
-        if latest and all(_timestamp(r["kickoff"], "kickoff") + timedelta(days=recheck_days) < now for r in mature):
+        pending_independent_shadow = any(r.get("_result_sync_ledger") == "shadow_models" for r in rows) and (
+            latest is None or latest.get("collection_method") != "independent_fixture_sync")
+        if latest and not pending_independent_shadow and all(_timestamp(r["kickoff"], "kickoff") + timedelta(days=recheck_days) < now for r in mature):
             skipped.append({"competition": key[0], "match_id": key[1], "status": "outside_revision_recheck_window"})
             continue
         due.append((key, rows))
@@ -88,12 +131,16 @@ def run(runtime: Path, config: dict, *, client=None, clock=None,
     clock = clock or (lambda: datetime.now(timezone.utc))
     started = _now(clock)
     with ledger_writer(runtime) as root:
-        forecasts = _objects(root, "forecasts")
-        targets, records = _targets(root, forecasts, started, revision_recheck_days)
-        errors = []
+        forecasts = [{**row, "_result_sync_ledger": "prospective"} for row in _objects(root, "forecasts")]
+        shadows, shadow_diagnostics, errors = _shadow_targets(runtime, started)
+        targets, records = _targets(root, forecasts + shadows, started, revision_recheck_days)
+        records.extend(shadow_diagnostics)
         report = {"schema": SCHEMA, "started_at": _iso(started), "run_started_at": _iso(started),
             "source_commit": os.environ.get("GITHUB_SHA"), "time_semantics": "observed_wall_clock_v1",
             "forecast_versions": len(forecasts), "target_matches": len(targets),
+            "production_forecast_versions": len(forecasts), "verified_shadow_forecast_versions": len(shadows),
+            "target_forecast_versions": len(forecasts) + len(shadows),
+            "shadow_forecasts_added_to_production": False,
             "revision_recheck_days": revision_recheck_days, "cache_max_age_seconds": cache_max_age_seconds,
             "max_run_seconds": max_run_seconds, "records": records,
             "model_or_training_required": False, "changes_training_data": False}
@@ -108,15 +155,24 @@ def run(runtime: Path, config: dict, *, client=None, clock=None,
                                for key, _ in targets)
                 targets = []
         stopped = False
+        fixture_responses = {}
         for (competition, mid), related in targets:
-            entry = {"competition": competition, "match_id": mid}
+            entry = {"competition": competition, "match_id": mid,
+                     "target_ledgers": sorted({f["_result_sync_ledger"] for f in related})}
             if stopped:
                 entry["status"] = "budget_deferred"
                 records.append(entry)
                 continue
             try:
                 provider_id = _provider_league(root, related, config)
-                envelope = client.fetch_fixture(mid, force=False, max_age_seconds=cache_max_age_seconds)
+                if mid not in fixture_responses:
+                    try:
+                        fixture_responses[mid] = client.fetch_fixture(mid, force=False, max_age_seconds=cache_max_age_seconds)
+                    except (APIError, ValueError, RuntimeError, OSError) as exc:
+                        fixture_responses[mid] = exc
+                envelope = fixture_responses[mid]
+                if isinstance(envelope, Exception):
+                    raise envelope
                 received = _now(clock)
                 # Preserve the complete sanitized APIClient response before semantic
                 # rejection, including empty/pending/wrong-identity responses.

@@ -24,6 +24,7 @@ on:
       - 'football_model/production_replay.py'
       - 'football_model/run_summary.py'
       - 'football_model/collect_quotes.py'
+      - 'football_model/shadow_models.py'
       - 'config.json'
   workflow_dispatch:
     inputs:
@@ -181,6 +182,28 @@ jobs:
           rm -f runtime/fundamentals/reports/latest.json
           python -m football_model.collect_fundamentals --runtime runtime --config config.json --league "$LEAGUE" --horizon-hours 24
 
+      - name: 保存真实未来模型对照并评分原有影子预测
+        id: shadow_models
+        if: ${{ always() && steps.restore.outcome == 'success' && env.MODE == 'train' }}
+        # Offline fits use existing admitted data. No API key, added schedule,
+        # production parameter change, decision recommendation or actual bet.
+        continue-on-error: true
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '1'
+        run: |
+          python -m football_model.run_summary mark --context "$RUNNER_TEMP/football-run-context.json" --stage shadow_models
+          python - <<'PYSHADOW'
+          import os
+          import subprocess
+          import sys
+          capture = subprocess.call([sys.executable, '-m', 'football_model.shadow_models', 'capture',
+              '--runtime', 'runtime', '--config', 'config.json', '--league', 'all',
+              '--source-commit', os.environ['GITHUB_SHA']])
+          score = subprocess.call([sys.executable, '-m', 'football_model.shadow_models', 'score', '--runtime', 'runtime'])
+          raise SystemExit(0 if capture == 0 and score == 0 else 1)
+          PYSHADOW
+
       - name: 检查输出是否可以保存和上传
         id: check
         if: ${{ always() && steps.restore.outcome == 'success' }}
@@ -209,6 +232,7 @@ jobs:
           FUNDAMENTALS_OUTCOME: ${{ steps.fundamentals.outcome }}
           RESULT_SYNC_OUTCOME: ${{ steps.result_sync.outcome }}
           QUOTES_OUTCOME: ${{ steps.quotes.outcome }}
+          SHADOW_MODELS_OUTCOME: ${{ steps.shadow_models.outcome }}
           PROSPECTIVE_OUTCOME: ${{ steps.prospective.outcome }}
           REPLAY_OUTCOME: ${{ steps.replay_check.outcome }}
         # Only whitelist-derived counts/enums enter the summary. It runs after
@@ -236,6 +260,7 @@ jobs:
             runtime/prospective/
             runtime/result_sync/
             runtime/quotes/
+            runtime/shadow_models/
             runtime/replay/
           if-no-files-found: warn
           retention-days: 14
@@ -252,7 +277,7 @@ jobs:
           include-hidden-files: false
 
       - name: 将实际失败标记为失败
-        if: ${{ always() && (steps.model.outcome != 'success' || steps.persist.outcome != 'success' || steps.prospective.outcome == 'failure' || steps.result_sync.outcome == 'failure' || steps.quotes.outcome == 'failure' || steps.replay_check.outcome == 'failure' || steps.summary.outcome != 'success') }}
+        if: ${{ always() && (steps.model.outcome != 'success' || steps.persist.outcome != 'success' || steps.prospective.outcome == 'failure' || steps.result_sync.outcome == 'failure' || steps.quotes.outcome == 'failure' || steps.shadow_models.outcome == 'failure' || steps.replay_check.outcome == 'failure' || steps.summary.outcome != 'success') }}
         run: |
-          echo '本次检查/训练、回放录制、前瞻冻结、赛果同步、报价采集或状态保存未完成。请查看分层摘要；不能将其视为全部成功。'
+          echo '本次检查/训练、回放录制、前瞻冻结、赛果同步、报价采集、影子模型实验或状态保存未完成。请查看分层摘要；不能将其视为全部成功。'
           exit 1
