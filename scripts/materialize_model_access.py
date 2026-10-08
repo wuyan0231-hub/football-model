@@ -82,8 +82,10 @@ def validate(payload):
         role = item.get("role")
         _require(role in ("source", "state"), "file role must be source or state")
         path = _path(item.get("path"))
-        _require((role == "state" and path.startswith("runtime/"))
-                 or (role == "source" and path != "runtime"
+        transport_state = (path == "state_storage.json"
+                           or re.fullmatch(r"state_archives/[0-9a-f]{64}\.json\.gz", path) is not None)
+        _require((role == "state" and (path.startswith("runtime/") or transport_state))
+                 or (role == "source" and not transport_state and path != "runtime"
                      and not path.startswith("runtime/")), "file role and path disagree")
         _require(path not in paths, "duplicate file path")
         paths.add(path)

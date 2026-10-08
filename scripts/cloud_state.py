@@ -27,6 +27,10 @@ import sys
 import tempfile
 from typing import Iterator
 
+# Resolve the helper from this checked-out source, including direct script use.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from football_model import state_storage
+
 
 STATE_BRANCH = "model-state"
 STATE_REF = f"refs/heads/{STATE_BRANCH}"
@@ -36,14 +40,15 @@ _IDENTITY = {
     "GIT_COMMITTER_NAME": "Football Model Automation",
     "GIT_COMMITTER_EMAIL": "football-model@users.noreply.github.com",
 }
-_STATE_ROOT_FILES = {"runtime", "state_metadata.json", "README.md", ".git"}
+_STATE_ROOT_FILES = {"runtime", "state_metadata.json", "README.md", ".git",
+                     state_storage.MANIFEST_NAME, state_storage.ARCHIVE_DIR}
 _ALLOWED_SUFFIXES = {".json", ".jsonl", ".csv", ".tsv", ".md", ".txt", ".npz", ".npy"}
 _MAX_FILE_BYTES = 60 * 1024 * 1024
-_MAX_TOTAL_BYTES = 500 * 1024 * 1024
+_MAX_TOTAL_BYTES = state_storage.MAX_PHYSICAL_BYTES
+_MAX_LOGICAL_BYTES = state_storage.MAX_LOGICAL_BYTES
 
 
-class StateError(RuntimeError):
-    """A safe, user-visible failure that never contains Git stderr or secrets."""
+StateError = state_storage.StorageError
 
 
 def _utc_now() -> str:
@@ -112,57 +117,16 @@ def _worktree(repo: Path, oid: str) -> Iterator[Path]:
 
 
 def _validate_runtime(runtime: Path) -> None:
-    if not runtime.exists():
-        raise StateError("runtime 不存在，不能保存。")
-    if runtime.is_symlink() or not runtime.is_dir():
-        raise StateError("runtime 必须是普通目录。")
-    known_secrets = [
-        value.encode() for name in (
-            "FOOTBALL_API_KEY", "GITHUB_TOKEN", "GH_TOKEN", "ACTIONS_RUNTIME_TOKEN",
-        ) if len(value := os.environ.get(name, "")) >= 6
-    ]
-    total = 0
-    expanded_total = 0
-    for path in runtime.rglob("*"):
-        if path.is_symlink():
-            raise StateError("runtime 包含符号链接，已停止保存。")
-        if any(part.startswith(".") for part in path.relative_to(runtime).parts):
-            raise StateError("runtime 包含隐藏文件或目录，已停止保存。")
-        if path.is_dir():
-            continue
-        relative = path.relative_to(runtime).as_posix()
-        replay_gzip = bool(re.fullmatch(r"replay/bundles/[0-9a-f]{64}\.json\.gz", relative))
-        if not path.is_file() or (path.suffix.lower() not in _ALLOWED_SUFFIXES and not replay_gzip):
-            raise StateError("runtime 包含不允许上传的文件类型，已停止保存。")
-        size = path.stat().st_size
-        total += size
-        if size > _MAX_FILE_BYTES or total > _MAX_TOTAL_BYTES:
-            raise StateError("状态超过安全保存大小，请检查缓存体积；未覆盖远端。")
-        if replay_gzip:
-            try:
-                with gzip.open(path, "rb") as handle:
-                    content = handle.read(_MAX_FILE_BYTES + 1)
-                expanded_total += len(content)
-                if len(content) > _MAX_FILE_BYTES or expanded_total > _MAX_TOTAL_BYTES:
-                    raise StateError("回放解压内容超过安全保存大小，已停止保存。")
-                json.loads(content)
-            except (OSError, EOFError, ValueError) as exc:
-                raise StateError("回放压缩文件无效，已停止保存。") from exc
-            if any(secret in content for secret in known_secrets):
-                raise StateError("回放解压内容疑似包含凭据，已停止保存；请检查程序输出。")
-        if known_secrets:
-            content = path.read_bytes()
-            if any(secret in content for secret in known_secrets):
-                raise StateError("状态文件疑似包含凭据，已停止保存；请检查程序输出。")
+    state_storage.validate_runtime(runtime, max_file_bytes=_MAX_FILE_BYTES,
+                                   max_logical_bytes=_MAX_LOGICAL_BYTES)
+    if state_storage.estimate_runtime(runtime)["persisted_bytes"] > _MAX_TOTAL_BYTES:
+        raise StateError("状态预计超过安全物理保存大小，请检查缓存体积；未覆盖远端。")
 
 
 def _validate_tree(tree: Path) -> None:
-    if any(path.name not in _STATE_ROOT_FILES for path in tree.iterdir()):
-        raise StateError("model-state 分支含有预期之外的文件，已停止以免损坏其他内容。")
-    for name in ("README.md", "state_metadata.json"):
-        if (tree / name).is_symlink():
-            raise StateError("model-state 元信息不允许使用符号链接。")
-    _validate_runtime(tree / "runtime")
+    state_storage.validate_storage_tree(tree, max_file_bytes=_MAX_FILE_BYTES,
+                                       max_physical_bytes=_MAX_TOTAL_BYTES,
+                                       max_logical_bytes=_MAX_LOGICAL_BYTES)
 
 
 def _write_json(path: Path, content: dict) -> None:
@@ -187,7 +151,9 @@ def load_state(repo: Path, runtime: Path = Path("runtime")) -> str | None:
             # still has no marker and therefore cannot be pushed by save.
             # Copy the whole tree: restoring only models/reports would lose
             # venue evidence and the immutable snapshot used by old forecasts.
-            shutil.copytree(tree / "runtime", runtime, dirs_exist_ok=True)
+            state_storage.restore_runtime(tree, runtime, max_file_bytes=_MAX_FILE_BYTES,
+                                          max_physical_bytes=_MAX_TOTAL_BYTES,
+                                          max_logical_bytes=_MAX_LOGICAL_BYTES)
     else:
         runtime.mkdir(exist_ok=True)
     source_sha = _git(repo, "rev-parse", "HEAD").stdout.strip()
@@ -227,18 +193,28 @@ def save_state(repo: Path, runtime: Path = Path("runtime")) -> str:
         if oid is not None:
             _validate_tree(tree)
             shutil.rmtree(tree / "runtime")
+            shutil.rmtree(tree / state_storage.ARCHIVE_DIR, ignore_errors=True)
+            (tree / state_storage.MANIFEST_NAME).unlink(missing_ok=True)
         # Registries, digest-named venue snapshots and audits are runtime state
         # too. Do not replace this with the shorter Actions artifact path list.
-        shutil.copytree(runtime, tree / "runtime")
+        storage_stats = state_storage.pack_runtime(runtime, tree, max_file_bytes=_MAX_FILE_BYTES,
+                                                   max_logical_bytes=_MAX_LOGICAL_BYTES)
         # Empty directories do not survive Git. A tiny manifest guarantees a
         # restorable runtime even if the first run found no accessible data.
-        _write_json(tree / "runtime" / "state_manifest.json", {"schema_version": 1})
+        if not (tree / "runtime" / "state_manifest.json").exists():
+            _write_json(tree / "runtime" / "state_manifest.json", {"schema_version": 1})
         metadata = {
             "schema_version": 1, "saved_at": _utc_now(),
             "source_sha": baseline["source_sha"], "source_ref": baseline["source_ref"],
             "previous_state_oid": oid,
             "github_run_id": os.environ.get("GITHUB_RUN_ID"),
             "github_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+            "state_storage": {"schema_version": state_storage.SCHEMA_VERSION,
+                              "physical_limit_bytes": _MAX_TOTAL_BYTES,
+                              "logical_limit_bytes": _MAX_LOGICAL_BYTES,
+                              "raw_bytes": storage_stats["raw_bytes"],
+                              "archived_file_count": storage_stats["archived_file_count"],
+                              "archive_blob_count": storage_stats["archive_blob_count"]},
             "model_note": "运行记录不表示模型已通过预测质量验证；以 reports 中的具体状态为准。",
         }
         _write_json(tree / "state_metadata.json", metadata)
@@ -248,7 +224,9 @@ def save_state(repo: Path, runtime: Path = Path("runtime")) -> str:
             "请勿强制推送、合并到主分支或在此分支手工编辑。\n"
             "仓库应保持 Private；Actions 附件只是 14 天便捷副本。\n", encoding="utf-8",
         )
-        _git(tree, "add", "--", "runtime", "state_metadata.json", "README.md")
+        _validate_tree(tree)  # Includes actual manifest and metadata bytes, before push.
+        _git(tree, "add", "--", "runtime", "state_metadata.json", "README.md",
+             state_storage.MANIFEST_NAME, state_storage.ARCHIVE_DIR)
         _git(tree, "-c", "commit.gpgsign=false", "commit", "-m", "Save football model runtime state", identity=True)
         commit = _git(tree, "rev-parse", "HEAD").stdout.strip()
         # Use source checkout for authenticated network commands. Its configured

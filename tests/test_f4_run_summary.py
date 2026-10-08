@@ -159,6 +159,64 @@ class F4SummaryTests(unittest.TestCase):
         self.assertIn('shadow_models', result['necessary_steps_not_successful'])
         self.assertIn('capacity_deferred', markdown(result))
 
+    def capacity_latest(self, operation='capture'):
+        value = {'status': 'capacity_deferred', 'operation': operation, 'source_commit': 'a' * 40,
+            'run_started_at': '2026-10-07T10:03:01Z', 'generated_at': '2026-10-07T10:03:20Z',
+            'scored_at': '2026-10-07T10:03:20Z', 'runtime_bytes': 499713007,
+            'estimated_persisted_bytes': 400 * 1024 * 1024,
+            'logical_bytes': 500000000, 'logical_limit_bytes': 2 * 1024 * 1024 * 1024,
+            'logical_capture_limit_bytes': 2 * 1024 * 1024 * 1024 - 256 * 1024,
+            'limit_bytes': 400 * 1024 * 1024, 'capacity_report_reserve_bytes': 256 * 1024,
+            'capacity_event_id': None, 'immutable_event_saved': False,
+            'diagnostic_evidence': 'bounded_current_latest_only'}
+        filename = 'latest.json' if operation == 'capture' else 'score-latest.json'
+        self.f.write('shadow_models/reports/' + filename, value)
+        return value
+
+    def test_exhausted_report_reserve_is_current_deferral_with_explicit_weaker_evidence(self):
+        self.capacity_latest()
+        self.capacity_latest('score')
+        self.f.outcomes['shadow_models'] = 'failure'
+        summary = self.f.build()['shadow_models']
+        for operation in ('capture', 'scoring'):
+            value = summary[operation]
+            self.assertEqual(value['status'], 'capacity_deferred')
+            self.assertEqual(value['diagnostic_evidence'], 'bounded_current_latest_only')
+            self.assertFalse(value['immutable_event_saved'])
+            self.assertIsNone(value['captured_forecast_versions'])
+            self.assertEqual(value['runtime_bytes'], 499713007)
+            self.assertEqual(value['estimated_persisted_bytes'], 400 * 1024 * 1024)
+            self.assertEqual(value['budget_basis'], 'estimated_persisted_storage_and_original_logical_bytes')
+
+    def test_missing_capacity_event_without_explicit_diagnostic_boundary_remains_unknown(self):
+        value = self.capacity_latest()
+        del value['diagnostic_evidence']
+        self.f.write('shadow_models/reports/latest.json', value)
+        self.assertEqual(self.f.build()['shadow_models']['capture']['status'], 'unknown')
+
+    def test_unlinked_capacity_report_still_requires_current_stage_and_commit(self):
+        value = self.capacity_latest()
+        value['source_commit'] = 'b' * 40
+        self.f.write('shadow_models/reports/latest.json', value)
+        self.assertEqual(self.f.build()['shadow_models']['capture']['status'], 'unknown')
+        value['source_commit'] = 'a' * 40
+        value['generated_at'] = '2026-10-07T09:00:00Z'
+        self.f.write('shadow_models/reports/latest.json', value)
+        self.assertEqual(self.f.build()['shadow_models']['capture']['status'], 'unknown')
+
+    def test_current_capture_exposes_separate_immutable_budget_dimensions(self):
+        self.run['storage_budget'] = {'runtime_bytes': 499713007, 'estimated_persisted_bytes': 300000000,
+            'limit_bytes': 400 * 1024 * 1024, 'logical_bytes': 500000000,
+            'logical_limit_bytes': 2 * 1024 * 1024 * 1024,
+            'logical_capture_limit_bytes': 2 * 1024 * 1024 * 1024 - 256 * 1024}
+        self.save_capture()
+        value = self.f.build()['shadow_models']['capture']
+        self.assertEqual(value['storage_budget']['runtime_bytes'], 499713007)
+        self.assertEqual(value['storage_budget']['estimated_persisted_bytes'], 300000000)
+        self.latest['storage_budget']['estimated_persisted_bytes'] -= 1
+        self.f.write('shadow_models/reports/latest.json', self.latest)
+        self.assertEqual(self.f.build()['shadow_models']['capture']['status'], 'unknown')
+
 
 if __name__ == '__main__':
     unittest.main()

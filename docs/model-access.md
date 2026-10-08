@@ -97,6 +97,22 @@ python -m football_model.integration match \
 
 当前未来分析默认省略 `--as-of`；历史截点核验仍严格执行框架§20.12，不能用过去时刻使已开赛比赛或后取得的材料伪装为赛前。不同结果分别记录：文件已落地、已读取未复算、调用失败、已复算；真实盘口计算再单列。helper 清单不替代 match 输出。
 
+## 新状态中的无损历史归档
+
+2026-10-08起，状态传输可使用`state_storage.json`清单与`state_archives/<压缩SHA256>.json.gz`。日更加载会在业务开始前按原路径、原字节完整还原；正常单场所需索引、模型、数据、预测、登记表及索引关联的当前验证仍保留直读。旧固定状态提交不改写，未归档文件继续按原入口读取。
+
+若要复核的历史报价或影子父证据路径在新状态中未直存，先从**同一固定state_commit**完整读取`state_storage.json`，按条目的`path`精确定位（相对runtime，例如`shadow_models/forecasts/<真实SHA>.json`）。再按真实`blob_sha256`取`state_archives/<真实blob_sha256>.json.gz`，使用`encoding="base64"`取得完整原响应。不要因路径归档误判原证据丢失，也不能自行制作精简清单冒充远端清单。
+
+原`materialize_model_access.py`现在接受这两个状态传输根路径，仍核固定状态提交URL、完整Git blob与原字节；源程序从同一固定source_commit取得。将原远端清单及所需压缩对象的响应按`role="state"`落入新目录后，运行：
+
+```sh
+python scripts/materialize_state_archive.py --state-root NEW_DIR \
+  --path shadow_models/forecasts/ACTUAL_FORECAST_SHA.json \
+  --output NEW_DIR/本次归档读取记录.json
+```
+
+`ACTUAL_FORECAST_SHA`必须换成清单中的实际逻辑路径；多个目标重复`--path`。入口校验清单结构与路径、60MiB单个原件限制、2GiB逻辑声明、单成员gzip、压缩SHA/大小、解压原SHA/大小及JSON；原文件已存在则拒绝覆盖。只取得目标对象时只能称“所选归档原字节已恢复”，不能称整个状态已恢复或模型已复算。随后仍执行原`integration match`或相应评分原函数；记录压缩对象Git blob和恢复原件SHA，二者不可混用。
+
 ## 访问记录与最后回退
 
 每次在本场 `model_access.json` 或 `record.json.model_records[]` 的附属记录保存：

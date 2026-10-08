@@ -353,15 +353,36 @@ def _shadow_object(root, collection, object_id):
 
 
 def _shadow_capacity(root, value, digest, operation):
-    event = _shadow_object(root, "capacity_events", value.get("capacity_event_id"))
-    if event != {k: v for k, v in value.items() if k != "capacity_event_id"} or event.get("operation") != operation:
+    if value.get("operation") != operation:
         raise ValueError("shadow_capacity_event_binding_mismatch")
+    if value.get("immutable_event_saved") is False:
+        if value.get("capacity_event_id") is not None or value.get("diagnostic_evidence") != "bounded_current_latest_only":
+            raise ValueError("shadow_capacity_missing_event_not_explicit")
+        event = value
+        evidence = "bounded_current_latest_only"
+    else:
+        event = _shadow_object(root, "capacity_events", value.get("capacity_event_id"))
+        if event != {k: v for k, v in value.items() if k != "capacity_event_id"}:
+            raise ValueError("shadow_capacity_event_binding_mismatch")
+        evidence = "immutable_capacity_event_and_current_latest"
     fields = ("runtime_bytes", "limit_bytes", "capacity_report_reserve_bytes")
     if any(_count(event.get(k)) is None for k in fields):
         raise ValueError("shadow_capacity_count_missing")
+    new_fields = ("estimated_persisted_bytes", "logical_bytes", "logical_limit_bytes", "logical_capture_limit_bytes")
+    if any(k in event for k in new_fields):
+        if any(_count(event.get(k)) is None for k in new_fields):
+            raise ValueError("shadow_capacity_new_budget_count_missing")
+        fields += new_fields
+    elif evidence == "bounded_current_latest_only":
+        raise ValueError("shadow_capacity_unlinked_budget_count_missing")
     return {"status": "capacity_deferred", "reason": "shadow_storage_capacity_deferred",
         "capacity_event_id": value["capacity_event_id"], "latest_sha256": digest,
         **{k: event[k] for k in fields}, "partial_objects_preserved": True,
+        "immutable_event_saved": evidence != "bounded_current_latest_only", "diagnostic_evidence": evidence,
+        "budget_basis": "estimated_persisted_storage_and_original_logical_bytes" if new_fields[0] in event else "legacy_original_logical_bytes",
+        "file_limit_bytes": _count(event.get("file_limit_bytes")),
+        "capacity_constraint": event.get("capacity_constraint") if event.get("capacity_constraint") in
+            ("file_limit", "estimated_persisted_limit", "logical_limit") else "unknown",
         "captured_forecast_versions": None, "captured_matches_this_run": None,
         "primary_pair_captures_this_run": None, "accuracy_or_profit_improvement_verified": False}
 
@@ -375,7 +396,7 @@ def _shadow_capture(runtime, context, now):
     if latest.get("status") == "capacity_deferred":
         return _shadow_capacity(root, latest, latest_sha, "capture")
     run = _shadow_object(root, "runs", latest.get("report_id"))
-    for key in ("source_commit", "protocol_id", "started_at", "completed_at", "captured_forecasts", "captured_matches"):
+    for key in ("source_commit", "protocol_id", "started_at", "completed_at", "captured_forecasts", "captured_matches", "storage_budget"):
         if run.get(key) != latest.get(key):
             raise ValueError("shadow_latest_run_binding_mismatch")
     if (run.get("purpose") != "prospective_model_experiment" or
@@ -455,6 +476,8 @@ def _shadow_capture(runtime, context, now):
         "captured_by_arm": dict(captured), "arm_fit_failures": dict(failed), "arm_forecast_rejections": dict(rejected),
         "eligibility_rejections": eligibility_rejections, "primary_pair_captures_this_run": len(primary_pairs),
         "count_basis": "this_run_pair_versions_not_new_independent_matches_or_settled_results",
+        "storage_budget": {k: _count(run.get("storage_budget", {}).get(k)) for k in
+            ("runtime_bytes", "estimated_persisted_bytes", "limit_bytes", "logical_bytes", "logical_limit_bytes", "logical_capture_limit_bytes", "file_limit_bytes")},
         "production_models_changed": False, "accuracy_or_profit_improvement_verified": False}
 
 

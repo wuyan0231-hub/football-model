@@ -22,6 +22,7 @@ from .model import (RESULT_AVAILABILITY_DELAY, fit_model, score_distribution,
 from .prospective import (_append as _ledger_append, _digest, _identity, _json_bytes, _name, _now,
                           _objects, _path, _read, _same_identity)
 from .settlement import matrix_array
+from .state_storage import MAX_FILE_BYTES, MAX_LOGICAL_BYTES, estimate_runtime, storage_cost
 
 VERSION = "s2-shadow-models-1.0"
 TIME = "observed_wall_clock_v1"
@@ -33,33 +34,50 @@ _BUDGET = ContextVar("shadow_storage_budget", default=None)
 
 class ShadowCapacityError(RuntimeError):
     def __init__(self, budget):
-        self.budget = dict(budget)
+        self.budget = _budget_public(budget)
         super().__init__("shadow_storage_capacity_deferred")
 
 
-def _runtime_bytes(runtime):
-    total = 0
-    for path in runtime.rglob("*"):
-        if path.is_symlink():
-            raise ValueError("symlinked_runtime_capacity_input")
-        if path.is_file():
-            total += path.stat().st_size
-    return total
+def _budget_public(budget):
+    return {k: v for k, v in budget.items() if not k.startswith("_")}
 
 
-def _reserve_bytes(amount):
+def _write_cost(path, raw):
+    """Check both dimensions before writing, update them only after success."""
     budget = _BUDGET.get()
-    if budget is not None and amount > 0:
-        if budget["runtime_bytes"] + amount > budget["limit_bytes"]:
-            raise ShadowCapacityError(budget)
-        budget["runtime_bytes"] += amount
+    if budget is None:
+        return None
+    if len(raw) > MAX_FILE_BYTES:
+        raise ShadowCapacityError({**budget, "capacity_constraint": "file_limit"})
+    previous = path.read_bytes() if path.exists() else None
+    relative = path.relative_to(budget["_runtime"]).as_posix()
+    persisted = storage_cost(relative, raw, budget["_retained_inline"])
+    old_cost = storage_cost(relative, previous, budget["_retained_inline"]) if previous is not None else 0
+    raw_delta = len(raw) - (len(previous) if previous is not None else 0)
+    # A smaller replacement never grants space for extra immutable captures in
+    # this run; the estimate remains conservative until the next full scan.
+    persisted_delta = max(0, persisted - old_cost)
+    if budget["estimated_persisted_bytes"] + persisted_delta > budget["limit_bytes"]:
+        raise ShadowCapacityError({**budget, "capacity_constraint": "estimated_persisted_limit"})
+    if budget["logical_bytes"] + raw_delta > budget["logical_capture_limit_bytes"]:
+        raise ShadowCapacityError({**budget, "capacity_constraint": "logical_limit"})
+    return raw_delta, persisted_delta
+
+
+def _record_write(cost):
+    if cost is not None:
+        budget = _BUDGET.get()
+        budget["runtime_bytes"] += cost[0]
+        budget["logical_bytes"] += cost[0]
+        budget["estimated_persisted_bytes"] += cost[1]
 
 
 def _append(root, collection, value):
     path = _path(root, collection, _digest(value) + ".json")
-    if not path.exists():
-        _reserve_bytes(len(_json_bytes(value)))
-    return _ledger_append(root, collection, value)
+    cost = _write_cost(path, _json_bytes(value)) if not path.exists() else None
+    object_id = _ledger_append(root, collection, value)
+    _record_write(cost)
+    return object_id
 
 
 def _snapshot(root, kind, content, sha):
@@ -78,7 +96,15 @@ def _writer(runtime):
             fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
             raise ValueError("shadow_writer_already_active") from exc
-        token = _BUDGET.set({"runtime_bytes": _runtime_bytes(runtime), "limit_bytes": STORAGE_LIMIT_BYTES})
+        estimated = estimate_runtime(runtime)
+        token = _BUDGET.set({"runtime_bytes": estimated["raw_bytes"],
+            "logical_bytes": estimated["logical_bytes"],
+            "estimated_persisted_bytes": estimated["persisted_bytes"],
+            "limit_bytes": STORAGE_LIMIT_BYTES, "logical_limit_bytes": MAX_LOGICAL_BYTES,
+            "file_limit_bytes": MAX_FILE_BYTES,
+            "logical_capture_limit_bytes": MAX_LOGICAL_BYTES - CAPACITY_REPORT_RESERVE_BYTES,
+            "capacity_measurement": "lossless_archive_conservative_persisted_and_original_logical_bytes",
+            "_runtime": runtime, "_retained_inline": frozenset(estimated["retained_inline"])})
         try:
             yield root
         finally:
@@ -243,8 +269,10 @@ def _capture(runtime, config, *, source_commit, state_commit=None, league="all",
         raise ValueError("invalid_state_commit")
     runtime = Path(runtime)
     with _writer(runtime) as root:
-        if _BUDGET.get()["runtime_bytes"] >= _BUDGET.get()["limit_bytes"]:
-            raise ShadowCapacityError(_BUDGET.get())
+        if _BUDGET.get()["estimated_persisted_bytes"] >= _BUDGET.get()["limit_bytes"]:
+            raise ShadowCapacityError({**_BUDGET.get(), "capacity_constraint": "estimated_persisted_limit"})
+        if _BUDGET.get()["logical_bytes"] >= _BUDGET.get()["logical_capture_limit_bytes"]:
+            raise ShadowCapacityError({**_BUDGET.get(), "capacity_constraint": "logical_limit"})
         started = _now(clock)
         protocol_id = _protocol(root, config, clock)
         index, index_sha = _read(runtime, "integration", "index.json")
@@ -366,7 +394,7 @@ def _capture(runtime, config, *, source_commit, state_commit=None, league="all",
         report["completed_at"] = _iso(_tick(clock, started))
         report["captured_forecasts"] = sum(c["status"] == "captured" for e in report["competitions"] for a in e["arms"] for c in a["forecasts"])
         report["captured_matches"] = len({(e["competition"], c["match_id"]) for e in report["competitions"] for a in e["arms"] for c in a["forecasts"] if c["status"] == "captured"})
-        report["storage_budget"] = {**_BUDGET.get(), "observation": "before_run_and_latest_report_writes"}
+        report["storage_budget"] = {**_budget_public(_BUDGET.get()), "observation": "before_run_and_latest_report_writes"}
         report["report_id"] = _append(root, "runs", report)
         captured_by_arm = {arm: sum(c["status"] == "captured" for e in report["competitions"] for a in e["arms"] if a["arm"] == arm for c in a["forecasts"]) for arm, _ in ARMS}
         primary_pairs = sum(len(set(c["match_id"] for a in e["arms"] if a["arm"] == "baseline180" for c in a["forecasts"] if c["status"] == "captured") &
@@ -505,9 +533,11 @@ def _saved_forecast_valid(root, forecast, now):
 def _latest(root, filename, value):
     from .cli import atomic_json
     path = _path(root, "reports", filename)
-    previous = path.stat().st_size if path.exists() else 0
-    _reserve_bytes(max(0, len(_json_bytes(value)) - previous))
+    # atomic_json preserves insertion order rather than sorting keys.
+    raw = (json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + "\n").encode()
+    cost = _write_cost(path, raw)
     atomic_json(path, value)
+    _record_write(cost)
 
 
 def _score(runtime, *, clock=None):
@@ -589,7 +619,7 @@ def _score(runtime, *, clock=None):
                 sum(r["candidate_minus_baseline"][metric] for r in scored) / len(scored) if scored else None
                 for metric in ("brier_1x2", "log_loss_1x2", "over_2_5_brier")},
                 "inferential_status": "descriptive_only_no_promotion_or_significance_claim"})
-        report["storage_budget"] = {**_BUDGET.get(), "observation": "before_score_run_and_latest_report_writes"}
+        report["storage_budget"] = {**_budget_public(_BUDGET.get()), "observation": "before_score_run_and_latest_report_writes"}
         report["report_id"] = _append(root, "score_runs", report)
         _latest(root, "score-latest.json", {k: v for k, v in report.items() if k != "matches"})
         return int(bool(report["errors"])), report
@@ -598,7 +628,8 @@ def _score(runtime, *, clock=None):
 def _capacity_report(runtime, operation, error, started, clock, source_commit=None):
     """Bounded diagnostics may use 256KiB of the reserved production headroom."""
     from .cli import atomic_json
-    root = _path(Path(runtime), "shadow_models")
+    runtime = Path(runtime)
+    root = _path(runtime, "shadow_models")
     completed = _iso(_now(clock))
     value = {"version": VERSION, "status": "capacity_deferred", "operation": operation,
         "run_started_at": _iso(started), "started_at": _iso(started), "generated_at": completed,
@@ -609,14 +640,32 @@ def _capacity_report(runtime, operation, error, started, clock, source_commit=No
         "production_models_changed": False, "accuracy_improvement_verified": False}
     if operation == "score":
         value["scored_at"] = completed
-    # A current bounded report is preferable to a stale successful latest.json.
-    # Do not grow an unbounded failure history after the small report reserve.
-    if error.budget["runtime_bytes"] + 2 * len(_json_bytes(value)) < STORAGE_LIMIT_BYTES + CAPACITY_REPORT_RESERVE_BYTES:
+    latest_path = _path(root, "reports", "latest.json" if operation == "capture" else "score-latest.json")
+    previous = latest_path.read_bytes() if latest_path.exists() else None
+    previous_cost = storage_cost(latest_path.relative_to(runtime).as_posix(), previous) if previous is not None else 0
+    value.update(immutable_event_saved=True, diagnostic_evidence="immutable_capacity_event_and_current_latest")
+    event_raw = _json_bytes(value)
+    event_path = _path(root, "capacity_events", _digest(value) + ".json")
+    event_cost = 0 if event_path.exists() else storage_cost(event_path.relative_to(runtime).as_posix(), event_raw)
+    event_raw_size = 0 if event_path.exists() else len(event_raw)
+    candidate = {**value, "capacity_event_id": _digest(value)}
+    latest_raw = (json.dumps(candidate, ensure_ascii=False, indent=2, allow_nan=False) + "\n").encode()
+    latest_cost = storage_cost(latest_path.relative_to(runtime).as_posix(), latest_raw)
+    persisted = error.budget["estimated_persisted_bytes"]
+    logical = error.budget["logical_bytes"]
+    # Only bounded diagnostics may use the small reserved headroom. Capacity is
+    # measured in the same archive units as normal objects, not raw/gzip mixed.
+    if (persisted + event_cost + max(0, latest_cost - previous_cost) < STORAGE_LIMIT_BYTES + CAPACITY_REPORT_RESERVE_BYTES
+            and logical + event_raw_size + len(latest_raw) - (len(previous) if previous is not None else 0) <= MAX_LOGICAL_BYTES):
         value["capacity_event_id"] = _ledger_append(root, "capacity_events", value)
     else:
         value["capacity_event_id"] = None
         value["immutable_event_saved"] = False
-    atomic_json(_path(root, "reports", "latest.json" if operation == "capture" else "score-latest.json"), value)
+        value["diagnostic_evidence"] = "bounded_current_latest_only"
+    raw = (json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + "\n").encode()
+    if logical + len(raw) - (len(previous) if previous is not None else 0) > MAX_LOGICAL_BYTES:
+        raise ValueError("shadow_capacity_diagnostic_exceeds_logical_limit")
+    atomic_json(latest_path, value)
     return 1, value
 
 
