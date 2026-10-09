@@ -89,7 +89,10 @@ class CapacityBudgetTest(unittest.TestCase):
             result=subprocess.run([sys.executable,str(Path(__file__).parents[1]/'scripts/s2_capacity_budget.py'),
                  '--before',str(before),'--after',str(after),'--opportunities','185'],capture_output=True,text=True)
             self.assertEqual(result.returncode,0,result.stderr)
-            self.assertFalse(json.loads(result.stdout)['mutates_state'])
+            output=json.loads(result.stdout)
+            self.assertFalse(output['mutates_state'])
+            self.assertEqual(output['limits'], {'hard_physical_bytes': 1024**3,
+                'hard_logical_bytes': 4*1024**3, 'conservative_writer_bytes': 800*1024**2})
             self.assertEqual(original,{p.name:p.read_bytes() for p in root.iterdir()})
 
 

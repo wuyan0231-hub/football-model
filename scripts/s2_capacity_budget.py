@@ -10,10 +10,11 @@ import json
 import math
 from pathlib import Path
 import re
+import sys
 
-HARD_PHYSICAL = 500 * 1024 * 1024
-HARD_LOGICAL = 2 * 1024 * 1024 * 1024
-WRITER_LIMIT = 400 * 1024 * 1024
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from football_model.storage_policy import (MAX_PHYSICAL_BYTES as HARD_PHYSICAL,
+    MAX_LOGICAL_BYTES as HARD_LOGICAL, SHADOW_WRITE_LIMIT_BYTES as WRITER_LIMIT)
 SHA = re.compile('[0-9a-f]{64}')
 
 
