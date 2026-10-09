@@ -3,8 +3,10 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from scripts.select_release_league import main, select_league
+from football_model.run_summary import LEAGUES, main as summary_main
 
 
 class ReleaseLeagueTests(unittest.TestCase):
@@ -15,6 +17,17 @@ class ReleaseLeagueTests(unittest.TestCase):
 
     def test_new_championship_is_the_only_first_training_target(self):
         self.assertEqual(select_league(self.before, self.current), "championship")
+
+    def test_summary_registry_accepts_every_real_configured_competition(self):
+        self.assertEqual(LEAGUES, {c['key'] for c in self.current['competitions']})
+
+    def test_release_training_target_can_initialize_real_workflow_context(self):
+        league = select_league(self.before, self.current)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'context.json'
+            with patch.dict('os.environ', {'GITHUB_SHA': 'a' * 40, 'MODE': 'train', 'LEAGUE': league}, clear=True):
+                self.assertEqual(summary_main(['begin', '--context', str(path)]), 0)
+            self.assertEqual(json.loads(path.read_text())['league'], 'championship')
 
     def test_later_releases_keep_existing_unl_check(self):
         self.assertEqual(select_league(self.current, self.current), "unl")
