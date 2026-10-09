@@ -82,7 +82,7 @@ class BudgetClient(FakeClient):
 class PipelineTests(unittest.TestCase):
     def test_added_domestic_league_run_keeps_existing_models_independent(self):
         production = json.loads((Path(__file__).parents[1] / "config.json").read_text())
-        for key in ("segunda", "argentina_a"):
+        for key in ("segunda", "argentina_a", "championship"):
             with self.subTest(league=key), tempfile.TemporaryDirectory() as tmp:
                 competition = next(c for c in production["competitions"] if c["key"] == key)
                 config = copy.deepcopy(BASE_CONFIG)
@@ -124,7 +124,7 @@ class PipelineTests(unittest.TestCase):
                                         now=NOW, clock=lambda: NOW, client=FakeClient())
             self.assertEqual(code, 0, report)
             self.assertEqual(report["requested_competitions"], keys)
-            for key in ("segunda", "argentina_a"):
+            for key in ("segunda", "argentina_a", "championship"):
                 self.assertEqual([call.args[1]["key"] for call in process.call_args_list].count(key), 1)
 
     def test_actual_fit_and_unchanged_data_reuses_same_parameters(self):
