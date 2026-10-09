@@ -2,7 +2,7 @@ name: 足球模型：数据检查与自动训练
 
 # This file configures a workflow; it does not deploy or enable it by itself.
 on:
-  # Recheck a venue-adapter release immediately; the daily all-league run stays unchanged.
+  # Train a newly added league, otherwise recheck the venue adapter on release.
   push:
     branches: [main]
     paths:
@@ -35,11 +35,11 @@ on:
         default: audit
         options: [audit, train]
       league:
-        description: 选择单个赛事；ucl 仅审计；unl 欧国联；liga_mx 墨西超；segunda 西乙；argentina_a 阿甲；all 批量运行
+        description: 选择单个赛事；championship 英冠；ucl 仅审计；unl 欧国联；liga_mx 墨西超；segunda 西乙；argentina_a 阿甲；all 批量运行
         type: choice
         required: true
         default: epl
-        options: [epl, laliga, bundesliga, serie_a, ligue_1, bundesliga_2, ligue_2, ucl, allsvenskan, eredivisie, primeira, brazil_a, j1, k1, mls, unl, liga_mx, segunda, argentina_a, all]
+        options: [epl, championship, laliga, bundesliga, serie_a, ligue_1, bundesliga_2, ligue_2, ucl, allsvenskan, eredivisie, primeira, brazil_a, j1, k1, mls, unl, liga_mx, segunda, argentina_a, all]
   schedule:
     # UTC 01:17 = 北京时间 09:17。GitHub 可能延迟执行。
     - cron: '17 1 * * *'
@@ -73,6 +73,15 @@ jobs:
           fetch-depth: 1
           persist-credentials: true
 
+      - name: 选择新联赛首训或场地发布验证
+        if: ${{ github.event_name == 'push' }}
+        env:
+          RELEASE_BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$RELEASE_BEFORE_SHA"
+          git show "$RELEASE_BEFORE_SHA:config.json" > "$RUNNER_TEMP/release-before-config.json"
+          python scripts/select_release_league.py --before-config "$RUNNER_TEMP/release-before-config.json" --config config.json --github-env "$GITHUB_ENV"
+
       - name: 准备 Python
         uses: actions/setup-python@v7
         with:
@@ -83,7 +92,7 @@ jobs:
       - name: 安装依赖
         run: python -m pip install -r requirements.txt
 
-      - name: 检查场地适配发布
+      - name: 检查模型接入发布
         if: ${{ github.event_name == 'push' }}
         run: python -m unittest discover -s tests -v
 
