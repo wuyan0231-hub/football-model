@@ -26,6 +26,7 @@ on:
       - 'football_model/shadow_models.py'
       - 'scripts/cloud_state.py'
       - 'config.json'
+      - '.github/training-requests/*.json'
   workflow_dispatch:
     inputs:
       mode:
@@ -80,7 +81,8 @@ jobs:
         run: |
           git fetch --no-tags --depth=1 origin "$RELEASE_BEFORE_SHA"
           git show "$RELEASE_BEFORE_SHA:config.json" > "$RUNNER_TEMP/release-before-config.json"
-          python scripts/select_release_league.py --before-config "$RUNNER_TEMP/release-before-config.json" --config config.json --github-env "$GITHUB_ENV"
+          git diff --diff-filter=A --name-only "$RELEASE_BEFORE_SHA" HEAD -- '.github/training-requests/*.json' > "$RUNNER_TEMP/release-training-requests.txt"
+          python scripts/select_release_league.py --before-config "$RUNNER_TEMP/release-before-config.json" --config config.json --github-env "$GITHUB_ENV" --requests-list "$RUNNER_TEMP/release-training-requests.txt"
 
       - name: 准备 Python
         uses: actions/setup-python@v7

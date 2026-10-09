@@ -15,7 +15,7 @@ from pathlib import Path
 import re
 
 VERSION = "layered-workflow-summary-v4"
-LEAGUES = frozenset("epl laliga bundesliga serie_a ligue_1 bundesliga_2 ligue_2 ucl allsvenskan eredivisie primeira brazil_a j1 k1 mls unl liga_mx segunda argentina_a".split())
+LEAGUES = frozenset("epl championship laliga bundesliga serie_a ligue_1 bundesliga_2 ligue_2 ucl allsvenskan eredivisie primeira brazil_a j1 k1 mls unl liga_mx segunda argentina_a".split())
 OUTCOMES = frozenset(("success", "failure", "cancelled", "skipped", "unknown"))
 STAGES = ("restore", "model", "replay", "prospective", "result_sync", "quotes", "fundamentals", "shadow_models", "total_shrink_shadow", "check", "persist")
 COVERAGE_STATES = frozenset(("prospective", "rejected", "unsupported", "capture_error", "no_current_prediction_file", "no_upcoming_matches"))
