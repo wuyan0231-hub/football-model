@@ -335,6 +335,21 @@ class TotalShrinkShadowTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "exceeds_shared_limits"):
                 ts._capacity(self.runtime, "score", error, self.clock)
 
+    def test_above_shadow_and_reserve_keeps_bounded_failure_under_hard_transport_limit(self):
+        actual = ts.sm.estimate_runtime(self.runtime)
+        actual["persisted_bytes"] = ts.sm.STORAGE_LIMIT_BYTES + ts.sm.CAPACITY_REPORT_RESERVE_BYTES + 1
+        stale = ts.sm.ShadowCapacityError({"estimated_persisted_bytes": 0, "logical_bytes": 0})
+        with patch.object(ts.sm, "estimate_runtime", return_value=actual):
+            code, report = ts._capacity(self.runtime, "capture", stale, self.clock)
+        self.assertEqual(code, 1)
+        self.assertEqual(report["status"], "capacity_deferred")
+        self.assertFalse(report["immutable_event_saved"])
+        self.assertEqual(json.loads((self.root / "reports/latest.json").read_text()), report)
+        actual["persisted_bytes"] = ts.sm.MAX_PHYSICAL_BYTES
+        with patch.object(ts.sm, "estimate_runtime", return_value=actual):
+            with self.assertRaisesRegex(ValueError, "exceeds_shared_limits"):
+                ts._capacity(self.runtime, "capture", stale, self.clock)
+
     def test_capacity_diagnostics_remeasure_stale_budget_under_writer_lock(self):
         self.capture()
         actual = ts.sm.estimate_runtime(self.runtime)

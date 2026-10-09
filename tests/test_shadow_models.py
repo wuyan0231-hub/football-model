@@ -303,6 +303,19 @@ class ShadowModelTests(unittest.TestCase):
         self.assertEqual(len(_objects(self.root, 'forecasts')), 0)
         self.assertIsNotNone(report['capacity_event_id'])
 
+    def test_capacity_diagnostic_remeasures_under_writer_lock(self):
+        from football_model import shadow_models as sm
+        actual = sm.estimate_runtime(self.runtime)
+        stale = sm.ShadowCapacityError({'estimated_persisted_bytes': 0, 'logical_bytes': 0})
+        with patch.object(sm, 'estimate_runtime', return_value=actual) as measured:
+            code, report = sm._capacity_report(self.runtime, 'capture', stale, self.clock(), self.clock)
+        measured.assert_called_once()
+        self.assertEqual(code, 1)
+        self.assertEqual(report['estimated_persisted_bytes'], actual['persisted_bytes'])
+        with sm._writer(self.runtime):
+            with self.assertRaisesRegex(ValueError, 'already_active'):
+                sm._capacity_report(self.runtime, 'capture', stale, self.clock(), self.clock)
+
     def test_incremental_capacity_blocks_crossing_and_duplicate_objects_are_free(self):
         from football_model.shadow_models import _writer, _append as guarded_append, ShadowCapacityError
         from football_model.state_storage import estimate_runtime, storage_cost

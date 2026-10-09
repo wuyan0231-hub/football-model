@@ -466,6 +466,8 @@ def match_packet(runtime, config, league, match_id, as_of=None, state_commit=Non
     # The existing original function checks IDs, unknown teams, connectedness,
     # score axes, probability direction and truncation; exact reproduction also
     # binds all saved metadata and tail accounting to that implementation.
+    from .f5c_access import comparison
+    f5c_comparison = comparison(runtime, league, match_id, row=row, now=now)
     return {
         "schema_version": 1, "packet_type": "saved_exploratory_forecast_for_framework",
         "created_at": iso(datetime.now(UTC)), "analysis_as_of": iso(now),
@@ -485,11 +487,12 @@ def match_packet(runtime, config, league, match_id, as_of=None, state_commit=Non
                        **venue_registry_provenance},
         "latest_league_attempt": latest,
         "prediction": prediction, "validation": validation,
+        "f5c_comparison": f5c_comparison,
         "external_checks": {"current_fixture_status_and_kickoff": "pending", "actual_venue_and_neutral_status": "pending",
                             "team_identity_against_current_schedule": "pending", "lineups_injuries_news": "pending",
                             "current_odds_and_settlement_contract": "pending"},
         "unquantified_factors": ["球员与伤停/预计及实际阵容", "射门事件xG", "战术变化", "旅行与赛程特征", "天气与场地变化", "参数不确定性"],
-        "market_mapping": {"status": "not_executed", "instruction": "以框架§22按真实合约映射五态及EV；本包未读取赔率、不计算盘口EV。预测λ不是射门xG。"},
+        "market_mapping": {"status": "not_executed", "instruction": "以框架§8按真实合约映射五态及EV；本包未读取赔率、不计算盘口EV。预测λ不是射门xG。"},
         "usage": "仅为已读取并复算的探索性常规时间比分基线。尚须外部核实本场资料；不能称已纳入全部信息、已验证优势或已自动推荐。90分钟含补时，不含加时与点球大战。",
     }
 
@@ -507,6 +510,8 @@ def main(argv=None):
             target.add_argument("--as-of")
             target.add_argument("--output")
             target.add_argument("--state-commit")
+            target.add_argument("--html", help="Export visible F5-C comparison together with --zip")
+            target.add_argument("--zip", help="Export exact F5-C originals together with --html")
     args = parser.parse_args(argv)
     try:
         config = _read(Path(args.config))
@@ -514,10 +519,19 @@ def main(argv=None):
             result = build_index(args.runtime, config)
             print(f"接入索引已保存：{len(result['competitions'])}个赛事；不代表质量验收。")
         else:
+            if bool(args.html) != bool(args.zip):
+                raise IntegrationError("--html 与 --zip 必须同时提供。")
+            if args.html:
+                from .f5c_access import _new_output
+                _new_output(args.html, args.runtime)
+                _new_output(args.zip, args.runtime)
             result = match_packet(args.runtime, config, args.league, args.match_id, args.as_of, args.state_commit)
             call_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
             output = Path(args.output) if args.output else Path(args.runtime) / "match_calls" / f"{call_id}-{args.league}-{args.match_id}.json"
             atomic_json(output, result)
+            if args.html:
+                from .f5c_access import export_report
+                export_report(result, args.runtime, args.html, args.zip)
             print(f"单场分析包已保存：{output}；原预测复算一致，赛程和场地待外部核验。")
         return 0
     except (ValueError, KeyError, TypeError, OSError, RuntimeError) as exc:

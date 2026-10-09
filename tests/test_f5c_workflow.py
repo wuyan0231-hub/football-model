@@ -13,7 +13,9 @@ class F5CWorkflowTests(unittest.TestCase):
     def test_maintenance_release_only_reaches_shadow_route(self):
         daily_push = self.daily.split('  workflow_dispatch:', 1)[0]
         shadow_push = self.shadow.split('  workflow_dispatch:', 1)[0]
-        for name in ('football_model/state_storage.py', 'football_model/run_summary.py'):
+        for name in ('football_model/state_storage.py', 'football_model/run_summary.py',
+                     'football_model/storage_policy.py', 'football_model/f5c_access.py',
+                     'football_model/integration.py', 'football_model/shadow_models.py', 'scripts/cloud_state.py'):
             self.assertNotIn("'" + name + "'", daily_push)
             self.assertIn("'" + name + "'", shadow_push)
         for name in ('football_model/total_shrink_shadow.py', '.github/workflows/football-total-shrink.yml'):

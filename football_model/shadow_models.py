@@ -27,12 +27,14 @@ from .prospective import (_append as _ledger_append, _digest, _identity, _json_b
                           _objects, _path, _read, _same_identity)
 from .settlement import matrix_array
 from .state_storage import MAX_FILE_BYTES, MAX_LOGICAL_BYTES, estimate_runtime, storage_cost
+from .storage_policy import (MAX_PHYSICAL_BYTES, SHADOW_WRITE_LIMIT_BYTES,
+                             DIAGNOSTIC_RESERVE_BYTES)
 
 VERSION = "s2-shadow-models-1.0"
 TIME = "observed_wall_clock_v1"
 ARMS = (("baseline180", 180), ("candidate90", 90), ("candidate365", 365))
-STORAGE_LIMIT_BYTES = 400 * 1024 * 1024
-CAPACITY_REPORT_RESERVE_BYTES = 256 * 1024
+STORAGE_LIMIT_BYTES = SHADOW_WRITE_LIMIT_BYTES
+CAPACITY_REPORT_RESERVE_BYTES = DIAGNOSTIC_RESERVE_BYTES
 NUMERIC_REPLAY_MATRIX_ABS_TOL = 1e-15
 NUMERIC_REPLAY_PROBABILITY_ABS_TOL = 1e-15
 _BUDGET = ContextVar("shadow_storage_budget", default=None)
@@ -679,7 +681,7 @@ def _score(runtime, *, clock=None):
         return int(bool(report["errors"])), report
 
 
-def _capacity_report(runtime, operation, error, started, clock, source_commit=None):
+def _capacity_report_locked(runtime, operation, error, started, clock, source_commit=None):
     """Bounded diagnostics may use 256KiB of the reserved production headroom."""
     from .cli import atomic_json
     runtime = Path(runtime)
@@ -712,18 +714,31 @@ def _capacity_report(runtime, operation, error, started, clock, source_commit=No
     logical = error.budget["logical_bytes"]
     # Only bounded diagnostics may use the small reserved headroom. Capacity is
     # measured in the same archive units as normal objects, not raw/gzip mixed.
-    if (persisted + event_cost + max(0, latest_cost - previous_cost) < STORAGE_LIMIT_BYTES + CAPACITY_REPORT_RESERVE_BYTES
+    if (persisted + event_cost + max(0, latest_cost - previous_cost) < min(MAX_PHYSICAL_BYTES, STORAGE_LIMIT_BYTES + CAPACITY_REPORT_RESERVE_BYTES)
             and logical + event_raw_size + len(latest_raw) - (len(previous) if previous is not None else 0) <= MAX_LOGICAL_BYTES):
         value["capacity_event_id"] = _ledger_append(root, "capacity_events", value)
+        persisted += event_cost
+        logical += event_raw_size
     else:
         value["capacity_event_id"] = None
         value["immutable_event_saved"] = False
         value["diagnostic_evidence"] = "bounded_current_latest_only"
     raw = (json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + "\n").encode()
+    if len(raw) > CAPACITY_REPORT_RESERVE_BYTES:
+        raise ValueError("shadow_capacity_diagnostic_too_large")
     if logical + len(raw) - (len(previous) if previous is not None else 0) > MAX_LOGICAL_BYTES:
         raise ValueError("shadow_capacity_diagnostic_exceeds_logical_limit")
+    if persisted + max(0, storage_cost(latest_path.relative_to(runtime).as_posix(), raw) - previous_cost) >= MAX_PHYSICAL_BYTES:
+        raise ValueError("shadow_capacity_diagnostic_exceeds_physical_limit")
     atomic_json(latest_path, value)
     return 1, value
+
+
+def _capacity_report(runtime, operation, error, started, clock, source_commit=None):
+    with _writer(Path(runtime)):
+        refreshed = ShadowCapacityError({**_budget_public(_BUDGET.get()),
+            "capacity_constraint": error.budget.get("capacity_constraint")})
+        return _capacity_report_locked(runtime, operation, refreshed, started, clock, source_commit)
 
 
 def capture(runtime, config, *, source_commit, state_commit=None, league="all", clock=None):

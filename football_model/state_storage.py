@@ -13,9 +13,9 @@ from pathlib import Path, PurePosixPath
 import re
 import shutil
 import zlib
+from .storage_policy import (MAX_PHYSICAL_BYTES, MAX_LOGICAL_BYTES,
+                             SUPPORTED_MANIFEST_LIMITS)
 
-MAX_PHYSICAL_BYTES = 500 * 1024 * 1024
-MAX_LOGICAL_BYTES = 2 * 1024 * 1024 * 1024
 MAX_FILE_BYTES = 60 * 1024 * 1024
 METADATA_RESERVE_BYTES = 256 * 1024
 MANIFEST_NAME = "state_storage.json"
@@ -23,6 +23,12 @@ ARCHIVE_DIR = "state_archives"
 SCHEMA_VERSION = 1
 _SUFFIXES = {".json", ".jsonl", ".csv", ".tsv", ".md", ".txt", ".npz", ".npy"}
 _SHA = re.compile(r"[0-9a-f]{64}")
+
+
+def _supported_limits(document):
+    logical, physical = document.get("logical_limit_bytes"), document.get("physical_limit_bytes")
+    return (type(logical) is int and type(physical) is int
+            and (logical, physical) in SUPPORTED_MANIFEST_LIMITS)
 
 
 class StorageError(RuntimeError):
@@ -290,7 +296,7 @@ def validate_storage_tree(tree: Path, *, max_file_bytes=MAX_FILE_BYTES,
     document = _manifest_json(manifest_path.read_bytes())
     if (not isinstance(document, dict) or set(document) != {"schema_version", "codec", "logical_limit_bytes", "physical_limit_bytes", "entries"}
         or type(document.get("schema_version")) is not int or document.get("schema_version") != SCHEMA_VERSION or document.get("codec") != "gzip-single-member"
-        or document.get("logical_limit_bytes") != MAX_LOGICAL_BYTES or document.get("physical_limit_bytes") != MAX_PHYSICAL_BYTES
+        or not _supported_limits(document)
         or not isinstance(document.get("entries"), list)
         or (archive.exists() and not archive.is_dir())
         or (document.get("entries") and not archive.is_dir())):
@@ -369,7 +375,7 @@ def read_archive_bytes(transport_dir: Path, logical_relative_path: str) -> bytes
     document = _manifest_json(manifest_path.read_bytes())
     if (not isinstance(document, dict) or set(document) != {"schema_version", "codec", "logical_limit_bytes", "physical_limit_bytes", "entries"}
         or type(document.get("schema_version")) is not int or document.get("schema_version") != SCHEMA_VERSION or document.get("codec") != "gzip-single-member"
-        or document.get("logical_limit_bytes") != MAX_LOGICAL_BYTES or document.get("physical_limit_bytes") != MAX_PHYSICAL_BYTES
+        or not _supported_limits(document)
         or not isinstance(document.get("entries"), list)):
         raise StorageError("状态压缩清单无效，已停止。")
     selected = None
