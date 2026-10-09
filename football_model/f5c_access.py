@@ -20,7 +20,7 @@ from .state_storage import MAX_FILE_BYTES, MAX_LOGICAL_BYTES, _relative, read_ar
 INDEX = "integration/f5c-index.json"
 COLLECTIONS = frozenset({"forecasts", "forecast_payloads", "protocols", "inputs", "sources",
     "production_parents", "production_sources", "selection_inputs", "selection_results",
-    "results", "scores"})
+    "results", "scores", "score_runs"})
 
 
 def _json(raw):
@@ -44,7 +44,13 @@ class Originals:
                 raise ValueError("original_file_limit")
             raw = path.read_bytes()
         elif self.state_tree:
-            raw = read_archive_bytes(self.state_tree, relative)
+            inline = ts._path(self.state_tree, "runtime", *relative.split("/"))
+            if inline.is_file():
+                if inline.stat().st_size > MAX_FILE_BYTES:
+                    raise ValueError("original_file_limit")
+                raw = inline.read_bytes()
+            else:
+                raw = read_archive_bytes(self.state_tree, relative)
         else:
             raise FileNotFoundError(relative)
         self.read_bytes[relative] = raw
@@ -123,7 +129,7 @@ def _attempts(runtime):
             if not isinstance(value, dict):
                 raise ValueError("invalid_latest_summary")
             result[operation] = {key: value.get(key) for key in
-                ("status", "source_commit", "run_started_at", "generated_at", "reason",
+                ("status", "source_commit", "run_started_at", "started_at", "completed_at", "scored_at", "generated_at", "reason",
                  "report_id", "errors", "captured_forecasts", "n_scored_matches")}
             if result[operation]["status"] is None:
                 result[operation]["status"] = "completed_with_errors" if value.get("errors") else "completed"
@@ -176,10 +182,45 @@ def _metrics_equal(saved, expected):
 
 def _verified_score(originals, forecast, now):
     candidates = []
-    for sid in _inventory(originals, "scores"):
+    report_id = None
+    try:
+        latest = _json(originals.raw(ts.ROOT + "/reports/score-latest.json"))
+        if not isinstance(latest, dict):
+            raise ValueError("f5c_score_summary_invalid")
+        report_id = latest.get("report_id")
+    except FileNotFoundError:
+        try:
+            index = _json(originals.raw(INDEX))
+            if not isinstance(index, dict):
+                raise ValueError("f5c_index_invalid")
+            report_id = index.get("latest_attempts", {}).get("score", {}).get("report_id")
+        except FileNotFoundError:
+            pass
+    if report_id:
+        report = originals.object("score_runs", report_id)
+        if report.get("version") != ts.VERSION or not isinstance(report.get("matches"), list):
+            raise ValueError("f5c_score_run_invalid")
+        if _timestamp(report["scored_at"], "scored_at") > now:
+            return {"status": "pending", "reason": "score_report_after_analysis_cutoff"}
+        selected = [r for r in report["matches"] if r.get("forecast_id") == forecast["object_id"]]
+        if not selected:
+            primary = [r for r in report["matches"] if r.get("competition") == forecast["competition"]
+                       and r.get("match_id") == forecast["match_id"]]
+            if primary:
+                return {"status": "not_primary_evaluation_version", "score_run_id": report_id,
+                    "reason": "frozen_first_pair_policy_uses_other_saved_version", "primary_records": primary}
+        score_ids = [r["score_id"] for r in selected if r.get("status") == "scored"]
+    else:
+        selected = None
+        score_ids = _inventory(originals, "scores")
+    for sid in score_ids:
         score = originals.object("scores", sid)
         if score.get("forecast_id") != forecast["object_id"]:
+            if report_id:
+                raise ValueError("f5c_score_run_forecast_mismatch")
             continue
+        if selected is not None and not any({k: v for k, v in r.items() if k != "score_id"} == score for r in selected):
+            raise ValueError("f5c_score_run_record_mismatch")
         result = originals.object("results", score["result_id"])
         if (score.get("status") != "scored" or score["input_id"] != forecast["input_id"]
                 or score["protocol_id"] != forecast["protocol_id"]
@@ -200,9 +241,10 @@ def _verified_score(originals, forecast, now):
             raise ValueError("f5c_score_difference_mismatch")
         candidates.append((result["content"]["observed_at"], result["content"]["captured_at"], sid, score))
     if not candidates:
-        return {"status": "pending", "reason": "no_saved_verified_score"}
+        return {"status": "pending", "reason": "no_saved_verified_score", "score_run_id": report_id,
+                "observed_records": selected}
     *_, sid, score = max(candidates)
-    return {**score, "score_id": sid}
+    return {**score, "score_id": sid, "score_run_id": report_id}
 
 
 def comparison(runtime, league, match_id, *, row=None, now=None, forecast_id=None, state_tree=None):
@@ -217,7 +259,8 @@ def comparison(runtime, league, match_id, *, row=None, now=None, forecast_id=Non
         ids = [forecast_id] if forecast_id else _inventory(originals, "forecasts")
         if not forecast_id and (index := Path(runtime) / INDEX).exists():
             saved_index = _json(ts._path(Path(runtime), *INDEX.split("/")).read_bytes())
-            if saved_index.get("schema_version") != 1 or not isinstance(saved_index.get("fixtures"), dict):
+            if (not isinstance(saved_index, dict) or saved_index.get("schema_version") != 1
+                    or not isinstance(saved_index.get("fixtures"), dict)):
                 raise ValueError("f5c_index_invalid")
             # Index is a hint, never an authority: include newer originals saved
             # after its generation and verify every referenced receipt below.
@@ -239,17 +282,24 @@ def comparison(runtime, league, match_id, *, row=None, now=None, forecast_id=Non
             matches.append((value["captured_at"], fid, value))
         for _, fid, value in sorted(matches):
             try:
+                parent = originals.object("production_parents", value["production_parent_id"])
+                native_row = parent["forecast"]["forecast"]
+                if row is not None and native_row != row:
+                    raise ValueError("different_production_parent_row")
                 with tempfile.TemporaryDirectory(prefix="f5c-read-") as temporary:
                     root = materialize(originals, fid, temporary)
                     forecast = {**value, "object_id": fid}
                     ts._saved_forecast_valid(root, forecast, now)
-                    parent = ts._load_object(root, "production_parents", value["production_parent_id"])
-                    native_row = parent["forecast"]["forecast"]
-                    if row is not None and native_row != row:
-                        raise ValueError("different_production_parent_row")
                     score = _verified_score(originals, forecast, now)
                     if score.get("score_id"):
                         materialize(originals, fid, temporary, score["score_id"])
+                    # Persist the lookup originals too: latest summary/index
+                    # and immutable score-run are part of score provenance.
+                    for name, raw in originals.read_bytes.items():
+                        if name in {INDEX, ts.ROOT + "/reports/score-latest.json"} or name.startswith(ts.ROOT + "/score_runs/"):
+                            target = ts._path(Path(temporary), *name.split("/"))
+                            target.parent.mkdir(parents=True, exist_ok=True)
+                            target.write_bytes(raw)
                     evidence_names = sorted(p.relative_to(Path(temporary)).as_posix()
                         for p in Path(temporary).rglob("*.json"))
                 result.update(status="verified_same_parent" if row is not None else "verified_saved_original_audit",

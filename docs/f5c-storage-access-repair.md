@@ -16,6 +16,8 @@ schema-1清单允许已发布的旧500 MiB／2 GiB与新1 GiB／4 GiB两组声�
 
 当前单场命令：
 
+已有评分从本轮不可变`score_runs`报告定位本场`score_id`，校验报告引用与评分原件，再读取对应独立结果；按需读取不要求下载其他比赛的评分blob。完整日更的加载机制不因这项单场优化改变。
+
 ```sh
 python -m football_model.integration match --runtime runtime --config config.json \
   --league brazil_a --match-id MATCH_ID --state-commit FULL_STATE_SHA \

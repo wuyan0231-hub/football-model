@@ -59,6 +59,19 @@ class F5CAccessTests(unittest.TestCase):
         self.assertEqual(packet["status"], "rejected", packet)
         self.assertIn("recorded_after_analysis_cutoff", str(packet))
 
+    def test_new_current_parent_does_not_relabel_the_frozen_primary_scoring_version(self):
+        self.fx.now += timedelta(minutes=1)
+        self.fx.publish([1001], fixture_helpers.NOW + timedelta(days=1), run_id="r2")
+        code, report = self.fx.capture()
+        self.assertEqual(code, 0, report)
+        code, report = ts.score(self.runtime, clock=self.fx.clock)
+        self.assertEqual(code, 0, report)
+        access.build_index(self.runtime)
+        packet = self.call(row=self.fx.rows[0])
+        self.assertEqual(packet["status"], "verified_same_parent", packet)
+        self.assertEqual(packet["score"]["status"], "not_primary_evaluation_version")
+        self.assertEqual(packet["score"]["primary_records"][0]["forecast_id"], self.forecast["object_id"])
+
     def test_missing_fixture_retains_capacity_failure_as_distinct_attempt(self):
         self.fx.write("total_shrink_shadow/reports/latest.json", {"status": "capacity_deferred", "reason": "space"})
         packet = access.comparison(self.runtime, "epl", 9999, now=self.fx.now)
@@ -73,6 +86,15 @@ class F5CAccessTests(unittest.TestCase):
         packet = self.call(row=self.fx.rows[0])
         self.assertEqual(packet["status"], "rejected", packet)
         self.assertIn("digest_mismatch", str(packet))
+
+    def test_non_object_index_or_score_summary_is_explicitly_rejected(self):
+        self.fx.write(access.INDEX, [])
+        packet = self.call(row=self.fx.rows[0])
+        self.assertEqual(packet["status"], "rejected", packet)
+        (self.runtime / access.INDEX).unlink()
+        self.fx.write('total_shrink_shadow/reports/score-latest.json', [])
+        packet = self.call(row=self.fx.rows[0])
+        self.assertEqual(packet["status"], "rejected", packet)
 
     def test_export_rejects_existing_runtime_and_symlink_outputs_before_writes(self):
         packet = self.call(row=self.fx.rows[0])
@@ -112,6 +134,12 @@ class F5CAccessTests(unittest.TestCase):
                 self.assertFalse(access._metrics_equal({"alpha_0": {"loss": value}}, expected))
 
     def test_old_transport_selectively_restores_closure_and_exports_exact_originals(self):
+        self.fx.now += timedelta(days=2)
+        self.fx.result(home=2, away=1)
+        code, report = ts.score(self.runtime, clock=self.fx.clock)
+        self.assertEqual(code, 0, report)
+        from football_model.prospective import _append
+        unrelated = _append(self.fx.root, "scores", {"forecast_id": "f" * 64, "unrelated": True})
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             tree = root / "tree"
@@ -121,6 +149,8 @@ class F5CAccessTests(unittest.TestCase):
             manifest = json.loads(manifest_path.read_text())
             manifest.update(logical_limit_bytes=2 * 1024**3, physical_limit_bytes=500 * 1024**2)
             manifest_path.write_text(json.dumps(manifest))
+            unrelated_entry = next(e for e in manifest["entries"] if e["path"].endswith('/scores/' + unrelated + '.json'))
+            (tree / state_storage.ARCHIVE_DIR / (unrelated_entry["blob_sha256"] + '.json.gz')).unlink()
             # Unrelated archive members need not be materialized or read.
             selected = self.forecast["object_id"]
             isolated = root / "isolated"
@@ -128,6 +158,7 @@ class F5CAccessTests(unittest.TestCase):
             packet = access.comparison(isolated, "epl", 1001, now=self.fx.now,
                                        forecast_id=selected, state_tree=tree)
             self.assertEqual(packet["status"], "verified_saved_original_audit", packet)
+            self.assertEqual(packet["score"]["status"], "scored")
             self.assertFalse(any(isolated.iterdir()))
             report, archive_path = root / "report.html", root / "report.zip"
             access.export_report(packet, isolated, report, archive_path, state_tree=tree)
