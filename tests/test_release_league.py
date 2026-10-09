@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.select_release_league import main, select_league
+from scripts.select_release_league import main, select_league, read_request
 from football_model.run_summary import LEAGUES, main as summary_main
 
 
@@ -31,6 +31,38 @@ class ReleaseLeagueTests(unittest.TestCase):
 
     def test_later_releases_keep_existing_unl_check(self):
         self.assertEqual(select_league(self.current, self.current), "unl")
+
+    def test_explicit_request_can_retry_an_already_configured_league(self):
+        request = {'schema_version': 1, 'mode': 'train', 'league': 'championship'}
+        self.assertEqual(select_league(self.current, self.current, request), 'championship')
+
+    def test_request_rejects_unknown_audit_or_conflicting_targets(self):
+        for league in ('unknown', 'ucl', 'championship\nMODE=audit'):
+            with self.assertRaises(ValueError):
+                select_league(self.current, self.current,
+                              {'schema_version': 1, 'mode': 'train', 'league': league})
+        with self.assertRaises(ValueError):
+            select_league(self.before, self.current,
+                          {'schema_version': 1, 'mode': 'train', 'league': 'epl'})
+        with self.assertRaises(ValueError):
+            select_league(self.current, self.current,
+                          {'schema_version': 1, 'mode': 'audit', 'league': 'championship'})
+
+    def test_request_file_is_read_from_the_exact_added_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            request = root / '.github/training-requests/championship-retry.json'
+            request.parent.mkdir(parents=True)
+            value = {'schema_version': 1, 'mode': 'train', 'league': 'championship'}
+            request.write_text(json.dumps(value))
+            listing = root / 'added.txt'
+            listing.write_text('.github/training-requests/championship-retry.json\n')
+            with patch('pathlib.Path.cwd', return_value=root):
+                self.assertEqual(read_request(listing), value)
+            for invalid in ('../private.json\n', '.github/training-requests/a.json\n.github/training-requests/b.json\n'):
+                listing.write_text(invalid)
+                with self.assertRaises(ValueError):
+                    read_request(listing)
 
     def test_existing_competition_edit_does_not_trigger_championship_training(self):
         edited = copy.deepcopy(self.current)
