@@ -121,8 +121,8 @@ class StateStorageTests(unittest.TestCase):
         self.assertEqual((self.root / "restored/models/epl.json").read_bytes(), b'{"model": "legacy"}\n')
 
     def test_physical_and_logical_limits_are_independent_and_finite(self):
-        self.assertEqual(storage.MAX_PHYSICAL_BYTES, 500 * 1024 * 1024)
-        self.assertEqual(storage.MAX_LOGICAL_BYTES, 2 * 1024 * 1024 * 1024)
+        self.assertEqual(storage.MAX_PHYSICAL_BYTES, 1024 * 1024 * 1024)
+        self.assertEqual(storage.MAX_LOGICAL_BYTES, 4 * 1024 * 1024 * 1024)
         self.write("quotes/raw/1/old.json", b'{"pad":"' + b"x" * 20000 + b'"}')
         self.pack()
         stats = storage.validate_storage_tree(self.tree, max_physical_bytes=2000, max_logical_bytes=30000)
@@ -132,6 +132,20 @@ class StateStorageTests(unittest.TestCase):
             storage.validate_storage_tree(self.tree, max_physical_bytes=100)
         with self.assertRaisesRegex(storage.StorageError, "逻辑"):
             storage.validate_storage_tree(self.tree, max_logical_bytes=1000)
+
+    def test_old_published_manifest_limits_restore_and_read_exact_original(self):
+        self.write("total_shrink_shadow/sources/" + "a" * 64 + ".json", b'{"legacy":true}\n')
+        self.pack()
+        self.mutate(lambda m: m.update(logical_limit_bytes=2 * 1024**3, physical_limit_bytes=500 * 1024**2))
+        storage.restore_runtime(self.tree, self.root / "restored")
+        name = "total_shrink_shadow/sources/" + "a" * 64 + ".json"
+        self.assertEqual((self.root / "restored" / name).read_bytes(), b'{"legacy":true}\n')
+        self.assertEqual(storage.read_archive_bytes(self.tree, name), b'{"legacy":true}\n')
+        self.mutate(lambda m: m.update(logical_limit_bytes=999999999999))
+        with self.assertRaises(storage.StorageError):
+            storage.validate_storage_tree(self.tree)
+        with self.assertRaises(storage.StorageError):
+            storage.read_archive_bytes(self.tree, name)
 
     def test_traversal_absolute_hidden_and_backslash_paths_rejected_before_write(self):
         for name in ("../outside.json", "/absolute.json", "quotes/raw/../bad.json", "quotes/raw/.hidden.json", "quotes\\raw\\bad.json"):

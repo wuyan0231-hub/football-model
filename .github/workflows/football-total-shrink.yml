@@ -12,6 +12,13 @@ on:
       - '.github/workflows/football-total-shrink.yml'
       - '.github/workflows/football.yml'
       - 'football_model/state_storage.py'
+      - 'football_model/storage_policy.py'
+      - 'football_model/f5c_access.py'
+      - 'football_model/integration.py'
+      - 'football_model/shadow_models.py'
+      - 'scripts/cloud_state.py'
+      - 'tests/test_f5c_access.py'
+      - 'docs/f5c-storage-access-repair.md'
       - 'tests/test_state_storage.py'
       - 'football_model/run_summary.py'
       - 'tests/test_f5c_run_summary.py'
@@ -89,6 +96,10 @@ jobs:
               '--source-commit', os.environ['GITHUB_SHA'], *state_args])
           score = subprocess.call([sys.executable, '-m', 'football_model.total_shrink_shadow', 'score',
               '--runtime', 'runtime', '--source-commit', os.environ['GITHUB_SHA']])
+          access = subprocess.call([sys.executable, '-m', 'football_model.f5c_access', 'index',
+              '--runtime', 'runtime', *state_args])
+          if access != 0:
+              raise SystemExit(access)
           raise SystemExit(0 if capture == 0 and score == 0 else 1)
           PYSHRINK
 

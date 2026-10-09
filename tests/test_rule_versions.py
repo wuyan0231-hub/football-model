@@ -1,8 +1,7 @@
-"""Keep current rule entry points aligned without rewriting revision history."""
+"""Keep the complete current framework and its entry points aligned."""
 from pathlib import Path
 import re
 import unittest
-
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -11,32 +10,32 @@ class RuleVersionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.framework = (ROOT / "docs/football-framework-v1.7.md").read_text(encoding="utf-8")
-        cls.images = (ROOT / "docs/odds-screenshot-reading-v1.2.md").read_text(encoding="utf-8")
-        cls.framework_revision = re.search(r"版本：v1\.7；修订批次：(\d+)", cls.framework).group(1)
-        cls.image_revision = re.search(r"^# .*v1\.2（修订批次(\d+)）", cls.images).group(1)
+        cls.revision = re.search(r"football-analysis-v1\.7-r(\d+)", cls.framework).group(1)
 
-    def test_current_entry_points_match_rule_headers(self):
-        framework_rev = self.framework_revision
-        image_rev = self.image_revision
-        self.assertIn(f"当前正文为v1.2修订批次{image_rev}", self.framework.split("## 零、")[0])
-        self.assertIn(f"当前配套：《足球盘口分析框架》v1.7 修订批次{framework_rev}", self.images.split("## 0.")[0])
+    def test_current_entry_points_match_rule_header_without_pinning_reading_spec(self):
+        for filename, separator in (("AGENTS.md", "## 每场必须实际执行"),
+                                    ("docs/model-access.md", "## 为什么"),
+                                    ("docs/model-integration.md", "## 先读接入"),
+                                    ("README.md", "## ")):
+            intro = (ROOT / filename).read_text(encoding="utf-8").split(separator)[0]
+            self.assertIn(f"v1.7 修订批次{self.revision}", intro)
+            self.assertIn("唯一现行《赔率截图读取规范》", intro)
+            self.assertNotRegex(intro, r"v1\.2.*修订批次[0-9]")
 
-        agents_intro = (ROOT / "AGENTS.md").read_text(encoding="utf-8").split("## 每场必须实际执行")[0]
-        access_intro = (ROOT / "docs/model-access.md").read_text(encoding="utf-8").split("## 为什么")[0]
-        for intro in (agents_intro, access_intro):
-            self.assertIn(f"v1.7 修订批次{framework_rev}", intro)
-            self.assertIn(f"v1.2 修订批次{image_rev}", intro)
+    def test_complete_body_has_all_execution_and_preservation_sections(self):
+        sections = re.findall(r"(?m)^## (\d+)\. ", self.framework)
+        self.assertEqual(sections, [str(i) for i in range(1, 19)])
+        for requirement in ("S00", "S11", "S13", "原始首输出", "四份台账", "prepared_not_active"):
+            self.assertIn(requirement, self.framework)
 
-    def test_publish_gate_and_example_use_current_versions(self):
-        publish_check = self.framework.split("### 21.4 ", 1)[1].split("### 21.5 ", 1)[0]
-        self.assertIn(f"v1.7批次{self.framework_revision}", publish_check)
-        self.assertIn(f"v1.2批次{self.image_revision}", publish_check)
-        invocation = self.framework.split("### 21.3 ", 1)[1].split("### 21.4 ", 1)[0]
-        self.assertIn(f"v1.7修订批次{self.framework_revision}执行", invocation)
-        self.assertIn(f"v1.2修订批次{self.image_revision}处理", invocation)
-        sample = self.framework.split("### 25.2 ", 1)[1].split("### 25.3 ", 1)[0]
-        self.assertIn(f'"framework": "v1.7-r{self.framework_revision}"', sample)
-        self.assertIn(f'"image_rules": "v1.2-r{self.image_revision}', sample)
+    def test_publish_gate_and_f5c_access_preserve_distinct_qualification(self):
+        gate = self.framework.split("### 10.1 ", 1)[1].split("### 10.2 ", 1)[0]
+        for key in ("G1", "G2", "G3", "G4", "G5"):
+            self.assertIn(key, gate)
+        f5c = self.framework.split("### 6.5 ", 1)[1].split("## 7. ", 1)[0]
+        for requirement in ("同一生产run", "α=0", "完整原预测行", "pending_state_commit_verification", "晚于截点"):
+            self.assertIn(requirement, f5c)
+        self.assertIn("整个协议周期的容量及持久恢复", self.framework)
 
 
 if __name__ == "__main__":

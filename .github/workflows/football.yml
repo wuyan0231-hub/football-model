@@ -15,7 +15,6 @@ on:
       - 'football_model/coverage_audit.py'
       - 'football_model/data.py'
       - 'football_model/cli.py'
-      - 'football_model/integration.py'
       - 'football_model/fundamentals.py'
       - 'football_model/collect_fundamentals.py'
       - 'football_model/prospective.py'
@@ -23,8 +22,6 @@ on:
       - 'football_model/settlement.py'
       - 'football_model/production_replay.py'
       - 'football_model/collect_quotes.py'
-      - 'football_model/shadow_models.py'
-      - 'scripts/cloud_state.py'
       - 'config.json'
       - '.github/training-requests/*.json'
   workflow_dispatch:
@@ -249,6 +246,10 @@ jobs:
               '--source-commit', os.environ['GITHUB_SHA'], *state_args])
           score = subprocess.call([sys.executable, '-m', 'football_model.total_shrink_shadow', 'score',
               '--runtime', 'runtime', '--source-commit', os.environ['GITHUB_SHA']])
+          access = subprocess.call([sys.executable, '-m', 'football_model.f5c_access', 'index',
+              '--runtime', 'runtime', *state_args])
+          if access != 0:
+              raise SystemExit(access)
           raise SystemExit(0 if capture == 0 and score == 0 else 1)
           PYSHRINK
 
