@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
   "time_semantics": "observed_wall_clock_v1",
-  "run_started_at": "2026-10-07T01:32:56.771491Z",
-  "training_cutoff": "2026-10-07T01:32:56.771491Z",
-  "data_observed_at": "2026-10-07T01:33:10.715979Z",
-  "model_fitted_at": "2026-10-07T01:33:10.862252Z",
+  "run_started_at": "2026-10-10T01:34:48.683605Z",
+  "training_cutoff": "2026-10-10T01:34:48.683605Z",
+  "data_observed_at": "2026-10-10T01:35:25.015177Z",
+  "model_fitted_at": "2026-10-10T01:35:25.331463Z",
   "program_version": "0.1.0",
-  "model_id": "argentina_a-20261007T013256771491Z",
+  "model_id": "argentina_a-20261010T013448683605Z",
   "competition": {
     "key": "argentina_a",
     "label": "阿根廷甲级联赛",
@@ -14,8 +14,8 @@
     "country": "Argentina",
     "mode": "domestic_baseline"
   },
-  "data_fingerprint": "cc0fe1a846c4d478ae84b9043a6015a924b22fee33c0c2f8b11ebe5eab07fcc1",
-  "trained_at": "2026-10-07T01:32:56.771491Z",
+  "data_fingerprint": "e5e878288488135c912b90f6eb55b6c5a48e141853118ab593698fcf49faf664",
+  "trained_at": "2026-10-10T01:34:48.683605Z",
   "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
   "maturity": "exploratory_baseline",
   "lineup_effects": "未量化",
@@ -26,225 +26,225 @@
     "fit_status": "converged",
     "trained": true,
     "validated_for_production": false,
-    "training_cutoff": "2026-10-07T01:32:56.771491Z",
-    "last_match_kickoff": "2026-10-06T00:15:00Z",
-    "last_result_assumed_available_at": "2026-10-06T04:15:00Z",
-    "n_matches": 1307,
+    "training_cutoff": "2026-10-10T01:34:48.683605Z",
+    "last_match_kickoff": "2026-10-09T21:00:00Z",
+    "last_result_assumed_available_at": "2026-10-10T01:00:00Z",
+    "n_matches": 1309,
     "n_teams": 32,
     "min_team_matches": 27,
     "low_sample_team_threshold": 5,
     "low_sample_team_ids": [],
     "excluded_after_cutoff_or_availability_delay": 0,
-    "training_data_sha256": "5aa8fd82c414392a07be044c1521b3bcb23019fee1542c75c45b55fadc3c04b7",
+    "training_data_sha256": "53f10f0513f0b7b46dae28c1859248978c163c9b9ee72d519f27015ede4362d8",
     "half_life_days": 180.0,
     "ridge": 3.0,
-    "effective_sample_size": 692.6303717665436,
-    "intercept": -0.11041554142196754,
-    "home_advantage": 0.2341825086994201,
+    "effective_sample_size": 692.9547718072187,
+    "intercept": -0.1052160444537332,
+    "home_advantage": 0.2273797984988803,
     "team_parameters": {
       "434": {
         "name": "Gimnasia L.P.",
-        "attack": 0.12678844237221001,
-        "defence": -0.08560090167317938,
-        "training_matches": 91
+        "attack": 0.11346980417573804,
+        "defence": -0.08759761030123178,
+        "training_matches": 92
       },
       "435": {
         "name": "River Plate",
-        "attack": 0.2888745039693081,
-        "defence": 0.053852067403980686,
+        "attack": 0.28829934112684413,
+        "defence": 0.05474043303286226,
         "training_matches": 92
       },
       "436": {
         "name": "Racing Club",
-        "attack": 0.13076900070349853,
-        "defence": -0.033825753538372916,
+        "attack": 0.12943187908394188,
+        "defence": -0.03203081818796125,
         "training_matches": 93
       },
       "437": {
         "name": "Rosario Central",
-        "attack": 0.11004000610325151,
-        "defence": 0.19593441099736,
+        "attack": 0.1074004228877419,
+        "defence": 0.19663721795151426,
         "training_matches": 92
       },
       "438": {
         "name": "Velez Sarsfield",
-        "attack": 0.1740740489869427,
-        "defence": 0.10080309544872393,
+        "attack": 0.17383424570971395,
+        "defence": 0.10183850919599745,
         "training_matches": 88
       },
       "439": {
         "name": "Godoy Cruz",
-        "attack": -0.19290045867430683,
-        "defence": -0.0729524173552725,
+        "attack": -0.19159204646085093,
+        "defence": -0.07079806033579263,
         "training_matches": 59
       },
       "440": {
         "name": "Belgrano Cordoba",
-        "attack": 0.027032393159436008,
-        "defence": 0.2605213472014957,
+        "attack": 0.025977921287212605,
+        "defence": 0.26237665571427987,
         "training_matches": 90
       },
       "441": {
         "name": "Union Santa Fe",
-        "attack": 0.26609329994801323,
-        "defence": -0.24172458474019576,
+        "attack": 0.26156280087504546,
+        "defence": -0.23912407820668702,
         "training_matches": 89
       },
       "442": {
         "name": "Defensa Y Justicia",
-        "attack": 0.17541815099264882,
-        "defence": -0.15519028703402668,
+        "attack": 0.17129032936766148,
+        "defence": -0.1546696413721575,
         "training_matches": 86
       },
       "445": {
         "name": "Huracan",
-        "attack": -0.058900388581798906,
-        "defence": 0.2511131806479431,
+        "attack": -0.062220799805442616,
+        "defence": 0.2527599612816814,
         "training_matches": 92
       },
       "446": {
         "name": "Lanus",
-        "attack": 0.060475456916346204,
-        "defence": 0.18673129940987276,
+        "attack": 0.0604288605996875,
+        "defence": 0.1870747677205878,
         "training_matches": 89
       },
       "449": {
         "name": "Banfield",
-        "attack": 0.022092101821827744,
-        "defence": -0.24427931258632343,
+        "attack": 0.017948331916431026,
+        "defence": -0.24253604239704296,
         "training_matches": 86
       },
       "450": {
         "name": "Estudiantes L.P.",
-        "attack": 0.0873810839529553,
-        "defence": 0.19849896890565438,
+        "attack": 0.08611645021111412,
+        "defence": 0.200343932673651,
         "training_matches": 92
       },
       "451": {
         "name": "Boca Juniors",
-        "attack": 0.3548371536874,
-        "defence": 0.27338572404864875,
+        "attack": 0.35350599442091213,
+        "defence": 0.2731948217639557,
         "training_matches": 92
       },
       "452": {
         "name": "Tigre",
-        "attack": -0.04865387849348503,
-        "defence": 0.11034361172497752,
+        "attack": -0.052444188920254646,
+        "defence": 0.11032068204859559,
         "training_matches": 89
       },
       "453": {
         "name": "Independiente",
-        "attack": 0.11224662689178636,
-        "defence": -0.02468025408041074,
+        "attack": 0.11218147958091049,
+        "defence": -0.023792253560467498,
         "training_matches": 90
       },
       "455": {
         "name": "Atletico Tucuman",
-        "attack": -0.1018417271879749,
-        "defence": -0.07084747981349897,
-        "training_matches": 86
+        "attack": -0.10017235112510156,
+        "defence": -0.05556260052430167,
+        "training_matches": 87
       },
       "456": {
         "name": "Talleres Cordoba",
-        "attack": -0.07977834987174592,
-        "defence": -0.07074827960329196,
+        "attack": -0.079895692606281,
+        "defence": -0.06961579609432657,
         "training_matches": 88
       },
       "457": {
         "name": "Newells Old Boys",
-        "attack": -0.06442402155779908,
-        "defence": -0.07127290440643201,
+        "attack": -0.06504071212419907,
+        "defence": -0.07122901843654078,
         "training_matches": 86
       },
       "458": {
         "name": "Argentinos JRS",
-        "attack": 0.15476800683544104,
-        "defence": 0.20855529770172695,
+        "attack": 0.1511155696737858,
+        "defence": 0.20974702710894208,
         "training_matches": 93
       },
       "460": {
         "name": "San Lorenzo",
-        "attack": -0.3658764930922221,
-        "defence": 0.1319932142504878,
+        "attack": -0.36548704396912723,
+        "defence": 0.13276261175326426,
         "training_matches": 91
       },
       "461": {
         "name": "San Martin S.J.",
-        "attack": -0.24195573217949543,
-        "defence": -0.033291440697009844,
+        "attack": -0.24347640985215752,
+        "defence": -0.031028781278322523,
         "training_matches": 32
       },
       "463": {
         "name": "Aldosivi",
-        "attack": -0.16567062511263309,
-        "defence": -0.20688703428796215,
-        "training_matches": 59
+        "attack": -0.17314103116346186,
+        "defence": -0.2567928277398531,
+        "training_matches": 60
       },
       "473": {
         "name": "Independ. Rivadavia",
-        "attack": 0.25822380245842386,
-        "defence": -0.066630541330101,
+        "attack": 0.254136798239224,
+        "defence": -0.06470673844506787,
         "training_matches": 88
       },
       "474": {
         "name": "Sarmiento Junin",
-        "attack": 0.08119678073349018,
-        "defence": -0.22677377519424916,
-        "training_matches": 85
+        "attack": 0.13856024257069505,
+        "defence": -0.22158576904493454,
+        "training_matches": 86
       },
       "476": {
         "name": "Deportivo Riestra",
-        "attack": -0.29661541871772323,
-        "defence": 0.17997085055988424,
+        "attack": -0.2964325846933477,
+        "defence": 0.18065811333429863,
         "training_matches": 88
       },
       "478": {
         "name": "Instituto Cordoba",
-        "attack": 0.1337100131523155,
-        "defence": 0.03690404385503433,
+        "attack": 0.13421720665576448,
+        "defence": 0.03823133461407093,
         "training_matches": 87
       },
       "1064": {
         "name": "Platense",
-        "attack": -0.16686624727638227,
-        "defence": -0.12309459608952217,
+        "attack": -0.16695177921041476,
+        "defence": -0.12218597113185146,
         "training_matches": 90
       },
       "1065": {
         "name": "Central Cordoba de Santiago",
-        "attack": -0.14334098851536894,
-        "defence": -0.12313815159769165,
+        "attack": -0.1433267279595865,
+        "defence": -0.12313901649807857,
         "training_matches": 88
       },
       "1066": {
         "name": "Gimnasia M.",
-        "attack": 0.08428281391497039,
-        "defence": -0.1273512757401764,
+        "attack": 0.08336906892641388,
+        "defence": -0.1280836571948432,
         "training_matches": 27
       },
       "2424": {
         "name": "Estudiantes de Rio Cuarto",
-        "attack": -0.5828454740027621,
-        "defence": -0.2833924982731977,
+        "attack": -0.5812622578308058,
+        "defence": -0.27949935091253386,
         "training_matches": 27
       },
       "2432": {
         "name": "Barracas Central",
-        "attack": -0.13863388333656773,
-        "defence": 0.07307437588512428,
+        "attack": -0.14140312158780677,
+        "defence": 0.0732919634682935,
         "training_matches": 89
       }
     },
     "graph_connected": true,
     "constraints": {
-      "attack_sum": -2.220446049250313e-16,
-      "defence_sum": 1.1102230246251565e-16
+      "attack_sum": 2.220446049250313e-16,
+      "defence_sum": -1.1102230246251565e-16
     },
     "optimizer": {
       "success": true,
       "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
-      "iterations": 31,
-      "objective": 932.5124566807402,
+      "iterations": 25,
+      "objective": 927.2551158294265,
       "parameter_at_bound": false
     },
     "warnings": [
@@ -259,16 +259,16 @@
     "is_rolling_backtest": false,
     "minimum_test_matches": 40,
     "meets_minimum_supported_test_matches": true,
-    "evaluation_data_cutoff": "2026-10-07T01:32:56.771491Z",
+    "evaluation_data_cutoff": "2026-10-10T01:34:48.683605Z",
     "split": {
       "method": "chronological_fixed_model_holdout",
       "grouped_by": "kickoff_utc_calendar_date",
       "train_cutoff": "2026-03-23T00:00:00Z",
       "train_last_kickoff": "2026-03-22T18:30:00Z",
       "test_start": "2026-03-23T01:15:00Z",
-      "test_end": "2026-10-06T00:15:00Z",
+      "test_end": "2026-10-09T21:00:00Z",
       "training_count": 1044,
-      "testing_count": 261,
+      "testing_count": 263,
       "result_availability_delay_hours": 4,
       "embargoed_count": 2,
       "embargoed_match_ids": [
@@ -277,23 +277,23 @@
       ]
     },
     "coverage": {
-      "total": 261,
-      "scored": 261,
+      "total": 263,
+      "scored": 263,
       "excluded": 0,
       "ratio": 1.0,
       "exclusions": []
     },
     "model_metrics": {
-      "n": 261,
-      "log_loss": 1.072054618405647,
-      "brier_score": 0.6483420215462691,
+      "n": 263,
+      "log_loss": 1.073842417525553,
+      "brier_score": 0.6496236363237408,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
     "baseline_metrics": {
-      "n": 261,
-      "log_loss": 1.0802308996205219,
-      "brier_score": 0.6537402308693604,
+      "n": 263,
+      "log_loss": 1.0815517857799315,
+      "brier_score": 0.6546661687673423,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
@@ -305,8 +305,8 @@
       "same_scored_matches_as_model": true
     },
     "comparison": {
-      "model_minus_baseline_log_loss": -0.008176281214874903,
-      "model_minus_baseline_brier_score": -0.005398209323091319,
+      "model_minus_baseline_log_loss": -0.0077093682543785125,
+      "model_minus_baseline_brier_score": -0.005042532443601533,
       "lower_is_better": true
     },
     "warnings": [
@@ -336,14 +336,15 @@
         "odds": true
       },
       "fixtures": 495,
-      "fetched_at": "2026-10-07T01:33:10.683663Z",
-      "received_at": "2026-10-07T01:33:10.692616Z",
+      "fetched_at": "2026-10-10T01:35:24.953689Z",
+      "received_at": "2026-10-10T01:35:24.971800Z",
       "from_cache": false,
       "status_counts": {
-        "FT": 414,
+        "HT": 1,
+        "FT": 417,
         "AET": 3,
         "PEN": 2,
-        "NS": 76
+        "NS": 72
       }
     },
     {
@@ -366,7 +367,7 @@
       },
       "fixtures": 510,
       "fetched_at": "2026-10-04T17:46:21.210260Z",
-      "received_at": "2026-10-07T01:33:10.702982Z",
+      "received_at": "2026-10-10T01:35:24.989856Z",
       "from_cache": true,
       "status_counts": {
         "FT": 503,
@@ -394,7 +395,7 @@
       },
       "fixtures": 378,
       "fetched_at": "2026-10-04T17:46:21.498376Z",
-      "received_at": "2026-10-07T01:33:10.710563Z",
+      "received_at": "2026-10-10T01:35:25.003425Z",
       "from_cache": true,
       "status_counts": {
         "FT": 378

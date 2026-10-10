@@ -1,0 +1,317 @@
+{
+  "content": {
+    "competition": {
+      "country": "South-Korea",
+      "key": "k1",
+      "label": "韩国K1",
+      "mode": "domestic_baseline",
+      "name": "K League 1"
+    },
+    "data_fingerprint": "d539853c4a1b26b067a15109f603b90133818e60485d90a11cfdcd55b6de6e55",
+    "data_observed_at": "2026-10-10T01:35:12.016873Z",
+    "ev": "未量化",
+    "lineup_effects": "未量化",
+    "maturity": "exploratory_baseline",
+    "model": {
+      "constraints": {
+        "attack_sum": -6.938893903907228e-18,
+        "defence_sum": 4.163336342344337e-17
+      },
+      "effective_sample_size": 316.49375521100177,
+      "excluded_after_cutoff_or_availability_delay": 0,
+      "fit_status": "converged",
+      "graph_connected": true,
+      "half_life_days": 180.0,
+      "home_advantage": 0.02669270788283152,
+      "intercept": 0.212967844398278,
+      "last_match_kickoff": "2026-10-09T07:30:00Z",
+      "last_result_assumed_available_at": "2026-10-09T11:30:00Z",
+      "low_sample_team_ids": [
+        2749,
+        2753,
+        2765
+      ],
+      "low_sample_team_threshold": 5,
+      "min_team_matches": 2,
+      "model_scope": "baseline_unadjusted_lineup",
+      "model_version": "independent_poisson_time_decay_l2_v1",
+      "n_matches": 647,
+      "n_teams": 17,
+      "optimizer": {
+        "iterations": 28,
+        "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "objective": 481.30676501531667,
+        "parameter_at_bound": false,
+        "success": true
+      },
+      "ridge": 3.0,
+      "team_parameters": {
+        "2745": {
+          "attack": -0.1085884500841026,
+          "defence": -0.0871932638140523,
+          "name": "Bucheon FC 1995",
+          "training_matches": 33
+        },
+        "2746": {
+          "attack": -0.04597159713526879,
+          "defence": 0.23697139390207583,
+          "name": "Gangwon FC",
+          "training_matches": 107
+        },
+        "2747": {
+          "attack": 0.03349172252404807,
+          "defence": -0.22213756919751598,
+          "name": "Daegu FC",
+          "training_matches": 78
+        },
+        "2748": {
+          "attack": 0.04342692985808731,
+          "defence": -0.18722359703890473,
+          "name": "FC Anyang",
+          "training_matches": 68
+        },
+        "2749": {
+          "attack": 0.00018197367810783682,
+          "defence": -0.029943497253974955,
+          "name": "Seoul E-Land FC",
+          "training_matches": 2
+        },
+        "2750": {
+          "attack": 0.2772371900246105,
+          "defence": 0.007416630412796627,
+          "name": "Daejeon Citizen",
+          "training_matches": 107
+        },
+        "2753": {
+          "attack": 0.04179864214016057,
+          "defence": -0.05489954856875714,
+          "name": "Asan Mugunghwa",
+          "training_matches": 2
+        },
+        "2756": {
+          "attack": 0.05890140492996954,
+          "defence": -0.1818891218940061,
+          "name": "Suwon City FC",
+          "training_matches": 78
+        },
+        "2759": {
+          "attack": -0.30488043197704795,
+          "defence": -0.2789838135929475,
+          "name": "Gwangju FC",
+          "training_matches": 106
+        },
+        "2761": {
+          "attack": -0.06261791159620517,
+          "defence": 0.16401625963002786,
+          "name": "Jeju United FC",
+          "training_matches": 108
+        },
+        "2762": {
+          "attack": 0.0781661326810579,
+          "defence": 0.23015002846906515,
+          "name": "Jeonbuk Motors",
+          "training_matches": 109
+        },
+        "2763": {
+          "attack": -0.013932618494978288,
+          "defence": 0.19516302056063467,
+          "name": "Incheon United",
+          "training_matches": 69
+        },
+        "2764": {
+          "attack": -0.21289777985972402,
+          "defence": 0.036713580658318964,
+          "name": "Pohang Steelers",
+          "training_matches": 107
+        },
+        "2765": {
+          "attack": -0.180428741396139,
+          "defence": -0.053045572904150184,
+          "name": "Suwon Bluewings",
+          "training_matches": 2
+        },
+        "2766": {
+          "attack": 0.31390415822451495,
+          "defence": 0.1809308029854801,
+          "name": "FC Seoul",
+          "training_matches": 106
+        },
+        "2767": {
+          "attack": 0.12161428826469356,
+          "defence": -0.0210075105525559,
+          "name": "Ulsan Hyundai FC",
+          "training_matches": 106
+        },
+        "2768": {
+          "attack": -0.039404911781784464,
+          "defence": 0.06496177819846563,
+          "name": "Gimcheon Sangmu FC",
+          "training_matches": 106
+        }
+      },
+      "trained": true,
+      "training_cutoff": "2026-10-10T01:34:48.683605Z",
+      "training_data_sha256": "949bc447c2ef48effc951cd46aeb5a04dcfffb10034de75b1c0692c76210128b",
+      "validated_for_production": false,
+      "warnings": [
+        "球队 [2749, 2753, 2765] 各自训练不足 5 场，估计强烈依赖正则化，须保留小样本标记。",
+        "仅为球队比分基线，未量化伤停、预计阵容、球员、xG、天气及赛程因素。",
+        "已拟合不代表已通过有效性验证；参数须通过实际运行程序才能更新。",
+        "输入须由上游核准为常规时间终场比分，不能包含加时或点球大战。"
+      ]
+    },
+    "model_fitted_at": "2026-10-10T01:35:12.167372Z",
+    "model_id": "k1-20261010T013448683605Z",
+    "program_version": "0.1.0",
+    "run_started_at": "2026-10-10T01:34:48.683605Z",
+    "schema_version": 2,
+    "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
+    "source_seasons": [
+      {
+        "coverage_flags": {
+          "fixtures": {
+            "events": true,
+            "lineups": true,
+            "statistics_fixtures": true,
+            "statistics_players": true
+          },
+          "injuries": false,
+          "odds": true,
+          "players": true,
+          "predictions": true,
+          "standings": true,
+          "top_assists": true,
+          "top_cards": true,
+          "top_scorers": true
+        },
+        "fetched_at": "2026-10-10T01:35:11.989485Z",
+        "fixtures": 198,
+        "from_cache": false,
+        "received_at": "2026-10-10T01:35:11.996550Z",
+        "status_counts": {
+          "FT": 183,
+          "NS": 15
+        },
+        "year": 2026
+      },
+      {
+        "coverage_flags": {
+          "fixtures": {
+            "events": true,
+            "lineups": true,
+            "statistics_fixtures": true,
+            "statistics_players": true
+          },
+          "injuries": true,
+          "odds": false,
+          "players": true,
+          "predictions": true,
+          "standings": true,
+          "top_assists": true,
+          "top_cards": true,
+          "top_scorers": true
+        },
+        "fetched_at": "2026-10-07T07:08:08.172378Z",
+        "fixtures": 232,
+        "from_cache": true,
+        "received_at": "2026-10-10T01:35:12.004129Z",
+        "status_counts": {
+          "FT": 232
+        },
+        "year": 2025
+      },
+      {
+        "coverage_flags": {
+          "fixtures": {
+            "events": true,
+            "lineups": true,
+            "statistics_fixtures": true,
+            "statistics_players": true
+          },
+          "injuries": false,
+          "odds": false,
+          "players": true,
+          "predictions": true,
+          "standings": true,
+          "top_assists": true,
+          "top_cards": true,
+          "top_scorers": true
+        },
+        "fetched_at": "2026-10-07T07:08:08.400145Z",
+        "fixtures": 232,
+        "from_cache": true,
+        "received_at": "2026-10-10T01:35:12.011768Z",
+        "status_counts": {
+          "AET": 1,
+          "FT": 231
+        },
+        "year": 2024
+      }
+    ],
+    "time_semantics": "observed_wall_clock_v1",
+    "trained_at": "2026-10-10T01:34:48.683605Z",
+    "training_cutoff": "2026-10-10T01:34:48.683605Z",
+    "validation": {
+      "baseline": {
+        "away_rate": 1.1639344262295082,
+        "home_rate": 1.3799421407907426,
+        "name": "training_league_home_away_mean_poisson",
+        "same_scored_matches_as_model": true,
+        "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)"
+      },
+      "baseline_metrics": {
+        "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+        "brier_score": 0.6787875825919183,
+        "log_loss": 1.1158162871457582,
+        "log_loss_probability_floor": 1e-15,
+        "n": 129
+      },
+      "comparison": {
+        "lower_is_better": true,
+        "model_minus_baseline_brier_score": -0.028873386524550737,
+        "model_minus_baseline_log_loss": -0.04203927214576941
+      },
+      "coverage": {
+        "excluded": 0,
+        "exclusions": [],
+        "ratio": 1.0,
+        "scored": 129,
+        "total": 129
+      },
+      "deployment_approved": false,
+      "evaluation_data_cutoff": "2026-10-10T01:34:48.683605Z",
+      "is_rolling_backtest": false,
+      "meets_minimum_supported_test_matches": true,
+      "minimum_test_matches": 40,
+      "model_metrics": {
+        "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+        "brier_score": 0.6499141960673676,
+        "log_loss": 1.0737770149999888,
+        "log_loss_probability_floor": 1e-15,
+        "n": 129
+      },
+      "split": {
+        "embargoed_count": 0,
+        "embargoed_match_ids": [],
+        "grouped_by": "kickoff_utc_calendar_date",
+        "method": "chronological_fixed_model_holdout",
+        "result_availability_delay_hours": 4,
+        "test_end": "2026-10-09T07:30:00Z",
+        "test_start": "2026-04-25T05:00:00Z",
+        "testing_count": 129,
+        "train_cutoff": "2026-04-25T00:00:00Z",
+        "train_last_kickoff": "2026-04-22T10:30:00Z",
+        "training_count": 518
+      },
+      "validation_status": "exploratory_single_fixed_holdout",
+      "warnings": [
+        "单次固定模型留出验证仅为探索性检查，不是滚动回测，也不构成上线或盈利证明。",
+        "不含赔率、投注收益、阵容修正或提前十小时伤停历史快照验证。",
+        "超参数为显式默认值，不能根据本留出期反复挑选参数后再声称独立验证。",
+        "未知球队比赛单独列为未覆盖，指标只针对 model_metrics.n 场已覆盖比赛。"
+      ]
+    }
+  },
+  "kind": "model_bundle",
+  "original_bytes_sha256": "c181ec9ed50b893f4bd1e68fd641f6fc2ce77ddd7eda6f90da2b0b40eeda65e6"
+}

@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
   "time_semantics": "observed_wall_clock_v1",
-  "run_started_at": "2026-10-09T01:35:36.043589Z",
-  "training_cutoff": "2026-10-09T01:35:36.043589Z",
-  "data_observed_at": "2026-10-09T01:35:52.195434Z",
-  "model_fitted_at": "2026-10-09T01:35:52.456276Z",
+  "run_started_at": "2026-10-10T01:34:48.683605Z",
+  "training_cutoff": "2026-10-10T01:34:48.683605Z",
+  "data_observed_at": "2026-10-10T01:35:08.379630Z",
+  "model_fitted_at": "2026-10-10T01:35:08.630046Z",
   "program_version": "0.1.0",
-  "model_id": "brazil_a-20261009T013536043589Z",
+  "model_id": "brazil_a-20261010T013448683605Z",
   "competition": {
     "key": "brazil_a",
     "label": "巴西甲",
@@ -14,8 +14,8 @@
     "country": "Brazil",
     "mode": "domestic_baseline"
   },
-  "data_fingerprint": "451aa558e497dba96c4e24a4465b11f108f636bde00042a31c049f4244628bf6",
-  "trained_at": "2026-10-09T01:35:36.043589Z",
+  "data_fingerprint": "a950254fe0a066043981b51b84963c82b4c15f604a1bf701cb557bdcc8b1a111",
+  "trained_at": "2026-10-10T01:34:48.683605Z",
   "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
   "maturity": "exploratory_baseline",
   "lineup_effects": "未量化",
@@ -26,195 +26,195 @@
     "fit_status": "converged",
     "trained": true,
     "validated_for_production": false,
-    "training_cutoff": "2026-10-09T01:35:36.043589Z",
-    "last_match_kickoff": "2026-10-08T00:30:00Z",
-    "last_result_assumed_available_at": "2026-10-08T04:30:00Z",
-    "n_matches": 1045,
+    "training_cutoff": "2026-10-10T01:34:48.683605Z",
+    "last_match_kickoff": "2026-10-09T00:30:00Z",
+    "last_result_assumed_available_at": "2026-10-09T04:30:00Z",
+    "n_matches": 1049,
     "n_teams": 27,
     "min_team_matches": 28,
     "low_sample_team_threshold": 5,
     "low_sample_team_ids": [],
     "excluded_after_cutoff_or_availability_delay": 0,
-    "training_data_sha256": "fd664cbf4cd8e905e89b35cbfa94fdb40219743b0562408be09b3c6b627eea33",
+    "training_data_sha256": "7d3ce3f5ff8e3e38b842ad328be4a3c6f253375b3985e96f3269638a401a200d",
     "half_life_days": 180.0,
     "ridge": 3.0,
-    "effective_sample_size": 544.642931687126,
-    "intercept": 0.06543796591987798,
-    "home_advantage": 0.320207923364279,
+    "effective_sample_size": 544.90243961881,
+    "intercept": 0.06359832006807059,
+    "home_advantage": 0.3266129000309898,
     "team_parameters": {
       "118": {
         "name": "Bahia",
-        "attack": 0.13823093234415693,
-        "defence": 0.02825706201339387,
-        "training_matches": 104
+        "attack": 0.1190577709295708,
+        "defence": 0.054412846003707216,
+        "training_matches": 105
       },
       "119": {
         "name": "Internacional",
-        "attack": -0.06280693320263817,
-        "defence": -0.0066189277574240524,
+        "attack": -0.06401091608956008,
+        "defence": -0.00459601553054909,
         "training_matches": 105
       },
       "120": {
         "name": "Botafogo",
-        "attack": 0.12517428502093683,
-        "defence": -0.026297073275590423,
+        "attack": 0.12351403848935548,
+        "defence": -0.023499724553511243,
         "training_matches": 105
       },
       "121": {
         "name": "Palmeiras",
-        "attack": 0.27539203280105046,
-        "defence": 0.460127908114543,
-        "training_matches": 104
+        "attack": 0.25667656336393435,
+        "defence": 0.49325925016333083,
+        "training_matches": 105
       },
       "123": {
         "name": "Sport Recife",
-        "attack": -0.3190427242494164,
-        "defence": -0.38482194821410404,
+        "attack": -0.31801074634582954,
+        "defence": -0.38111825335245286,
         "training_matches": 38
       },
       "124": {
         "name": "Fluminense",
-        "attack": 0.16152845905160973,
-        "defence": 0.11865018986343924,
-        "training_matches": 104
+        "attack": 0.1995456190961732,
+        "defence": 0.14629580654283986,
+        "training_matches": 105
       },
       "126": {
         "name": "Sao Paulo",
-        "attack": -0.09696908938307447,
-        "defence": 0.08167302708683523,
+        "attack": -0.10013587064139626,
+        "defence": 0.0838623642071223,
         "training_matches": 105
       },
       "127": {
         "name": "Flamengo",
-        "attack": 0.42909262602645476,
-        "defence": 0.40722261329952186,
-        "training_matches": 104
+        "attack": 0.4342259721414831,
+        "defence": 0.3790530750922512,
+        "training_matches": 105
       },
       "128": {
         "name": "Santos",
-        "attack": 0.15677335826566,
-        "defence": -0.020000397338568395,
-        "training_matches": 66
+        "attack": 0.17467000965634744,
+        "defence": -0.027596362823655643,
+        "training_matches": 67
       },
       "129": {
         "name": "Ceara",
-        "attack": -0.2572248597430061,
-        "defence": 0.15614159163738472,
+        "attack": -0.2553588618172731,
+        "defence": 0.15923139256589292,
         "training_matches": 38
       },
       "130": {
         "name": "Gremio",
-        "attack": -0.09257485296423366,
-        "defence": -0.004609521501352954,
+        "attack": -0.09230196881133755,
+        "defence": -0.0019404581407137318,
         "training_matches": 105
       },
       "131": {
         "name": "Corinthians",
-        "attack": -0.11259823398379556,
-        "defence": 0.07883011974036894,
+        "attack": -0.11547098442539207,
+        "defence": 0.08148480130166158,
         "training_matches": 105
       },
       "132": {
         "name": "Chapecoense-sc",
-        "attack": -0.13988022719722998,
-        "defence": -0.3878149998798398,
+        "attack": -0.14308482704380504,
+        "defence": -0.38626311037802225,
         "training_matches": 28
       },
       "133": {
         "name": "Vasco DA Gama",
-        "attack": 0.09631538546208605,
-        "defence": -0.0962319221994217,
+        "attack": 0.0945828709291622,
+        "defence": -0.09446183185534206,
         "training_matches": 104
       },
       "134": {
         "name": "Atletico Paranaense",
-        "attack": 0.2006509356508306,
-        "defence": 0.09568491711590184,
-        "training_matches": 66
+        "attack": 0.21115461258943757,
+        "defence": 0.06092197851486235,
+        "training_matches": 67
       },
       "135": {
         "name": "Cruzeiro",
-        "attack": 0.18287166707155197,
-        "defence": 0.13676752055917002,
+        "attack": 0.17896409105488473,
+        "defence": 0.13892972737815512,
         "training_matches": 105
       },
       "136": {
         "name": "Vitoria",
-        "attack": -0.14346563992601338,
-        "defence": -0.032017195195207626,
+        "attack": -0.1439744361405004,
+        "defence": -0.02998297116626428,
         "training_matches": 105
       },
       "140": {
         "name": "Criciuma",
-        "attack": -0.06796014660158044,
-        "defence": -0.1135226515476753,
+        "attack": -0.06771445741183639,
+        "defence": -0.1115430827769235,
         "training_matches": 38
       },
       "144": {
         "name": "Atletico Goianiense",
-        "attack": -0.16643440124935244,
-        "defence": -0.05879518932067593,
+        "attack": -0.16572169763774494,
+        "defence": -0.057235155665830637,
         "training_matches": 38
       },
       "147": {
         "name": "Coritiba",
-        "attack": 0.055666787607485446,
-        "defence": -0.20063274484460247,
-        "training_matches": 28
+        "attack": 0.01753584934016578,
+        "defence": -0.25191369177976125,
+        "training_matches": 29
       },
       "152": {
         "name": "Juventude",
-        "attack": -0.13057384395011526,
-        "defence": -0.22173347314726333,
+        "attack": -0.12880623691193538,
+        "defence": -0.2188705804765345,
         "training_matches": 76
       },
       "154": {
         "name": "Fortaleza EC",
-        "attack": 0.015159619348237681,
-        "defence": -0.07305714470624483,
+        "attack": 0.0160036747145718,
+        "defence": -0.06975827355337155,
         "training_matches": 76
       },
       "794": {
         "name": "RB Bragantino",
-        "attack": -0.05762405389467657,
-        "defence": 0.05545643555231374,
+        "attack": -0.06065815051595104,
+        "defence": 0.05831420569834835,
         "training_matches": 105
       },
       "1062": {
         "name": "Atletico-MG",
-        "attack": 0.012949256618715892,
-        "defence": 0.13409058827091175,
-        "training_matches": 104
+        "attack": 0.03891720141729299,
+        "defence": 0.12386645369626392,
+        "training_matches": 105
       },
       "1193": {
         "name": "Cuiaba",
-        "attack": -0.19011266949464292,
-        "defence": 0.0345316964061597,
+        "attack": -0.189278160625597,
+        "defence": 0.0361270658389398,
         "training_matches": 38
       },
       "1198": {
         "name": "Remo",
-        "attack": -0.08165479304913409,
-        "defence": -0.1794980338552205,
+        "attack": -0.08660483818266716,
+        "defence": -0.1767546890579747,
         "training_matches": 29
       },
       "7848": {
         "name": "Mirassol",
-        "attack": 0.06911712362013311,
-        "defence": 0.018217553123247403,
+        "attack": 0.06628387887844657,
+        "defence": 0.019775234107531955,
         "training_matches": 67
       }
     },
     "graph_connected": true,
     "constraints": {
-      "attack_sum": 8.326672684688674e-17,
-      "defence_sum": 2.0816681711721685e-17
+      "attack_sum": -2.7755575615628914e-17,
+      "defence_sum": 1.3530843112619095e-16
     },
     "optimizer": {
       "success": true,
       "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
-      "iterations": 31,
-      "objective": 758.3578008706227,
+      "iterations": 33,
+      "objective": 766.4888920848982,
       "parameter_at_bound": false
     },
     "warnings": [
@@ -229,51 +229,51 @@
     "is_rolling_backtest": false,
     "minimum_test_matches": 40,
     "meets_minimum_supported_test_matches": true,
-    "evaluation_data_cutoff": "2026-10-09T01:35:36.043589Z",
+    "evaluation_data_cutoff": "2026-10-10T01:34:48.683605Z",
     "split": {
       "method": "chronological_fixed_model_holdout",
       "grouped_by": "kickoff_utc_calendar_date",
-      "train_cutoff": "2026-03-29T00:00:00Z",
-      "train_last_kickoff": "2026-03-22T23:30:00Z",
-      "test_start": "2026-03-29T22:30:00Z",
-      "test_end": "2026-10-08T00:30:00Z",
-      "training_count": 836,
-      "testing_count": 209,
+      "train_cutoff": "2026-04-01T00:00:00Z",
+      "train_last_kickoff": "2026-03-29T22:30:00Z",
+      "test_start": "2026-04-01T22:30:00Z",
+      "test_end": "2026-10-09T00:30:00Z",
+      "training_count": 837,
+      "testing_count": 212,
       "result_availability_delay_hours": 4,
       "embargoed_count": 0,
       "embargoed_match_ids": []
     },
     "coverage": {
-      "total": 209,
-      "scored": 209,
+      "total": 212,
+      "scored": 212,
       "excluded": 0,
       "ratio": 1.0,
       "exclusions": []
     },
     "model_metrics": {
-      "n": 209,
-      "log_loss": 1.0267907187159953,
-      "brier_score": 0.6181467265289912,
+      "n": 212,
+      "log_loss": 1.0245863839963185,
+      "brier_score": 0.6169495431823067,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
     "baseline_metrics": {
-      "n": 209,
-      "log_loss": 1.0623119190882966,
-      "brier_score": 0.641233699575942,
+      "n": 212,
+      "log_loss": 1.0634506034981577,
+      "brier_score": 0.6420546046597098,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
     "baseline": {
       "name": "training_league_home_away_mean_poisson",
-      "home_rate": 1.474596533173939,
-      "away_rate": 1.0203227734608489,
+      "home_rate": 1.4776119402985075,
+      "away_rate": 1.0202985074626865,
       "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
       "same_scored_matches_as_model": true
     },
     "comparison": {
-      "model_minus_baseline_log_loss": -0.03552120037230133,
-      "model_minus_baseline_brier_score": -0.023086973046950843,
+      "model_minus_baseline_log_loss": -0.03886421950183916,
+      "model_minus_baseline_brier_score": -0.0251050614774031,
       "lower_is_better": true
     },
     "warnings": [
@@ -303,15 +303,13 @@
         "odds": true
       },
       "fixtures": 380,
-      "fetched_at": "2026-10-09T01:35:52.140933Z",
-      "received_at": "2026-10-09T01:35:52.157585Z",
+      "fetched_at": "2026-10-10T01:35:08.330034Z",
+      "received_at": "2026-10-10T01:35:08.344144Z",
       "from_cache": false,
       "status_counts": {
-        "HT": 1,
-        "FT": 287,
+        "FT": 289,
         "PST": 1,
-        "NS": 90,
-        "2H": 1
+        "NS": 90
       }
     },
     {
@@ -334,7 +332,7 @@
       },
       "fixtures": 380,
       "fetched_at": "2026-10-08T01:33:58.310978Z",
-      "received_at": "2026-10-09T01:35:52.171873Z",
+      "received_at": "2026-10-10T01:35:08.357831Z",
       "from_cache": true,
       "status_counts": {
         "FT": 380
@@ -360,7 +358,7 @@
       },
       "fixtures": 380,
       "fetched_at": "2026-10-08T01:33:58.519369Z",
-      "received_at": "2026-10-09T01:35:52.185815Z",
+      "received_at": "2026-10-10T01:35:08.371272Z",
       "from_cache": true,
       "status_counts": {
         "FT": 380

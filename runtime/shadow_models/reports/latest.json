@@ -1,34 +1,189 @@
 {
   "version": "s2-shadow-models-1.0",
-  "status": "capacity_deferred",
-  "operation": "capture",
+  "started_at": "2026-10-10T01:47:56.313182Z",
+  "protocol_id": "52b45f5deadc542fb525193be4ce55c312e42c557c480b44928db66145599b4e",
+  "source_commit": "cfad8dfb1771ce7c5fab6e67831a2c3b39712449",
+  "state_commit": null,
   "numerical_environment": {
     "python_version": "3.12.15",
     "numpy_version": "2.3.5",
     "scipy_version": "1.17.0",
     "platform_machine": "x86_64"
   },
-  "run_started_at": "2026-10-09T16:29:58.585364Z",
-  "started_at": "2026-10-09T16:29:58.585364Z",
-  "generated_at": "2026-10-09T16:30:50.123661Z",
-  "completed_at": "2026-10-09T16:30:50.123661Z",
-  "source_commit": "9a2c90070999b2d32153326f15aa33f570b414ae",
-  "reason": "shadow_storage_capacity_deferred",
-  "runtime_bytes": 1176373701,
-  "logical_bytes": 1336558513,
-  "estimated_persisted_bytes": 476058132,
-  "limit_bytes": 419430400,
-  "logical_limit_bytes": 2147483648,
-  "file_limit_bytes": 62914560,
-  "logical_capture_limit_bytes": 2147221504,
-  "capacity_measurement": "lossless_archive_conservative_persisted_and_original_logical_bytes",
-  "capacity_constraint": "estimated_persisted_limit",
-  "capacity_report_reserve_bytes": 262144,
-  "partial_objects_preserved": true,
-  "counts_for_partial_capture": null,
+  "implementation_sha256": {
+    "shadow_models.py": "aa69b839d54ac424b8efbbac48947f3f85bbf02f4110f36868b3de6cd8c23078",
+    "model.py": "bb1373a867d8afa903465ca77ca61f314b4ea01957dbc25382f48f7033581995",
+    "nations.py": "8956218497f90c5d8f1b12a284e9a2de1768d385091bdf92dbb5e51be28083ca",
+    "venue_registry.py": "42c1a42ea66c11c7083b6731c5ec9b13ff150f322f1ecf1981f672135e2c0755"
+  },
+  "config_source": "1a39f9e1cb44dfa5f7183d92a9ab0a6e1afb21a97634114c72d427fddf40fa63",
+  "index_source": "3242089d8c869072575d4a45569fe89997129c21980c7a29075508dc04581bb3",
+  "purpose": "prospective_model_experiment",
+  "schedule_scope": "saved_daily_schedule_checked_against_available_quote_fixture_responses_not_live_official_confirmation",
   "production_models_changed": false,
   "accuracy_improvement_verified": false,
-  "immutable_event_saved": false,
-  "diagnostic_evidence": "bounded_current_latest_only",
-  "capacity_event_id": null
+  "errors": [],
+  "completed_at": "2026-10-10T01:48:04.127092Z",
+  "captured_forecasts": 600,
+  "captured_matches": 200,
+  "storage_budget": {
+    "runtime_bytes": 1453457461,
+    "logical_bytes": 1661772526,
+    "estimated_persisted_bytes": 617500494,
+    "limit_bytes": 838860800,
+    "logical_limit_bytes": 4294967296,
+    "file_limit_bytes": 62914560,
+    "logical_capture_limit_bytes": 4294705152,
+    "capacity_measurement": "lossless_archive_conservative_persisted_and_original_logical_bytes",
+    "observation": "before_run_and_latest_report_writes"
+  },
+  "report_id": "1dd740a97ebdfe6fc3e37418ee066f38e4ea5cb3c74fbb32e20eac6d26fa6de7",
+  "generated_at": "2026-10-10T01:48:04.127092Z",
+  "run_started_at": "2026-10-10T01:47:56.313182Z",
+  "competition_count": 19,
+  "captured_by_arm": {
+    "baseline180": 200,
+    "candidate90": 200,
+    "candidate365": 200
+  },
+  "eligibility_rejections": 0,
+  "eligibility_rejection_reasons": {},
+  "arm_failures": {},
+  "arm_forecast_rejections": {},
+  "primary_pair_captures_this_run": 200,
+  "competitions": [
+    {
+      "competition": "epl",
+      "input_id": "ff5c709946df8a321fa727410d9ddb7f454eee86ed96115c0427c395b28a6bfa",
+      "source_rows": 10,
+      "eligible_candidates": 10,
+      "status": "completed"
+    },
+    {
+      "competition": "championship",
+      "input_id": "11fcb013f586e136b5e26e5b4775e093745a9eaf12718097a7593e0344d86c96",
+      "source_rows": 24,
+      "eligible_candidates": 24,
+      "status": "completed"
+    },
+    {
+      "competition": "laliga",
+      "input_id": "37e8dc373aa27ca729fcd4743338b42a6afe7297483ac4b93f80a4444265503a",
+      "source_rows": 10,
+      "eligible_candidates": 10,
+      "status": "completed"
+    },
+    {
+      "competition": "bundesliga",
+      "input_id": "a729380e81b019d39a003946b5e60bc9d4943ece1d5631ea475bc0d4bb52d8bb",
+      "source_rows": 9,
+      "eligible_candidates": 9,
+      "status": "completed"
+    },
+    {
+      "competition": "serie_a",
+      "input_id": "0567525c14019441e9ba01d0a5a9393dd070298b9e8f8c6edb41acc827058f8f",
+      "source_rows": 11,
+      "eligible_candidates": 11,
+      "status": "completed"
+    },
+    {
+      "competition": "ligue_1",
+      "input_id": "bb34673d8d60cbaef7106def01b192accce82d5e983632d727ef132dad75b239",
+      "source_rows": 9,
+      "eligible_candidates": 9,
+      "status": "completed"
+    },
+    {
+      "competition": "bundesliga_2",
+      "input_id": "fe6bcedada9feb405de50fee08589dd5530413728c0fcf8ac5ae6e4e78070bb3",
+      "source_rows": 9,
+      "eligible_candidates": 9,
+      "status": "completed"
+    },
+    {
+      "competition": "ligue_2",
+      "input_id": "5f330b61a887f85711b89753c016c5c691d430e18e17f610e2eaa0c9ad757967",
+      "source_rows": 9,
+      "eligible_candidates": 9,
+      "status": "completed"
+    },
+    {
+      "competition": "allsvenskan",
+      "input_id": "75ae65cc37048a87c81f80e725d17a7d74d4e126ab32f1f5b281296336815e14",
+      "source_rows": 8,
+      "eligible_candidates": 8,
+      "status": "completed"
+    },
+    {
+      "competition": "eredivisie",
+      "input_id": "4c6d39a8ccd9a6ce1298d3aad8904c4ea00b52f39673864925ffe097bfeaaf0e",
+      "source_rows": 9,
+      "eligible_candidates": 9,
+      "status": "completed"
+    },
+    {
+      "competition": "primeira",
+      "input_id": "cadc9cec375df227bcc26a8c890c3e880d10926a2987bf4e4d04b486f6dc2702",
+      "source_rows": 7,
+      "eligible_candidates": 7,
+      "status": "completed"
+    },
+    {
+      "competition": "brazil_a",
+      "input_id": "ffc382b346b4faa9b9f6b2b26e9cc6151f8cfe2738f6e9d1e5e7fea4608a6a03",
+      "source_rows": 11,
+      "eligible_candidates": 11,
+      "status": "completed"
+    },
+    {
+      "competition": "j1",
+      "input_id": "40afef7b086ec46d78da5a6efb46ff086abeb8568184882d54fc0c809e5f977d",
+      "source_rows": 8,
+      "eligible_candidates": 8,
+      "status": "completed"
+    },
+    {
+      "competition": "k1",
+      "input_id": "55f840a4bd7e1e62a3ed9598f60a7fa0660fcbc73d14731f2f7d95e75bb0288f",
+      "source_rows": 3,
+      "eligible_candidates": 3,
+      "status": "completed"
+    },
+    {
+      "competition": "mls",
+      "input_id": "871389cd8521086d0d98db07d043107788f80346149009bc7685c9a889f7ab8c",
+      "source_rows": 30,
+      "eligible_candidates": 30,
+      "status": "completed"
+    },
+    {
+      "competition": "unl",
+      "input_id": "b4823f596b38fc22bc4722180facc02465a5b582d11d9b02c6a9a235d353527c",
+      "source_rows": 0,
+      "eligible_candidates": 0,
+      "status": "no_eligible_future_matches"
+    },
+    {
+      "competition": "liga_mx",
+      "input_id": "ac751958b69f6af4f8f1526003e8d4bf261d847830b7a5cdadebbd3012dcc55e",
+      "source_rows": 9,
+      "eligible_candidates": 9,
+      "status": "completed"
+    },
+    {
+      "competition": "segunda",
+      "input_id": "5bdf56b59cac913e637c609923d13d984f71bb39db4eff4f665e251ebd231aa8",
+      "source_rows": 12,
+      "eligible_candidates": 12,
+      "status": "completed"
+    },
+    {
+      "competition": "argentina_a",
+      "input_id": "0d4826de9db00bbe3ba2e820cbfa0d31c36971f3afe2492f10e0cfdac2d0c139",
+      "source_rows": 12,
+      "eligible_candidates": 12,
+      "status": "completed"
+    }
+  ]
 }
