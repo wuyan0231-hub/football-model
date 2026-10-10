@@ -42,3 +42,7 @@ python -m football_model.f5c_access audit --runtime SELECTED_RUNTIME \
 integration、shadow_models、cloud_state及存储／读取模块的纯维护发布改走独立F5-C工作流，移出自动训练的push路径。原生产模型／数据／新联赛训练路径及北京时间09:17日程保留。独立路线不提供API密钥给派生／评分／索引，不训练不采集。
 
 合并后核实际工作流outcome、原报告、保存提交及压缩原件回读；不能只看绿色step或本地测试。三场历史修复只追加对照附件，不覆盖原报告，不追认当时聊天已纳入F5-C。工程通过和预测效果继续分别报告。
+
+## 接续验收补修：预测与评分分开
+
+预测核验通过后，score.status独立保留pending、read_failed、rejected、scored或not_primary_evaluation_version；评分读取失败不撤销已核预测与同父资格。损坏或缺失评分不补0、不补造后台完成，已实际读到的拒绝原字节单列diagnostic_evidence并随ZIP保存。归档状态中的最新尝试摘要经同一Originals读取器取得，缺失与后台失败分别披露。新增回归包括成熟选择池闭包在空目录重新验证。

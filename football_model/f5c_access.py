@@ -120,12 +120,12 @@ def materialize(originals, forecast_id, destination, score_id=None):
     return ts._root(destination)
 
 
-def _attempts(runtime):
+def _attempts(runtime, *, originals=None):
+    originals = originals or Originals(runtime)
     result = {}
     for operation, name in (("capture", "latest.json"), ("score", "score-latest.json")):
-        path = ts._path(Path(runtime), ts.ROOT, "reports", name)
         try:
-            value = _json(path.read_bytes())
+            value = _json(originals.raw(f"{ts.ROOT}/reports/{name}"))
             if not isinstance(value, dict):
                 raise ValueError("invalid_latest_summary")
             result[operation] = {key: value.get(key) for key in
@@ -193,12 +193,16 @@ def _verified_score(originals, forecast, now):
             index = _json(originals.raw(INDEX))
             if not isinstance(index, dict):
                 raise ValueError("f5c_index_invalid")
-            report_id = index.get("latest_attempts", {}).get("score", {}).get("report_id")
+            attempts = index.get("latest_attempts", {})
+            if not isinstance(attempts, dict) or not isinstance(attempts.get("score", {}), dict):
+                raise ValueError("f5c_index_score_attempt_invalid")
+            report_id = attempts.get("score", {}).get("report_id")
         except FileNotFoundError:
             pass
     if report_id:
         report = originals.object("score_runs", report_id)
-        if report.get("version") != ts.VERSION or not isinstance(report.get("matches"), list):
+        if (report.get("version") != ts.VERSION or not isinstance(report.get("matches"), list)
+                or not all(isinstance(record, dict) for record in report["matches"])):
             raise ValueError("f5c_score_run_invalid")
         if _timestamp(report["scored_at"], "scored_at") > now:
             return {"status": "pending", "reason": "score_report_after_analysis_cutoff"}
@@ -241,7 +245,9 @@ def _verified_score(originals, forecast, now):
             raise ValueError("f5c_score_difference_mismatch")
         candidates.append((result["content"]["observed_at"], result["content"]["captured_at"], sid, score))
     if not candidates:
-        return {"status": "pending", "reason": "no_saved_verified_score", "score_run_id": report_id,
+        rejected = [record for record in (selected or []) if record.get("status") == "rejected"]
+        return {"status": "rejected" if rejected else "pending",
+                "reason": "saved_score_attempt_rejected" if rejected else "no_saved_verified_score", "score_run_id": report_id,
                 "observed_records": selected}
     *_, sid, score = max(candidates)
     return {**score, "score_id": sid, "score_run_id": report_id}
@@ -253,9 +259,13 @@ def comparison(runtime, league, match_id, *, row=None, now=None, forecast_id=Non
         "read_at": ts._iso(datetime.now(timezone.utc)), "validation_cutoff": ts._iso(now),
         "usage": "engineering_pilot_descriptive_only", "confirmation_eligible": False,
         "accuracy_improvement_verified": False, "new_fits": 0, "new_api_calls": 0,
-        "latest_attempts": _attempts(runtime), "rejections": []}
-    originals = Originals(runtime, state_tree)
+        "latest_attempts": {}, "rejections": []}
     try:
+        originals = Originals(runtime, state_tree)
+        result["latest_attempts"] = _attempts(runtime, originals=originals)
+        result["attempt_evidence"] = [{"path": name, "sha256": hashlib.sha256(raw).hexdigest(),
+            "bytes": len(raw), "validation": "raw_attempt_summary_not_forecast_validation"}
+            for name, raw in sorted(originals.read_bytes.items())]
         ids = [forecast_id] if forecast_id else _inventory(originals, "forecasts")
         if not forecast_id and (index := Path(runtime) / INDEX).exists():
             saved_index = _json(ts._path(Path(runtime), *INDEX.split("/")).read_bytes())
@@ -290,18 +300,32 @@ def comparison(runtime, league, match_id, *, row=None, now=None, forecast_id=Non
                     root = materialize(originals, fid, temporary)
                     forecast = {**value, "object_id": fid}
                     ts._saved_forecast_valid(root, forecast, now)
-                    score = _verified_score(originals, forecast, now)
-                    if score.get("score_id"):
-                        materialize(originals, fid, temporary, score["score_id"])
+                    # Prediction and independent-result scoring have separate
+                    # validation boundaries. A bad score must never turn an
+                    # already verified five-arm pair into a missing forecast.
+                    forecast_names = {p.relative_to(Path(temporary)).as_posix()
+                        for p in Path(temporary).rglob("*.json")}
+                    score_originals = Originals(runtime, state_tree)
+                    diagnostic_names = []
+                    try:
+                        score = _verified_score(score_originals, forecast, now)
+                        if score.get("score_id"):
+                            materialize(score_originals, fid, temporary, score["score_id"])
+                    except (ValueError, KeyError, TypeError, OSError) as exc:
+                        score = {"status": "read_failed" if isinstance(exc, OSError) else "rejected",
+                                 "reason": safe_error(exc), "validation": "not_verified"}
+                        diagnostic_names = sorted(score_originals.read_bytes)
+                    originals.read_bytes.update(score_originals.read_bytes)
                     # Persist the lookup originals too: latest summary/index
                     # and immutable score-run are part of score provenance.
                     for name, raw in originals.read_bytes.items():
-                        if name in {INDEX, ts.ROOT + "/reports/score-latest.json"} or name.startswith(ts.ROOT + "/score_runs/"):
+                        if name not in diagnostic_names and (name in {INDEX, ts.ROOT + "/reports/score-latest.json"}
+                                or name.startswith(ts.ROOT + "/score_runs/")):
                             target = ts._path(Path(temporary), *name.split("/"))
                             target.parent.mkdir(parents=True, exist_ok=True)
                             target.write_bytes(raw)
-                    evidence_names = sorted(p.relative_to(Path(temporary)).as_posix()
-                        for p in Path(temporary).rglob("*.json"))
+                    evidence_names = sorted(forecast_names if diagnostic_names else
+                        (p.relative_to(Path(temporary)).as_posix() for p in Path(temporary).rglob("*.json")))
                 result.update(status="verified_same_parent" if row is not None else "verified_saved_original_audit",
                     forecast_id=fid, production_forecast_id=value["production_forecast_id"],
                     production_parent_id=value["production_parent_id"], input_id=value["input_id"],
@@ -317,7 +341,10 @@ def comparison(runtime, league, match_id, *, row=None, now=None, forecast_id=Non
                         "required_evidence": "fixed_state_commit_and_first_successful_save_before_kickoff"},
                     alpha_zero_exactly_native=value["predictions"]["alpha_0"] == native_row["prediction"],
                     score=score, evidence=[{"path": name, "sha256": hashlib.sha256(originals.read_bytes[name]).hexdigest(),
-                        "bytes": len(originals.read_bytes[name])} for name in evidence_names])
+                        "bytes": len(originals.read_bytes[name])} for name in evidence_names],
+                    diagnostic_evidence=[{"path": name, "sha256": hashlib.sha256(originals.read_bytes[name]).hexdigest(),
+                        "bytes": len(originals.read_bytes[name]), "validation": "raw_only_score_not_verified"}
+                        for name in diagnostic_names if name not in evidence_names])
                 return result
             except (ValueError, KeyError, TypeError, OSError) as exc:
                 result["rejections"].append({"forecast_id": fid, "reason": safe_error(exc)})
@@ -342,6 +369,33 @@ def export_report(packet, runtime, html_path, zip_path, *, state_tree=None):
     """Include a visible comparison and the exact original evidence closure."""
     f5c = packet.get("f5c_comparison", packet)
     title = f"F5-C 对照：{f5c.get('competition')} / {f5c.get('match_id')}"
+    selection, score = f5c.get("selection", {}), f5c.get("score", {})
+    summary = ('<p>实际选中 α：' + html.escape(str(selection.get("alpha", "未知")))
+        + '；合格成熟样本：' + html.escape(str(selection.get("n", "未知")))
+        + '；选参原因：' + html.escape(str(selection.get("reason", "未知"))) + '</p><p>评分状态：'
+        + html.escape(str(score.get("status", "未取得"))) + '；评分原因：'
+        + html.escape(str(score.get("reason", "无"))) + '</p>')
+    primary_table = ''
+    if (f5c.get("status") in {"verified_same_parent", "verified_saved_original_audit"}
+            and f5c.get("baseline") and f5c.get("selected_prediction")):
+        baseline, selected = f5c["baseline"], f5c["selected_prediction"]
+        main_rows = []
+        for label, prediction in (("180天生产基线", baseline),
+                (f"实际所选F5-C（α={selection.get('alpha', '未知')}）", selected)):
+            rates, probabilities = prediction["expected_goals"], prediction["probabilities"]
+            main_rows.append('<tr><td>' + html.escape(label) + f"</td><td>{rates['home']:.6f}</td><td>{rates['away']:.6f}</td>"
+                f"<td>{probabilities['home_win']:.6%}</td><td>{probabilities['draw']:.6%}</td><td>{probabilities['away_win']:.6%}</td></tr>")
+        main_rows.append('<tr><td>候选减基线</td>' + ''.join(f'<td>{selected["expected_goals"][side] - baseline["expected_goals"][side]:+.6f}</td>'
+            for side in ("home", "away")) + ''.join(f'<td>{100 * (selected["probabilities"][key] - baseline["probabilities"][key]):+.6f}个百分点</td>'
+            for key in ("home_win", "draw", "away_win")) + '</tr>')
+        primary_table = ('<h2>主要对照：生产基线与实际所选候选</h2><table id="primary-comparison"><thead><tr>'
+            '<th>方案</th><th>主λ</th><th>客λ</th><th>主胜</th><th>平</th><th>客胜</th></tr></thead><tbody>'
+            + ''.join(main_rows) + '</tbody></table>')
+        deltas = '；'.join(label + f"{100 * (selected['probabilities'][key] - baseline['probabilities'][key]):+.6f}个百分点"
+            for key, label in (("home_win", "主胜"), ("draw", "平局"), ("away_win", "客胜")))
+        summary += '<p>选中候选相对生产基线的概率差：' + deltas + '</p>'
+        if selection.get("alpha") == 0 and selected == baseline:
+            summary += '<p>α=0：选中候选与生产基线完全相同。</p>'
     rows = []
     for name, prediction in f5c.get("predictions", {}).items():
         rates, probabilities = prediction["expected_goals"], prediction["probabilities"]
@@ -350,8 +404,8 @@ def export_report(packet, runtime, html_path, zip_path, *, state_tree=None):
     document = ('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>' + html.escape(title)
         + '</title><style>body{max-width:1050px;margin:40px auto;font:16px/1.7 sans-serif}table{border-collapse:collapse}td,th{border:1px solid #bbb;padding:8px}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style><h1>'
         + html.escape(title) + '</h1><p>当前状态：' + html.escape(f5c["status"])
-        + '</p><p>工程影子试运行；五档不是五个独立样本。α=0沿用生产原件，未通过未来确认与推广验收。历史审计不新增赛前资格。</p>'
-        + '<table><tr><th>力度</th><th>主λ</th><th>客λ</th><th>主胜</th><th>平</th><th>客胜</th></tr>'
+        + '</p>' + summary + '<p>工程影子试运行；五档不是五个独立样本。α=0沿用生产原件，未通过未来确认与推广验收。历史审计不新增赛前资格。</p>'
+        + primary_table + '<h2>探索性附表：全部五档</h2><table id="exploratory-grid"><tr><th>力度</th><th>主λ</th><th>客λ</th><th>主胜</th><th>平</th><th>客胜</th></tr>'
         + ''.join(rows) + '</table><h2>完整读取、父预测、评分及失败记录</h2><pre>'
         + html.escape(json.dumps(packet, ensure_ascii=False, indent=2, allow_nan=False)) + '</pre></html>')
     html_path, zip_path = _new_output(html_path, runtime), _new_output(zip_path, runtime)
@@ -365,6 +419,16 @@ def export_report(packet, runtime, html_path, zip_path, *, state_tree=None):
         if hashlib.sha256(raw).hexdigest() != evidence["sha256"] or len(raw) != evidence["bytes"]:
             raise ValueError("f5c_original_changed_before_export")
         items["originals/" + evidence["path"]] = raw
+    for evidence in f5c.get("diagnostic_evidence", []):
+        raw = originals.raw(evidence["path"])
+        if hashlib.sha256(raw).hexdigest() != evidence["sha256"] or len(raw) != evidence["bytes"]:
+            raise ValueError("f5c_score_diagnostic_changed_before_export")
+        items["diagnostics/" + evidence["path"]] = raw
+    for evidence in f5c.get("attempt_evidence", []):
+        raw = originals.raw(evidence["path"])
+        if hashlib.sha256(raw).hexdigest() != evidence["sha256"] or len(raw) != evidence["bytes"]:
+            raise ValueError("f5c_attempt_summary_changed_before_export")
+        items["attempts/" + evidence["path"]] = raw
     manifest = {"schema_version": 1, "files": [{"path": name, "sha256": hashlib.sha256(raw).hexdigest(),
         "bytes": len(raw)} for name, raw in sorted(items.items())]}
     html_path.parent.mkdir(parents=True, exist_ok=True)
@@ -406,7 +470,8 @@ def main(argv=None):
     result = comparison(args.runtime, args.league, args.match_id, forecast_id=args.forecast_id, state_tree=args.state_tree)
     atomic_json(output, result)
     export_report(result, args.runtime, args.html, args.zip, state_tree=args.state_tree)
-    print(json.dumps({"status": result["status"], "forecast_id": result.get("forecast_id"), "reason": result.get("reason")}, ensure_ascii=False))
+    print(json.dumps({"status": result["status"], "forecast_id": result.get("forecast_id"), "reason": result.get("reason"),
+        "score_status": result.get("score", {}).get("status"), "score_reason": result.get("score", {}).get("reason")}, ensure_ascii=False))
     return int(result["status"] != "verified_saved_original_audit")
 
 
