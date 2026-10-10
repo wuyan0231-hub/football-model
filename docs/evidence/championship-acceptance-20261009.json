@@ -1,0 +1,438 @@
+{
+  "schema_version": 1,
+  "request": "模型增加英冠联赛，然后告诉我目前模型支持哪些联赛",
+  "request_time_exact": null,
+  "verification_completed_at": "2026-10-09T16:52:09.994Z",
+  "framework": {
+    "file": "足球盘口分析框架_v1.7_修订批次六.md",
+    "sha256": "2680d8abef0da5a92c23d222d9a7389c01b5fae8e98177d47e4d34d851e5e048",
+    "first_read_time_exact": null,
+    "scope": "Engineering league extension; the sampled match call is an access test, not a complete match analysis or betting recommendation."
+  },
+  "repository": "wuyan0231-hub/football-model",
+  "source": {
+    "initial": "134b1217b8c1b0e8d12a4adc6835f1942f944170",
+    "first_release": "434c4719d61c3f859ac50e7c5474d031cac079eb",
+    "accepted_training_source": "9a2c90070999b2d32153326f15aa33f570b414ae",
+    "accepted_training_source_tree": "1f1082cddb890b3d67bd7735d746e68f7f490574",
+    "full_source_files_materialized_and_git_blob_verified": 190,
+    "model_algorithm_data_module_and_frozen_research_protocols_unchanged": true,
+    "existing_competition_objects_and_global_parameters_unchanged": true
+  },
+  "state": {
+    "initial": "b38584ff7f0605fa03b58eb99ab9ea00623910e9",
+    "before_retry": "3b2035b1d93a107fb4a77b701b27b5bb30afa654",
+    "accepted": "4c9b8143ef21edb188b7c297ba89c6e2a88cbd2f",
+    "first_post_save_observed_at": "2026-10-09T16:40:50.232Z"
+  },
+  "tests": {
+    "first_release_pr": 23,
+    "first_release_cloud_tests": 1007,
+    "fix_pr": 24,
+    "fix_head": "0435765dd4e4c657e6f793eea27f16ace2baff2d",
+    "fix_ci_run": 37957416061,
+    "fix_cloud_tests": 1012,
+    "fix_cloud_conclusion": "success",
+    "deployed_release_cloud_tests": 1012,
+    "deployed_release_cloud_tests_duration_seconds": 65.272,
+    "initial_local_full_regression": "Incomplete local run without a terminal summary; not counted as passed."
+  },
+  "first_failure": {
+    "workflow_run": 37954302086,
+    "source_commit": "434c4719d61c3f859ac50e7c5474d031cac079eb",
+    "error": "invalid_workflow_context",
+    "cause": "championship missing from run_summary.LEAGUES",
+    "training_executed": false,
+    "persistence_executed": false,
+    "original_evidence": "docs/evidence/championship-initial-workflow-failure-20261009.json"
+  },
+  "retry": {
+    "workflow_run": 37957661718,
+    "job_id": 113915624273,
+    "overall_conclusion": "failure",
+    "actual_outcomes": {
+      "RESTORE_OUTCOME": "success",
+      "MODEL_OUTCOME": "success",
+      "PERSIST_OUTCOME": "success",
+      "CHECK_OUTCOME": "success",
+      "FUNDAMENTALS_OUTCOME": "success",
+      "RESULT_SYNC_OUTCOME": "success",
+      "QUOTES_OUTCOME": "failure",
+      "SHADOW_MODELS_OUTCOME": "failure",
+      "TOTAL_SHRINK_SHADOW_OUTCOME": "failure",
+      "PROSPECTIVE_OUTCOME": "success",
+      "REPLAY_OUTCOME": "success"
+    },
+    "model_report_exit_code": 0,
+    "requested_competitions": [
+      "championship"
+    ],
+    "report_run_id": "20261009T162510706513Z",
+    "api_requests_for_model_stage": 5,
+    "training_last_match_kickoff": "2026-09-20T12:30:00Z",
+    "model_refresh": {
+      "required": true,
+      "reasons": [
+        "initial_fit"
+      ],
+      "training_inputs_changed": false,
+      "data_changed": null,
+      "performed": true,
+      "prior_model_id": null
+    },
+    "model_fitted_at": "2026-10-09T16:25:12.454195Z",
+    "training_cutoff": "2026-10-09T16:25:10.706513Z",
+    "forecast_count": 24,
+    "unsupported_forecasts": 0,
+    "remaining_failures": {
+      "quotes": "partial; 221 fixtures; current open and actual execution unverified",
+      "shadow_models": "capture and score capacity_deferred",
+      "total_shrink_shadow": "shadow_storage_capacity_deferred / total_shrink_capacity_diagnostic_exceeds_shared_limits"
+    },
+    "logs_url": "https://github.com/wuyan0231-hub/football-model/actions/runs/37957661718"
+  },
+  "acceptance": {
+    "provider_league_id": 40,
+    "provider_country": "England",
+    "provider_name": "Championship",
+    "eligible_matches": 1209,
+    "teams": 34,
+    "model_id": "championship-20261009T162510706513Z",
+    "model_maturity": "exploratory_baseline",
+    "holdout_total": 245,
+    "holdout_scored": 217,
+    "holdout_excluded_unknown_team": 28,
+    "model_log_loss": 1.081172926957559,
+    "baseline_log_loss": 1.0926254224754894,
+    "deployment_approved": false,
+    "original_input_check": "docs/evidence/championship-input-verification-20261009.json",
+    "single_match_call": {
+      "command": "python -m football_model.integration match --runtime runtime --config config.json --league championship --match-id 1563190 --state-commit 4c9b8143ef21edb188b7c297ba89c6e2a88cbd2f --output acceptance/championship-match-1563190.json",
+      "started_at": "2026-10-09T16:46:18.345Z",
+      "finished_at": "2026-10-09T16:46:30.345Z",
+      "exit_code": 0,
+      "match_id": 1563190,
+      "read_and_recomputed": true,
+      "fit_performed": false,
+      "packet": "docs/evidence/championship-match-call-1563190-20261009.json",
+      "qualification": "Engineering read/recompute only; external checks remain pending. No odds, EV or direction recommendation."
+    }
+  },
+  "inventory": {
+    "configured_competitions": 20,
+    "saved_models": 19,
+    "domestic_models": [
+      {
+        "key": "epl",
+        "label": "英超",
+        "status": "available"
+      },
+      {
+        "key": "championship",
+        "label": "英冠",
+        "status": "available"
+      },
+      {
+        "key": "laliga",
+        "label": "西甲",
+        "status": "available"
+      },
+      {
+        "key": "bundesliga",
+        "label": "德甲",
+        "status": "available"
+      },
+      {
+        "key": "serie_a",
+        "label": "意甲",
+        "status": "available"
+      },
+      {
+        "key": "ligue_1",
+        "label": "法甲",
+        "status": "available"
+      },
+      {
+        "key": "bundesliga_2",
+        "label": "德乙",
+        "status": "available"
+      },
+      {
+        "key": "ligue_2",
+        "label": "法乙",
+        "status": "available"
+      },
+      {
+        "key": "allsvenskan",
+        "label": "瑞典超",
+        "status": "available"
+      },
+      {
+        "key": "eredivisie",
+        "label": "荷甲",
+        "status": "available"
+      },
+      {
+        "key": "primeira",
+        "label": "葡超",
+        "status": "available"
+      },
+      {
+        "key": "brazil_a",
+        "label": "巴西甲",
+        "status": "available"
+      },
+      {
+        "key": "j1",
+        "label": "日职联J1",
+        "status": "available"
+      },
+      {
+        "key": "k1",
+        "label": "韩国K1",
+        "status": "available"
+      },
+      {
+        "key": "mls",
+        "label": "美职联MLS",
+        "status": "available"
+      },
+      {
+        "key": "liga_mx",
+        "label": "墨西超Liga MX",
+        "status": "available"
+      },
+      {
+        "key": "segunda",
+        "label": "西乙",
+        "status": "available"
+      },
+      {
+        "key": "argentina_a",
+        "label": "阿根廷甲级联赛",
+        "status": "available"
+      }
+    ],
+    "national_models": [
+      {
+        "key": "unl",
+        "label": "欧洲国家联赛",
+        "status": "no_upcoming"
+      }
+    ],
+    "audit_only": [
+      {
+        "key": "ucl",
+        "label": "欧冠",
+        "status": "audit_only"
+      }
+    ],
+    "existing_models_byte_identical_by_git_blob": true,
+    "models_before_retry": [
+      {
+        "path": "runtime/models/allsvenskan.json",
+        "sha": "6e3dfd4882fe410b42a1106e1bd4518d4bf08691",
+        "size": 10162
+      },
+      {
+        "path": "runtime/models/argentina_a.json",
+        "sha": "f5b89d15b40d7cc6fb9c197155978be07d2527a7",
+        "size": 12256
+      },
+      {
+        "path": "runtime/models/brazil_a.json",
+        "sha": "fa8972229ef55a10e1217e4564a1b8869b2fa4d8",
+        "size": 11219
+      },
+      {
+        "path": "runtime/models/bundesliga.json",
+        "sha": "3a0360b6ec60e0701d50e61ff43f53c8710a8bdb",
+        "size": 12202
+      },
+      {
+        "path": "runtime/models/bundesliga_2.json",
+        "sha": "b3a4dfc5ef8c40dc3d75da730ab08f2246eb0246",
+        "size": 15916
+      },
+      {
+        "path": "runtime/models/epl.json",
+        "sha": "8e2291c26a92c9f9ddfcbd42a897ce8b27e46ceb",
+        "size": 12094
+      },
+      {
+        "path": "runtime/models/eredivisie.json",
+        "sha": "6d9b2bd31452420b8f2d5fc36ae36ce08ea78de7",
+        "size": 11186
+      },
+      {
+        "path": "runtime/models/j1.json",
+        "sha": "83b61c7e03a956e4287cc38d544b4c8241f35b49",
+        "size": 10598
+      },
+      {
+        "path": "runtime/models/k1.json",
+        "sha": "8b071d567bbd4b9777fe981f2a961e4382366325",
+        "size": 10291
+      },
+      {
+        "path": "runtime/models/laliga.json",
+        "sha": "c1996a53eba44272a553bc361c4dd1b82044455d",
+        "size": 13904
+      },
+      {
+        "path": "runtime/models/liga_mx.json",
+        "sha": "34061c53fd8d097bb9ddcc22a5656bde01e65c38",
+        "size": 11946
+      },
+      {
+        "path": "runtime/models/ligue_1.json",
+        "sha": "f1301c24fc0aeea8e774162c029e645f1e1a8337",
+        "size": 11976
+      },
+      {
+        "path": "runtime/models/ligue_2.json",
+        "sha": "5626a68989db8e49e4d56108a1426df8dcaa36af",
+        "size": 14619
+      },
+      {
+        "path": "runtime/models/mls.json",
+        "sha": "97be7157a6add864c7535cec539557afb1ed3035",
+        "size": 12560
+      },
+      {
+        "path": "runtime/models/primeira.json",
+        "sha": "ac013c68b443c1dafa4b0bf9b701a6ca58409441",
+        "size": 13025
+      },
+      {
+        "path": "runtime/models/segunda.json",
+        "sha": "be3f1737a507b4107550e5489805f0ae2bdd7a6f",
+        "size": 16441
+      },
+      {
+        "path": "runtime/models/serie_a.json",
+        "sha": "77e6e7b92477d53fdafde9e0bd3a236d5001a65b",
+        "size": 11337
+      },
+      {
+        "path": "runtime/models/unl.json",
+        "sha": "522d185b3a252ab5f679fb2689ad34830969ffe4",
+        "size": 330958
+      }
+    ],
+    "models_after": [
+      {
+        "path": "runtime/models/allsvenskan.json",
+        "sha": "6e3dfd4882fe410b42a1106e1bd4518d4bf08691",
+        "size": 10162
+      },
+      {
+        "path": "runtime/models/argentina_a.json",
+        "sha": "f5b89d15b40d7cc6fb9c197155978be07d2527a7",
+        "size": 12256
+      },
+      {
+        "path": "runtime/models/brazil_a.json",
+        "sha": "fa8972229ef55a10e1217e4564a1b8869b2fa4d8",
+        "size": 11219
+      },
+      {
+        "path": "runtime/models/bundesliga.json",
+        "sha": "3a0360b6ec60e0701d50e61ff43f53c8710a8bdb",
+        "size": 12202
+      },
+      {
+        "path": "runtime/models/bundesliga_2.json",
+        "sha": "b3a4dfc5ef8c40dc3d75da730ab08f2246eb0246",
+        "size": 15916
+      },
+      {
+        "path": "runtime/models/championship.json",
+        "sha": "f51df5012c80f8593ce9a28d634ba0e76325cc10",
+        "size": 16425
+      },
+      {
+        "path": "runtime/models/epl.json",
+        "sha": "8e2291c26a92c9f9ddfcbd42a897ce8b27e46ceb",
+        "size": 12094
+      },
+      {
+        "path": "runtime/models/eredivisie.json",
+        "sha": "6d9b2bd31452420b8f2d5fc36ae36ce08ea78de7",
+        "size": 11186
+      },
+      {
+        "path": "runtime/models/j1.json",
+        "sha": "83b61c7e03a956e4287cc38d544b4c8241f35b49",
+        "size": 10598
+      },
+      {
+        "path": "runtime/models/k1.json",
+        "sha": "8b071d567bbd4b9777fe981f2a961e4382366325",
+        "size": 10291
+      },
+      {
+        "path": "runtime/models/laliga.json",
+        "sha": "c1996a53eba44272a553bc361c4dd1b82044455d",
+        "size": 13904
+      },
+      {
+        "path": "runtime/models/liga_mx.json",
+        "sha": "34061c53fd8d097bb9ddcc22a5656bde01e65c38",
+        "size": 11946
+      },
+      {
+        "path": "runtime/models/ligue_1.json",
+        "sha": "f1301c24fc0aeea8e774162c029e645f1e1a8337",
+        "size": 11976
+      },
+      {
+        "path": "runtime/models/ligue_2.json",
+        "sha": "5626a68989db8e49e4d56108a1426df8dcaa36af",
+        "size": 14619
+      },
+      {
+        "path": "runtime/models/mls.json",
+        "sha": "97be7157a6add864c7535cec539557afb1ed3035",
+        "size": 12560
+      },
+      {
+        "path": "runtime/models/primeira.json",
+        "sha": "ac013c68b443c1dafa4b0bf9b701a6ca58409441",
+        "size": 13025
+      },
+      {
+        "path": "runtime/models/segunda.json",
+        "sha": "be3f1737a507b4107550e5489805f0ae2bdd7a6f",
+        "size": 16441
+      },
+      {
+        "path": "runtime/models/serie_a.json",
+        "sha": "77e6e7b92477d53fdafde9e0bd3a236d5001a65b",
+        "size": 11337
+      },
+      {
+        "path": "runtime/models/unl.json",
+        "sha": "522d185b3a252ab5f679fb2689ad34830969ffe4",
+        "size": 330958
+      }
+    ]
+  },
+  "retrieval": {
+    "state_file_received_at": {
+      "runtime/models/championship.json": "2026-10-09T16:41:26.412Z",
+      "runtime/reports/history/20261009T162510706513Z.json": "2026-10-09T16:41:26.486Z",
+      "runtime/predictions/20261009T162510706513Z/championship.json": "2026-10-09T16:41:26.803Z",
+      "runtime/validation/championship/20261009T162510706513Z.json": "2026-10-09T16:41:26.554Z",
+      "runtime/data/championship.json": "2026-10-09T16:41:26.653Z",
+      "runtime/model_history/championship/20261009T162510706513Z.json": "2026-10-09T16:41:26.394Z",
+      "runtime/cache/api_cache/48871822476a244d48dda7ccbd7c56ae05bdff9bd7aaca230b2f673027dd31ed.json": "2026-10-09T16:42:14.078Z",
+      "runtime/cache/api_cache/b93f4fb031c8f974a9d498b0335a3f7bcab3577e6cbda753069a0f3b17c254f0.json": "2026-10-09T16:42:14.524Z",
+      "runtime/cache/api_cache/effd0513dd235baf19c2f926c3b2b3799aac08361c3328db22ab4ae71784ed91.json": "2026-10-09T16:42:14.512Z",
+      "runtime/cache/api_cache/f5f1d2d6f99b5d6e2b4994065cc44c69aaec6c0df60ca873be9436bcb8d20e5d.json": "2026-10-09T16:42:14.231Z",
+      "runtime/replay/bundles/9566fe43010416e432d59e0c67131448678bdd89f39e1f5436405f1e92cd1847.json.gz": "2026-10-09T16:42:31.319Z"
+    },
+    "large_validation_handling": "Contents endpoint returned empty body; materializer rejected it. Original UTF-8 blob was fetched via the SHA bound by fixed-commit path metadata and its Git blob hash checked before writing. See validation_blob_access_receipt.",
+    "validation_blob_access_receipt": "docs/evidence/championship-validation-access-20261009.json"
+  }
+}
