@@ -1,0 +1,386 @@
+{
+  "schema_version": 1,
+  "request": "连接中断，检查进度，继续进行",
+  "user_request_submitted_at": "2026-10-10T16:20:06+08:00",
+  "checked_at": "2026-10-10T08:25:10.963485+00:00",
+  "repository": "wuyan0231-hub/football-model",
+  "source_commit_checked": "cfad8dfb1771ce7c5fab6e67831a2c3b39712449",
+  "state_commit_checked": "0b4399e1a2693ca3603dfdf31f7223d77aa60aff",
+  "original_training_source": "9a2c90070999b2d32153326f15aa33f570b414ae",
+  "original_training_state": "4c9b8143ef21edb188b7c297ba89c6e2a88cbd2f",
+  "scope": "Complete interrupted acceptance evidence publication only. No retraining, API collection, workflow dispatch, parameter/schedule/production/F5 protocol changes.",
+  "original_records_retained_byte_identical": [
+    "championship-acceptance-20261009.json",
+    "championship-input-verification-20261009.json",
+    "championship-match-call-1563190-20261009.json",
+    "championship-validation-access-20261009.json",
+    "championship-publication-resume-20261010.json"
+  ],
+  "current_daily_run": {
+    "id": 38013642919,
+    "job_id": 114099043756,
+    "overall_conclusion": "success",
+    "actual_outcomes": {
+      "RESTORE_OUTCOME": "success",
+      "MODEL_OUTCOME": "success",
+      "PERSIST_OUTCOME": "success",
+      "CHECK_OUTCOME": "success",
+      "FUNDAMENTALS_OUTCOME": "failure",
+      "RESULT_SYNC_OUTCOME": "success",
+      "QUOTES_OUTCOME": "success",
+      "SHADOW_MODELS_OUTCOME": "success",
+      "TOTAL_SHRINK_SHADOW_OUTCOME": "success",
+      "PROSPECTIVE_OUTCOME": "success",
+      "REPLAY_OUTCOME": "success"
+    },
+    "fundamentals": "partial; 83 fixtures; exit code 1; probability adjustment disabled",
+    "state_saved": true,
+    "job_logs_observed_at": "2026-10-10T08:23:28.745Z"
+  },
+  "current_championship": {
+    "model_id": "championship-20261010T013448683605Z",
+    "model_fitted_at": "2026-10-10T01:34:50.869560Z",
+    "n_matches": 1210,
+    "n_teams": 34,
+    "training_last_match_kickoff": "2026-10-09T19:00:00Z",
+    "model_optimizer": {
+      "success": true,
+      "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+      "iterations": 36,
+      "objective": 907.3172752628957,
+      "parameter_at_bound": false
+    },
+    "report_exit_code": 0,
+    "report_run_id": "20261010T013448683605Z",
+    "forecast_count_at_generation": 24,
+    "unsupported_forecasts": 0,
+    "validation_coverage": {
+      "total": 246,
+      "scored": 217,
+      "excluded": 29,
+      "ratio": 0.8821138211382114,
+      "exclusions": [
+        {
+          "match_id": 1563083,
+          "reason": "未知球队 ID：[39]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563084,
+          "reason": "未知球队 ID：[68]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563087,
+          "reason": "未知球队 ID：[1379]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563093,
+          "reason": "未知球队 ID：[48]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563098,
+          "reason": "未知球队 ID：[1379]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563100,
+          "reason": "未知球队 ID：[39]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563101,
+          "reason": "未知球队 ID：[68]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563105,
+          "reason": "未知球队 ID：[48]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563117,
+          "reason": "未知球队 ID：[39]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563108,
+          "reason": "未知球队 ID：[68, 1379]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563116,
+          "reason": "未知球队 ID：[48]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563120,
+          "reason": "未知球队 ID：[1379]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563123,
+          "reason": "未知球队 ID：[68]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563126,
+          "reason": "未知球队 ID：[48, 39]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563133,
+          "reason": "未知球队 ID：[1379]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563134,
+          "reason": "未知球队 ID：[68]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563142,
+          "reason": "未知球队 ID：[48]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563131,
+          "reason": "未知球队 ID：[39]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563144,
+          "reason": "未知球队 ID：[68, 48]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563166,
+          "reason": "未知球队 ID：[48]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563156,
+          "reason": "未知球队 ID：[68]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563160,
+          "reason": "未知球队 ID：[1379]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563161,
+          "reason": "未知球队 ID：[39]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563145,
+          "reason": "未知球队 ID：[1379]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563172,
+          "reason": "未知球队 ID：[48]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563171,
+          "reason": "未知球队 ID：[1379]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563177,
+          "reason": "未知球队 ID：[39]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563173,
+          "reason": "未知球队 ID：[68]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1563190,
+          "reason": "未知球队 ID：[48]；缺少训练数据，当前模型不支持。"
+        }
+      ]
+    },
+    "validation_status": "exploratory_single_fixed_holdout",
+    "deployment_approved": false,
+    "current_model_match_recomputation": "not performed in this resume; preserved original successful call is a historical engineering test, not a current prematch analysis",
+    "freshness_boundary": "Training now includes a fixture at 2026-10-09T19:00:00Z. Full team-specific schedule denominator and match-specific external facts remain separate checks."
+  },
+  "inventory": {
+    "configured_count": 20,
+    "saved_model_count": 19,
+    "domestic": [
+      {
+        "key": "epl",
+        "label": "英超",
+        "status": "available"
+      },
+      {
+        "key": "championship",
+        "label": "英冠",
+        "status": "available"
+      },
+      {
+        "key": "laliga",
+        "label": "西甲",
+        "status": "available"
+      },
+      {
+        "key": "bundesliga",
+        "label": "德甲",
+        "status": "available"
+      },
+      {
+        "key": "serie_a",
+        "label": "意甲",
+        "status": "available"
+      },
+      {
+        "key": "ligue_1",
+        "label": "法甲",
+        "status": "available"
+      },
+      {
+        "key": "bundesliga_2",
+        "label": "德乙",
+        "status": "available"
+      },
+      {
+        "key": "ligue_2",
+        "label": "法乙",
+        "status": "available"
+      },
+      {
+        "key": "allsvenskan",
+        "label": "瑞典超",
+        "status": "available"
+      },
+      {
+        "key": "eredivisie",
+        "label": "荷甲",
+        "status": "available"
+      },
+      {
+        "key": "primeira",
+        "label": "葡超",
+        "status": "available"
+      },
+      {
+        "key": "brazil_a",
+        "label": "巴西甲",
+        "status": "available"
+      },
+      {
+        "key": "j1",
+        "label": "日职联J1",
+        "status": "available"
+      },
+      {
+        "key": "k1",
+        "label": "韩国K1",
+        "status": "available"
+      },
+      {
+        "key": "mls",
+        "label": "美职联MLS",
+        "status": "available"
+      },
+      {
+        "key": "liga_mx",
+        "label": "墨西超Liga MX",
+        "status": "available"
+      },
+      {
+        "key": "segunda",
+        "label": "西乙",
+        "status": "available"
+      },
+      {
+        "key": "argentina_a",
+        "label": "阿根廷甲级联赛",
+        "status": "available"
+      }
+    ],
+    "national": [
+      {
+        "key": "unl",
+        "label": "欧洲国家联赛",
+        "status": "no_upcoming"
+      }
+    ],
+    "audit_only": [
+      {
+        "key": "ucl",
+        "label": "欧冠",
+        "status": "audit_only"
+      }
+    ]
+  },
+  "document_provenance": {
+    "current_main_doc_sha256": "6d299807f988a2ef535ff49fda0f6365daf3ffe7df6e3eae0f126e4d5d97783c",
+    "interrupted_edited_doc_sha256": "a2788119742a26cbfa08094ed329fd9b2969a8bd6451f328dae1b089d60ec3e3",
+    "current_main_doc_is_exact_prefix": true,
+    "original_materialization_manifest_retained": true,
+    "note": "The edited acceptance document is a derived append, not an unmodified fixed-source original. Other original acceptance evidence bytes are preserved. Original verification script is copied exactly to its documented reference path.",
+    "original_verification_script_sha256": "c24d0bf03afb7cfe81007c3f3a630e55b5aaf8e6053f39903a781ca426053467"
+  },
+  "read_fingerprints": [
+    {
+      "local_path": "source/AGENTS.md",
+      "bytes": 34779,
+      "sha256": "fdd8c6631540d99eec3ee78f945d372429c4e10835d47146201a345b5ae2a2b9",
+      "git_blob": "085e12994b91bdbe5d016049efa0b5fd5a32c815"
+    },
+    {
+      "local_path": "source/docs/model-access.md",
+      "bytes": 13018,
+      "sha256": "08879cb69eac954759a312fe50040221afcbbc964a0a1fdbd1bd3b9488dcbd63",
+      "git_blob": "cacba2ffa8c0eab39ce0a2e028378cf83534d71a"
+    },
+    {
+      "local_path": "source/config.json",
+      "bytes": 3417,
+      "sha256": "08aee55614862f6719ec83744d81d0544792beed087ba270995526b5d1894c49",
+      "git_blob": "6c86b01bb363e3a32f3410343c15da857b2db3ad"
+    },
+    {
+      "local_path": "source/docs/英冠接入说明_20261009.md",
+      "bytes": 4096,
+      "sha256": "6d299807f988a2ef535ff49fda0f6365daf3ffe7df6e3eae0f126e4d5d97783c",
+      "git_blob": "6182a94af38ec4efb5427c4fa7937f6e1875c484"
+    },
+    {
+      "local_path": "state/runtime/integration/index.json",
+      "bytes": 141617,
+      "sha256": "dac5b714567a56b000274668f9d19650bc5faa5104cb050fb4392e95070dd849",
+      "git_blob": "c47197a8416876723b62442ecff5081e77ea3776"
+    },
+    {
+      "local_path": "state/runtime/models/championship.json",
+      "bytes": 16577,
+      "sha256": "69b61fb35bd828662f36e206324a5bf6bd58455a44d29d2fd9fc33bee80673f7",
+      "git_blob": "eb833d9ea7820e6af8c26ef7b492f5314ecb02a6"
+    },
+    {
+      "local_path": "state/runtime/reports/history/20261010T013448683605Z.json",
+      "bytes": 560400,
+      "sha256": "437cd8e3e37e14fd022133cff3a66b6ca11183c37c12870a1fb50ca562cfa5bb",
+      "git_blob": "6c44d538a9594c3b208b64ea13ff4df712287461"
+    },
+    {
+      "local_path": "daily-jobs-response.json",
+      "bytes": 5459,
+      "sha256": "9545f1f6951ee5c52b91a9166e460b0061866aab64146a3e6fe654f0eb2ed419",
+      "git_blob": null
+    },
+    {
+      "local_path": "daily-log-response.json",
+      "bytes": 55773,
+      "sha256": "782298187a0ed8ad7c5f75bab637d677f333d6a154985f0ce83d24eb82bd73af",
+      "git_blob": null
+    }
+  ],
+  "failed_access_retained": [
+    {
+      "path": "docs/evidence/championship-acceptance-20261009.json",
+      "ref": "cfad8dfb1771ce7c5fab6e67831a2c3b39712449",
+      "http_status": 404,
+      "scope": "Exact acceptance path not readable in checked main; repository access succeeded for other files."
+    },
+    {
+      "path": "docs/evidence/championship-publication-resume-20261010.json",
+      "ref": "cfad8dfb1771ce7c5fab6e67831a2c3b39712449",
+      "http_status": 404
+    },
+    {
+      "path": "runtime/run_summaries/latest.json",
+      "ref": "0b4399e1a2693ca3603dfdf31f7223d77aa60aff",
+      "http_status": 404,
+      "scope": "Unconfirmed guessed summary path; not used as evidence of run failure. Actual job log used instead."
+    }
+  ],
+  "completion_before_publication": "Original code, independent training, durable state and original match call complete; acceptance publication pending.",
+  "limitations": [
+    "Exploratory fixed holdout is not independent future accuracy or ROI acceptance.",
+    "Current saved forecast counts are generation-time counts, not a live schedule check.",
+    "Current fundamentals partial failure is retained; daily overall success does not imply every ancillary stage succeeded.",
+    "Original first-attempt workflow failure and retry ancillary failures remain immutable historical records."
+  ]
+}
