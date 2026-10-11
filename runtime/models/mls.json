@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
   "time_semantics": "observed_wall_clock_v1",
-  "run_started_at": "2026-10-07T07:09:05.348136Z",
-  "training_cutoff": "2026-10-07T07:09:05.348136Z",
-  "data_observed_at": "2026-10-07T07:09:06.181533Z",
-  "model_fitted_at": "2026-10-07T07:09:06.508616Z",
+  "run_started_at": "2026-10-11T01:33:06.415389Z",
+  "training_cutoff": "2026-10-11T01:33:06.415389Z",
+  "data_observed_at": "2026-10-11T01:33:33.242217Z",
+  "model_fitted_at": "2026-10-11T01:33:33.495627Z",
   "program_version": "0.1.0",
-  "model_id": "mls-20261007T070905348136Z",
+  "model_id": "mls-20261011T013306415389Z",
   "competition": {
     "key": "mls",
     "label": "美职联MLS",
@@ -14,8 +14,8 @@
     "country": "USA",
     "mode": "domestic_baseline"
   },
-  "data_fingerprint": "cbe2459976c5b56f5ead59b5a8e63808a7d11d480d7ca361c9e2e0bbed943253",
-  "trained_at": "2026-10-07T07:09:05.348136Z",
+  "data_fingerprint": "5dee6265d12af0149ad4e8a87f3c79b4c708fa3f971e96551f22ad40068041e9",
+  "trained_at": "2026-10-11T01:33:06.415389Z",
   "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
   "maturity": "exploratory_baseline",
   "lineup_effects": "未量化",
@@ -26,213 +26,213 @@
     "fit_status": "converged",
     "trained": true,
     "validated_for_production": false,
-    "training_cutoff": "2026-10-07T07:09:05.348136Z",
-    "last_match_kickoff": "2026-10-07T00:30:00Z",
-    "last_result_assumed_available_at": "2026-10-07T04:30:00Z",
-    "n_matches": 1467,
+    "training_cutoff": "2026-10-11T01:33:06.415389Z",
+    "last_match_kickoff": "2026-10-10T18:30:00Z",
+    "last_result_assumed_available_at": "2026-10-10T22:30:00Z",
+    "n_matches": 1469,
     "n_teams": 30,
     "min_team_matches": 66,
     "low_sample_team_threshold": 5,
     "low_sample_team_ids": [],
     "excluded_after_cutoff_or_availability_delay": 0,
-    "training_data_sha256": "50d223fb1b6ddfc36424d1f0afe121e4e60acb3795a6e3ffc5a09003163b49c7",
+    "training_data_sha256": "2000c9372d811a2ff546f756f76322b593a98622cb5a9a9dd1f0583b0c2e3fd1",
     "half_life_days": 180.0,
     "ridge": 3.0,
-    "effective_sample_size": 699.1026701762488,
-    "intercept": 0.31028113952245423,
-    "home_advantage": 0.237267449483941,
+    "effective_sample_size": 699.6901954069031,
+    "intercept": 0.30966045526327274,
+    "home_advantage": 0.23869206799666964,
     "team_parameters": {
       "1595": {
         "name": "Seattle Sounders",
-        "attack": -0.10705379784639792,
-        "defence": 0.10950955196349021,
+        "attack": -0.10683098818126409,
+        "defence": 0.1095732574528772,
         "training_matches": 102
       },
       "1596": {
         "name": "San Jose Earthquakes",
-        "attack": 0.0686819553740103,
-        "defence": -0.08093922117331372,
+        "attack": 0.06862306205984621,
+        "defence": -0.08065031824540803,
         "training_matches": 95
       },
       "1597": {
         "name": "FC Dallas",
-        "attack": 0.10785323772698756,
-        "defence": -0.013866156530745525,
+        "attack": 0.1078052102897164,
+        "defence": -0.013614800534940954,
         "training_matches": 97
       },
       "1598": {
         "name": "Orlando City SC",
-        "attack": 0.16069390351716817,
-        "defence": -0.22190506229362184,
+        "attack": 0.16052439897501528,
+        "defence": -0.2214572736261754,
         "training_matches": 101
       },
       "1599": {
         "name": "Philadelphia Union",
-        "attack": 0.25124282443253404,
-        "defence": 0.07659757918289868,
+        "attack": 0.2506582496194189,
+        "defence": 0.07652517586946571,
         "training_matches": 98
       },
       "1600": {
         "name": "Houston Dynamo",
-        "attack": -0.25040938059072565,
-        "defence": 0.23822590825047346,
+        "attack": -0.25005602238895414,
+        "defence": 0.23806081365663767,
         "training_matches": 97
       },
       "1601": {
         "name": "Toronto FC",
-        "attack": -0.11748166164223124,
-        "defence": -0.04731586214204932,
-        "training_matches": 95
+        "attack": -0.11203543944809352,
+        "defence": -0.04537269076735604,
+        "training_matches": 96
       },
       "1602": {
         "name": "New York Red Bulls",
-        "attack": -0.21592245139068753,
-        "defence": -0.03904659129331335,
+        "attack": -0.2159441655259605,
+        "defence": -0.03896198240305708,
         "training_matches": 100
       },
       "1603": {
         "name": "Vancouver Whitecaps",
-        "attack": 0.24672512317505524,
-        "defence": 0.22514325948705402,
+        "attack": 0.2466169006279437,
+        "defence": 0.22525535357185072,
         "training_matches": 104
       },
       "1604": {
         "name": "New York City FC",
-        "attack": -0.06322687870235115,
-        "defence": 0.17593963914611319,
-        "training_matches": 104
+        "attack": -0.06901195872153959,
+        "defence": 0.16839237885102998,
+        "training_matches": 105
       },
       "1605": {
         "name": "Los Angeles Galaxy",
-        "attack": -0.07927852366780459,
-        "defence": -0.06835202920608736,
+        "attack": -0.07942487831231104,
+        "defence": -0.0682964619907423,
         "training_matches": 101
       },
       "1606": {
         "name": "Real Salt Lake",
-        "attack": -0.11661255793257587,
-        "defence": -0.04540830488482822,
+        "attack": -0.11670816680970054,
+        "defence": -0.045377959363631384,
         "training_matches": 98
       },
       "1607": {
         "name": "Chicago Fire",
-        "attack": 0.14543880391902664,
-        "defence": 0.013397902522387789,
-        "training_matches": 98
+        "attack": 0.15102335814083467,
+        "defence": 0.018966789846606415,
+        "training_matches": 99
       },
       "1608": {
         "name": "Atlanta United FC",
-        "attack": -0.23611107024322542,
-        "defence": -0.02778462487602182,
+        "attack": -0.23604465529787824,
+        "defence": -0.02762579250792232,
         "training_matches": 100
       },
       "1609": {
         "name": "New England Revolution",
-        "attack": 0.013178668099826688,
-        "defence": 0.055716765239776825,
+        "attack": 0.01280365935261646,
+        "defence": 0.055907993128867836,
         "training_matches": 95
       },
       "1610": {
         "name": "Colorado Rapids",
-        "attack": -0.14288754586010344,
-        "defence": 0.011101337033512008,
+        "attack": -0.14297850562330072,
+        "defence": 0.011168259985646115,
         "training_matches": 97
       },
       "1611": {
         "name": "Sporting Kansas City",
-        "attack": -0.12685766186546701,
-        "defence": -0.36531508407363156,
+        "attack": -0.1266827482836715,
+        "defence": -0.36478286546285615,
         "training_matches": 95
       },
       "1612": {
         "name": "Minnesota United FC",
-        "attack": 0.010313363747301225,
-        "defence": -0.1122960453954874,
+        "attack": 0.010334697385191537,
+        "defence": -0.11203406267817846,
         "training_matches": 102
       },
       "1613": {
         "name": "Columbus Crew",
-        "attack": -0.03267053430016331,
-        "defence": 0.024308515044482382,
+        "attack": -0.03315181356718746,
+        "defence": 0.024121378840425534,
         "training_matches": 100
       },
       "1614": {
         "name": "CF Montreal",
-        "attack": -0.26736043874272325,
-        "defence": -0.1457410035782915,
-        "training_matches": 96
+        "attack": -0.26966214797444876,
+        "defence": -0.14952605380802356,
+        "training_matches": 97
       },
       "1615": {
         "name": "DC United",
-        "attack": -0.18768092187370078,
-        "defence": -0.09331407977836452,
+        "attack": -0.18771048875004417,
+        "defence": -0.09311473929184812,
         "training_matches": 94
       },
       "1616": {
         "name": "Los Angeles FC",
-        "attack": 0.02600164418702252,
-        "defence": 0.29330304767051213,
+        "attack": 0.02607524132258795,
+        "defence": 0.29318051097641656,
         "training_matches": 103
       },
       "1617": {
         "name": "Portland Timbers",
-        "attack": 0.04585133168066887,
-        "defence": -0.12497233784116503,
+        "attack": 0.0458160103357291,
+        "defence": -0.1245464415412508,
         "training_matches": 100
       },
       "2242": {
         "name": "FC Cincinnati",
-        "attack": 0.18597149535873253,
-        "defence": -0.27130157312829206,
+        "attack": 0.185351257230335,
+        "defence": -0.2710160144136942,
         "training_matches": 101
       },
       "9568": {
         "name": "Inter Miami",
-        "attack": 0.4392672449044345,
-        "defence": -0.09395039121911826,
+        "attack": 0.43882371246281493,
+        "defence": -0.09347650873630568,
         "training_matches": 104
       },
       "9569": {
         "name": "Nashville SC",
-        "attack": 0.1421003921142162,
-        "defence": 0.4123214907989069,
+        "attack": 0.14185588647330322,
+        "defence": 0.41203273813700947,
         "training_matches": 98
       },
       "16489": {
         "name": "Austin",
-        "attack": -0.17741429801745215,
-        "defence": -0.023756125100134973,
+        "attack": -0.17719709202639944,
+        "defence": -0.02350566471461375,
         "training_matches": 97
       },
       "18310": {
         "name": "Charlotte",
-        "attack": 0.04906108994413045,
-        "defence": 0.12391042603728702,
+        "attack": 0.0487674853553111,
+        "defence": 0.12402883831633466,
         "training_matches": 101
       },
       "20787": {
         "name": "St. Louis City",
-        "attack": 0.14245543541303196,
-        "defence": 0.03899065963628265,
+        "attack": 0.14232729444845452,
+        "defence": 0.03920005524961864,
         "training_matches": 95
       },
       "25484": {
         "name": "San Diego",
-        "attack": 0.0861312090814626,
-        "defence": -0.02320158949871076,
+        "attack": 0.08603264683163475,
+        "defence": -0.023053913796782483,
         "training_matches": 66
       }
     },
     "graph_connected": true,
     "constraints": {
-      "attack_sum": 1.1102230246251565e-16,
-      "defence_sum": 8.673617379884035e-17
+      "attack_sum": -2.7755575615628914e-17,
+      "defence_sum": -1.6653345369377348e-16
     },
     "optimizer": {
       "success": true,
       "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
-      "iterations": 23,
-      "objective": 1172.0844455564475,
+      "iterations": 24,
+      "objective": 1159.920639095162,
       "parameter_at_bound": false
     },
     "warnings": [
@@ -247,16 +247,16 @@
     "is_rolling_backtest": false,
     "minimum_test_matches": 40,
     "meets_minimum_supported_test_matches": true,
-    "evaluation_data_cutoff": "2026-10-07T07:09:05.348136Z",
+    "evaluation_data_cutoff": "2026-10-11T01:33:06.415389Z",
     "split": {
       "method": "chronological_fixed_model_holdout",
       "grouped_by": "kickoff_utc_calendar_date",
       "train_cutoff": "2026-04-19T00:00:00Z",
       "train_last_kickoff": "2026-04-18T18:30:00Z",
       "test_start": "2026-04-19T00:30:00Z",
-      "test_end": "2026-10-07T00:30:00Z",
+      "test_end": "2026-10-10T18:30:00Z",
       "training_count": 1168,
-      "testing_count": 292,
+      "testing_count": 294,
       "result_availability_delay_hours": 4,
       "embargoed_count": 7,
       "embargoed_match_ids": [
@@ -270,23 +270,23 @@
       ]
     },
     "coverage": {
-      "total": 292,
-      "scored": 292,
+      "total": 294,
+      "scored": 294,
       "excluded": 0,
       "ratio": 1.0,
       "exclusions": []
     },
     "model_metrics": {
-      "n": 292,
-      "log_loss": 1.105748774409796,
-      "brier_score": 0.6697298175413408,
+      "n": 294,
+      "log_loss": 1.1031375183714192,
+      "brier_score": 0.6678831735610558,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
     "baseline_metrics": {
-      "n": 292,
-      "log_loss": 1.0757427226848173,
-      "brier_score": 0.6501000136091382,
+      "n": 294,
+      "log_loss": 1.0736932994303794,
+      "brier_score": 0.6486583159620838,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
@@ -298,8 +298,8 @@
       "same_scored_matches_as_model": true
     },
     "comparison": {
-      "model_minus_baseline_log_loss": 0.030006051724978722,
-      "model_minus_baseline_brier_score": 0.019629803932202594,
+      "model_minus_baseline_log_loss": 0.029444218941039768,
+      "model_minus_baseline_brier_score": 0.019224857598971967,
       "lower_is_better": true
     },
     "warnings": [
@@ -329,12 +329,15 @@
         "odds": true
       },
       "fixtures": 510,
-      "fetched_at": "2026-10-07T07:09:05.729101Z",
-      "received_at": "2026-10-07T07:09:05.747957Z",
+      "fetched_at": "2026-10-11T01:33:33.178964Z",
+      "received_at": "2026-10-11T01:33:33.196973Z",
       "from_cache": false,
       "status_counts": {
-        "FT": 405,
-        "NS": 105
+        "1H": 1,
+        "HT": 2,
+        "FT": 407,
+        "NS": 93,
+        "2H": 7
       }
     },
     {
@@ -357,8 +360,8 @@
       },
       "fixtures": 540,
       "fetched_at": "2026-10-07T07:09:05.938559Z",
-      "received_at": "2026-10-07T07:09:05.958607Z",
-      "from_cache": false,
+      "received_at": "2026-10-11T01:33:33.213421Z",
+      "from_cache": true,
       "status_counts": {
         "FT": 533,
         "PEN": 7
@@ -384,8 +387,8 @@
       },
       "fixtures": 526,
       "fetched_at": "2026-10-07T07:09:06.145918Z",
-      "received_at": "2026-10-07T07:09:06.166988Z",
-      "from_cache": false,
+      "received_at": "2026-10-11T01:33:33.232858Z",
+      "from_cache": true,
       "status_counts": {
         "CANC": 4,
         "FT": 512,
@@ -393,16 +396,5 @@
         "AET": 1
       }
     }
-  ],
-  "time_evidence_migration": {
-    "policy": "refit_legacy_model_when_upcoming_v1",
-    "reason": "missing_model_fitted_at",
-    "prior_model_id": "mls-20261003T013044865986Z",
-    "prior_model_fitted_at": null,
-    "prior_model_evidence": {
-      "path": "runtime/model_history/mls/predecessors/f51c8d587369cc49f90fba632d5432244c9275e3c455d9b51b6cccd0691f1a49.json",
-      "sha256": "f51c8d587369cc49f90fba632d5432244c9275e3c455d9b51b6cccd0691f1a49"
-    },
-    "new_model_fitted_at": "2026-10-07T07:09:06.508616Z"
-  }
+  ]
 }

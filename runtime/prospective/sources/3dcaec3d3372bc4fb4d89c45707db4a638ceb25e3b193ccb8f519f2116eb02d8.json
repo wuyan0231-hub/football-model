@@ -1,0 +1,406 @@
+{
+  "content": {
+    "competition": {
+      "country": "Argentina",
+      "key": "argentina_a",
+      "label": "阿根廷甲级联赛",
+      "mode": "domestic_baseline",
+      "name": "Liga Profesional Argentina"
+    },
+    "data_fingerprint": "3fe571c553fcc7d49f2261dd761137734f338948c04af2b7f45bd8ac45959613",
+    "data_observed_at": "2026-10-11T01:33:42.202074Z",
+    "ev": "未量化",
+    "lineup_effects": "未量化",
+    "maturity": "exploratory_baseline",
+    "model": {
+      "constraints": {
+        "attack_sum": 0.0,
+        "defence_sum": 0.0
+      },
+      "effective_sample_size": 693.6762823144657,
+      "excluded_after_cutoff_or_availability_delay": 0,
+      "fit_status": "converged",
+      "graph_connected": true,
+      "half_life_days": 180.0,
+      "home_advantage": 0.22669906140589194,
+      "intercept": -0.10025051030284753,
+      "last_match_kickoff": "2026-10-10T20:00:00Z",
+      "last_result_assumed_available_at": "2026-10-11T00:00:00Z",
+      "low_sample_team_ids": [],
+      "low_sample_team_threshold": 5,
+      "min_team_matches": 27,
+      "model_scope": "baseline_unadjusted_lineup",
+      "model_version": "independent_poisson_time_decay_l2_v1",
+      "n_matches": 1313,
+      "n_teams": 32,
+      "optimizer": {
+        "iterations": 25,
+        "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "objective": 936.0560109683064,
+        "parameter_at_bound": false,
+        "success": true
+      },
+      "ridge": 3.0,
+      "team_parameters": {
+        "1064": {
+          "attack": -0.16912551911345014,
+          "defence": -0.11533608345622794,
+          "name": "Platense",
+          "training_matches": 90
+        },
+        "1065": {
+          "attack": -0.0988789174646024,
+          "defence": -0.1463856080251855,
+          "name": "Central Cordoba de Santiago",
+          "training_matches": 89
+        },
+        "1066": {
+          "attack": 0.07792216874687273,
+          "defence": -0.12101879430152937,
+          "name": "Gimnasia M.",
+          "training_matches": 27
+        },
+        "2424": {
+          "attack": -0.5852974561022581,
+          "defence": -0.2764315863961028,
+          "name": "Estudiantes de Rio Cuarto",
+          "training_matches": 27
+        },
+        "2432": {
+          "attack": -0.09740505494350181,
+          "defence": 0.10290391359971221,
+          "name": "Barracas Central",
+          "training_matches": 90
+        },
+        "434": {
+          "attack": 0.11001983844709322,
+          "defence": -0.08384147054348838,
+          "name": "Gimnasia L.P.",
+          "training_matches": 92
+        },
+        "435": {
+          "attack": 0.2844909267168409,
+          "defence": 0.05806870693468193,
+          "name": "River Plate",
+          "training_matches": 92
+        },
+        "436": {
+          "attack": 0.12318400369098946,
+          "defence": -0.028270278635904117,
+          "name": "Racing Club",
+          "training_matches": 93
+        },
+        "437": {
+          "attack": 0.10510048140227078,
+          "defence": 0.1999591136357578,
+          "name": "Rosario Central",
+          "training_matches": 92
+        },
+        "438": {
+          "attack": 0.1700273817103923,
+          "defence": 0.10695489277486829,
+          "name": "Velez Sarsfield",
+          "training_matches": 88
+        },
+        "439": {
+          "attack": -0.19238127043245204,
+          "defence": -0.06702686620162498,
+          "name": "Godoy Cruz",
+          "training_matches": 59
+        },
+        "440": {
+          "attack": 0.024856954021359456,
+          "defence": 0.2635920696893331,
+          "name": "Belgrano Cordoba",
+          "training_matches": 90
+        },
+        "441": {
+          "attack": 0.21144770130484533,
+          "defence": -0.24709321864020267,
+          "name": "Union Santa Fe",
+          "training_matches": 90
+        },
+        "442": {
+          "attack": 0.1837389761402047,
+          "defence": -0.09687653769957896,
+          "name": "Defensa Y Justicia",
+          "training_matches": 87
+        },
+        "445": {
+          "attack": -0.09144020052779286,
+          "defence": 0.20646045500198273,
+          "name": "Huracan",
+          "training_matches": 93
+        },
+        "446": {
+          "attack": 0.05655341215033309,
+          "defence": 0.19140094647011083,
+          "name": "Lanus",
+          "training_matches": 89
+        },
+        "449": {
+          "attack": 0.015141086531276845,
+          "defence": -0.23916038166315615,
+          "name": "Banfield",
+          "training_matches": 86
+        },
+        "450": {
+          "attack": 0.11128328780783656,
+          "defence": 0.16040260006070584,
+          "name": "Estudiantes L.P.",
+          "training_matches": 93
+        },
+        "451": {
+          "attack": 0.36608377804130465,
+          "defence": 0.2348154544789458,
+          "name": "Boca Juniors",
+          "training_matches": 93
+        },
+        "452": {
+          "attack": -0.05573952481083928,
+          "defence": 0.11592058320229012,
+          "name": "Tigre",
+          "training_matches": 89
+        },
+        "453": {
+          "attack": 0.10645095490697411,
+          "defence": -0.01950961627158146,
+          "name": "Independiente",
+          "training_matches": 90
+        },
+        "455": {
+          "attack": -0.10524318467775533,
+          "defence": -0.04915865672972361,
+          "name": "Atletico Tucuman",
+          "training_matches": 87
+        },
+        "456": {
+          "attack": -0.08529188950184197,
+          "defence": -0.06552705872625916,
+          "name": "Talleres Cordoba",
+          "training_matches": 88
+        },
+        "457": {
+          "attack": -0.06876514530378752,
+          "defence": -0.06600517685107789,
+          "name": "Newells Old Boys",
+          "training_matches": 86
+        },
+        "458": {
+          "attack": 0.14780983770054293,
+          "defence": 0.21396730289435742,
+          "name": "Argentinos JRS",
+          "training_matches": 93
+        },
+        "460": {
+          "attack": -0.3710228049411002,
+          "defence": 0.1367489665070509,
+          "name": "San Lorenzo",
+          "training_matches": 91
+        },
+        "461": {
+          "attack": -0.24477969956809825,
+          "defence": -0.02877430461704163,
+          "name": "San Martin S.J.",
+          "training_matches": 32
+        },
+        "463": {
+          "attack": -0.17437547848661544,
+          "defence": -0.25647735960955986,
+          "name": "Aldosivi",
+          "training_matches": 60
+        },
+        "473": {
+          "attack": 0.25106936373723776,
+          "defence": -0.06250166814241988,
+          "name": "Independ. Rivadavia",
+          "training_matches": 88
+        },
+        "474": {
+          "attack": 0.13309740878993367,
+          "defence": -0.2209424345008667,
+          "name": "Sarmiento Junin",
+          "training_matches": 86
+        },
+        "476": {
+          "attack": -0.30043026153817903,
+          "defence": 0.18805379553705778,
+          "name": "Deportivo Riestra",
+          "training_matches": 88
+        },
+        "478": {
+          "attack": 0.1618988455659659,
+          "defence": 0.011088300224676363,
+          "name": "Instituto Cordoba",
+          "training_matches": 88
+        }
+      },
+      "trained": true,
+      "training_cutoff": "2026-10-11T01:33:06.415389Z",
+      "training_data_sha256": "60fb75ff6547d42558ce1e7b63cfed4c6292c5002bae70f17c4a900f72681485",
+      "validated_for_production": false,
+      "warnings": [
+        "仅为球队比分基线，未量化伤停、预计阵容、球员、xG、天气及赛程因素。",
+        "已拟合不代表已通过有效性验证；参数须通过实际运行程序才能更新。",
+        "输入须由上游核准为常规时间终场比分，不能包含加时或点球大战。"
+      ]
+    },
+    "model_fitted_at": "2026-10-11T01:33:42.444964Z",
+    "model_id": "argentina_a-20261011T013306415389Z",
+    "program_version": "0.1.0",
+    "run_started_at": "2026-10-11T01:33:06.415389Z",
+    "schema_version": 2,
+    "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
+    "source_seasons": [
+      {
+        "coverage_flags": {
+          "fixtures": {
+            "events": true,
+            "lineups": true,
+            "statistics_fixtures": true,
+            "statistics_players": true
+          },
+          "injuries": false,
+          "odds": true,
+          "players": true,
+          "predictions": true,
+          "standings": true,
+          "top_assists": true,
+          "top_cards": true,
+          "top_scorers": true
+        },
+        "fetched_at": "2026-10-11T01:33:42.146983Z",
+        "fixtures": 495,
+        "from_cache": false,
+        "received_at": "2026-10-11T01:33:42.163207Z",
+        "status_counts": {
+          "2H": 1,
+          "AET": 3,
+          "FT": 421,
+          "NS": 68,
+          "PEN": 2
+        },
+        "year": 2026
+      },
+      {
+        "coverage_flags": {
+          "fixtures": {
+            "events": true,
+            "lineups": true,
+            "statistics_fixtures": true,
+            "statistics_players": true
+          },
+          "injuries": true,
+          "odds": false,
+          "players": true,
+          "predictions": true,
+          "standings": true,
+          "top_assists": true,
+          "top_cards": true,
+          "top_scorers": true
+        },
+        "fetched_at": "2026-10-04T17:46:21.210260Z",
+        "fixtures": 510,
+        "from_cache": true,
+        "received_at": "2026-10-11T01:33:42.179630Z",
+        "status_counts": {
+          "AET": 1,
+          "FT": 503,
+          "PEN": 6
+        },
+        "year": 2025
+      },
+      {
+        "coverage_flags": {
+          "fixtures": {
+            "events": true,
+            "lineups": true,
+            "statistics_fixtures": true,
+            "statistics_players": true
+          },
+          "injuries": false,
+          "odds": false,
+          "players": true,
+          "predictions": true,
+          "standings": true,
+          "top_assists": true,
+          "top_cards": true,
+          "top_scorers": true
+        },
+        "fetched_at": "2026-10-04T17:46:21.498376Z",
+        "fixtures": 378,
+        "from_cache": true,
+        "received_at": "2026-10-11T01:33:42.193487Z",
+        "status_counts": {
+          "FT": 378
+        },
+        "year": 2024
+      }
+    ],
+    "time_semantics": "observed_wall_clock_v1",
+    "trained_at": "2026-10-11T01:33:06.415389Z",
+    "training_cutoff": "2026-10-11T01:33:06.415389Z",
+    "validation": {
+      "baseline": {
+        "away_rate": 0.8372203712517848,
+        "home_rate": 1.1504045692527367,
+        "name": "training_league_home_away_mean_poisson",
+        "same_scored_matches_as_model": true,
+        "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)"
+      },
+      "baseline_metrics": {
+        "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+        "brier_score": 0.6569282581194985,
+        "log_loss": 1.0848024032359609,
+        "log_loss_probability_floor": 1e-15,
+        "n": 263
+      },
+      "comparison": {
+        "lower_is_better": true,
+        "model_minus_baseline_brier_score": -0.006318098120232429,
+        "model_minus_baseline_log_loss": -0.009930727840057108
+      },
+      "coverage": {
+        "excluded": 0,
+        "exclusions": [],
+        "ratio": 1.0,
+        "scored": 263,
+        "total": 263
+      },
+      "deployment_approved": false,
+      "evaluation_data_cutoff": "2026-10-11T01:33:06.415389Z",
+      "is_rolling_backtest": false,
+      "meets_minimum_supported_test_matches": true,
+      "minimum_test_matches": 40,
+      "model_metrics": {
+        "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+        "brier_score": 0.6506101599992661,
+        "log_loss": 1.0748716753959038,
+        "log_loss_probability_floor": 1e-15,
+        "n": 263
+      },
+      "split": {
+        "embargoed_count": 0,
+        "embargoed_match_ids": [],
+        "grouped_by": "kickoff_utc_calendar_date",
+        "method": "chronological_fixed_model_holdout",
+        "result_availability_delay_hours": 4,
+        "test_end": "2026-10-10T20:00:00Z",
+        "test_start": "2026-03-25T22:00:00Z",
+        "testing_count": 263,
+        "train_cutoff": "2026-03-25T00:00:00Z",
+        "train_last_kickoff": "2026-03-24T00:15:00Z",
+        "training_count": 1050
+      },
+      "validation_status": "exploratory_single_fixed_holdout",
+      "warnings": [
+        "单次固定模型留出验证仅为探索性检查，不是滚动回测，也不构成上线或盈利证明。",
+        "不含赔率、投注收益、阵容修正或提前十小时伤停历史快照验证。",
+        "超参数为显式默认值，不能根据本留出期反复挑选参数后再声称独立验证。",
+        "未知球队比赛单独列为未覆盖，指标只针对 model_metrics.n 场已覆盖比赛。"
+      ]
+    }
+  },
+  "kind": "model_bundle",
+  "original_bytes_sha256": "ec3210a8c46af5408a2286e3cc9dc7027bfbb48d24d8920135396e33f92a921c"
+}

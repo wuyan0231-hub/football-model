@@ -1,0 +1,373 @@
+{
+  "content": {
+    "competition": {
+      "country": "Netherlands",
+      "key": "eredivisie",
+      "label": "荷甲",
+      "mode": "domestic_baseline",
+      "name": "Eredivisie"
+    },
+    "data_fingerprint": "faec6b7df182f8b3aa915cc209f6eb1605378ed43b747caa070f902130915805",
+    "data_observed_at": "2026-10-11T01:33:24.675699Z",
+    "ev": "未量化",
+    "lineup_effects": "未量化",
+    "maturity": "exploratory_baseline",
+    "model": {
+      "constraints": {
+        "attack_sum": -1.5265566588595902e-16,
+        "defence_sum": 1.1102230246251565e-16
+      },
+      "effective_sample_size": 401.21374047928555,
+      "excluded_after_cutoff_or_availability_delay": 0,
+      "fit_status": "converged",
+      "graph_connected": true,
+      "half_life_days": 180.0,
+      "home_advantage": 0.13724426396141864,
+      "intercept": 0.33002650916842896,
+      "last_match_kickoff": "2026-10-10T19:00:00Z",
+      "last_result_assumed_available_at": "2026-10-10T23:00:00Z",
+      "low_sample_team_ids": [
+        199,
+        409,
+        421
+      ],
+      "low_sample_team_threshold": 5,
+      "min_team_matches": 2,
+      "model_scope": "baseline_unadjusted_lineup",
+      "model_version": "independent_poisson_time_decay_l2_v1",
+      "n_matches": 698,
+      "n_teams": 26,
+      "optimizer": {
+        "iterations": 38,
+        "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "objective": 591.5288953918322,
+        "parameter_at_bound": false,
+        "success": true
+      },
+      "ridge": 3.0,
+      "team_parameters": {
+        "193": {
+          "attack": -0.15395184506692092,
+          "defence": -0.2547167174870038,
+          "name": "PEC Zwolle",
+          "training_matches": 75
+        },
+        "194": {
+          "attack": 0.2902145392276815,
+          "defence": 0.3456934740101801,
+          "name": "Ajax",
+          "training_matches": 78
+        },
+        "195": {
+          "attack": -0.3201069608566501,
+          "defence": -0.3347133769878612,
+          "name": "Willem II",
+          "training_matches": 45
+        },
+        "196": {
+          "attack": 0.08591036844780223,
+          "defence": 0.11321211594265994,
+          "name": "Excelsior",
+          "training_matches": 41
+        },
+        "197": {
+          "attack": 0.7202612088943745,
+          "defence": 0.19656914743357157,
+          "name": "PSV Eindhoven",
+          "training_matches": 76
+        },
+        "198": {
+          "attack": -0.2839948273808174,
+          "defence": -0.23810012165540576,
+          "name": "ADO Den Haag",
+          "training_matches": 9
+        },
+        "199": {
+          "attack": -0.11897139838837172,
+          "defence": 0.03533929495963216,
+          "name": "De Graafschap",
+          "training_matches": 2
+        },
+        "201": {
+          "attack": 0.2000641052092393,
+          "defence": 0.22004466381181184,
+          "name": "AZ Alkmaar",
+          "training_matches": 78
+        },
+        "202": {
+          "attack": 0.060927230979087,
+          "defence": 0.09989367479932398,
+          "name": "Groningen",
+          "training_matches": 76
+        },
+        "203": {
+          "attack": -0.29311968227178,
+          "defence": -0.021578620313471932,
+          "name": "NAC Breda",
+          "training_matches": 68
+        },
+        "205": {
+          "attack": -0.0057114743777215305,
+          "defence": -0.08237165308578971,
+          "name": "Fortuna Sittard",
+          "training_matches": 76
+        },
+        "206": {
+          "attack": -0.3092048537579055,
+          "defence": -0.2994168334482651,
+          "name": "Heracles",
+          "training_matches": 68
+        },
+        "207": {
+          "attack": 0.138831126934943,
+          "defence": -0.030946220760003248,
+          "name": "Utrecht",
+          "training_matches": 77
+        },
+        "209": {
+          "attack": 0.44310496887935813,
+          "defence": 0.32434236505735875,
+          "name": "Feyenoord",
+          "training_matches": 76
+        },
+        "210": {
+          "attack": 0.04035689204556074,
+          "defence": 0.09246221525640952,
+          "name": "Heerenveen",
+          "training_matches": 78
+        },
+        "409": {
+          "attack": -0.03642802295217881,
+          "defence": 0.028480552937587323,
+          "name": "Dordrecht",
+          "training_matches": 4
+        },
+        "410": {
+          "attack": 0.20346628895644744,
+          "defence": -0.047456368675995675,
+          "name": "GO Ahead Eagles",
+          "training_matches": 76
+        },
+        "413": {
+          "attack": 0.2212643460785555,
+          "defence": 0.051097686398204306,
+          "name": "NEC Nijmegen",
+          "training_matches": 77
+        },
+        "415": {
+          "attack": 0.19384038669386555,
+          "defence": 0.29723020826167346,
+          "name": "Twente",
+          "training_matches": 78
+        },
+        "416": {
+          "attack": -0.30466885263091725,
+          "defence": 0.06021647473399733,
+          "name": "FC Volendam",
+          "training_matches": 34
+        },
+        "417": {
+          "attack": -0.04625236170116961,
+          "defence": -0.17829523077963694,
+          "name": "Waalwijk",
+          "training_matches": 34
+        },
+        "419": {
+          "attack": -0.3427854435800818,
+          "defence": -0.04039556495676933,
+          "name": "Almere City FC",
+          "training_matches": 34
+        },
+        "420": {
+          "attack": 0.001959571805901419,
+          "defence": -0.3933185870012125,
+          "name": "Cambuur",
+          "training_matches": 9
+        },
+        "421": {
+          "attack": -0.1867284332597719,
+          "defence": 0.13556210408744038,
+          "name": "Den Bosch",
+          "training_matches": 4
+        },
+        "426": {
+          "attack": -0.07532989316540456,
+          "defence": -0.13243779377784068,
+          "name": "Sparta Rotterdam",
+          "training_matches": 76
+        },
+        "427": {
+          "attack": -0.12294698476312536,
+          "defence": 0.05360311123940531,
+          "name": "Telstar",
+          "training_matches": 47
+        }
+      },
+      "trained": true,
+      "training_cutoff": "2026-10-11T01:33:06.415389Z",
+      "training_data_sha256": "6e89370c748f410d0097585c540e84c80740a231e4e62552713e7955c533a7e4",
+      "validated_for_production": false,
+      "warnings": [
+        "球队 [199, 409, 421] 各自训练不足 5 场，估计强烈依赖正则化，须保留小样本标记。",
+        "仅为球队比分基线，未量化伤停、预计阵容、球员、xG、天气及赛程因素。",
+        "已拟合不代表已通过有效性验证；参数须通过实际运行程序才能更新。",
+        "输入须由上游核准为常规时间终场比分，不能包含加时或点球大战。"
+      ]
+    },
+    "model_fitted_at": "2026-10-11T01:33:24.799435Z",
+    "model_id": "eredivisie-20261011T013306415389Z",
+    "program_version": "0.1.0",
+    "run_started_at": "2026-10-11T01:33:06.415389Z",
+    "schema_version": 2,
+    "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
+    "source_seasons": [
+      {
+        "coverage_flags": {
+          "fixtures": {
+            "events": true,
+            "lineups": true,
+            "statistics_fixtures": true,
+            "statistics_players": true
+          },
+          "injuries": true,
+          "odds": true,
+          "players": true,
+          "predictions": true,
+          "standings": true,
+          "top_assists": true,
+          "top_cards": true,
+          "top_scorers": true
+        },
+        "fetched_at": "2026-10-11T01:33:24.638564Z",
+        "fixtures": 306,
+        "from_cache": false,
+        "received_at": "2026-10-11T01:33:24.649278Z",
+        "status_counts": {
+          "FT": 68,
+          "NS": 238
+        },
+        "year": 2026
+      },
+      {
+        "coverage_flags": {
+          "fixtures": {
+            "events": true,
+            "lineups": true,
+            "statistics_fixtures": true,
+            "statistics_players": true
+          },
+          "injuries": true,
+          "odds": false,
+          "players": true,
+          "predictions": true,
+          "standings": true,
+          "top_assists": true,
+          "top_cards": true,
+          "top_scorers": true
+        },
+        "fetched_at": "2026-10-08T01:33:55.316254Z",
+        "fixtures": 309,
+        "from_cache": true,
+        "received_at": "2026-10-11T01:33:24.659548Z",
+        "status_counts": {
+          "FT": 308,
+          "PEN": 1
+        },
+        "year": 2025
+      },
+      {
+        "coverage_flags": {
+          "fixtures": {
+            "events": true,
+            "lineups": true,
+            "statistics_fixtures": true,
+            "statistics_players": true
+          },
+          "injuries": true,
+          "odds": false,
+          "players": true,
+          "predictions": true,
+          "standings": true,
+          "top_assists": true,
+          "top_cards": true,
+          "top_scorers": true
+        },
+        "fetched_at": "2026-10-08T01:33:55.521337Z",
+        "fixtures": 321,
+        "from_cache": true,
+        "received_at": "2026-10-11T01:33:24.670628Z",
+        "status_counts": {
+          "AET": 3,
+          "FT": 317,
+          "PEN": 1
+        },
+        "year": 2024
+      }
+    ],
+    "time_semantics": "observed_wall_clock_v1",
+    "trained_at": "2026-10-11T01:33:06.415389Z",
+    "training_cutoff": "2026-10-11T01:33:06.415389Z",
+    "validation": {
+      "baseline": {
+        "away_rate": 1.3407671721677075,
+        "home_rate": 1.727921498661909,
+        "name": "training_league_home_away_mean_poisson",
+        "same_scored_matches_as_model": true,
+        "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)"
+      },
+      "baseline_metrics": {
+        "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+        "brier_score": 0.6726485458624758,
+        "log_loss": 1.1067412855632923,
+        "log_loss_probability_floor": 1e-15,
+        "n": 138
+      },
+      "comparison": {
+        "lower_is_better": true,
+        "model_minus_baseline_brier_score": -0.08337624831030865,
+        "model_minus_baseline_log_loss": -0.11581952825154285
+      },
+      "coverage": {
+        "excluded": 0,
+        "exclusions": [],
+        "ratio": 1.0,
+        "scored": 138,
+        "total": 138
+      },
+      "deployment_approved": false,
+      "evaluation_data_cutoff": "2026-10-11T01:33:06.415389Z",
+      "is_rolling_backtest": false,
+      "meets_minimum_supported_test_matches": true,
+      "minimum_test_matches": 40,
+      "model_metrics": {
+        "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+        "brier_score": 0.5892722975521671,
+        "log_loss": 0.9909217573117495,
+        "log_loss_probability_floor": 1e-15,
+        "n": 138
+      },
+      "split": {
+        "embargoed_count": 0,
+        "embargoed_match_ids": [],
+        "grouped_by": "kickoff_utc_calendar_date",
+        "method": "chronological_fixed_model_holdout",
+        "result_availability_delay_hours": 4,
+        "test_end": "2026-10-10T19:00:00Z",
+        "test_start": "2026-03-15T11:15:00Z",
+        "testing_count": 138,
+        "train_cutoff": "2026-03-15T00:00:00Z",
+        "train_last_kickoff": "2026-03-14T20:00:00Z",
+        "training_count": 560
+      },
+      "validation_status": "exploratory_single_fixed_holdout",
+      "warnings": [
+        "单次固定模型留出验证仅为探索性检查，不是滚动回测，也不构成上线或盈利证明。",
+        "不含赔率、投注收益、阵容修正或提前十小时伤停历史快照验证。",
+        "超参数为显式默认值，不能根据本留出期反复挑选参数后再声称独立验证。",
+        "未知球队比赛单独列为未覆盖，指标只针对 model_metrics.n 场已覆盖比赛。"
+      ]
+    }
+  },
+  "kind": "model_bundle",
+  "original_bytes_sha256": "e6a03a27c71aa316e6d1ac5c319aa32a35a089c887567a85c3db59553a32b6c1"
+}

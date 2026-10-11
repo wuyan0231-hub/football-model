@@ -1,0 +1,396 @@
+{
+  "content": {
+    "competition": {
+      "country": "Germany",
+      "key": "bundesliga",
+      "label": "德甲",
+      "mode": "domestic_baseline",
+      "name": "Bundesliga"
+    },
+    "data_fingerprint": "8cb32f22d733dd05df5c8e969f8aa42e86588c01c019c735a299ad91634c19e6",
+    "data_observed_at": "2026-10-11T01:33:13.550105Z",
+    "ev": "未量化",
+    "lineup_effects": "未量化",
+    "maturity": "exploratory_baseline",
+    "model": {
+      "constraints": {
+        "attack_sum": -5.551115123125783e-17,
+        "defence_sum": -1.1102230246251565e-16
+      },
+      "effective_sample_size": 387.70480671688,
+      "excluded_after_cutoff_or_availability_delay": 0,
+      "fit_status": "converged",
+      "graph_connected": true,
+      "half_life_days": 180.0,
+      "home_advantage": 0.250299852400068,
+      "intercept": 0.26457257311649296,
+      "last_match_kickoff": "2026-10-10T16:30:00Z",
+      "last_result_assumed_available_at": "2026-10-10T20:30:00Z",
+      "low_sample_team_ids": [
+        174
+      ],
+      "low_sample_team_threshold": 5,
+      "min_team_matches": 4,
+      "model_scope": "baseline_unadjusted_lineup",
+      "model_version": "independent_poisson_time_decay_l2_v1",
+      "n_matches": 659,
+      "n_teams": 23,
+      "optimizer": {
+        "iterations": 37,
+        "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "objective": 550.345249869988,
+        "parameter_at_bound": false,
+        "success": true
+      },
+      "ridge": 3.0,
+      "team_parameters": {
+        "157": {
+          "attack": 0.751781986665398,
+          "defence": 0.33761146071413856,
+          "name": "Bayern München",
+          "training_matches": 73
+        },
+        "160": {
+          "attack": 0.12582979305776598,
+          "defence": 0.04745714971695395,
+          "name": "SC Freiburg",
+          "training_matches": 72
+        },
+        "161": {
+          "attack": -0.13758425157591403,
+          "defence": -0.11003464172119261,
+          "name": "VfL Wolfsburg",
+          "training_matches": 70
+        },
+        "162": {
+          "attack": -0.0931793230473672,
+          "defence": -0.04788371160896536,
+          "name": "Werder Bremen",
+          "training_matches": 73
+        },
+        "163": {
+          "attack": -0.07725330001784102,
+          "defence": -0.17049479313476695,
+          "name": "Borussia Mönchengladbach",
+          "training_matches": 72
+        },
+        "164": {
+          "attack": 0.08322950384083287,
+          "defence": -0.013839499526802428,
+          "name": "FSV Mainz 05",
+          "training_matches": 73
+        },
+        "165": {
+          "attack": 0.2854007168314873,
+          "defence": 0.36769699222263896,
+          "name": "Borussia Dortmund",
+          "training_matches": 73
+        },
+        "1660": {
+          "attack": 0.08064097034736784,
+          "defence": 0.054099811009110266,
+          "name": "SV Elversberg",
+          "training_matches": 7
+        },
+        "167": {
+          "attack": 0.15072907395987553,
+          "defence": -0.171328017872948,
+          "name": "1899 Hoffenheim",
+          "training_matches": 73
+        },
+        "168": {
+          "attack": 0.342038108930039,
+          "defence": 0.11961717527860356,
+          "name": "Bayer Leverkusen",
+          "training_matches": 73
+        },
+        "169": {
+          "attack": 0.14116570424192287,
+          "defence": -0.23110030549960492,
+          "name": "Eintracht Frankfurt",
+          "training_matches": 73
+        },
+        "170": {
+          "attack": 0.04038058049211329,
+          "defence": 0.0002425335003389331,
+          "name": "FC Augsburg",
+          "training_matches": 73
+        },
+        "172": {
+          "attack": 0.27361602289041864,
+          "defence": 0.08244887198251688,
+          "name": "VfB Stuttgart",
+          "training_matches": 73
+        },
+        "173": {
+          "attack": 0.2763675601692436,
+          "defence": 0.15537098402434596,
+          "name": "RB Leipzig",
+          "training_matches": 73
+        },
+        "174": {
+          "attack": -0.3179143156590278,
+          "defence": 0.3561471271530236,
+          "name": "FC Schalke 04",
+          "training_matches": 4
+        },
+        "175": {
+          "attack": -0.20677489967546114,
+          "defence": -0.13285346981801516,
+          "name": "Hamburger SV",
+          "training_matches": 39
+        },
+        "176": {
+          "attack": -0.24922603656979456,
+          "defence": -0.09717763767484679,
+          "name": "VfL Bochum",
+          "training_matches": 34
+        },
+        "180": {
+          "attack": -0.15010027273475093,
+          "defence": -0.17330510283785355,
+          "name": "1. FC Heidenheim",
+          "training_matches": 70
+        },
+        "182": {
+          "attack": -0.17828189049847842,
+          "defence": -0.16715494123045388,
+          "name": "Union Berlin",
+          "training_matches": 73
+        },
+        "185": {
+          "attack": -0.5462693195510673,
+          "defence": 0.2062349520391054,
+          "name": "SC Paderborn 07",
+          "training_matches": 7
+        },
+        "186": {
+          "attack": -0.5146018768107103,
+          "defence": -0.0005827142451887963,
+          "name": "FC St. Pauli",
+          "training_matches": 68
+        },
+        "191": {
+          "attack": -0.01629416290078156,
+          "defence": -0.2221712211623127,
+          "name": "Holstein Kiel",
+          "training_matches": 34
+        },
+        "192": {
+          "attack": -0.06370037238527054,
+          "defence": -0.18900100130782505,
+          "name": "1. FC Köln",
+          "training_matches": 38
+        }
+      },
+      "trained": true,
+      "training_cutoff": "2026-10-11T01:33:06.415389Z",
+      "training_data_sha256": "00f6fedd7d69801ef6e026d739d1ccb1f38b954adf7964f28107618485f88b53",
+      "validated_for_production": false,
+      "warnings": [
+        "球队 [174] 各自训练不足 5 场，估计强烈依赖正则化，须保留小样本标记。",
+        "仅为球队比分基线，未量化伤停、预计阵容、球员、xG、天气及赛程因素。",
+        "已拟合不代表已通过有效性验证；参数须通过实际运行程序才能更新。",
+        "输入须由上游核准为常规时间终场比分，不能包含加时或点球大战。"
+      ]
+    },
+    "model_fitted_at": "2026-10-11T01:33:13.666664Z",
+    "model_id": "bundesliga-20261011T013306415389Z",
+    "program_version": "0.1.0",
+    "run_started_at": "2026-10-11T01:33:06.415389Z",
+    "schema_version": 2,
+    "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
+    "source_seasons": [
+      {
+        "coverage_flags": {
+          "fixtures": {
+            "events": true,
+            "lineups": true,
+            "statistics_fixtures": true,
+            "statistics_players": true
+          },
+          "injuries": true,
+          "odds": true,
+          "players": true,
+          "predictions": true,
+          "standings": true,
+          "top_assists": true,
+          "top_cards": true,
+          "top_scorers": true
+        },
+        "fetched_at": "2026-10-11T01:33:13.507914Z",
+        "fixtures": 306,
+        "from_cache": false,
+        "received_at": "2026-10-11T01:33:13.524059Z",
+        "status_counts": {
+          "FT": 43,
+          "NS": 263
+        },
+        "year": 2026
+      },
+      {
+        "coverage_flags": {
+          "fixtures": {
+            "events": true,
+            "lineups": true,
+            "statistics_fixtures": true,
+            "statistics_players": true
+          },
+          "injuries": true,
+          "odds": false,
+          "players": true,
+          "predictions": true,
+          "standings": true,
+          "top_assists": true,
+          "top_cards": true,
+          "top_scorers": true
+        },
+        "fetched_at": "2026-10-07T01:33:00.352448Z",
+        "fixtures": 308,
+        "from_cache": true,
+        "received_at": "2026-10-11T01:33:13.535237Z",
+        "status_counts": {
+          "AET": 1,
+          "FT": 307
+        },
+        "year": 2025
+      },
+      {
+        "coverage_flags": {
+          "fixtures": {
+            "events": true,
+            "lineups": true,
+            "statistics_fixtures": true,
+            "statistics_players": true
+          },
+          "injuries": true,
+          "odds": false,
+          "players": true,
+          "predictions": true,
+          "standings": true,
+          "top_assists": true,
+          "top_cards": true,
+          "top_scorers": true
+        },
+        "fetched_at": "2026-10-07T01:33:00.619388Z",
+        "fixtures": 308,
+        "from_cache": true,
+        "received_at": "2026-10-11T01:33:13.545175Z",
+        "status_counts": {
+          "FT": 308
+        },
+        "year": 2024
+      }
+    ],
+    "time_semantics": "observed_wall_clock_v1",
+    "trained_at": "2026-10-11T01:33:06.415389Z",
+    "training_cutoff": "2026-10-11T01:33:06.415389Z",
+    "validation": {
+      "baseline": {
+        "away_rate": 1.4643196955280684,
+        "home_rate": 1.686964795432921,
+        "name": "training_league_home_away_mean_poisson",
+        "same_scored_matches_as_model": true,
+        "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)"
+      },
+      "baseline_metrics": {
+        "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+        "brier_score": 0.6523692144097479,
+        "log_loss": 1.076610704846054,
+        "log_loss_probability_floor": 1e-15,
+        "n": 123
+      },
+      "comparison": {
+        "lower_is_better": true,
+        "model_minus_baseline_brier_score": -0.057815026404059666,
+        "model_minus_baseline_log_loss": -0.0788321670381229
+      },
+      "coverage": {
+        "excluded": 11,
+        "exclusions": [
+          {
+            "match_id": 1545417,
+            "reason": "未知球队 ID：[185]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1545418,
+            "reason": "未知球队 ID：[185]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1575146,
+            "reason": "未知球队 ID：[185]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1575141,
+            "reason": "未知球队 ID：[174]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1575157,
+            "reason": "未知球队 ID：[185]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1575156,
+            "reason": "未知球队 ID：[174]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1575164,
+            "reason": "未知球队 ID：[174]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1575158,
+            "reason": "未知球队 ID：[185]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1575173,
+            "reason": "未知球队 ID：[174]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1575175,
+            "reason": "未知球队 ID：[185]；缺少训练数据，当前模型不支持。"
+          },
+          {
+            "match_id": 1575184,
+            "reason": "未知球队 ID：[185]；缺少训练数据，当前模型不支持。"
+          }
+        ],
+        "ratio": 0.917910447761194,
+        "scored": 123,
+        "total": 134
+      },
+      "deployment_approved": false,
+      "evaluation_data_cutoff": "2026-10-11T01:33:06.415389Z",
+      "is_rolling_backtest": false,
+      "meets_minimum_supported_test_matches": true,
+      "minimum_test_matches": 40,
+      "model_metrics": {
+        "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+        "brier_score": 0.5945541880056883,
+        "log_loss": 0.9977785378079311,
+        "log_loss_probability_floor": 1e-15,
+        "n": 123
+      },
+      "split": {
+        "embargoed_count": 0,
+        "embargoed_match_ids": [],
+        "grouped_by": "kickoff_utc_calendar_date",
+        "method": "chronological_fixed_model_holdout",
+        "result_availability_delay_hours": 4,
+        "test_end": "2026-10-10T16:30:00Z",
+        "test_start": "2026-03-07T14:30:00Z",
+        "testing_count": 134,
+        "train_cutoff": "2026-03-07T00:00:00Z",
+        "train_last_kickoff": "2026-03-06T19:30:00Z",
+        "training_count": 525
+      },
+      "validation_status": "exploratory_single_fixed_holdout",
+      "warnings": [
+        "单次固定模型留出验证仅为探索性检查，不是滚动回测，也不构成上线或盈利证明。",
+        "不含赔率、投注收益、阵容修正或提前十小时伤停历史快照验证。",
+        "超参数为显式默认值，不能根据本留出期反复挑选参数后再声称独立验证。",
+        "未知球队比赛单独列为未覆盖，指标只针对 model_metrics.n 场已覆盖比赛。"
+      ]
+    }
+  },
+  "kind": "model_bundle",
+  "original_bytes_sha256": "0304e87979e6c56d45addbf8570cd382adfb4caf247e2d8587546493a34357b0"
+}
