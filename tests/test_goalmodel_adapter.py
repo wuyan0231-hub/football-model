@@ -157,6 +157,46 @@ class GoalmodelProtocolTests(unittest.TestCase):
             with self.assertRaises(ModelDataError):
                 _validate_output(tampered, sample_fixtures(), dc)
 
+    def test_native_r_roundoff_preserved_but_canonical_probabilities_match_matrix(self):
+        from football_model.feature_research import score_forecast
+
+        for dc, rho in ((False, 0), (True, -0.1)):
+            with self.subTest(dc=dc):
+                native = output_for(sample_fixtures(), dc, rho)
+                native["forecasts"][0]["probabilities_1x2"]["home"] += 5e-12
+                native["forecasts"][0]["probabilities_1x2"]["draw"] -= 5e-12
+                original = copy.deepcopy(native["forecasts"][0])
+
+                def fake_r(command, **kwargs):
+                    Path(command[-1]).write_text(json.dumps(native))
+                    return subprocess.CompletedProcess(command, 0, "", "")
+
+                with patch("football_model.goalmodel_adapter.shutil.which", return_value="Rscript"), \
+                        patch("football_model.goalmodel_adapter.subprocess.run", side_effect=fake_r):
+                    output = fit_predict_goalmodel(sample_matches(), sample_fixtures(),
+                                                   cutoff="2024-05-01T00:00:00Z", dc=dc)
+                self.assertEqual(output["status"], "ok", output)
+                forecast = output["forecasts"][0]
+                self.assertEqual(forecast["probabilities_1x2"], original["probabilities_1x2"])
+                self.assertEqual(forecast["score_matrix"], original["score_matrix"])
+                self.assertEqual(forecast["expected_home_goals"], original["expected_home_goals"])
+                self.assertEqual(forecast["expected_away_goals"], original["expected_away_goals"])
+                self.assertEqual(forecast["rho"], original["rho"])
+                self.assertGreater(forecast["upstream_probability_roundoff_max"], 1e-15)
+                self.assertLess(forecast["upstream_probability_roundoff_max"], 1e-10)
+                self.assertEqual(output["upstream_probability_roundoff_max"],
+                                 forecast["upstream_probability_roundoff_max"])
+                self.assertIn("unchanged validated score_matrix", forecast["probability_derivation"])
+                score = score_forecast(forecast, {"home_goals": 1, "away_goals": 0})
+                self.assertTrue(math.isfinite(score["scoreline_nll"]))
+
+    def test_native_r_large_disagreement_or_nonfinite_probability_still_rejected(self):
+        for native_home in (float("nan"), 0.99):
+            native = output_for(sample_fixtures())
+            native["forecasts"][0]["probabilities_1x2"]["home"] = native_home
+            with self.assertRaises(ModelDataError):
+                _validate_output(native, sample_fixtures(), False)
+
     def test_missing_identity_source_or_convergence_not_success(self):
         for mutate in [lambda o: o.update(source_commit="f"*40),
                        lambda o: o["fit"].update(converged=False),

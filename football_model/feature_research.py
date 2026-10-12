@@ -296,7 +296,11 @@ def study(runtime, league, protocol, *, source_commit, state_commit=None, run_go
             "successful_fits":sum(bool(e.get("goalmodel_runs",{}).get(k,{}).get("forecasts")) for e in experiments),
             "failures":sum(x.get("candidate")==k for e in experiments for x in e["errors"])} for k in ("G0","G1")}}
     path = save_immutable(root/"feature_models"/"reports"/league/"history", report)
-    (path.parent.parent/"latest.json").write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n")
+    summary={k:v for k,v in report.items() if k not in ("replay","experiments","scored_matches")}
+    summary.update(schema_version="feature-research-summary-v1",full_report_ref={
+        "path":str(path.relative_to(root)),"sha256":hashlib.sha256(path.read_bytes()).hexdigest()},
+        baseline_forecast_matches=len(entries),bulk_fields_stored_in_full_report=["replay","experiments","scored_matches"])
+    (path.parent.parent/"latest.json").write_text(json.dumps(summary,ensure_ascii=False,indent=2)+"\n")
     return report
 
 

@@ -295,12 +295,28 @@ def fit_predict_goalmodel(training_matches, fixtures, *, cutoff,
     for forecast in result["forecasts"]:
         forecast["expected_goals"] = {"home": forecast["expected_home_goals"],
                                        "away": forecast["expected_away_goals"]}
+        # Preserve the original R aggregates, while the compatibility view is
+        # derived from the exact already-validated serialized matrix consumed
+        # by Python scoring/settlement. R and NumPy summation roundoff must not
+        # produce an internally inconsistent compatibility payload. This does
+        # not rebuild/renormalize the matrix, alter rates or discard DC.
+        matrix = np.asarray(forecast["score_matrix"], dtype=float)
         forecast["probabilities"] = {
-            "home_win": forecast["probabilities_1x2"]["home"],
-            "draw": forecast["probabilities_1x2"]["draw"],
-            "away_win": forecast["probabilities_1x2"]["away"]}
+            "home_win": float(np.tril(matrix, -1).sum()),
+            "draw": float(np.trace(matrix)),
+            "away_win": float(np.triu(matrix, 1).sum())}
+        forecast["upstream_probability_roundoff_max"] = max(
+            abs(forecast["probabilities"][canonical] - forecast["probabilities_1x2"][upstream])
+            for canonical, upstream in (("home_win", "home"), ("draw", "draw"),
+                                        ("away_win", "away")))
+        forecast["probability_derivation"] = (
+            "probabilities derived by NumPy tril/trace/triu from the unchanged "
+            "validated score_matrix; native R aggregates preserved as probabilities_1x2")
         forecast["tail_tolerance"] = TAIL_TOLERANCE
         forecast["matrix_renormalized"] = True
         forecast["model_version"] = GOALMODEL_ADAPTER_VERSION
         forecast["model_scope"] = "independent_goalmodel_research_only"
+    result["upstream_probability_roundoff_max"] = max(
+        (forecast["upstream_probability_roundoff_max"] for forecast in result["forecasts"]),
+        default=0.0)
     return result

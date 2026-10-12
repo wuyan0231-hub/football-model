@@ -195,7 +195,9 @@ def should_archive(relative_path: str, retained_inline=frozenset()) -> bool:
         return False
     return (name.startswith(("quotes/raw/", "quotes/snapshots/", "validation/"))
             or (name.startswith(("shadow_models/", "total_shrink_shadow/")) and name.split("/")[1] != "reports"
-                and bool(re.fullmatch(r"[0-9a-f]{64}\.json", name.split("/")[-1]))))
+                and bool(re.fullmatch(r"[0-9a-f]{64}\.json", name.split("/")[-1])))
+            or (name.startswith(("feature_models/", "feature_snapshots/"))
+                and bool(re.fullmatch(r"[0-9a-f]{64}\.json",name.split("/")[-1]))))
 
 
 def storage_cost(relative_path: str, raw_bytes: bytes, retained_inline=frozenset()) -> int:
