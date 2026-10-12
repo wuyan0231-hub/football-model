@@ -2,17 +2,17 @@
   "schema_version": "feature-model-card-v1",
   "league": "serie_a",
   "candidate_id": "M1_schedule_offset_l2_v1",
-  "source_commit": "362edc54159f3d7e311ed4f7cee8cc1c0ccc783b",
-  "state_commit": "2e79fe17888aab493997fe8bbb8ae3cfb18a78bf",
-  "training_cutoff": "2026-10-12T17:23:28.777425Z",
-  "generated_at": "2026-10-12T17:24:24.114689Z",
+  "source_commit": "7f643568dbe441640a15d45bf365e016852bad6e",
+  "state_commit": "4c7a12199a321d41ada9003c4a59e96ae6629e35",
+  "training_cutoff": "2026-10-12T17:46:49.670553Z",
+  "generated_at": "2026-10-12T17:48:37.625692Z",
   "feature_names": [
     "rest_days_capped",
     "matches_last14d",
     "opponent_rest_days_capped",
     "opponent_matches_last14d"
   ],
-  "feature_scope": "same_competition",
+  "feature_scope": "all_club_competitions_provider_scope",
   "correction_model": {
     "model_version": "poisson_fixed_log_offset_l2_shared_v1",
     "model_scope": "fixed_baseline_log_offset_feature_correction",
@@ -22,7 +22,7 @@
     "trained": true,
     "validated_for_production": false,
     "automatic_promotion": false,
-    "training_cutoff": "2026-10-12T17:23:28.777425Z",
+    "training_cutoff": "2026-10-12T17:46:49.670553Z",
     "feature_names": [
       "rest_days_capped",
       "matches_last14d",
@@ -30,37 +30,37 @@
       "opponent_matches_last14d"
     ],
     "coefficients": {
-      "rest_days_capped": -0.003891631688459937,
-      "matches_last14d": -0.0017101100616470698,
-      "opponent_rest_days_capped": -0.006880361135860115,
-      "opponent_matches_last14d": -0.0030311244771687165
+      "rest_days_capped": -0.01870662630025191,
+      "matches_last14d": -0.02755640648576338,
+      "opponent_rest_days_capped": 0.010867766078966272,
+      "opponent_matches_last14d": 0.03293499462269888
     },
     "feature_scaling": {
       "rest_days_capped": {
-        "mean": 7.732591526951551,
-        "scale": 2.962306967283289,
+        "mean": 6.957195296144802,
+        "scale": 3.0212397416566787,
         "constant_in_training": false
       },
       "matches_last14d": {
-        "mean": 1.3870313681985482,
-        "scale": 0.7554416667094866,
+        "mean": 1.723160023513726,
+        "scale": 0.9191473557066318,
         "constant_in_training": false
       },
       "opponent_rest_days_capped": {
-        "mean": 7.732591526951551,
-        "scale": 2.9623069672832893,
+        "mean": 6.957195296144802,
+        "scale": 3.0212397416566787,
         "constant_in_training": false
       },
       "opponent_matches_last14d": {
-        "mean": 1.3870313681985482,
-        "scale": 0.7554416667094866,
+        "mean": 1.723160023513726,
+        "scale": 0.9191473557066318,
         "constant_in_training": false
       }
     },
     "intercept_added": false,
     "shared_home_away_coefficients": true,
     "offset_definition": "log(out_of_sample_baseline_lambda), coefficient fixed to 1",
-    "alpha": 1.0,
+    "alpha": 0.1,
     "L1_wt": 0.0,
     "refit": false,
     "loss_definition": "mean(mean_one_time_weight * poisson_nll) + 0.5 * alpha * sum(beta**2)",
@@ -69,8 +69,8 @@
       "origin": "kickoff",
       "reference": "correction_training_cutoff",
       "normalization": "mean_one",
-      "raw_weight_sum": 413.6115821896086,
-      "normalized_weight_sum": 1230.0
+      "raw_weight_sum": 413.58575819918747,
+      "normalized_weight_sum": 1230.0000000000002
     },
     "n_rows": 1230,
     "n_matches": 615,
@@ -692,16 +692,16 @@
       1550144,
       1550145
     ],
-    "training_data_sha256": "880a102dcf748dd348de301e5a5f0da95d79f766f3d279fab361da3198464878",
+    "training_data_sha256": "a30c04d38356c4dd543106c9377c576a9d0d7c6068a4c00296e2f1299a3e7267",
     "last_result_available_at": "2026-10-11T22:45:00Z",
-    "effective_side_sample_size": 851.1907471392622,
-    "effective_match_sample_size": 425.5953735696311,
+    "effective_side_sample_size": 851.1907471392624,
+    "effective_match_sample_size": 425.5953735696312,
     "independent_evaluation_unit": "match_id, never a side row or repeated forecast version",
     "optimizer": {
       "method": "statsmodels_GLM_fit_regularized_bfgs",
-      "gradient_norm": 1.4133752002150683e-05,
+      "gradient_norm": 9.816823221531262e-06,
       "gradient_norm_tolerance": 2e-05,
-      "objective": 1.377572598772048
+      "objective": 1.377112431522616
     },
     "numeric_environment": {
       "numpy": "2.3.5",
@@ -714,9 +714,9 @@
       "Target regulation-time final-status verification belongs to the replay builder.",
       "Recorded historical availability assumptions are not observed live publication times."
     ],
-    "correction_model_sha256": "b0740274afaa5abd1efc359092886ff30257429a0a9d843f9831e792b0f6a009"
+    "correction_model_sha256": "1b6f08d25369e40e7dba658253ffe02cd0b43e5d65ecd52ead948e57218df575"
   },
-  "model_hash": "9aeff5d6228d348b324d884c622dce01c5fa581ef8b4c95fc2485d53af3947c3",
+  "model_hash": "4f771fe7ba13d721109e6fc1835bf4745898dd14761f19532d0daaed5a8d1778",
   "protocol_hash": "27e1b150629eecb13774330948813eaba0022165a2801c409c9b0fc8ef105f0c",
   "usage": "engineering_shadow_only",
   "lineup_adjusted": false,
@@ -727,8 +727,13 @@
       "original_path": "data/serie_a.json"
     },
     {
-      "path": "feature_models/training_inputs/0b830d347db5a93ded23a4131fc6f9e2e8a3ac00c5e7f0d8a60c822b2cb1d527.json",
-      "sha256": "011c6e09725234811edcf1765219e3e0d8ada91a10f3f594ac5a3ca22998d33f",
+      "path": "feature_models/inputs/ce7c380b07b94c056db7556dcb6ce6d523131cc9e7a73698331f5f7cd0e0b16f.json",
+      "sha256": "ce7c380b07b94c056db7556dcb6ce6d523131cc9e7a73698331f5f7cd0e0b16f",
+      "original_path": "feature_models/schedules/serie_a/latest.json"
+    },
+    {
+      "path": "feature_models/training_inputs/3f38b9dca35ac493efa250bb3c84f01793c8516a827450ca87fbce2c4d654f51.json",
+      "sha256": "59609eb6a8ba13f015719811092d03b4bfef0443959d37b2200d4dd27b60bc55",
       "kind": "training_bundle"
     }
   ],
@@ -740,21 +745,21 @@
     "trials": [
       {
         "alpha": 0.01,
-        "score": 1.3819647151144554,
+        "score": 1.3801422573169895,
         "status": "scored"
       },
       {
         "alpha": 0.1,
-        "score": 1.381667119809227,
+        "score": 1.3801125481844543,
         "status": "scored"
       },
       {
         "alpha": 1.0,
-        "score": 1.3810305803129082,
+        "score": 1.3802847288860935,
         "status": "scored"
       }
     ],
-    "selected_alpha": 1.0
+    "selected_alpha": 0.1
   },
   "predictive_improvement_verified": false,
   "automatic_promotion": false
