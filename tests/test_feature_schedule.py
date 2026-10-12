@@ -8,8 +8,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from football_model.data import APIClient, APIError, RequestBudgetError
-from football_model.feature_schedule import collect_schedule, load_schedule
+from football_model.data import APIClient, APIError, DataError, RequestBudgetError, _utc
+from football_model.feature_schedule import collect_schedule, load_schedule, _metadata, _diagnostic_code
 
 
 NOW = datetime(2026, 10, 12, 12, tzinfo=timezone.utc)
@@ -216,6 +216,60 @@ class ScheduleTests(unittest.TestCase):
         self.assertEqual(report["coverage"]["request_status_counts"], {"deferred": 4})
         self.assertEqual(load_schedule(self.runtime, "serie_a")[1]["completeness_status"], "partial")
         self.assertNotIn("private status diagnostic", json.dumps(report))
+
+    def test_real_metadata_timestamp_after_request_start_uses_completion_clock(self):
+        # Production run38281475496: first club response fetched at .669765,
+        # then valid Serie A metadata fetched at .910057. The old comparison
+        # froze the former time and incorrectly rejected every new response.
+        request_started = _utc("2026-10-12T17:23:01.669765Z")
+        metadata_fetched = _utc("2026-10-12T17:23:01.910057Z")
+        mutable_clock = [request_started]
+        env = envelope("/leagues", {"id": 135, "season": 2026}, [{
+            "league": {"id": 135, "name": "Serie A", "type": "League"},
+            "country": {"name": "Italy", "code": "IT"},
+            "seasons": [{"year": 2026, "start": "2026-08-22", "end": "2027-05-30", "current": True}],
+        }])
+        env["fetched_at"] = metadata_fetched.isoformat()
+
+        class RequestClient:
+            def _cached_request(self, *args, **kwargs):
+                mutable_clock[0] = metadata_fetched + timedelta(microseconds=1)
+                return env
+
+        result = _metadata(RequestClient(), 135, 2026, lambda: mutable_clock[0],
+                           self.runtime / "responses_root", self.runtime)
+        self.assertGreater(metadata_fetched, request_started)  # the prior implementation would fail
+        self.assertEqual(result["type"], "League")
+        self.assertEqual(result["evidence"]["fetched_at"], env["fetched_at"])
+        self.assertTrue((self.runtime / result["evidence"]["path"]).is_file())
+
+    def test_truly_future_metadata_still_rejected_and_original_saved(self):
+        env = envelope("/leagues", {"id": 135, "season": 2026}, [{
+            "league": {"id": 135, "name": "Serie A", "type": "League"},
+            "seasons": [{"year": 2026}]}])
+        env["fetched_at"] = (NOW + timedelta(seconds=1)).isoformat()
+
+        class Client:
+            def _cached_request(self, *args, **kwargs):
+                return env
+
+        with self.assertRaisesRegex(DataError, "competition_metadata_observation_in_future") as caught:
+            _metadata(Client(), 135, 2026, lambda: NOW, self.runtime / "responses_root", self.runtime)
+        evidence = caught.exception.schedule_evidence
+        self.assertEqual(json.loads((self.runtime / evidence["path"]).read_text()), env)
+
+    def test_metadata_content_failure_has_safe_code_and_preserved_response(self):
+        client = FakeClient()
+        params = {"id": 135, "season": 2026}
+        bad = envelope("/leagues", params, [{"league": {"id": 135, "name": "Serie A", "type": "Unknown"},
+                                              "seasons": [{"year": 2026}]}])
+        client.failures[("/leagues", tuple(sorted(params.items())))] = bad
+        code, report = self.collect(client)
+        self.assertEqual(code, 1)
+        failure = report["coverage"]["competition_metadata_failures"][0]
+        self.assertEqual(failure["diagnostic_code"], "competition_metadata_type_invalid")
+        self.assertTrue((self.runtime / failure["evidence"]["path"]).is_file())
+        self.assertEqual(_diagnostic_code(DataError("unit_test_secret")), "validation_or_storage_error")
 
     def test_empty_and_paginated_cached_responses_never_claim_complete(self):
         client = FakeClient()

@@ -27,6 +27,18 @@ STATUSES = {"TBD", "NS", "1H", "HT", "2H", "ET", "BT", "P", "SUSP", "INT",
             "FT", "AET", "PEN", "PST", "CANC", "ABD", "AWD", "WO", "LIVE"}
 FINISHED = {"FT", "AET", "PEN"}
 FRIENDLY = re.compile(r"\bfriendl(?:y|ies)\b|友谊", re.IGNORECASE)
+SAFE_DIAGNOSTIC_CODES = {
+    "fixture_envelope_endpoint_mismatch", "fixture_envelope_params_or_errors_invalid",
+    "fixture_response_not_list", "fixture_pagination_not_complete", "fixture_observation_in_future",
+    "fixture_structure_invalid", "fixture_league_missing", "fixture_competition_or_season_mismatch",
+    "fixture_league_name_missing", "fixture_does_not_involve_requested_club", "fixture_status_invalid",
+    "fixture_competition_type_invalid", "competition_metadata_envelope_invalid",
+    "competition_metadata_observation_in_future", "competition_metadata_pagination_invalid",
+    "competition_metadata_not_unique", "competition_metadata_type_invalid",
+    "competition_metadata_name_missing", "competition_metadata_season_missing_or_duplicated",
+    "league_fixture_response_empty_unverified", "league_match_maps_to_multiple_seasons",
+    "collection_clock_moved_backwards", "schedule_evidence_hash_conflict",
+}
 
 
 def _canonical(value):
@@ -124,13 +136,35 @@ def _signature(raw):
             "league": {k: raw["league"].get(k) for k in ("id", "season")}}
 
 
-def _metadata(client, league_id, season, now, root, runtime):
+def _diagnostic_code(exc):
+    """Retain module-defined validation codes, never arbitrary exception text."""
+    value = str(exc)
+    if type(exc) is DataError and value in SAFE_DIAGNOSTIC_CODES:
+        return value
+    return "budget_deferred" if isinstance(exc, RequestBudgetError) else "provider_error" if isinstance(exc, APIError) else "validation_or_storage_error"
+
+
+def _metadata(client, league_id, season, clock, root, runtime):
     params = {"id": league_id, "season": season}
     envelope = client._cached_request("/leagues", params, force=False, max_age_seconds=7 * 86400)
+    # The provider's fetched_at is stamped after request completion. Compare to
+    # a real post-request clock, not the caller's pre-request time. Saving the
+    # sanitized original before validation also preserves rejected evidence.
+    evidence = _save_evidence(root, envelope, runtime)
+    observed = _utc(clock())
+    try:
+        return _validate_metadata(envelope, league_id, season, params, observed, evidence)
+    except (APIError, ValueError, KeyError, TypeError, OSError) as exc:
+        exc.schedule_evidence = evidence
+        raise
+
+
+def _validate_metadata(envelope, league_id, season, params, observed, evidence):
     if (envelope.get("endpoint") != "/leagues" or envelope.get("params") != params
-            or envelope.get("errors") or not isinstance(envelope.get("response"), list)
-            or _utc(envelope["fetched_at"]) > now):
+            or envelope.get("errors") or not isinstance(envelope.get("response"), list)):
         raise DataError("competition_metadata_envelope_invalid")
+    if _utc(envelope["fetched_at"]) > observed:
+        raise DataError("competition_metadata_observation_in_future")
     paging = envelope.get("paging", {})
     if not isinstance(paging, dict) or paging.get("total", 1) != 1 or paging.get("current", 1) != 1:
         raise DataError("competition_metadata_pagination_invalid")
@@ -149,7 +183,7 @@ def _metadata(client, league_id, season, now, root, runtime):
         raise DataError("competition_metadata_season_missing_or_duplicated")
     return {"league_id": league_id, "season": season, "name": comp["name"],
             "type": comp["type"], "friendly": bool(FRIENDLY.search(comp["name"])),
-            "evidence": _save_evidence(root, envelope, runtime)}
+            "evidence": evidence}
 
 
 def collect_schedule(config, runtime="runtime", league="serie_a", *, source_commit=None,
@@ -195,6 +229,7 @@ def collect_schedule(config, runtime="runtime", league="serie_a", *, source_comm
         "target_match_season_mapping": [], "issues": [], "conflict_match_ids": [],
         "target_match_identity_or_score_mismatches": [],
         "normalized_target_match_ids_missing_from_club_responses": [],
+        "competition_metadata_failures": [],
         "all_club_competitions_complete": False, "independent_fixture_census_verified": False,
         "historical_availability_verified": False, "national_team_player_workload_included": False,
         "friendly_competitions_excluded": True, "workload_events": []}
@@ -219,17 +254,20 @@ def collect_schedule(config, runtime="runtime", league="serie_a", *, source_comm
         item.update(status="deferred" if isinstance(exc, RequestBudgetError) else "failed",
             reason="budget_deferred" if isinstance(exc, RequestBudgetError) else
                    "provider_error" if isinstance(exc, APIError) else "validation_or_storage_error",
-            failure_stage=failed_stage, checked_at=_iso(now()))
+            failure_stage=failed_stage, diagnostic_code=_diagnostic_code(exc), checked_at=_iso(now()))
 
     def competition_type(lid, year):
         key = (lid, year)
         if key not in metadata:
             try:
-                metadata[key] = _metadata(client, lid, year, now(), root, runtime)
+                metadata[key] = _metadata(client, lid, year, now, root, runtime)
             except (APIError, ValueError, KeyError, TypeError, OSError) as exc:
                 # Repeating failed metadata queries for every club does not add
                 # evidence and needlessly consumes the same quota.
                 metadata[key] = exc
+                coverage["competition_metadata_failures"].append({"league_id": lid, "season": year,
+                    "diagnostic_code": _diagnostic_code(exc), "checked_at": _iso(now()),
+                    "evidence": getattr(exc, "schedule_evidence", None)})
         if isinstance(metadata[key], Exception):
             raise metadata[key]
         return metadata[key]
@@ -316,6 +354,7 @@ def collect_schedule(config, runtime="runtime", league="serie_a", *, source_comm
                                 entry["accepted_fixtures"] += 1
                             except (APIError, ValueError, KeyError, TypeError, OSError) as exc:
                                 entry["invalid_fixtures"].append({"response_index": index,
+                                    "diagnostic_code": _diagnostic_code(exc),
                                     "reason": "budget_deferred" if isinstance(exc, RequestBudgetError) else
                                               "competition_or_fixture_validation_failed"})
                         entry["status"] = "partial" if entry["invalid_fixtures"] else "collected"
