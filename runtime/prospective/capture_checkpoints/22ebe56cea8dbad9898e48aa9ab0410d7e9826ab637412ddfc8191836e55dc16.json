@@ -1,0 +1,311 @@
+{
+  "competitions": [
+    {
+      "configured": true,
+      "data_observed_at": "2026-10-12T01:37:43.506751Z",
+      "detail": "未含阵容伤停、xG与赛程；未证实预测或收益优势。",
+      "eligible_matches": 690,
+      "ev": "未量化",
+      "forecast_availability": {
+        "status": "available",
+        "supported_count": 9,
+        "unsupported_count": 0,
+        "unsupported_reasons": {},
+        "upcoming_count": 9
+      },
+      "forecast_count": 9,
+      "forecast_generated_at": "2026-10-12T01:37:43.513790Z",
+      "key": "ligue_2",
+      "label": "法乙",
+      "last_match_kickoff": "2026-10-10T18:00:00Z",
+      "lineup_model": "未实现",
+      "metadata_received_at": "2026-10-12T01:37:43.191706Z",
+      "missing_seasons": [],
+      "model_change": "数据未变，沿用参数",
+      "model_fitted_at": "2026-10-11T01:33:20.018306Z",
+      "model_freshness": {
+        "age_basis": "training_cutoff",
+        "age_days": 1.0030741210069445,
+        "evaluated_at": "2026-10-12T01:37:32.019444Z",
+        "latest_upcoming_model_age_days": 6.685342414479167,
+        "max_age_days": 14,
+        "note": "真实重拟合可沿用相同历史样本；不代表取得新赛果、阵容或其他基本面。",
+        "status": "current",
+        "training_data_age_days": 1.3177317065277778,
+        "training_last_match_kickoff": "2026-10-10T18:00:00Z"
+      },
+      "model_id": "ligue_2-20261011T013306415389Z",
+      "model_refresh": {
+        "data_changed": false,
+        "performed": false,
+        "prior_model_id": "ligue_2-20261011T013306415389Z",
+        "reasons": [],
+        "required": false,
+        "training_inputs_changed": false
+      },
+      "observed_at": "2026-10-12T01:37:43.506751Z",
+      "provider_league_id": 62,
+      "return_advantage": "未经验证",
+      "run_started_at": "2026-10-12T01:37:32.019444Z",
+      "seasons": [
+        {
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "injuries": false,
+            "odds": true,
+            "players": true,
+            "predictions": true,
+            "standings": true,
+            "top_assists": true,
+            "top_cards": true,
+            "top_scorers": true
+          },
+          "fetched_at": "2026-10-12T01:37:43.483790Z",
+          "fixtures": 306,
+          "from_cache": false,
+          "received_at": "2026-10-12T01:37:43.490304Z",
+          "status_counts": {
+            "FT": 71,
+            "NS": 235
+          },
+          "year": 2026
+        },
+        {
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "injuries": true,
+            "odds": false,
+            "players": true,
+            "predictions": true,
+            "standings": true,
+            "top_assists": true,
+            "top_cards": true,
+            "top_scorers": true
+          },
+          "fetched_at": "2026-10-08T01:33:51.120521Z",
+          "fixtures": 310,
+          "from_cache": true,
+          "received_at": "2026-10-12T01:37:43.496950Z",
+          "status_counts": {
+            "AWD": 1,
+            "FT": 308,
+            "PEN": 1
+          },
+          "year": 2025
+        },
+        {
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "injuries": false,
+            "odds": false,
+            "players": true,
+            "predictions": true,
+            "standings": true,
+            "top_assists": true,
+            "top_cards": true,
+            "top_scorers": true
+          },
+          "fetched_at": "2026-10-08T01:33:51.369588Z",
+          "fixtures": 310,
+          "from_cache": true,
+          "received_at": "2026-10-12T01:37:43.503366Z",
+          "status_counts": {
+            "FT": 310
+          },
+          "year": 2024
+        }
+      ],
+      "status": "探索性基线",
+      "time_semantics": "observed_wall_clock_v1",
+      "trained_at": "2026-10-11T01:33:06.415389Z",
+      "training_cutoff": "2026-10-11T01:33:06.415389Z",
+      "unsupported_forecasts": 0,
+      "validation": {
+        "baseline": {
+          "away_rate": 1.1266968325791855,
+          "home_rate": 1.3909502262443438,
+          "name": "training_league_home_away_mean_poisson",
+          "same_scored_matches_as_model": true,
+          "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)"
+        },
+        "baseline_metrics": {
+          "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+          "brier_score": 0.6652409850213293,
+          "log_loss": 1.0971620748852677,
+          "log_loss_probability_floor": 1e-15,
+          "n": 114
+        },
+        "comparison": {
+          "lower_is_better": true,
+          "model_minus_baseline_brier_score": -0.018555544155552606,
+          "model_minus_baseline_log_loss": -0.02920138443188658
+        },
+        "coverage": {
+          "excluded": 24,
+          "exclusions": [
+            {
+              "match_id": 1545224,
+              "reason": "未知球队 ID：[3221]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1545225,
+              "reason": "未知球队 ID：[3221]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552427,
+              "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552428,
+              "reason": "未知球队 ID：[83]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552431,
+              "reason": "未知球队 ID：[115]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552433,
+              "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552436,
+              "reason": "未知球队 ID：[83]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552438,
+              "reason": "未知球队 ID：[115]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552442,
+              "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552448,
+              "reason": "未知球队 ID：[115]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552445,
+              "reason": "未知球队 ID：[83]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552451,
+              "reason": "未知球队 ID：[115]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552453,
+              "reason": "未知球队 ID：[83]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552452,
+              "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552459,
+              "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552465,
+              "reason": "未知球队 ID：[115]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552464,
+              "reason": "未知球队 ID：[83]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552469,
+              "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552476,
+              "reason": "未知球队 ID：[115, 83]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552477,
+              "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552481,
+              "reason": "未知球队 ID：[115]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552478,
+              "reason": "未知球队 ID：[83]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552493,
+              "reason": "未知球队 ID：[115]；缺少训练数据，当前模型不支持。"
+            },
+            {
+              "match_id": 1552491,
+              "reason": "未知球队 ID：[83]；缺少训练数据，当前模型不支持。"
+            }
+          ],
+          "ratio": 0.8260869565217391,
+          "scored": 114,
+          "total": 138
+        },
+        "deployment_approved": false,
+        "evaluation_data_cutoff": "2026-10-11T01:33:06.415389Z",
+        "is_rolling_backtest": false,
+        "meets_minimum_supported_test_matches": true,
+        "minimum_test_matches": 40,
+        "model_metrics": {
+          "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+          "brier_score": 0.6466854408657767,
+          "log_loss": 1.0679606904533812,
+          "log_loss_probability_floor": 1e-15,
+          "n": 114
+        },
+        "split": {
+          "embargoed_count": 0,
+          "embargoed_match_ids": [],
+          "grouped_by": "kickoff_utc_calendar_date",
+          "method": "chronological_fixed_model_holdout",
+          "result_availability_delay_hours": 4,
+          "test_end": "2026-10-10T18:00:00Z",
+          "test_start": "2026-03-20T19:00:00Z",
+          "testing_count": 138,
+          "train_cutoff": "2026-03-20T00:00:00Z",
+          "train_last_kickoff": "2026-03-16T19:45:00Z",
+          "training_count": 552
+        },
+        "validation_status": "exploratory_single_fixed_holdout",
+        "warnings": [
+          "单次固定模型留出验证仅为探索性检查，不是滚动回测，也不构成上线或盈利证明。",
+          "不含赔率、投注收益、阵容修正或提前十小时伤停历史快照验证。",
+          "超参数为显式默认值，不能根据本留出期反复挑选参数后再声称独立验证。",
+          "未知球队比赛单独列为未覆盖，指标只针对 model_metrics.n 场已覆盖比赛。"
+        ]
+      },
+      "xg_model": "未实现"
+    }
+  ],
+  "generated_at": "2026-10-12T01:37:43.516377Z",
+  "mode": "train",
+  "program_version": "0.1.0",
+  "report_scope": "completed_competition_checkpoint",
+  "requested_competitions": [
+    "ligue_2"
+  ],
+  "run_id": "20261012T013732019444Z",
+  "run_started_at": "2026-10-12T01:37:32.019444Z",
+  "schema_version": 2,
+  "source_commit": "2a5ee2a23589c9fa0247b940e57265cdf5c80af2",
+  "time_semantics": "observed_wall_clock_v1",
+  "training_cutoff": "2026-10-12T01:37:32.019444Z"
+}

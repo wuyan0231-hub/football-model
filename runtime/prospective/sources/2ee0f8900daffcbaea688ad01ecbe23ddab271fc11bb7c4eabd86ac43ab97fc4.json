@@ -1,0 +1,248 @@
+{
+  "content": {
+    "competitions": [
+      {
+        "configured": true,
+        "coverage_audit": {
+          "comparison_eligibility": {
+            "note": "共同样本配对评分仅为描述性检查；因果增量还需固定修复外的资料、实现和验证条件。",
+            "pure_repair_effect_validated": false,
+            "reasons": [
+              "different_or_unknown_evaluation_data_cutoff",
+              "different_or_unknown_split_test_end"
+            ],
+            "same_evaluation_conditions": false
+          },
+          "counts": {
+            "common_scored": 138,
+            "new_excluded": 0,
+            "new_only_scored": 4,
+            "new_scored": 142,
+            "new_total": 142,
+            "old_excluded": 0,
+            "old_scored": 138,
+            "old_total": 138,
+            "paired_common_scored": 138,
+            "removed_scored": 0,
+            "unpaired_common_scored": 0
+          },
+          "path": "runtime/audits/eredivisie/20261012T013732019444Z-coverage.json",
+          "prospective_increment_validated": false,
+          "status": "noncomparable_diagnostic"
+        },
+        "data_observed_at": "2026-10-12T01:37:47.650521Z",
+        "detail": "未含阵容伤停、xG与赛程；未证实预测或收益优势。",
+        "eligible_matches": 702,
+        "ev": "未量化",
+        "forecast_availability": {
+          "status": "available",
+          "supported_count": 9,
+          "unsupported_count": 0,
+          "unsupported_reasons": {},
+          "upcoming_count": 9
+        },
+        "forecast_count": 9,
+        "forecast_generated_at": "2026-10-12T01:37:47.790806Z",
+        "key": "eredivisie",
+        "label": "荷甲",
+        "last_match_kickoff": "2026-10-11T14:45:00Z",
+        "lineup_model": "未实现",
+        "metadata_received_at": "2026-10-12T01:37:47.398621Z",
+        "missing_seasons": [],
+        "model_change": "完成新拟合",
+        "model_fitted_at": "2026-10-12T01:37:47.734569Z",
+        "model_freshness": {
+          "age_basis": "training_cutoff",
+          "age_days": 0.0,
+          "evaluated_at": "2026-10-12T01:37:32.019444Z",
+          "latest_upcoming_model_age_days": 6.682268293472222,
+          "max_age_days": 14,
+          "note": "真实重拟合可沿用相同历史样本；不代表取得新赛果、阵容或其他基本面。",
+          "status": "current",
+          "training_data_age_days": 0.4531483731944444,
+          "training_last_match_kickoff": "2026-10-11T14:45:00Z"
+        },
+        "model_id": "eredivisie-20261012T013732019444Z",
+        "model_refresh": {
+          "data_changed": true,
+          "performed": true,
+          "prior_model_id": "eredivisie-20261011T013306415389Z",
+          "reasons": [
+            "training_inputs_changed"
+          ],
+          "required": true,
+          "training_inputs_changed": true
+        },
+        "observed_at": "2026-10-12T01:37:47.650521Z",
+        "provider_league_id": 88,
+        "return_advantage": "未经验证",
+        "run_started_at": "2026-10-12T01:37:32.019444Z",
+        "seasons": [
+          {
+            "coverage_flags": {
+              "fixtures": {
+                "events": true,
+                "lineups": true,
+                "statistics_fixtures": true,
+                "statistics_players": true
+              },
+              "injuries": true,
+              "odds": true,
+              "players": true,
+              "predictions": true,
+              "standings": true,
+              "top_assists": true,
+              "top_cards": true,
+              "top_scorers": true
+            },
+            "fetched_at": "2026-10-12T01:37:47.625059Z",
+            "fixtures": 306,
+            "from_cache": false,
+            "received_at": "2026-10-12T01:37:47.633771Z",
+            "status_counts": {
+              "FT": 72,
+              "NS": 234
+            },
+            "year": 2026
+          },
+          {
+            "coverage_flags": {
+              "fixtures": {
+                "events": true,
+                "lineups": true,
+                "statistics_fixtures": true,
+                "statistics_players": true
+              },
+              "injuries": true,
+              "odds": false,
+              "players": true,
+              "predictions": true,
+              "standings": true,
+              "top_assists": true,
+              "top_cards": true,
+              "top_scorers": true
+            },
+            "fetched_at": "2026-10-08T01:33:55.316254Z",
+            "fixtures": 309,
+            "from_cache": true,
+            "received_at": "2026-10-12T01:37:47.640049Z",
+            "status_counts": {
+              "FT": 308,
+              "PEN": 1
+            },
+            "year": 2025
+          },
+          {
+            "coverage_flags": {
+              "fixtures": {
+                "events": true,
+                "lineups": true,
+                "statistics_fixtures": true,
+                "statistics_players": true
+              },
+              "injuries": true,
+              "odds": false,
+              "players": true,
+              "predictions": true,
+              "standings": true,
+              "top_assists": true,
+              "top_cards": true,
+              "top_scorers": true
+            },
+            "fetched_at": "2026-10-08T01:33:55.521337Z",
+            "fixtures": 321,
+            "from_cache": true,
+            "received_at": "2026-10-12T01:37:47.647142Z",
+            "status_counts": {
+              "AET": 3,
+              "FT": 317,
+              "PEN": 1
+            },
+            "year": 2024
+          }
+        ],
+        "status": "探索性基线",
+        "time_semantics": "observed_wall_clock_v1",
+        "trained_at": "2026-10-12T01:37:32.019444Z",
+        "training_cutoff": "2026-10-12T01:37:32.019444Z",
+        "unsupported_forecasts": 0,
+        "validation": {
+          "baseline": {
+            "away_rate": 1.3407671721677075,
+            "home_rate": 1.727921498661909,
+            "name": "training_league_home_away_mean_poisson",
+            "same_scored_matches_as_model": true,
+            "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)"
+          },
+          "baseline_metrics": {
+            "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+            "brier_score": 0.673771784098632,
+            "log_loss": 1.1081551926920081,
+            "log_loss_probability_floor": 1e-15,
+            "n": 142
+          },
+          "comparison": {
+            "lower_is_better": true,
+            "model_minus_baseline_brier_score": -0.08477138629654335,
+            "model_minus_baseline_log_loss": -0.11783802789184983
+          },
+          "coverage": {
+            "excluded": 0,
+            "exclusions": [],
+            "ratio": 1.0,
+            "scored": 142,
+            "total": 142
+          },
+          "deployment_approved": false,
+          "evaluation_data_cutoff": "2026-10-12T01:37:32.019444Z",
+          "is_rolling_backtest": false,
+          "meets_minimum_supported_test_matches": true,
+          "minimum_test_matches": 40,
+          "model_metrics": {
+            "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+            "brier_score": 0.5890003978020887,
+            "log_loss": 0.9903171648001583,
+            "log_loss_probability_floor": 1e-15,
+            "n": 142
+          },
+          "split": {
+            "embargoed_count": 0,
+            "embargoed_match_ids": [],
+            "grouped_by": "kickoff_utc_calendar_date",
+            "method": "chronological_fixed_model_holdout",
+            "result_availability_delay_hours": 4,
+            "test_end": "2026-10-11T14:45:00Z",
+            "test_start": "2026-03-15T11:15:00Z",
+            "testing_count": 142,
+            "train_cutoff": "2026-03-15T00:00:00Z",
+            "train_last_kickoff": "2026-03-14T20:00:00Z",
+            "training_count": 560
+          },
+          "validation_status": "exploratory_single_fixed_holdout",
+          "warnings": [
+            "单次固定模型留出验证仅为探索性检查，不是滚动回测，也不构成上线或盈利证明。",
+            "不含赔率、投注收益、阵容修正或提前十小时伤停历史快照验证。",
+            "超参数为显式默认值，不能根据本留出期反复挑选参数后再声称独立验证。",
+            "未知球队比赛单独列为未覆盖，指标只针对 model_metrics.n 场已覆盖比赛。"
+          ]
+        },
+        "xg_model": "未实现"
+      }
+    ],
+    "generated_at": "2026-10-12T01:37:47.797524Z",
+    "mode": "train",
+    "program_version": "0.1.0",
+    "report_scope": "completed_competition_checkpoint",
+    "requested_competitions": [
+      "eredivisie"
+    ],
+    "run_id": "20261012T013732019444Z",
+    "run_started_at": "2026-10-12T01:37:32.019444Z",
+    "schema_version": 2,
+    "source_commit": "2a5ee2a23589c9fa0247b940e57265cdf5c80af2",
+    "time_semantics": "observed_wall_clock_v1",
+    "training_cutoff": "2026-10-12T01:37:32.019444Z"
+  },
+  "kind": "run_report",
+  "original_bytes_sha256": "2e791afed48915b75ef6a85af76dce798b257bcedc6da1b553f25fc22adaec8a"
+}
