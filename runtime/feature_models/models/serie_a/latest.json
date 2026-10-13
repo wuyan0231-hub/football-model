@@ -2,10 +2,10 @@
   "schema_version": "feature-model-card-v1",
   "league": "serie_a",
   "candidate_id": "M1_schedule_offset_l2_v1",
-  "source_commit": "7f643568dbe441640a15d45bf365e016852bad6e",
-  "state_commit": "4c7a12199a321d41ada9003c4a59e96ae6629e35",
-  "training_cutoff": "2026-10-12T17:46:49.670553Z",
-  "generated_at": "2026-10-12T17:48:37.625692Z",
+  "source_commit": "46dce2e55a2229c88dab0dfbe2df1e4f7f25c556",
+  "state_commit": "d3b13fc387f90366e8e9ee0c3be51b121cd4a8b6",
+  "training_cutoff": "2026-10-13T01:26:14.939540Z",
+  "generated_at": "2026-10-13T01:28:24.164528Z",
   "feature_names": [
     "rest_days_capped",
     "matches_last14d",
@@ -22,7 +22,7 @@
     "trained": true,
     "validated_for_production": false,
     "automatic_promotion": false,
-    "training_cutoff": "2026-10-12T17:46:49.670553Z",
+    "training_cutoff": "2026-10-13T01:26:14.939540Z",
     "feature_names": [
       "rest_days_capped",
       "matches_last14d",
@@ -30,10 +30,10 @@
       "opponent_matches_last14d"
     ],
     "coefficients": {
-      "rest_days_capped": -0.01870662630025191,
-      "matches_last14d": -0.02755640648576338,
-      "opponent_rest_days_capped": 0.010867766078966272,
-      "opponent_matches_last14d": 0.03293499462269888
+      "rest_days_capped": -0.018706626302358757,
+      "matches_last14d": -0.02755640648685735,
+      "opponent_rest_days_capped": 0.01086776607702144,
+      "opponent_matches_last14d": 0.032934994622519136
     },
     "feature_scaling": {
       "rest_days_capped": {
@@ -42,17 +42,17 @@
         "constant_in_training": false
       },
       "matches_last14d": {
-        "mean": 1.723160023513726,
+        "mean": 1.7231600235137263,
         "scale": 0.9191473557066318,
         "constant_in_training": false
       },
       "opponent_rest_days_capped": {
         "mean": 6.957195296144802,
-        "scale": 3.0212397416566787,
+        "scale": 3.021239741656679,
         "constant_in_training": false
       },
       "opponent_matches_last14d": {
-        "mean": 1.723160023513726,
+        "mean": 1.7231600235137263,
         "scale": 0.9191473557066318,
         "constant_in_training": false
       }
@@ -69,8 +69,8 @@
       "origin": "kickoff",
       "reference": "correction_training_cutoff",
       "normalization": "mean_one",
-      "raw_weight_sum": 413.58575819918747,
-      "normalized_weight_sum": 1230.0000000000002
+      "raw_weight_sum": 413.0779493444689,
+      "normalized_weight_sum": 1230.0
     },
     "n_rows": 1230,
     "n_matches": 615,
@@ -692,16 +692,16 @@
       1550144,
       1550145
     ],
-    "training_data_sha256": "a30c04d38356c4dd543106c9377c576a9d0d7c6068a4c00296e2f1299a3e7267",
+    "training_data_sha256": "238f6b70047314b04427f413852e09c418378d2f308dc32573ee2f9e99ec3353",
     "last_result_available_at": "2026-10-11T22:45:00Z",
-    "effective_side_sample_size": 851.1907471392624,
-    "effective_match_sample_size": 425.5953735696312,
+    "effective_side_sample_size": 851.1907471392623,
+    "effective_match_sample_size": 425.59537356963114,
     "independent_evaluation_unit": "match_id, never a side row or repeated forecast version",
     "optimizer": {
       "method": "statsmodels_GLM_fit_regularized_bfgs",
-      "gradient_norm": 9.816823221531262e-06,
+      "gradient_norm": 9.816823242851734e-06,
       "gradient_norm_tolerance": 2e-05,
-      "objective": 1.377112431522616
+      "objective": 1.377112431521991
     },
     "numeric_environment": {
       "numpy": "2.3.5",
@@ -714,9 +714,9 @@
       "Target regulation-time final-status verification belongs to the replay builder.",
       "Recorded historical availability assumptions are not observed live publication times."
     ],
-    "correction_model_sha256": "1b6f08d25369e40e7dba658253ffe02cd0b43e5d65ecd52ead948e57218df575"
+    "correction_model_sha256": "4ab00aef4734080c64edc320dc04839398ecbcc77cd85e879c18293c6c70195b"
   },
-  "model_hash": "4f771fe7ba13d721109e6fc1835bf4745898dd14761f19532d0daaed5a8d1778",
+  "model_hash": "3cdb77e14124f60f8c878b7fe8ce8781cac96d642d0989c69c4af463cc0fcf8c",
   "protocol_hash": "27e1b150629eecb13774330948813eaba0022165a2801c409c9b0fc8ef105f0c",
   "usage": "engineering_shadow_only",
   "lineup_adjusted": false,
@@ -727,13 +727,13 @@
       "original_path": "data/serie_a.json"
     },
     {
-      "path": "feature_models/inputs/ce7c380b07b94c056db7556dcb6ce6d523131cc9e7a73698331f5f7cd0e0b16f.json",
-      "sha256": "ce7c380b07b94c056db7556dcb6ce6d523131cc9e7a73698331f5f7cd0e0b16f",
+      "path": "feature_models/inputs/8d02610c2e3fed97b788290fbc5f5ce8090384a7b0c104dfa962401408bcc4c3.json",
+      "sha256": "8d02610c2e3fed97b788290fbc5f5ce8090384a7b0c104dfa962401408bcc4c3",
       "original_path": "feature_models/schedules/serie_a/latest.json"
     },
     {
-      "path": "feature_models/training_inputs/3f38b9dca35ac493efa250bb3c84f01793c8516a827450ca87fbce2c4d654f51.json",
-      "sha256": "59609eb6a8ba13f015719811092d03b4bfef0443959d37b2200d4dd27b60bc55",
+      "path": "feature_models/training_inputs/5b9c2daca87cea01f804b4084e97947676081dfd57aec97870d8b10515e71dc2.json",
+      "sha256": "19b2347cf54d8346a99d79845c651be402715ef05879f4b0b797ba7343521e3f",
       "kind": "training_bundle"
     }
   ],
@@ -745,17 +745,17 @@
     "trials": [
       {
         "alpha": 0.01,
-        "score": 1.3801422573169895,
+        "score": 1.380142257316516,
         "status": "scored"
       },
       {
         "alpha": 0.1,
-        "score": 1.3801125481844543,
+        "score": 1.3801125481839964,
         "status": "scored"
       },
       {
         "alpha": 1.0,
-        "score": 1.3802847288860935,
+        "score": 1.3802847288856834,
         "status": "scored"
       }
     ],
