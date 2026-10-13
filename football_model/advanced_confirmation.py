@@ -72,6 +72,16 @@ def _read_ref(root, ref):
     return _read(path)
 
 
+def _read_development_artifact(runtime, ref):
+    # Research storage transparently verifies every immutable chunk and object;
+    # activation must never consume a partially materialized report/card.
+    from .advanced_storage import load_report
+    try:
+        return load_report(runtime, ref)
+    except (ValueError, OSError, KeyError, TypeError) as exc:
+        raise ConfirmationError("development_artifact_integrity: " + str(exc)) from exc
+
+
 def _save(root, category, value):
     data = _raw(value)
     path = Path(root) / category / (hashlib.sha256(data).hexdigest() + ".json")
@@ -252,12 +262,15 @@ def verify_development(runtime, report, card, *, protocol, league, candidate_id,
     from .feature_research import score_forecast
     from .model import score_distribution
     from .feature_correction import predict_correction
-    from .advanced_research import predict_saved_goalmodel, candidate_feature_names, _side_values
+    from .advanced_research import predict_saved_goalmodel, candidate_feature_names, _side_values, implementation_fingerprint
     if (report.get("schema_version") != "advanced-research-v1" or report.get("league") != league
             or report.get("purpose") != "historical_development_only"
             or report.get("protocol_hash", report.get("protocol_sha256")) != digest(protocol)
             or digest(report.get("protocol")) != digest(protocol)):
         raise ConfirmationError("development_report_contract_invalid")
+    implementation = implementation_fingerprint()
+    if report.get("implementation_fingerprint") != implementation or card.get("implementation_fingerprint") != implementation:
+        raise ConfirmationError("development_implementation_fingerprint_mismatch")
     if _time(report.get("generated_at")) > now:
         raise ConfirmationError("development_report_from_future")
     if (card.get("fit_status") != "fitted" or card.get("candidate_id") != candidate_id
@@ -273,7 +286,7 @@ def verify_development(runtime, report, card, *, protocol, league, candidate_id,
     refs = report.get("source_refs", []) + card.get("source_refs", [])
     if not refs:
         raise ConfirmationError("development_frozen_sources_missing")
-    sources = [_read_ref(runtime, ref) for ref in refs]
+    sources = [_read_development_artifact(runtime, ref) for ref in refs]
     source_matches = {}
     for source in sources:
         if isinstance(source, dict) and isinstance(source.get("matches"), list):
@@ -372,8 +385,8 @@ def activate(runtime, root, *, design, advanced_protocol, league, candidate_id, 
              development_ref, card_ref, family_size, now):
     """Only this gate can write an activation; no historical trial backdating."""
     now = _time(now)
-    report = _read_ref(runtime, development_ref)
-    card = _read_ref(runtime, card_ref)
+    report = _read_development_artifact(runtime, development_ref)
+    card = _read_development_artifact(runtime, card_ref)
     if report.get("protocol_sha256", report.get("protocol_hash")) != digest(advanced_protocol):
         raise ConfirmationError("development_protocol_mismatch")
     if not isinstance(card, dict) or card.get("candidate_id", candidate_id) != candidate_id:
@@ -401,6 +414,7 @@ def activate(runtime, root, *, design, advanced_protocol, league, candidate_id, 
         "last_kickoff": _iso(start + timedelta(days=design["max_calendar_days"])),
         "design": design, "design_sha256": digest(design),
         "advanced_protocol_sha256": digest(advanced_protocol),
+        "implementation_fingerprint": report["implementation_fingerprint"],
         "development_ref": development_ref, "development_gate": gate,
         "anchor_model_card_ref": card_ref, "sample_plan": gate["sample_plan"],
         "cohort_rule": "first_observed_queue_order;before_kickoff;all_failures_included",
@@ -486,6 +500,9 @@ def monitor(runtime, root, activation, rows, *, now, scored_rows_loader=None):
     now = _time(now)
     if activation["design_sha256"] != digest(activation["design"]):
         raise ConfirmationError("activation_design_corrupt")
+    from .advanced_research import implementation_fingerprint
+    if activation.get("implementation_fingerprint") != implementation_fingerprint():
+        raise ConfirmationError("activation_implementation_changed_new_protocol_required")
     design = validate_design(activation["design"])
     terminal_pointer = Path(root) / "terminal.json"
     if terminal_pointer.exists():
@@ -646,6 +663,8 @@ def _candidate_specs(protocol):
 def run(runtime, league, advanced_protocol, design, *, auto_activate=False, clock=None, row_loader=None):
     """Continuous orchestration entry point; blocked trials still produce receipts."""
     validate_design(design)
+    from .advanced_research import implementation_fingerprint
+    current_implementation = implementation_fingerprint()
     runtime = Path(runtime).resolve()
     now = _time((clock or (lambda: datetime.now(timezone.utc)))())
     protocol_hash = digest(advanced_protocol)
@@ -656,7 +675,7 @@ def run(runtime, league, advanced_protocol, design, *, auto_activate=False, cloc
         try:
             pointer = _read(report_pointer)
             report_ref = pointer.get("full_report_ref", pointer.get("report_ref"))
-            report = _read_ref(runtime, report_ref)
+            report = _read_development_artifact(runtime, report_ref)
         except (OSError, ValueError, TypeError) as exc:
             development_error = str(exc)
     if row_loader is None:
@@ -675,6 +694,8 @@ def run(runtime, league, advanced_protocol, design, *, auto_activate=False, cloc
         try:
             if activation_path.exists():
                 activation = _read_ref(runtime, _read(activation_path))
+                if activation.get("implementation_fingerprint") != current_implementation:
+                    raise ConfirmationError("activation_implementation_changed_new_protocol_required")
                 if (activation["advanced_protocol_sha256"] != protocol_hash or activation["design_sha256"] != digest(design)
                         or (activation.get("league"), activation.get("candidate_id"), activation.get("horizon")) != (league, candidate_id, horizon)):
                     raise ConfirmationError("activation_policy_changed")
@@ -682,8 +703,14 @@ def run(runtime, league, advanced_protocol, design, *, auto_activate=False, cloc
                 activation = None
             gate = None
             if activation is None:
+                if development_error is not None:
+                    raise ConfirmationError(development_error)
                 if report is None:
                     gate = {"status": "blocked_pending_development", "failures": [development_error or "development_report_unavailable"]}
+                elif report.get("implementation_fingerprint") != current_implementation:
+                    gate = {"status": "blocked_pending_development", "failures": ["implementation_changed_requires_fresh_development_study"],
+                        "report_implementation_sha256": (report.get("implementation_fingerprint") or {}).get("sha256"),
+                        "current_implementation_sha256": current_implementation["sha256"]}
                 else:
                     gate = development_gate(report, candidate_id, horizon, design, family_size)
                     card_ref = report.get("model_cards", {}).get(candidate_id)

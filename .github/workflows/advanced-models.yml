@@ -21,8 +21,8 @@ permissions:
   contents: write
   actions: read
 concurrency:
-  group: football-model-state
-  cancel-in-progress: false
+  group: ${{ github.ref == 'refs/heads/main' && 'football-model-state' || format('football-model-research-{0}', github.ref) }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   pre_study_capture:
@@ -223,6 +223,16 @@ jobs:
           all_report=reports.get('all',{}).get('report',{})
           receipt.update(production_promoted=False,accuracy_improvement_verified=False,collection_reports=reports,
                          full_collection_completed=receipt['COLLECTION']=='success' and all_report.get('full_collection_completed') is True)
+          study_path=Path('runtime/advanced_models/study_runs/latest.json')
+          if study_path.is_file():
+              study_raw=study_path.read_bytes(); study=json.loads(study_raw)
+              receipt['research_report']={'path':str(study_path),'sha256':hashlib.sha256(study_raw).hexdigest(),
+                  'research_full_completed':study.get('research_full_completed'),
+                  'requested_leagues':len(study.get('configured_leagues',[])),
+                  'completed_leagues':study.get('completed_leagues'),
+                  'deferred_leagues':study.get('capacity_deferred_leagues'),
+                  'failed_leagues':sum(r.get('status')=='failed' for r in study.get('results',[]))}
+          receipt['research_full_completed']=receipt['RESEARCH']=='success' and receipt.get('research_report',{}).get('research_full_completed') is True
           Path('advanced-run-receipt.json').write_text(json.dumps(receipt,indent=2))
           summary={k:v for k,v in receipt.items() if k != 'collection_reports'}
           summary['collection_reports']={selection:{

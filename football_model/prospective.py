@@ -129,6 +129,77 @@ def _same_identity(left: dict, right: dict) -> bool:
     return _identity(left) == _identity(right)
 
 
+def _event_order(row: dict) -> tuple:
+    return (_timestamp(row["observed_at"], "observed_at"),
+            _timestamp(row["captured_at"], "captured_at"), row["object_id"])
+
+
+def record_schedule_revision(root: Path, competition: str, row: dict, *, observed: datetime,
+                             captured: datetime, source_id: str, forecasts: list[dict],
+                             collection_method: str) -> str:
+    """Keep a changed kickoff as unscorable evidence, never as an altered result."""
+    identity = _identity(row)
+    relevant = [f for f in forecasts if f["competition"] == competition and f["match_id"] == identity["match_id"]]
+    if (not relevant or any(_same_identity(f, identity) for f in relevant)
+            or not any(all(f[k] == identity[k] for k in ("match_id", "home_id", "away_id")) for f in relevant)):
+        raise ValueError("result_identity_or_kickoff_mismatch")
+    if observed > captured:
+        raise ValueError("result_source_missing_or_future_observation")
+    source, _ = _read(root, "sources", source_id + ".json")
+    if _digest(source) != source_id:
+        raise ValueError("schedule_revision_source_integrity_mismatch")
+    originals = []
+    for forecast in relevant:
+        ledger = forecast.get("_result_sync_ledger", "prospective")
+        source_root = root if ledger == "prospective" else _path(root.parent, "shadow_models")
+        original, _ = _read(source_root, "forecasts", forecast["object_id"] + ".json")
+        if _digest(original) != forecast["object_id"]:
+            raise ValueError("schedule_revision_forecast_integrity_mismatch")
+        source_ids = {forecast[k] for k in ("source_id", "report_source", "model_source") if forecast.get(k)}
+        source_ids.update(v for k, v in forecast.get("parents", {}).items() if k.endswith("_source") and isinstance(v, str))
+        frozen_source_refs = []
+        for sid in sorted(source_ids):
+            frozen_source, _ = _read(source_root, "sources", _name(sid) + ".json")
+            if _digest(frozen_source) != sid:
+                raise ValueError("schedule_revision_original_source_integrity_mismatch")
+            frozen_source_refs.append({"path": f"{ledger}/sources/{sid}.json", "sha256": sid})
+        originals.append({"ledger": ledger, "forecast_id": forecast["object_id"], "identity": _identity(forecast),
+            "forecast_ref": {"path": f"{ledger}/forecasts/{forecast['object_id']}.json", "sha256": _digest(original)},
+            "frozen_source_refs": frozen_source_refs,
+            "prediction_source_id": forecast.get("source_id", forecast.get("parents", {}).get("prediction_source")),
+            "report_source_id": forecast.get("report_source", forecast.get("parents", {}).get("report_source"))})
+    previous = [r for r in _objects(root, "schedule_revisions")
+                if r["competition"] == competition and r["match_id"] == identity["match_id"]]
+    latest = max(previous, key=_event_order, default=None)
+    if latest and observed < _timestamp(latest["observed_at"], "observed_at"):
+        if collection_method == "pipeline_normalized_data":
+            return latest["object_id"]
+        raise ValueError("schedule_revision_observation_regressed")
+    if latest and latest["source_id"] == source_id and latest["original_forecasts"] == originals:
+        return latest["object_id"]
+    return _append(root, "schedule_revisions", {"schema_version": 1, "competition": competition, **identity,
+        "status": "unscorable_schedule_revision", "observed_at": _iso(observed), "captured_at": _iso(captured),
+        "source_id": source_id, "source_ref": {"path": f"prospective/sources/{source_id}.json", "sha256": _digest(source)},
+        "original_forecasts": originals, "collection_method": collection_method,
+        "supersedes": latest["object_id"] if latest else None, "original_forecasts_unchanged": True,
+        "result_appended": False, "paired_scoring_eligible": False})
+
+
+def current_results(root: Path, *, as_of: datetime | None = None) -> list[dict]:
+    """Preserve history while excluding results superseded by schedule evidence."""
+    revisions = {}
+    for row in _objects(root, "schedule_revisions"):
+        if as_of is not None and max(_timestamp(row["observed_at"], "observed_at"),
+                                    _timestamp(row["captured_at"], "captured_at")) > as_of:
+            continue
+        key = (row["competition"], row["match_id"])
+        if key not in revisions or _event_order(row) > _event_order(revisions[key]):
+            revisions[key] = row
+    return [r for r in _objects(root, "results") if not (
+        (revision := revisions.get((r["competition"], r["match_id"])))
+        and _event_order(revision) >= _event_order(r) and not _same_identity(revision, r))]
+
+
 def make_protocol(config: dict) -> dict:
     settings = config.get("prospective", {})
     if not isinstance(settings, dict):
@@ -321,13 +392,24 @@ def append_result(root: Path, competition: str, row: dict, *, observed: datetime
                   collection_method: str = "pipeline_normalized_data") -> str | None:
     """Append a verified regulation result revision; never mutate original evidence."""
     relevant = [r for r in forecasts if r["competition"] == competition and r["match_id"] == row["match_id"]]
-    if not relevant or not any(_same_identity(r, row) for r in relevant):
+    if not relevant:
         raise ValueError("result_identity_or_kickoff_mismatch")
     if observed > captured:
         raise ValueError("result_source_missing_or_future_observation")
     if _timestamp(row["kickoff"], "kickoff") + RESULT_AVAILABILITY_DELAY > observed:
         raise ValueError("result_observed_before_regulation_maturity")
     scores = {field: _integer(row[field], field, 0) for field in ("home_goals", "away_goals")}
+    if not any(_same_identity(r, row) for r in relevant):
+        record_schedule_revision(root, competition, row, observed=observed, captured=captured,
+            source_id=source_id, forecasts=relevant, collection_method=collection_method)
+        return None
+    revisions = [r for r in _objects(root, "schedule_revisions")
+                 if r["competition"] == competition and r["match_id"] == row["match_id"]]
+    revision = max(revisions, key=_event_order, default=None)
+    if revision and observed <= _timestamp(revision["observed_at"], "observed_at"):
+        if collection_method == "pipeline_normalized_data":
+            return None
+        raise ValueError("result_source_observation_regressed_after_schedule_revision")
     versions = [r for r in _objects(root, "results")
                 if r["competition"] == competition and r["match_id"] == row["match_id"]]
     latest = max(versions, key=lambda v: (_timestamp(v["observed_at"], "observed_at"),
@@ -343,7 +425,7 @@ def append_result(root: Path, competition: str, row: dict, *, observed: datetime
         unchanged = _same_identity(latest, row) and all(latest[field] == score for field, score in scores.items())
         evidence_upgrade = (unchanged and latest.get("collection_method") == "pipeline_normalized_data"
                             and collection_method == "independent_fixture_sync")
-        if unchanged and not evidence_upgrade:
+        if unchanged and not evidence_upgrade and not (revision and _event_order(revision) > _event_order(latest)):
             return None
         if evidence_upgrade:
             # Same goals can still add materially stronger independent evidence.
@@ -478,8 +560,12 @@ def _markets(rows: list[tuple[dict, dict]], forecast_key: str, contracts: list) 
 
 def summarize(root: Path, clock) -> dict:
     forecasts, results, quotes = (_objects(root, name) for name in ("forecasts", "results", "quotes"))
+    schedule_revisions = _objects(root, "schedule_revisions")
+    revision_map = {}
+    for revision in sorted(schedule_revisions, key=_event_order):
+        revision_map[(revision["competition"], revision["match_id"])] = revision
     result_map = {}
-    for result in sorted(results, key=lambda r: (_timestamp(r["observed_at"], "observed_at"), _timestamp(r["captured_at"], "captured_at"), r["object_id"])):
+    for result in sorted(current_results(root), key=_event_order):
         result_map[(result["competition"], result["match_id"])] = result
     primary = {}
     changed_identity = []
@@ -508,11 +594,16 @@ def summarize(root: Path, clock) -> dict:
         common = [(row, result) for row, result in scored if row["baseline"]["status"] == "available"]
         for row in rows:
             result = result_map.get((competition, row["match_id"]))
+            revision = revision_map.get((competition, row["match_id"]))
             statuses.append({"protocol_id": pid, "competition": competition, "match_id": row["match_id"],
-                "primary_forecast_id": row["object_id"], "status": ("scored" if _same_identity(row, result) else "result_identity_conflict") if result else "pending",
-                "result_id": result["object_id"] if result and _same_identity(row, result) else None})
+                "primary_forecast_id": row["object_id"], "status": ("scored" if _same_identity(row, result) else "result_identity_conflict") if result else ("unscorable_schedule_revision" if revision else "pending"),
+                "result_id": result["object_id"] if result and _same_identity(row, result) else None,
+                "schedule_revision_id": revision["object_id"] if revision else None})
+        unscorable = sum((competition, row["match_id"]) in revision_map
+                         and (competition, row["match_id"]) not in result_map for row in rows)
         summaries.append({"protocol_id": pid, "competition": competition, "unique_matches": len(rows),
-            "pending": len(rows) - len(scored), "scored": len(scored),
+            "pending": len(rows) - len(scored) - unscorable, "scored": len(scored),
+            "unscorable_schedule_revision": unscorable,
             "all_model_coverage": _markets(scored, "model", protocols[pid]["contracts"]),
             "common_sample": {"n": len(common), "model": _markets(common, "model", protocols[pid]["contracts"]),
                               "league_mean": _markets(common, "baseline", protocols[pid]["contracts"])},
@@ -557,6 +648,8 @@ def summarize(root: Path, clock) -> dict:
             "unique_primary_matches_by_protocol": len(primary), "coverage_records": len(coverage),
             "coverage_status_counts": dict(Counter(row["status"] for row in coverage)),
             "result_versions": len(results), "groups": summaries, "match_statuses": statuses,
+            "schedule_revision_versions": len(schedule_revisions),
+            "unscorable_schedule_revision_matches": sum(s["status"] == "unscorable_schedule_revision" for s in statuses),
             "identity_changed_forecasts": changed_identity,
             "quote_simulation": {"status": "available" if returns else "not_available",
                 "eligible_quotes": len(selected_quotes), "scored_quotes": len(returns),

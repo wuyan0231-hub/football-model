@@ -8,6 +8,7 @@ import unittest
 from football_model.advanced_features import (feature_values, build_feature_rows,
     make_players_snapshot, validate_players_snapshot, validate_evidence, FEATURE_GROUPS)
 from football_model.advanced_collection import collect_run, _save
+from football_model.advanced_capacity import CapacityGuard, CapacityDeferred
 from football_model.data import DataError, RequestBudgetError
 from football_model.fundamentals import make_snapshot, save_snapshot
 
@@ -126,11 +127,21 @@ class AdvancedFeaturesTests(unittest.TestCase):
         self.assertAlmostEqual(result["home"]["confirmed_xi_prior_rating_delta"],2/11)
         self.assertTrue(result["groups"]["lineup_rating"])
 
-    def test_impossible_player_minutes_quarantined(self):
+    def test_impossible_player_minutes_quarantined_but_stoppage_valid(self):
         f=self.history[0];env=envelope("players",f)
-        env["response"][0]["players"].append({"player":{"id":112},"statistics":[{"games":{"minutes":90}}]})
-        with self.assertRaisesRegex(DataError,"team_total"):
+        env["response"][0]["players"][0]["statistics"][0]["games"]["minutes"]=1000
+        with self.assertRaisesRegex(DataError,"regulation_player_minutes"):
             make_players_snapshot(env,f)
+        valid=make_players_snapshot(envelope("players",f,minute=95),f)
+        self.assertTrue(valid["teams"]["1"]["complete_minutes"])
+
+    def test_unidentified_bench_does_not_invent_id_or_discard_known_players(self):
+        f=self.history[0];env=envelope("players",f)
+        env["response"][0]["players"].append({"player":{"id":0},"statistics":[{"games":{"minutes":None,"rating":None}}]})
+        result=make_players_snapshot(env,f)
+        self.assertEqual(len(result["teams"]["1"]["players"]),11)
+        self.assertEqual(len(result["teams"]["1"]["unidentified_players"]),1)
+        self.assertFalse(result["teams"]["1"]["complete_minutes"])
 
     def test_unknown_bench_minutes_dont_erase_observed_starters_rating_or_xi(self):
         for path in (self.root/"advanced_features/snapshots/players").glob("*/*.json"):path.unlink()
@@ -180,7 +191,12 @@ class FakeClient:
     def resolve_league(self,c,force=False):
         return {"league":{"id":39},"seasons":[{"year":2025,"coverage":{"fixtures":{"lineups":True,"statistics_fixtures":True,"statistics_players":True}}}],"fetched_at":"2026-02-01T00:00:00Z"}
     def fetch_fixture(self,mid,**kwargs):
-        return {"endpoint":"/fixtures","params":{"id":mid},"response":[api_fixture(self.fixtures[mid])],"fetched_at":"2026-02-01T00:00:00Z"}
+        if self.requests_made>=self.budget:raise RequestBudgetError("budget")
+        self.requests_made+=1;self.order.append(mid)
+        raw=api_fixture(self.fixtures[mid])
+        for kind in ("statistics","lineups","players"):
+            raw[kind]=envelope(kind,self.fixtures[mid])["response"]
+        return {"endpoint":"/fixtures","params":{"id":mid},"response":[raw],"fetched_at":"2026-02-01T00:00:00Z"}
     def _cached_request(self,endpoint,params,**kwargs):
         if self.requests_made>=self.budget:raise RequestBudgetError("budget")
         self.requests_made+=1;self.order.append(params["fixture"])
@@ -188,6 +204,79 @@ class FakeClient:
 
 
 class AdvancedCollectionTests(unittest.TestCase):
+    def test_network_deferral_does_not_skip_later_embedded_cache(self):
+        for capacity in (False,True):
+            with self.subTest(capacity=capacity),tempfile.TemporaryDirectory() as directory:
+                root=Path(directory);(root/"data").mkdir();rows=[fixture(1,2),fixture(2,4)]
+                (root/"data/a.json").write_text(json.dumps({"matches":rows}))
+                raw=api_fixture(rows[0])
+                for kind in ("statistics","lineups","players"):raw[kind]=envelope(kind,rows[0])["response"]
+                env={"endpoint":"/fixtures","params":{"id":1},"response":[raw],"fetched_at":"2026-02-01T00:00:00Z"}
+                path=root/"fundamentals/fixtures/1/original.json";path.parent.mkdir(parents=True)
+                path.write_text(json.dumps({"fixture_response":env}))
+                class DeniedFirst(FakeClient):
+                    attempts=0
+                    def fetch_fixture(self,mid,**kwargs):
+                        self.attempts+=1
+                        if capacity:raise CapacityDeferred({"test":"unknown_network_payload_budget"})
+                        raise RequestBudgetError("daily_quota_exhausted")
+                client=DeniedFirst(rows)
+                code,report=collect_run({"competitions":[{"key":"a"}]},root,client=client,
+                    clock=lambda:datetime(2026,2,2,tzinfo=timezone.utc))
+                self.assertEqual(code,0);self.assertEqual(client.attempts,1)
+                self.assertEqual(report["matches"][0]["match_id"],2)
+                self.assertEqual(report["matches"][0]["status"],"deferred")
+                self.assertEqual(report["matches"][1]["match_id"],1)
+                self.assertEqual(report["matches"][1]["status"],"collected")
+                self.assertEqual(report["deferred_requests"],3)
+                self.assertEqual(report["engineering_failure_count"],0)
+                self.assertEqual(len(list((root/"advanced_features/evidence").glob("*/*/*.json"))),3)
+
+    def test_embedded_original_reused_without_endpoint_calls_and_rebuilds(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);(root/"data").mkdir();rows=[fixture(i,i*2) for i in range(1,4)]
+            (root/"data/a.json").write_text(json.dumps({"matches":rows,"observed_at":"2026-01-09T00:00:00Z"}))
+            originals={}
+            for row in rows:
+                raw=api_fixture(row)
+                for kind in ("statistics","lineups","players"):raw[kind]=envelope(kind,row)["response"]
+                env={"endpoint":"/fixtures","params":{"id":row["match_id"]},"response":[raw],"fetched_at":"2026-02-01T00:00:00Z"}
+                path=root/"fundamentals/fixtures"/str(row["match_id"])/"original.json"
+                path.parent.mkdir(parents=True);path.write_text(json.dumps({"fixture_response":env},indent=3)+"\n")
+                originals[str(path.relative_to(root))]=path.read_bytes()
+            client=FakeClient(rows,budget=0)
+            code,report=collect_run({"competitions":[{"key":"a"}]},root,client=client,
+                clock=lambda:datetime(2026,2,2,tzinfo=timezone.utc))
+            self.assertEqual(code,0);self.assertEqual(client.requests_made,0)
+            self.assertEqual(report["pending_requests"],0)
+            for name,raw in originals.items():self.assertEqual((root/name).read_bytes(),raw)
+            wrappers=list((root/"advanced_features/evidence").glob("*/*/*.json"))
+            self.assertEqual(len(wrappers),9)
+            self.assertTrue(all(p.stat().st_size<1500 for p in wrappers))
+            target={**fixture(20,12,status="NS"),"kickoff":"2026-02-03T12:00:00Z"}
+            values=feature_values(root,"a",target,"2026-02-02T01:00:00Z")
+            self.assertEqual(values["home"]["shots_for_mean"],10)
+            self.assertTrue(all(any(ref["path"]==name for ref in values["source_refs"]) for name in originals))
+            with tempfile.TemporaryDirectory() as closed:
+                for ref in values["source_refs"]:
+                    p=Path(closed)/ref["path"];p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes((root/ref["path"]).read_bytes())
+                rebuilt=feature_values(closed,"a",target,"2026-02-02T01:00:00Z")
+                self.assertEqual(rebuilt["home"],values["home"])
+
+    def test_capacity_deferral_saves_report_without_unsafe_evidence_write(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);(root/"data").mkdir();rows=[fixture(1,2)]
+            (root/"data/a.json").write_text(json.dumps({"matches":rows}))
+            guard=CapacityGuard(root,max_logical=80_000,max_physical=8*1024*1024,reserve_logical=80_000,reserve_physical=0)
+            code,report=collect_run({"competitions":[{"key":"a"}]},root,client=FakeClient(rows),capacity_guard=guard,
+                clock=lambda:datetime(2026,2,2,tzinfo=timezone.utc))
+            self.assertEqual(code,0);self.assertEqual(report["execution_status"],"deferred")
+            self.assertEqual(report["capacity_deferred_requests"],3)
+            self.assertEqual(report["engineering_failure_count"],0)
+            self.assertFalse(list((root/"advanced_features/contexts").glob("*.json")))
+            self.assertTrue((root/"advanced_features/collection/latest.json").exists())
+            self.assertLess(guard.logical,80_000)
+
     def test_resume_keeps_denominator_and_rotates_leagues(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);(root/"data").mkdir()
@@ -196,7 +285,7 @@ class AdvancedCollectionTests(unittest.TestCase):
                 (root/"data"/(key+".json")).write_text(json.dumps({"matches":rows}))
             config={"competitions":[{"key":"a"},{"key":"b"}]}
             clock=lambda:datetime(2026,2,2,tzinfo=timezone.utc)
-            client=FakeClient(fixtures,budget=3)
+            client=FakeClient(fixtures,budget=1)
             code,report=collect_run(config,root,client=client,clock=clock)
             self.assertEqual(code,0);self.assertEqual(len(report["matches"]),4)
             self.assertEqual(report["pending_requests"],9)
@@ -207,13 +296,13 @@ class AdvancedCollectionTests(unittest.TestCase):
             self.assertTrue(all(l["denominator_preserved"] for l in report["leagues"]))
             next_client=FakeClient(fixtures)
             code,finished=collect_run(config,root,client=next_client,clock=clock)
-            self.assertEqual(code,0);self.assertEqual(next_client.requests_made,9)
+            self.assertEqual(code,0);self.assertEqual(next_client.requests_made,3)
             self.assertEqual(finished["pending_requests"],0)
             self.assertTrue(finished["full_collection_completed"])
             self.assertEqual(finished["execution_status"],"complete")
             self.assertEqual(json.loads((root/"advanced_features/collection/by_selection/all/latest.json").read_text()),finished)
             value=next((root/"advanced_features/evidence/statistics").glob("*/*.json"))
-            raw=json.loads(value.read_text());raw["snapshot"]["fixture"]["status"]="NS"
+            raw=json.loads(value.read_text());raw["normalized_snapshot_id"]="0"*64
             with self.assertRaises(DataError):validate_evidence(raw,root)
 
     def test_missing_league_history_never_reports_zero_coverage(self):
@@ -227,9 +316,9 @@ class AdvancedCollectionTests(unittest.TestCase):
 
     def test_mixed_schema_failure_and_budget_deferral_remains_failure(self):
         class BrokenClient(FakeClient):
-            def _cached_request(self,endpoint,params,**kwargs):
-                result=super()._cached_request(endpoint,params,**kwargs)
-                result["params"]={"fixture":999999}
+            def fetch_fixture(self,mid,**kwargs):
+                result=super().fetch_fixture(mid,**kwargs)
+                result["response"][0]["statistics"][0]["team"]["id"]=999999
                 return result
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);(root/"data").mkdir()
@@ -239,7 +328,7 @@ class AdvancedCollectionTests(unittest.TestCase):
                 client=BrokenClient(rows,budget=1),clock=lambda:datetime(2026,2,2,tzinfo=timezone.utc))
             self.assertEqual(code,1)
             self.assertEqual(report["failed_requests"],1)
-            self.assertEqual(report["deferred_requests"],5)
+            self.assertEqual(report["deferred_requests"],3)
             self.assertEqual(report["engineering_failure_count"],1)
             self.assertEqual(report["execution_status"],"failed")
             self.assertTrue(report["matches"][0]["kinds"]["statistics"]["diagnostic_ref"])

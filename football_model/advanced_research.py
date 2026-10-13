@@ -22,6 +22,7 @@ from .feature_dataset import FEATURE_NAMES, build_replay, feature_values
 from .feature_research import (choose_alpha, digest, save_immutable, score_forecast,
                                paired_summary, _request_summary)
 from .model import ModelDataError, RESULT_AVAILABILITY_DELAY, TAIL_TOLERANCE, _iso, _timestamp
+from .advanced_storage import save_artifact, load_artifact, load_report
 
 
 FEATURE_GROUPS = {
@@ -36,17 +37,33 @@ FEATURE_GROUPS = {
 }
 
 
+def implementation_fingerprint():
+    root = Path(__file__).resolve().parents[1]
+    paths = ("football_model/advanced_research.py", "football_model/advanced_features.py",
+        "football_model/advanced_storage.py", "football_model/feature_correction.py",
+        "football_model/feature_dataset.py", "football_model/model.py", "football_model/cold_start.py",
+        "football_model/feature_research.py", "football_model/settlement.py", "requirements.txt",
+        "football_model/goalmodel_adapter.py", "scripts/goalmodel_bridge.R",
+        "third_party/goalmodel/R/goalmodel_fit.R", "third_party/goalmodel/R/goalmodel_predict.R")
+    files = {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in paths}
+    return {"schema_version": "advanced-implementation-fingerprint-v1", "files": files,
+            "sha256": digest(files)}
+
+
 def _read(path):
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def _write(path, value):
+def _write(path, value, guard=None, *, final=False):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(".tmp")
-    temporary.write_text(json.dumps(value, ensure_ascii=False, sort_keys=True,
-                                   indent=2, allow_nan=False) + "\n", encoding="utf-8")
+    raw = (json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n").encode()
+    ticket = guard.check_write(path, raw, final=final) if guard is not None else None
+    temporary.write_bytes(raw)
     temporary.replace(path)
+    if ticket is not None:
+        guard.commit_write(ticket)
 
 
 def _ref(root, path):
@@ -62,7 +79,7 @@ def _resolve(root, ref):
     return path
 
 
-def _freeze(root, path):
+def _freeze(root, path, guard=None):
     root = Path(root).resolve()
     path = Path(path).resolve()
     raw = Path(path).read_bytes()
@@ -73,8 +90,11 @@ def _freeze(root, path):
         if destination.read_bytes() != raw:
             raise ModelDataError("advanced immutable source collision")
     else:
+        ticket = guard.check_write(destination, raw) if guard is not None else None
         with destination.open("xb") as handle:
             handle.write(raw)
+        if ticket is not None:
+            guard.commit_write(ticket)
     return {**_ref(root, destination), "original_path": str(Path(path).relative_to(root))}
 
 
@@ -292,6 +312,8 @@ def build_live_predictions(runtime, league, protocol, baseline_prediction, featu
                 raise ModelDataError("no_successful_model_card")
             card = _read(model_path)
             _validate_card_identity(card, candidate, league, protocol)
+            if card.get("implementation_fingerprint") != implementation_fingerprint():
+                raise ModelDataError("candidate implementation differs from saved fit")
             if candidate.startswith("G") and not run_goalmodel:
                 raise ModelDataError("goalmodel_disabled")
             if _timestamp(card["generated_at"], "generated_at") > cutoff:
@@ -310,7 +332,7 @@ def build_live_predictions(runtime, league, protocol, baseline_prediction, featu
             if card["kind"] == "offset_correction":
                 if baseline_prediction is None:
                     raise ModelDataError("baseline_unavailable")
-                bundle = _read(_resolve(root, card["correction_training_ref"]))
+                bundle = load_artifact(root, card["correction_training_ref"])
                 if bundle.get("correction_model") != card["correction_model"]:
                     raise ModelDataError("correction card differs from frozen fitted model")
                 baseline = {**copy.deepcopy(baseline_prediction), "cutoff_at": _iso(cutoff)}
@@ -319,7 +341,7 @@ def build_live_predictions(runtime, league, protocol, baseline_prediction, featu
             else:
                 if card.get("reproduction_verification", {}).get("verified") is not True:
                     raise ModelDataError("saved_goalmodel_not_R_verified")
-                bundle = _read(_resolve(root, card["goalmodel_training_ref"]))
+                bundle = load_artifact(root, card["goalmodel_training_ref"])
                 original = bundle["real_R_result"]
                 if (card["goalmodel_fit"] != original["fit"] or card["training_match_ids"] != original["training_match_ids"]
                         or card["training_cutoff"] != original["cutoff"] or card["feature_names"] != original["feature_names"]):
@@ -335,7 +357,7 @@ def build_live_predictions(runtime, league, protocol, baseline_prediction, featu
             "production_changed": False, "predictive_improvement_verified": False}
 
 
-def study(runtime, league, protocol, *, source_commit, state_commit=None, run_goalmodel=False, clock=None):
+def study(runtime, league, protocol, *, source_commit, state_commit=None, run_goalmodel=False, clock=None, capacity_guard=None):
     validate_protocol(protocol)
     from .advanced_features import build_feature_rows
     from .goalmodel_adapter import fit_predict_goalmodel
@@ -343,18 +365,19 @@ def study(runtime, league, protocol, *, source_commit, state_commit=None, run_go
     clock = clock or (lambda: datetime.now(timezone.utc))
     started = clock()
     now = _iso(started)
+    implementation = implementation_fingerprint()
     original_path = root / "data" / (league + ".json")
     original = _read(original_path)
     matches = [m for m in original["matches"] if _timestamp(m["kickoff"], "kickoff") + RESULT_AVAILABILITY_DELAY <= started]
     directory = root / "advanced_models" / league / digest(protocol)
-    input_refs = [_freeze(root, original_path)]
+    input_refs = [_freeze(root, original_path, capacity_guard)]
     schedule_path = root / "feature_models" / "schedules" / league / "latest.json"
     schedule_events = None
     if schedule_path.exists():
         schedule = _read(schedule_path)
         if schedule.get("coverage", {}).get("provider_queries_complete"):
             schedule_events = schedule["coverage"]["workload_events"]
-            input_refs.append(_freeze(root, schedule_path))
+            input_refs.append(_freeze(root, schedule_path, capacity_guard))
     replays, feature_sets, datasets = {}, {}, {}
     for horizon in sorted({v["horizon"] for v in protocol["candidates"].values()} | {"EARLY"}):
         hours = protocol["horizon_hours"] if horizon == "EARLY" else protocol.get("lineup_horizon_hours", .75)
@@ -374,7 +397,7 @@ def study(runtime, league, protocol, *, source_commit, state_commit=None, run_go
         replays[horizon], feature_sets[horizon], datasets[horizon] = replay, features, dataset
         for source_ref in dataset.get("source_refs", []):
             source_path = _resolve(root, source_ref)
-            input_refs.append(_freeze(root, source_path))
+            input_refs.append(_freeze(root, source_path, capacity_guard))
     input_refs = list({r["path"]: r for r in input_refs}.values())
     frozen_lookup = {(r["original_path"], r["sha256"]): r for r in input_refs}
     datasets = _rebind_frozen_refs(datasets, frozen_lookup)
@@ -549,27 +572,28 @@ def study(runtime, league, protocol, *, source_commit, state_commit=None, run_go
                     "correction_model": model,
                     "feature_dataset": datasets[horizon], "source_files": input_refs,
                     "training_cutoff": now, "historical_PIT_verified": False}
-                bundle_path = save_immutable(directory / "training_inputs", bundle)
+                bundle_path = save_artifact(root, directory / "training_inputs", bundle, guard=capacity_guard)
                 card = {"schema_version": "advanced-model-card-v1", "candidate_id": candidate,
                     "league": league, "horizon": horizon, "kind": "offset_correction",
                     "feature_names": names, "feature_groups": protocol["candidates"][candidate]["groups"],
                     "fit_status": "fitted", "correction_model": model, "selection": selection,
                     "training_cutoff": now, "generated_at": _iso(clock()), "source_commit": source_commit,
                     "state_commit": state_commit, "protocol_hash": digest(protocol),
+                    "implementation_fingerprint": implementation,
                     "source_refs": input_refs + [_ref(root, bundle_path)],
                     "correction_training_ref": _ref(root, bundle_path),
                     "usage": "engineering_shadow_only", "predictive_improvement_verified": False,
                     "automatic_promotion": False}
                 card["model_hash"] = digest(card)
-                card_path = save_immutable(directory / "models" / candidate / "history", card)
-                _write(directory / "models" / candidate / "latest.json", card)
+                card_path = save_artifact(root, directory / "models" / candidate / "history", card, guard=capacity_guard)
+                _write(directory / "models" / candidate / "latest.json", card, capacity_guard)
                 model_cards[candidate] = _ref(root, card_path)
                 attempt.update(status="fitted", model_card_ref=model_cards[candidate])
             except (ValueError, ArithmeticError) as exc:
                 attempt.update(_failure(exc, "latest_offset_fit"))
             attempt["previous_latest_preserved"] = attempt["status"] != "fitted" and (directory / "models" / candidate / "latest.json").exists()
-            path = save_immutable(directory / "models" / candidate / "fit_attempts", attempt)
-            _write(directory / "models" / candidate / "latest_fit_status.json", {**attempt, "attempt_ref": _ref(root, path)})
+            path = save_artifact(root, directory / "models" / candidate / "fit_attempts", attempt, guard=capacity_guard)
+            _write(directory / "models" / candidate / "latest_fit_status.json", {**attempt, "attempt_ref": _ref(root, path)}, capacity_guard)
             fit_attempts[candidate] = attempt
     if run_goalmodel:
         features = feature_sets["EARLY"]
@@ -602,7 +626,7 @@ def study(runtime, league, protocol, *, source_commit, state_commit=None, run_go
                     "training_features": train_features, "feature_names": names, "cutoff": now,
                     "source_files": input_refs, "real_R_result": result,
                     "probe_features": probe_features, "probe_scope": "synthetic_engineering_only_not_match_predictions"}
-                bundle_path = save_immutable(directory / "training_inputs", bundle)
+                bundle_path = save_artifact(root, directory / "training_inputs", bundle, guard=capacity_guard)
                 card = {"schema_version": "advanced-model-card-v1", "kind": "goalmodel_saved_fit",
                     "candidate_id": candidate, "league": league, "horizon": "EARLY", "dc": False,
                     "training_feature_horizon": "EARLY", "prediction_horizons": protocol.get("goalmodel_horizons", ["EARLY"]),
@@ -611,20 +635,21 @@ def study(runtime, league, protocol, *, source_commit, state_commit=None, run_go
                     "training_match_ids": result["training_match_ids"], "training_data_sha256": digest(train),
                     "training_cutoff": now, "generated_at": _iso(clock()), "source_commit": source_commit,
                     "state_commit": state_commit, "protocol_hash": digest(protocol),
+                    "implementation_fingerprint": implementation,
                     "source_refs": input_refs + [_ref(root, bundle_path)], "goalmodel_training_ref": _ref(root, bundle_path),
                     "usage": "engineering_shadow_only", "predictive_improvement_verified": False,
                     "automatic_promotion": False}
                 card["reproduction_verification"] = verify_goalmodel_probes(card, result, probe_features)
                 card["model_hash"] = digest(card)
-                card_path = save_immutable(directory / "models" / candidate / "history", card)
-                _write(directory / "models" / candidate / "latest.json", card)
+                card_path = save_artifact(root, directory / "models" / candidate / "history", card, guard=capacity_guard)
+                _write(directory / "models" / candidate / "latest.json", card, capacity_guard)
                 model_cards[candidate] = _ref(root, card_path)
                 attempt.update(status="fitted", model_card_ref=model_cards[candidate])
             except (ValueError, ArithmeticError) as exc:
                 attempt.update(_failure(exc, "latest_goalmodel_fit"))
             attempt["previous_latest_preserved"] = attempt["status"] != "fitted" and (directory / "models" / candidate / "latest.json").exists()
-            path = save_immutable(directory / "models" / candidate / "fit_attempts", attempt)
-            _write(directory / "models" / candidate / "latest_fit_status.json", {**attempt, "attempt_ref": _ref(root, path)})
+            path = save_artifact(root, directory / "models" / candidate / "fit_attempts", attempt, guard=capacity_guard)
+            _write(directory / "models" / candidate / "latest_fit_status.json", {**attempt, "attempt_ref": _ref(root, path)}, capacity_guard)
             fit_attempts[candidate] = attempt
     comparisons, coverage = {}, {}
     for candidate in list(protocol["candidates"]) + protocol.get("goalmodel_candidates", []):
@@ -651,6 +676,7 @@ def study(runtime, league, protocol, *, source_commit, state_commit=None, run_go
     report = {"schema_version": "advanced-research-v1", "league": league,
         "run_started_at": now, "generated_at": _iso(clock()), "source_commit": source_commit,
         "state_commit": state_commit, "protocol": protocol, "protocol_hash": digest(protocol),
+        "implementation_fingerprint": implementation,
         "purpose": "historical_development_only", "prospective_qualified": False,
         "requested_matches": len(matches), "requested_horizon_opportunities": len(all_rows),
         "unavailable_targets": [{"match_id": m["match_id"], "reason": "result_not_mature_at_study_start"}
@@ -674,10 +700,10 @@ def study(runtime, league, protocol, *, source_commit, state_commit=None, run_go
     report["cold_start_diagnostics"] = {"forecast_horizon_opportunities": sum("COLD_START" in r["scores"] for r in all_rows),
         "unique_matches": len({r["match_id"] for r in all_rows if "COLD_START" in r["scores"]}),
         "paired_improvement_claim": False, "production_baseline_failures_preserved": True}
-    path = save_immutable(directory / "reports" / "history", report)
+    path = save_artifact(root, directory / "reports" / "history", report, guard=capacity_guard)
     summary = {k: v for k, v in report.items() if k not in ("replays", "feature_datasets", "experiments", "scored_matches")}
     summary["full_report_ref"] = _ref(root, path)
-    _write(directory / "reports" / "latest.json", summary)
+    _write(directory / "reports" / "latest.json", summary, capacity_guard)
     return report
 
 
@@ -695,21 +721,55 @@ def main(argv=None):
     protocol = validate_protocol(_read(args.protocol))
     leagues = [c["key"] for c in _read(args.config)["competitions"] if c.get("mode") != "audit_only"] if args.league == "all" else [args.league]
     results = []
-    for league in leagues:
+    from .advanced_capacity import CapacityGuard, CapacityDeferred
+    guard = CapacityGuard(args.runtime)
+    def record_attempt(value):
+        directory = Path(args.runtime) / "advanced_models" / value["league"] / digest(protocol) / "reports"
+        path = save_artifact(Path(args.runtime), directory / "failures", value, guard=guard, final=True)
+        _write(directory / "latest_attempt.json", {**value, "failure_ref": _ref(Path(args.runtime), path)}, guard, final=True)
+        results.append(value)
+        print(json.dumps(value, ensure_ascii=False), flush=True)
+
+    for index, league in enumerate(leagues):
+        print(json.dumps({"league": league, "status": "research_started"}, ensure_ascii=False), flush=True)
         try:
             report = study(args.runtime, league, protocol, source_commit=args.source_commit,
-                state_commit=args.state_commit, run_goalmodel=args.run_goalmodel)
+                state_commit=args.state_commit, run_goalmodel=args.run_goalmodel, capacity_guard=guard)
             results.append({"league": league, "status": "completed_development",
                 "requested_matches": report["requested_matches"], "latest_fits": report["latest_fits"],
                 "request_coverage": report["request_coverage"], "accuracy_improvement_verified": False})
+            print(json.dumps({"league": league, "status": "research_completed", "requested_matches": report["requested_matches"],
+                "fitted_candidates": [k for k,v in report["latest_fits"].items() if v["status"] == "fitted"]}, ensure_ascii=False), flush=True)
+        except CapacityDeferred as exc:
+            # Preserve the remaining configured denominator without launching
+            # additional expensive fits once the shared guard is exhausted.
+            for pending in leagues[index:]:
+                history_path = Path(args.runtime) / "data" / (pending + ".json")
+                try:
+                    count = len(_read(history_path)["matches"])
+                except (OSError, ValueError, KeyError, TypeError):
+                    count = None
+                record_attempt({"league": pending, "status": "capacity_deferred",
+                    "requested_history_matches": count, "research_full_completed": False,
+                    "fit_attempted_this_run": pending == league,
+                    "reason": "storage_capacity_exhausted" if pending == league else "pending_after_capacity_exhaustion",
+                    "capacity": exc.details, "generated_at": _iso(datetime.now(timezone.utc)),
+                    "source_commit": args.source_commit, "protocol_hash": digest(protocol)})
+            break
         except (OSError, ValueError, ArithmeticError) as exc:
             failure = {"league": league, "status": "failed", **_failure(exc, "study"),
                 "generated_at": _iso(datetime.now(timezone.utc)), "source_commit": args.source_commit}
-            directory = Path(args.runtime) / "advanced_models" / league / digest(protocol) / "reports"
-            path = save_immutable(directory / "failures", failure)
-            _write(directory / "latest_attempt.json", {**failure, "failure_ref": _ref(Path(args.runtime), path)})
-            results.append(failure)
-    print(json.dumps({"results": results, "production_changed": False}, ensure_ascii=False))
+            record_attempt(failure)
+    summary = {"results": results, "production_changed": False,
+        "research_full_completed": all(r["status"] == "completed_development" for r in results),
+        "configured_leagues": leagues, "completed_leagues": sum(r["status"] == "completed_development" for r in results),
+        "capacity_deferred_leagues": sum(r["status"] == "capacity_deferred" for r in results),
+        "source_commit": args.source_commit, "protocol_hash": digest(protocol),
+        "generated_at": _iso(datetime.now(timezone.utc)), "capacity": guard.summary()}
+    run_root = Path(args.runtime) / "advanced_models" / "study_runs"
+    path = save_artifact(Path(args.runtime), run_root / "history", summary, guard=guard, final=True)
+    _write(run_root / "latest.json", {**summary, "full_report_ref": _ref(Path(args.runtime), path)}, guard, final=True)
+    print(json.dumps(summary, ensure_ascii=False), flush=True)
     return int(any(r["status"] == "failed" for r in results))
 
 

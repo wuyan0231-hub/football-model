@@ -78,9 +78,9 @@ class ResultSyncTests(unittest.TestCase):
         self.assertEqual(report['counts']['pending_or_not_mature_at_observation'], 1)
         self.assertEqual(prospective._objects(self.root/'prospective', 'results'), [])
 
-    def test_wrong_league_team_kickoff_and_fixture_are_rejected_with_response_retained(self):
+    def test_wrong_league_team_and_fixture_are_rejected_with_response_retained(self):
         mutations = [lambda i:i['league'].update(id=7), lambda i:i['teams']['home'].update(id=9),
-            lambda i:i['fixture'].update(date='2026-10-06T17:00:00Z'), lambda i:i['fixture'].update(id=24)]
+            lambda i:i['fixture'].update(id=24)]
         for change in mutations:
             with self.subTest(change=change):
                 env = copy.deepcopy(self.envelope)
@@ -91,6 +91,61 @@ class ResultSyncTests(unittest.TestCase):
                 source_id = report['records'][0]['source_id']
                 self.assertTrue((self.root/'prospective/sources'/f'{source_id}.json').exists())
         self.assertEqual(prospective._objects(self.root/'prospective', 'results'), [])
+
+    def test_kickoff_revision_is_unscorable_and_preserves_both_sources_and_forecast(self):
+        frozen={p.name:p.read_bytes() for p in (self.root/'prospective/forecasts').glob('*.json')}
+        self.item['fixture'].update(date='2026-10-06T17:00:00Z',timestamp=int(fixtures.dt('2026-10-06T17:00:00Z').timestamp()))
+        code,report=self.sync()
+        self.assertEqual(code,0)
+        self.assertEqual(report['counts'],{'unscorable_schedule_revision':1})
+        self.assertEqual(prospective._objects(self.root/'prospective','results'),[])
+        revision=prospective._objects(self.root/'prospective','schedule_revisions')[0]
+        self.assertEqual(revision['kickoff'],'2026-10-06T17:00:00Z')
+        self.assertFalse(revision['paired_scoring_eligible'])
+        for ref in [revision['source_ref']]+[f['forecast_ref'] for f in revision['original_forecasts']]:
+            self.assertEqual(prospective.hashlib.sha256((self.root/ref['path']).read_bytes()).hexdigest(),ref['sha256'])
+        for name,raw in frozen.items():self.assertEqual((self.root/'prospective/forecasts'/name).read_bytes(),raw)
+        summary=prospective.summarize(self.root/'prospective',lambda:self.now)
+        self.assertEqual(summary['groups'][0]['scored'],0)
+        self.assertEqual(summary['groups'][0]['pending'],0)
+        self.assertEqual(summary['match_statuses'][0]['status'],'unscorable_schedule_revision')
+        self.sync();self.assertEqual(len(prospective._objects(self.root/'prospective','schedule_revisions')),1)
+        self.now=fixtures.dt('2026-11-01T21:01:00Z')
+        code,report=self.sync()
+        self.assertEqual(code,0);self.assertEqual(self.client.calls,[])
+        self.assertEqual(report['records'][0]['reason'],'outside_revision_recheck_window')
+
+    def test_later_schedule_revision_removes_current_score_without_rewriting_history(self):
+        self.sync()
+        old={p.name:p.read_bytes() for p in (self.root/'prospective/results').glob('*.json')}
+        self.item['fixture'].update(date='2026-10-06T17:00:00Z',timestamp=int(fixtures.dt('2026-10-06T17:00:00Z').timestamp()))
+        self.envelope['fetched_at']='2026-10-06T22:00:00Z';self.now=fixtures.dt('2026-10-06T22:01:00Z')
+        self.assertEqual(self.sync()[0],0)
+        self.assertEqual(prospective.current_results(self.root/'prospective'),[])
+        self.assertEqual(len(prospective.current_results(self.root/'prospective',as_of=fixtures.dt('2026-10-06T21:30:00Z'))),1)
+        self.case.result();code,summary=prospective.run(self.root,self.case.config,clock=lambda:self.now)
+        self.assertEqual(code,0);self.assertEqual(summary['groups'][0]['scored'],0)
+        for name,raw in old.items():self.assertEqual((self.root/'prospective/results'/name).read_bytes(),raw)
+        self.item['fixture'].update(date=self.case.row['kickoff'],timestamp=int(fixtures.dt(self.case.row['kickoff']).timestamp()))
+        self.envelope['fetched_at']='2026-10-06T23:00:00Z';self.now=fixtures.dt('2026-10-06T23:01:00Z')
+        self.assertEqual(self.sync()[0],0)
+        self.assertEqual(len(prospective.current_results(self.root/'prospective')),1)
+        self.assertEqual(len(prospective._objects(self.root/'prospective','results')),2)
+        self.now=fixtures.dt('2026-11-01T21:01:00Z')
+        self.assertEqual(self.sync()[1]['counts'],{'outside_revision_recheck_window':1})
+
+    def test_schedule_revision_keeps_other_fixture_processing_and_schema_errors_fatal(self):
+        self.case.row['match_id']=23;self.case.report['run_id']='r2';self.case.save_inputs();self.case.invoke()
+        class Mixed(FixtureClient):
+            def fetch_fixture(inner,mid,**kwargs):
+                env=copy.deepcopy(inner.envelope);env['params']['id']=mid;env['response'][0]['fixture']['id']=mid
+                if mid==22:env['response'][0]['fixture'].update(date='2026-10-06T17:00:00Z',timestamp=int(fixtures.dt('2026-10-06T17:00:00Z').timestamp()))
+                return env
+        code,report=result_sync.run(self.root,self.case.config,client=Mixed(self.envelope),clock=lambda:self.now)
+        self.assertEqual(code,0);self.assertEqual(report['counts'],{'unscorable_schedule_revision':1,'result_appended':1})
+        env=copy.deepcopy(self.envelope);env['response'][0]['fixture'].update(date='2026-10-06T17:00:00Z',timestamp=int(fixtures.dt('2026-10-06T17:00:00Z').timestamp()))
+        env['response'][0]['score']['fulltime']={'home':None,'away':None}
+        self.assertEqual(self.sync(env)[0],1)
 
     def test_missing_fulltime_not_substituted(self):
         self.item['score']['fulltime'] = {'home': None, 'away': None}

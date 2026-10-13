@@ -152,7 +152,7 @@ def frozen_runtime(runtime, refs, cutoff):
 
 
 
-def _confirmation_tag(runtime, league, protocol, candidate, horizon, fixture, cutoff):
+def _confirmation_tag(runtime, league, protocol, candidate, horizon, fixture, cutoff, branch=None):
     base = Path(runtime) / "advanced_models" / league / _digest(protocol) / "confirmation"
     matches = []
     for path in base.glob("*/" + candidate + "/" + horizon + "/activation.json"):
@@ -170,8 +170,18 @@ def _confirmation_tag(runtime, league, protocol, candidate, horizon, fixture, cu
     if not matches:
         return {"confirmation_eligible": False}
     reference, activation = matches[0]
+    from .advanced_research import implementation_fingerprint
+    current = implementation_fingerprint()
+    if activation.get("implementation_fingerprint") != current:
+        return {"confirmation_eligible": False, "confirmation_ineligible_reason": "confirmation_implementation_changed"}
+    if (branch or {}).get("status") == "predicted" and not branch.get("model_ref"):
+        return {"confirmation_eligible": False, "confirmation_ineligible_reason": "confirmation_candidate_model_missing"}
+    if (branch or {}).get("model_ref"):
+        card = _read_ref(Path(runtime), branch["model_ref"])
+        if card.get("implementation_fingerprint") != current:
+            return {"confirmation_eligible": False, "confirmation_ineligible_reason": "confirmation_candidate_implementation_changed"}
     return {"confirmation_eligible": True, "confirmation_activation_ref": reference,
-        "confirmation_activation_sha256": _digest(activation)}
+        "confirmation_activation_sha256": _digest(activation), "confirmation_implementation_fingerprint": current}
 
 
 def _verify_confirmation_tag(runtime, payload, candidate, item):
@@ -179,13 +189,25 @@ def _verify_confirmation_tag(runtime, payload, candidate, item):
         return
     activation = _read_ref(Path(runtime), item["confirmation_activation_ref"])
     cutoff = _utc(payload["actual_cutoff_at"])
+    from .advanced_research import implementation_fingerprint
+    current = implementation_fingerprint()
+    if item.get("status") in {"predicted", "verified"} and not item.get("model_ref"):
+        # Verified views retain the immutable model ref from the payload.
+        original = payload.get("candidates", {}).get(candidate, {})
+        if not original.get("model_ref"):
+            raise SnapshotError("confirmation_candidate_model_missing")
     if (item.get("confirmation_activation_sha256") != _digest(activation)
+            or activation.get("implementation_fingerprint") != current
+            or item.get("confirmation_implementation_fingerprint") != current
             or activation.get("advanced_protocol_sha256") != payload["protocol_sha256"]
             or activation.get("candidate_id") != candidate or activation.get("horizon") != payload["horizon"]
             or activation.get("league") != payload["league"]
             or _utc(activation["created_at"]) > cutoff or _utc(activation["future_start"]) > cutoff
             or _utc(payload["fixture"]["kickoff"]) > _utc(activation["last_kickoff"])):
         raise SnapshotError("confirmation_capture_tag_invalid")
+    model_ref = item.get("model_ref") or payload.get("candidates", {}).get(candidate, {}).get("model_ref")
+    if model_ref and _read_ref(Path(runtime), model_ref).get("implementation_fingerprint") != current:
+        raise SnapshotError("confirmation_candidate_implementation_changed")
 
 
 def _feature_numeric(value):
@@ -402,7 +424,7 @@ def capture_run(runtime, league="serie_a", *, source_commit, protocol, state_com
                             except (ImportError, ValueError, KeyError, TypeError, OSError) as exc:
                                 candidates = {cid: {"status": "unavailable", "reason": _reason(exc)} for cid in candidate_ids(protocol)}
                             for cid, branch in candidates.items():
-                                branch.update(_confirmation_tag(runtime, league, protocol, cid, horizon, fixture, cutoff))
+                                branch.update(_confirmation_tag(runtime, league, protocol, cid, horizon, fixture, cutoff, branch))
                             created = _tick(clock, base_done)
                             payload = {"schema_version": VERSION, "league": league, "fixture": fixture, "horizon": horizon,
                                 "protocol": deepcopy(protocol), "protocol_sha256": _digest(protocol), "source_commit": source_commit,

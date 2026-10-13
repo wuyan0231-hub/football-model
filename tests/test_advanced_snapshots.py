@@ -12,6 +12,7 @@ from unittest.mock import patch
 from football_model.advanced_snapshots import (capture_run, load_verified_comparison, verify_capture,
     _root, freeze_inputs, frozen_runtime, queue_members)
 from football_model.advanced_scoring import score_run, verified_confirmation_rows
+from football_model.advanced_research import implementation_fingerprint
 from football_model.feature_snapshots import _digest, _read, SnapshotError
 from football_model.model import _distribution_from_rates
 from tests.test_cli import BASE_CONFIG, FakeClient as TrainingClient
@@ -50,7 +51,7 @@ class AdvancedSnapshotTests(unittest.TestCase):
             "teams":{"home":{"id":self.row["home_id"],"name":self.row["home_name"]},"away":{"id":self.row["away_id"],"name":self.row["away_name"]}},
             "league":{"id":999,"name":"Synthetic League","country":"Test"}}
         write(self.runtime/"fundamentals/fixtures/2000/current.json",{"fixture_response":{"endpoint":"/fixtures","params":{"id":2000},"errors":[],"fetched_at":iso(CAPTURE),"response":[self.identity]}})
-        self.card=write(self.runtime/"test-card.json",{"beta":.1,"generated_at":iso(TRAINED)})
+        self.card=write(self.runtime/"test-card.json",{"beta":.1,"generated_at":iso(TRAINED),"implementation_fingerprint":implementation_fingerprint()})
         self.kickoff=datetime.fromisoformat(self.row["kickoff"].replace("Z","+00:00"))
     def live(self,runtime,league,protocol,baseline,features,cutoff,fixture):
         root=Path(runtime);p=root/"test-card.json";card=_read(p)
@@ -161,7 +162,8 @@ class AdvancedSnapshotTests(unittest.TestCase):
     def test_confirmation_tag_frozen_before_capture_and_no_retroactive_tagging(self):
         self.capture();first=self.comparison();self.assertFalse(first["candidates"]["M_test"].get("confirmation_eligible",False))
         activation={"league":"epl","candidate_id":"M_test","horizon":"EARLY","advanced_protocol_sha256":_digest(PROTOCOL),
-            "created_at":iso(CAPTURE),"future_start":iso(CAPTURE),"last_kickoff":iso(self.kickoff+timedelta(days=30))}
+            "created_at":iso(CAPTURE),"future_start":iso(CAPTURE),"last_kickoff":iso(self.kickoff+timedelta(days=30)),
+            "implementation_fingerprint":implementation_fingerprint()}
         p=write(self.runtime/'activation-source.json',activation)
         write(self.runtime/'advanced_models/epl'/_digest(PROTOCOL)/'confirmation/design/M_test/EARLY/activation.json',ref(self.runtime,p))
         self.capture(CAPTURE+timedelta(minutes=1));self.assertFalse(self.comparison(CAPTURE+timedelta(minutes=1))["candidates"]["M_test"].get("confirmation_eligible",False))
@@ -205,13 +207,35 @@ class AdvancedSnapshotTests(unittest.TestCase):
 
     def test_damaged_confirmation_activation_keeps_m0_and_clears_formal_eligibility(self):
         activation={"league":"epl","candidate_id":"M_test","horizon":"EARLY","advanced_protocol_sha256":_digest(PROTOCOL),
-            "created_at":iso(CAPTURE),"future_start":iso(CAPTURE),"last_kickoff":iso(self.kickoff+timedelta(days=30))}
+            "created_at":iso(CAPTURE),"future_start":iso(CAPTURE),"last_kickoff":iso(self.kickoff+timedelta(days=30)),
+            "implementation_fingerprint":implementation_fingerprint()}
         p=write(self.runtime/'activation-source.json',activation)
         write(self.runtime/'advanced_models/epl'/_digest(PROTOCOL)/'confirmation/design/M_test/EARLY/activation.json',ref(self.runtime,p))
         self.capture();before=self.comparison();self.assertTrue(before['candidates']['M_test']['confirmation_eligible'])
+        write(self.card,{'beta':9,'implementation_fingerprint':{'sha256':'new-latest-card'}})
+        self.assertTrue(self.comparison()['candidates']['M_test']['confirmation_eligible'])
         p.write_text('{}');after=self.comparison();self.assertEqual(after['status'],'available')
         self.assertFalse(after['candidates']['M_test']['confirmation_eligible'])
         self.assertEqual(after['candidates']['M_test']['status'],'verified')
+    def test_confirmation_implementation_drift_blocks_candidate_and_baseline_fallback(self):
+        activation={"league":"epl","candidate_id":"M_test","horizon":"EARLY","advanced_protocol_sha256":_digest(PROTOCOL),
+            "created_at":iso(CAPTURE),"future_start":iso(CAPTURE),"last_kickoff":iso(self.kickoff+timedelta(days=30)),
+            "implementation_fingerprint":{"sha256":"old-implementation"}}
+        p=write(self.runtime/'activation-source.json',activation)
+        write(self.runtime/'advanced_models/epl'/_digest(PROTOCOL)/'confirmation/design/M_test/EARLY/activation.json',ref(self.runtime,p))
+        self.capture();got=self.comparison()
+        self.assertEqual(got['status'],'available')
+        self.assertEqual(got['candidates']['M_test']['status'],'verified')
+        self.assertFalse(got['candidates']['M_test']['confirmation_eligible'])
+        from football_model.advanced_snapshots import _confirmation_tag
+        tag=_confirmation_tag(self.runtime,'epl',PROTOCOL,'M_test','EARLY',got['fixture'],CAPTURE,{"status":"unavailable"})
+        self.assertFalse(tag['confirmation_eligible'])
+        activation['implementation_fingerprint']=implementation_fingerprint();write(p,activation)
+        write(self.runtime/'advanced_models/epl'/_digest(PROTOCOL)/'confirmation/design/M_test/EARLY/activation.json',ref(self.runtime,p))
+        write(self.card,{"beta":.1,"generated_at":iso(TRAINED),"implementation_fingerprint":{"sha256":"old-card"}})
+        tag=_confirmation_tag(self.runtime,'epl',PROTOCOL,'M_test','EARLY',got['fixture'],CAPTURE,{"model_ref":ref(self.runtime,self.card)})
+        self.assertFalse(tag['confirmation_eligible'])
+
     def test_active_formal_trial_hides_repeated_aggregate_score_tests(self):
         self.capture()
         write(self.runtime/'advanced_models/epl'/_digest(PROTOCOL)/'confirmation/design/M_test/EARLY/activation.json',{})

@@ -24,7 +24,7 @@ from .data import normalize_fixtures
 from .model import (RESULT_AVAILABILITY_DELAY, fit_model, score_distribution,
                     _iso, _timestamp, _validated_matches)
 from .prospective import (_append as _ledger_append, _digest, _identity, _json_bytes, _name, _now,
-                          _objects, _path, _read, _same_identity)
+                          _objects, _path, _read, _same_identity, current_results)
 from .settlement import matrix_array
 from .state_storage import MAX_FILE_BYTES, MAX_LOGICAL_BYTES, estimate_runtime, storage_cost
 from .storage_policy import (MAX_PHYSICAL_BYTES, SHADOW_WRITE_LIMIT_BYTES,
@@ -602,7 +602,7 @@ def _score(runtime, *, clock=None):
         now = _now(clock)
         production = _path(runtime, "prospective")
         forecasts = _objects(root, "forecasts")
-        results = _objects(production, "results")
+        results = current_results(production, as_of=now)
         grouped = defaultdict(list)
         for forecast in forecasts:
             _saved_forecast_valid(root, forecast, now)

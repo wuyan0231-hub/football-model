@@ -9,14 +9,15 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
-from contextlib import nullcontext
+from contextlib import contextmanager, nullcontext
 from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
 
-from .advanced_features import (canonical, make_players_snapshot, read_json,
+from .advanced_features import (canonical, embedded_snapshot, make_players_snapshot, read_json,
     source_ref, validate_evidence, _identity)
+from .advanced_capacity import CapacityGuard, guarded_cache_writes
 from .data import APIClient, APIError, DataError, RequestBudgetError, _fixture_identity, _iso, _utc
 from .fundamentals import make_snapshot
 
@@ -24,22 +25,43 @@ from .fundamentals import make_snapshot
 ENDPOINTS = {"statistics":"/fixtures/statistics", "lineups":"/fixtures/lineups", "players":"/fixtures/players"}
 
 
-def _save(runtime, directory, value):
+@contextmanager
+def _offline_requests(client, reason=None):
+    """Continue valid cache reads after deferral, without another HTTP attempt."""
+    if reason is None or not hasattr(client,"_request"):
+        yield
+        return
+    original=client._request
+    def denied(*args,**kwargs):
+        error=RequestBudgetError(reason);error.reason=reason
+        raise error
+    client._request=denied
+    try:yield
+    finally:client._request=original
+
+
+def _save(runtime, directory, value, *, guard=None, final=False):
     data = (canonical(value)+"\n").encode()
     path = Path(runtime)/directory/(hashlib.sha256(data).hexdigest()+".json")
+    ticket=guard.check_write(path,data,final=final) if guard is not None else None
     path.parent.mkdir(parents=True,exist_ok=True)
     if path.exists():
         if path.read_bytes() != data: raise DataError("immutable_collision")
     else:
         with path.open("xb") as stream: stream.write(data)
+    if ticket is not None:guard.commit_write(ticket)
     return source_ref(path,runtime)
 
 
 def _cache_contexts(runtime, now):
     found = {}
-    for path in sorted((Path(runtime)/"cache"/"api_cache").glob("*.json")):
+    paths=list((Path(runtime)/"cache"/"api_cache").glob("*.json"))
+    paths+=list((Path(runtime)/"fundamentals"/"fixtures").glob("*/*.json"))
+    for path in sorted(paths):
         try:
-            envelope = read_json(path)
+            document = read_json(path)
+            projection="fixture_response" if "fixture_response" in document else None
+            envelope=document[projection] if projection else document
             if (envelope.get("endpoint") != "/fixtures" or envelope.get("errors")
                     or envelope.get("paging",{}).get("total",1) != 1
                     or envelope.get("paging",{}).get("current",1) != 1
@@ -50,24 +72,37 @@ def _cache_contexts(runtime, now):
                 identity, _ = _fixture_identity(raw)
                 if raw["fixture"]["status"]["short"] != "FT": continue
                 mid = identity["match_id"]
-                if mid not in found or envelope["fetched_at"] > found[mid][0]["fetched_at"]:
-                    found[mid] = (envelope,raw)
+                priority=(sum(isinstance(raw.get(k),list) for k in ENDPOINTS),_utc(envelope["fetched_at"]))
+                previous=found.get(mid)
+                previous_priority=(sum(isinstance(previous[1].get(k),list) for k in ENDPOINTS),_utc(previous[0]["fetched_at"])) if previous else None
+                if previous is None or priority>previous_priority:
+                    found[mid] = (envelope,raw,path,projection)
         except (ValueError,TypeError,KeyError,OSError,AttributeError):
             continue
     return found
 
 
-def _context(client, expected, metadata, contexts, now):
+def _context(client, expected, metadata, contexts, now,refresh=False,offline_reason=None):
     mid = expected["match_id"]
-    if mid in contexts:
-        envelope,raw = contexts[mid]
+    if mid in contexts and not refresh:
+        envelope,raw,path,projection = contexts[mid]
     else:
-        envelope = client.fetch_fixture(mid,force=False,max_age_seconds=7*86400)
+        with _offline_requests(client,offline_reason):
+            envelope = client.fetch_fixture(mid,force=refresh,max_age_seconds=7*86400)
+        path=projection=None
         if envelope.get("endpoint") != "/fixtures" or envelope.get("params") != {"id":mid} or envelope.get("errors") or envelope.get("paging",{}).get("total",1)!=1:
             raise DataError("fixture_context_invalid")
         if not isinstance(envelope.get("response"),list) or len(envelope["response"])!=1:
             raise DataError("fixture_context_not_unique")
         raw = envelope["response"][0]
+    if offline_reason is None and (not all(isinstance(raw.get(k),list) for k in ENDPOINTS) or
+            any(raw.get(k)==[] for k in ENDPOINTS) and (now()-_utc(envelope["fetched_at"])).total_seconds()>7*86400):
+        # League-season fixture lists lack nested statistics; one approved
+        # fixture-detail request yields all embedded feature endpoints together.
+        envelope=client.fetch_fixture(mid,force=refresh,max_age_seconds=7*86400)
+        if envelope.get("endpoint")!="/fixtures" or envelope.get("params")!={"id":mid} or envelope.get("errors") or len(envelope.get("response",[]))!=1:
+            raise DataError("fixture_detail_invalid")
+        raw=envelope["response"][0];path=projection=None
     actual,_ = _fixture_identity(raw)
     if _identity(actual) != _identity(expected) or _utc(envelope["fetched_at"]) > now():
         raise DataError("fixture_context_identity_or_clock_invalid")
@@ -76,7 +111,26 @@ def _context(client, expected, metadata, contexts, now):
         raise DataError("fixture_league_identity_invalid")
     seasons = [s for s in metadata["seasons"] if s.get("year")==league.get("season")]
     if len(seasons)!=1: raise DataError("fixture_coverage_missing")
-    return envelope,raw,seasons[0]["coverage"]
+    return envelope,raw,seasons[0]["coverage"],path,projection
+
+
+def _save_context(runtime,envelope,path=None,projection=None,guard=None):
+    if path is not None and projection=="fixture_response":
+        # Existing fundamentals contexts are immutable originals, retained at
+        # their original bytes. The wrapper explicitly names the projection.
+        return source_ref(path,runtime),projection
+    if path is not None:
+        data=Path(path).read_bytes()
+        destination=Path(runtime)/"advanced_features"/"contexts"/(hashlib.sha256(data).hexdigest()+".json")
+        ticket=guard.check_write(destination,data) if guard is not None else None
+        destination.parent.mkdir(parents=True,exist_ok=True)
+        if destination.exists():
+            if destination.read_bytes()!=data:raise DataError("immutable_context_collision")
+        else:
+            with destination.open("xb") as out:out.write(data)
+        if ticket is not None:guard.commit_write(ticket)
+        return source_ref(destination,runtime),None
+    return _save(runtime,Path("advanced_features/contexts"),envelope,guard=guard),None
 
 
 def _retained(runtime, kind, mid, expected, now, refresh, context_cache=None):
@@ -95,11 +149,12 @@ def _retained(runtime, kind, mid, expected, now, refresh, context_cache=None):
 
 
 def collect_run(config, runtime, league="all", *, client=None, clock=None, max_seconds=None,
-                reserve_requests=250, refresh=False, kinds=("statistics","lineups","players")):
+                reserve_requests=250, refresh=False, kinds=("statistics","lineups","players"),capacity_guard=None):
     if type(reserve_requests)is not int or reserve_requests<0: raise DataError("invalid_request_reservation")
     if not kinds or any(k not in ENDPOINTS for k in kinds) or len(set(kinds))!=len(kinds): raise DataError("invalid_kinds")
     clock=clock or (lambda:datetime.now(timezone.utc))
     started=_utc(clock()); runtime=Path(runtime)
+    guard=capacity_guard if capacity_guard is not None else CapacityGuard(runtime)
     def now():
         value=_utc(clock())
         if value<started: raise DataError("clock_moved_backwards")
@@ -137,7 +192,8 @@ def collect_run(config, runtime, league="all", *, client=None, clock=None, max_s
     except (ValueError,KeyError,TypeError,OSError): pass
     queue=[(key,rows_by_league[key][i]) for i in range(max(map(len,rows_by_league.values()),default=0))
         for key in keys if i<len(rows_by_league[key])]
-    metadata={}; context_refs={}; context_cache={}; halted=False
+    metadata={}; context_refs={}; context_cache={}; halted=False;initialization_failed=False
+    halted_reason="real_budget_or_runtime_deferred"
     if queue:
         try:
             client=client or APIClient(runtime/"cache",max_requests=config.get("max_requests_per_run"),
@@ -149,9 +205,10 @@ def collect_run(config, runtime, league="all", *, client=None, clock=None, max_s
                     and initial_budget.get("configured_daily_limit") is not None):
                 raise DataError("actual_daily_balance_unavailable")
         except (APIError,ValueError,TypeError,OSError):
-            halted=True; report["issues"].append({"reason":"client_or_real_daily_budget_unavailable"})
+            halted=True;initialization_failed=True
+            report["issues"].append({"reason":"client_or_real_daily_budget_unavailable"})
     reservation=client.reserve_requests(reserve_requests) if client is not None and hasattr(client,"reserve_requests") else nullcontext()
-    with reservation:
+    with reservation, guarded_cache_writes(client,guard):
         for key,expected in queue:
             mid=expected["match_id"]
             item={"league":key,"match_id":mid,"kinds":{},"status":"pending"}; report["matches"].append(item)
@@ -164,57 +221,79 @@ def collect_run(config, runtime, league="all", *, client=None, clock=None, max_s
                 else: pending.append(kind)
             if not pending:
                 item["status"]="retained"; continue
-            if halted:
-                for kind in pending: item["kinds"][kind]={"status":"deferred","reason":"real_budget_or_runtime_deferred"}
+            if initialization_failed or (halted and (mid not in contexts or refresh)):
+                for kind in pending: item["kinds"][kind]={"status":"deferred","reason":halted_reason}
                 item["status"]="deferred"; continue
             report["last_attempted_league"]=key
             try:
                 if key not in metadata:
-                    metadata[key]=client.resolve_league(leagues[key][0],force=False)
+                    with _offline_requests(client,halted_reason if halted else None):
+                        metadata[key]=client.resolve_league(leagues[key][0],force=False)
                     if _utc(metadata[key]["fetched_at"])>now(): raise DataError("metadata_clock_in_future")
-                envelope,raw,coverage=_context(client,expected,metadata[key],contexts,now)
+                envelope,raw,coverage,context_path,context_projection=_context(client,expected,metadata[key],contexts,now,refresh,
+                    halted_reason if halted else None)
                 context_key=id(envelope)
                 if context_key not in context_refs:
-                    context_refs[context_key]=(envelope,_save(runtime,Path("advanced_features/contexts"),envelope))
+                    ref,projection=_save_context(runtime,envelope,context_path,context_projection,guard)
+                    context_refs[context_key]=(envelope,ref,projection)
                 if raw["fixture"]["status"]["short"]!="FT":
                     for kind in pending: item["kinds"][kind]={"status":"unsupported","reason":"not_regulation_FT_statistics"}
                     item["status"]="unsupported"; continue
                 for kind in pending:
                     covered=coverage.get("fixtures",{}).get({"statistics":"statistics_fixtures","lineups":"lineups","players":"statistics_players"}[kind])
-                    if covered is False:
+                    if covered is False and not raw.get(kind):
                         item["kinds"][kind]={"status":"unsupported","reason":"provider_declares_coverage_false"}; continue
                     source=None
                     try:
-                        # Existing client's allowlist intentionally excludes
-                        # players; use its same validated cache/budget primitive.
-                        source=client._cached_request(ENDPOINTS[kind],{"fixture":mid},force=refresh,max_age_seconds=7*86400)
-                        snap=(make_players_snapshot(source,raw,context_observed_at=envelope["fetched_at"])
-                            if kind=="players" else make_snapshot(kind,source,raw,context_observed_at=envelope["fetched_at"]))
-                        value={"schema_version":"advanced-source-v1","snapshot":snap,"fixture_envelope_ref":context_refs[context_key][1],
-                            "metadata":metadata[key],"evidence_envelope":source,"created_at":_iso(now())}
+                        if isinstance(raw.get(kind),list):
+                            snap=embedded_snapshot(kind,envelope,mid)
+                            value={"schema_version":"advanced-embedded-source-v1","kind":kind,"match_id":mid,
+                                "fixture_envelope_ref":context_refs[context_key][1],
+                                "fixture_envelope_projection":context_refs[context_key][2],
+                                "normalized_snapshot_id":snap["snapshot_id"],"created_at":_iso(now()),
+                                "source_kind":"declared_projection_of_original_fixture_embedded_field",
+                                "network_endpoint":"/fixtures","field":kind}
+                        elif kind=="players":
+                            # The production API client intentionally has no
+                            # players endpoint permission. Do not evade that
+                            # allowlist; fixture detail is the authorized source.
+                            item["kinds"][kind]=({"status":"deferred","reason":halted_reason} if halted else
+                                {"status":"unsupported","reason":"fixture_detail_players_field_absent"})
+                            continue
+                        else:
+                            with _offline_requests(client,halted_reason if halted else None):
+                                source=client._cached_request(ENDPOINTS[kind],{"fixture":mid},force=refresh,max_age_seconds=7*86400)
+                            snap=make_snapshot(kind,source,raw,context_observed_at=envelope["fetched_at"])
+                            value={"schema_version":"advanced-source-v1","snapshot":snap,"fixture_envelope_ref":context_refs[context_key][1],
+                                "fixture_envelope_projection":context_refs[context_key][2],
+                                "metadata":metadata[key],"evidence_envelope":source,"created_at":_iso(now())}
                         validate_evidence(value,runtime,context_cache)
-                        ref=_save(runtime,Path("advanced_features/evidence")/kind/str(mid),value)
-                        item["kinds"][kind]={"status":"collected","source":ref,"response_rows":len(snap["raw_response"])}
-                    except RequestBudgetError:
-                        halted=True; item["kinds"][kind]={"status":"deferred","reason":"real_budget_or_runtime_deferred"}
+                        ref=_save(runtime,Path("advanced_features/evidence")/kind/str(mid),value,guard=guard)
+                        item["kinds"][kind]={"status":"collected","source":ref,"response_rows":len(snap["raw_response"]),
+                            "collection_method":"fixture_embedded_projection" if source is None else "endpoint_request_or_cache"}
+                    except RequestBudgetError as exc:
+                        halted=True;halted_reason=getattr(exc,"reason","real_budget_or_runtime_deferred")
+                        item["kinds"][kind]={"status":"deferred","reason":halted_reason}
                     except (APIError,ValueError,KeyError,TypeError,OSError,AttributeError):
                         item["kinds"][kind]={"status":"failed","reason":"provider_schema_identity_or_storage_failure"}
                         # APIClient already redacts credential echoes. Preserve
                         # the actual returned envelope when normalization failed;
                         # it stays quarantined and is never a feature snapshot.
-                        if source is not None:
+                        if source is not None or isinstance(raw.get(kind),list):
                             try:
                                 diagnostic={"schema_version":"advanced-source-failure-v1","kind":kind,
                                     "match_id":mid,"recorded_at":_iso(now()),"evidence_envelope":source,
                                     "fixture_envelope_ref":context_refs[context_key][1],
+                                    "fixture_envelope_projection":context_refs[context_key][2],
+                                    "embedded_field":kind if source is None else None,
                                     "reason":"provider_schema_identity_or_storage_failure","feature_eligible":False}
-                                item["kinds"][kind]["diagnostic_ref"]=_save(runtime,Path("advanced_features/failures")/kind/str(mid),diagnostic)
+                                item["kinds"][kind]["diagnostic_ref"]=_save(runtime,Path("advanced_features/failures")/kind/str(mid),diagnostic,guard=guard)
                             except (ValueError,TypeError,OSError):
                                 item["kinds"][kind]["diagnostic_save_failed"]=True
                 item["status"]="partial" if any(v["status"] in ("failed","deferred") for v in item["kinds"].values()) else "collected"
-            except RequestBudgetError:
-                halted=True
-                for kind in pending: item["kinds"].setdefault(kind,{"status":"deferred","reason":"real_budget_or_runtime_deferred"})
+            except RequestBudgetError as exc:
+                halted=True;halted_reason=getattr(exc,"reason","real_budget_or_runtime_deferred")
+                for kind in pending: item["kinds"].setdefault(kind,{"status":"deferred","reason":halted_reason})
                 item["status"]="deferred"
             except (APIError,ValueError,KeyError,TypeError,OSError,AttributeError):
                 for kind in pending: item["kinds"].setdefault(kind,{"status":"failed","reason":"fixture_metadata_or_context_invalid"})
@@ -232,6 +311,7 @@ def collect_run(config, runtime, league="all", *, client=None, clock=None, max_s
     report["pending_requests"]=sum(v["status"] in ("failed","deferred") for i in report["matches"] for v in i["kinds"].values())
     report["failed_requests"]=sum(v["status"]=="failed" for i in report["matches"] for v in i["kinds"].values())
     report["deferred_requests"]=sum(v["status"]=="deferred" for i in report["matches"] for v in i["kinds"].values())
+    report["capacity_deferred_requests"]=sum(v.get("reason")=="storage_capacity_deferred" for i in report["matches"] for v in i["kinds"].values())
     report["engineering_failures"]={"failed_endpoint_requests":report["failed_requests"],
         "history_missing_or_invalid_leagues":sum(l["status"]=="history_missing_or_invalid" for l in report["leagues"]),
         "initialization_or_collection_issues":len(report["issues"]),
@@ -243,11 +323,15 @@ def collect_run(config, runtime, league="all", *, client=None, clock=None, max_s
     # Quota/runtime deferral is normal resumable execution, never full coverage.
     # A schema, identity, account initialization or storage failure stays fatal.
     report["exit_code"]=int(report["engineering_failure_count"]>0)
-    ref=_save(runtime,Path("advanced_features/collection/history"),report)
+    report["storage_capacity_before_report_writes"]=guard.summary()
+    ref=_save(runtime,Path("advanced_features/collection/history"),report,guard=guard,final=True)
     if Path(league).name!=league or league in (".",".."):raise DataError("invalid_league_selection_path")
     for pointer in (latest,runtime/"advanced_features"/"collection"/"by_selection"/league/"latest.json"):
         pointer.parent.mkdir(parents=True,exist_ok=True)
-        temporary=pointer.with_suffix(".tmp"); temporary.write_text(canonical(report)+"\n",encoding="utf-8"); temporary.replace(pointer)
+        raw=(canonical(report)+"\n").encode()
+        ticket=guard.check_write(pointer,raw,final=True)
+        temporary=pointer.with_suffix(".tmp"); temporary.write_bytes(raw); temporary.replace(pointer)
+        guard.commit_write(ticket)
     return report["exit_code"],report
 
 

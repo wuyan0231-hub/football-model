@@ -76,21 +76,20 @@ def make_players_snapshot(envelope, fixture, *, context_observed_at=None):
         if tid not in (identity["home_id"], identity["away_id"]) or tid in seen:
             raise DataError("players_team_identity_invalid")
         seen.add(tid)
-        players, pids, missing = [], set(), []
+        players, pids, missing, unidentified = [], set(), [], []
         if not isinstance(row.get("players"), list):
             raise DataError("players_not_list")
-        for raw in row["players"]:
-            pid = _integer(raw.get("player", {}).get("id"), "player_id", 1)
-            if pid in pids:
-                raise DataError("duplicate_player")
-            pids.add(pid)
+        for index, raw in enumerate(row["players"]):
+            pid = raw.get("player", {}).get("id")
             stats = raw.get("statistics")
             if not isinstance(stats, list) or len(stats) != 1 or not isinstance(stats[0], dict):
                 raise DataError("player_statistics_not_unique")
             minutes = stats[0].get("games", {}).get("minutes")
-            if minutes is None:
-                missing.append(pid)
-            elif type(minutes) not in (int, float) or not math.isfinite(minutes) or not 0 <= minutes <= 90:
+            # Provider FT player minutes can include stoppage time. A 90-minute
+            # cap or 990-team-minutes identity incorrectly rejects legitimate
+            # regulation matches. FT status excludes extra time; this generous
+            # bound is only a malformed-value sanity guard.
+            if minutes is not None and (type(minutes) not in (int, float) or not math.isfinite(minutes) or not 0 <= minutes <= 180):
                 raise DataError("invalid_regulation_player_minutes")
             raw_rating = stats[0].get("games", {}).get("rating")
             rating = None
@@ -101,15 +100,22 @@ def make_players_snapshot(envelope, fixture, *, context_observed_at=None):
                     if not math.isfinite(rating) or not 0 <= rating <= 10: raise ValueError
                 except (ValueError,TypeError):
                     raise DataError("invalid_player_rating") from None
+            if type(pid)is not int or pid<1:
+                unidentified.append({"source_row_index":index,"minutes":minutes,"rating":rating,
+                    "reason":"unidentified_player_not_assigned_synthetic_id"})
+                continue
+            if pid in pids:raise DataError("duplicate_player")
+            pids.add(pid)
+            if minutes is None:missing.append(pid)
             players.append({"player_id": pid, "minutes": minutes, "rating": rating})
         positive = sum(p["minutes"] is not None and p["minutes"] > 0 for p in players)
-        if sum(p["minutes"] or 0 for p in players) > 11*90:
-            raise DataError("player_minutes_exceed_regulation_team_total")
-        teams[str(tid)] = {"players": players, "complete_minutes": not missing and positive >= 11,
-            "missing_minutes_player_ids": missing, "player_count": len(players)}
+        teams[str(tid)] = {"players": players, "complete_minutes": not missing and not unidentified and positive >= 11,
+            "missing_minutes_player_ids": missing, "player_count": len(players),"unidentified_players":unidentified,
+            "minutes_scope":"provider_reported_FT_regulation_including_stoppage"}
     for tid in (identity["home_id"], identity["away_id"]):
         teams.setdefault(str(tid), {"players": [], "complete_minutes": False,
-            "missing_minutes_player_ids": [], "player_count": 0})
+            "missing_minutes_player_ids": [], "player_count": 0,"unidentified_players":[],
+            "minutes_scope":"provider_reported_FT_regulation_including_stoppage"})
     result = {"schema_version": "advanced-players-snapshot-v1", "kind": "players",
         "endpoint": "/fixtures/players", "params": envelope["params"], "fixture": identity,
         "observed_at": _iso(observed), "context_observed_at": _iso(context),
@@ -127,23 +133,56 @@ def validate_players_snapshot(snapshot):
         raise DataError("players_snapshot_reconstruction_mismatch")
 
 
+def _evidence_context(value,runtime,context_cache=None):
+    if "fixture_envelope_ref" not in value:return value["fixture_envelope"]
+    if runtime is None:raise DataError("source_runtime_required")
+    ref=value["fixture_envelope_ref"]
+    key=(ref["path"],ref["sha256"])
+    context=context_cache.get(key) if context_cache is not None else None
+    if context is None:
+        path=Path(runtime)/ref["path"]
+        if source_ref(path,runtime)!=ref:raise DataError("fixture_context_hash_mismatch")
+        context=read_json(path)
+        if context_cache is not None:context_cache[key]=context
+    projection=value.get("fixture_envelope_projection")
+    if projection is not None:
+        if projection!="fixture_response":raise DataError("invalid_fixture_context_projection")
+        context=context[projection]
+    return context
+
+
+def embedded_snapshot(kind,context,match_id):
+    if kind not in ("statistics","lineups","players") or context.get("endpoint")!="/fixtures" or context.get("errors"):
+        raise DataError("invalid_embedded_source")
+    if context.get("paging",{}).get("total",1)!=1 or context.get("paging",{}).get("current",1)!=1:
+        raise DataError("invalid_embedded_pagination")
+    rows=[r for r in context["response"] if r.get("fixture",{}).get("id")==match_id]
+    if len(rows)!=1:raise DataError("embedded_fixture_not_unique")
+    raw=rows[0];identity=_fixture(raw);league=raw.get("league",{})
+    if context.get("params") not in ({"id":match_id},{"league":league.get("id"),"season":league.get("season")}):
+        raise DataError("embedded_context_params_mismatch")
+    if not isinstance(raw.get(kind),list):raise DataError("embedded_field_missing")
+    envelope={"endpoint":"/fixtures/"+kind,"params":{"fixture":match_id},
+        "response":raw[kind],"fetched_at":context["fetched_at"]}
+    # This is a declared adapter projection, not an invented network response;
+    # the persisted wrapper's authority is the original /fixtures document.
+    return (make_players_snapshot(envelope,raw,context_observed_at=context["fetched_at"])
+        if kind=="players" else make_snapshot(kind,envelope,raw,context_observed_at=context["fetched_at"]))
+
+
 def validate_evidence(value, runtime=None, context_cache=None):
     """Reconstruct a snapshot from its fixture/endpoint/metadata originals."""
+    if value.get("schema_version")=="advanced-embedded-source-v1":
+        context=_evidence_context(value,runtime,context_cache)
+        snap=embedded_snapshot(value["kind"],context,value["match_id"])
+        if snap["snapshot_id"]!=value["normalized_snapshot_id"]:
+            raise DataError("embedded_snapshot_reconstruction_mismatch")
+        if _utc(snap["known_at"])>_utc(value["created_at"]):raise DataError("embedded_observation_in_future")
+        return snap
     if value.get("schema_version") != "advanced-source-v1":
         raise DataError("invalid_advanced_source_schema")
     snap, metadata = value["snapshot"], value["metadata"]
-    if "fixture_envelope_ref" in value:
-        if runtime is None: raise DataError("source_runtime_required")
-        ref=value["fixture_envelope_ref"]
-        cached=context_cache.get((ref["path"],ref["sha256"])) if context_cache is not None else None
-        if cached is None:
-            path=Path(runtime)/ref["path"]
-            if source_ref(path,runtime)!=ref: raise DataError("fixture_context_hash_mismatch")
-            context=read_json(path)
-            if context_cache is not None: context_cache[(ref["path"],ref["sha256"])]=context
-        else: context=cached
-    else:
-        context=value["fixture_envelope"]
+    context=_evidence_context(value,runtime,context_cache)
     if context.get("endpoint") != "/fixtures" or context.get("errors") or context.get("paging",{}).get("total",1) != 1:
         raise DataError("invalid_fixture_context")
     raw = [r for r in context["response"] if r.get("fixture",{}).get("id") == snap["fixture"]["match_id"]]
@@ -189,11 +228,11 @@ def load_sources(runtime, league, records=None):
     for path in sorted(paths):
         try:
             snap = read_json(path)
-            if snap.get("schema_version") == "advanced-source-v1":
+            if snap.get("schema_version") in ("advanced-source-v1","advanced-embedded-source-v1"):
                 wrapper=snap
                 snap = validate_evidence(wrapper,runtime,context_cache)
                 known_times[str(path.relative_to(runtime))]=_iso(max(_utc(t) for t in
-                    (snap["known_at"],wrapper["metadata"]["fetched_at"],wrapper["created_at"])))
+                    (snap["known_at"],wrapper.get("metadata",{}).get("fetched_at",snap["known_at"]),wrapper["created_at"])))
                 if "fixture_envelope_ref" in wrapper:
                     dependencies[str(path.relative_to(runtime))]=[wrapper["fixture_envelope_ref"]]
             mid = snap.get("fixture", {}).get("match_id")

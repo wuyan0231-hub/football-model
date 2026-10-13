@@ -2,7 +2,7 @@
   "schema_version": "advanced-rule-inheritance-v1",
   "framework_version": "football-analysis-v1.7-r11",
   "direct_parent_framework_version": "football-analysis-v1.7-r10",
-  "created_at": "2026-10-13T03:07:24.311882+00:00",
+  "created_at": "2026-10-13T03:37:18.074462+00:00",
   "direct_parent_source_commit": "58e8cd88a0d83b28119fba9a6a971417959eb04d",
   "parent_documents": [
     {
@@ -58,15 +58,15 @@
   "current_documents": [
     {
       "path": "docs/football-framework-v1.7.md",
-      "bytes": 95579,
-      "sha256": "5d829d71be9d4c873203b8ebbc5d789b9f4faa943798ce8dfe0eb003d6e07990",
-      "git_blob_sha": "0df0beb7993a1c2b279c2c9da00c4f4f132d716b"
+      "bytes": 95786,
+      "sha256": "b356b6faeb1551ece0fbb87ad9f3c18bdbe4c89db6685f47ba4995e93a02c5b4",
+      "git_blob_sha": "7189c69191dbb5556aef79817812067984e3a986"
     },
     {
       "path": "docs/project-instructions-v1.7.md",
-      "bytes": 17127,
-      "sha256": "fc80dd4f19bca32d7c2ddc6142cca2618e349eab5cb93df845b9dc48e2430150",
-      "git_blob_sha": "3155789d35774eabce1954b8103f2bd402a5a5db"
+      "bytes": 17253,
+      "sha256": "d3dbc212cc16ddb7a3d979c8182338d9b9eeb7f5e2c1023d6a8796ed57201cf6",
+      "git_blob_sha": "814bf6961990045bae0b7af7299b89faa000eb14"
     },
     {
       "path": "docs/feature-models.md",
@@ -76,9 +76,9 @@
     },
     {
       "path": "docs/model-access.md",
-      "bytes": 16671,
-      "sha256": "5c1edcb2fa99588d2f6b507a4118b40d538fe8e28f4dd417052b74b7ddbd268b",
-      "git_blob_sha": "53507c820cd8e58611b73461bae9edb0e7707634"
+      "bytes": 16989,
+      "sha256": "86298f7793492c639ba4f17e28661c0363d95d3f77fd8b311bd1df1ed8041d08",
+      "git_blob_sha": "83912b38243e8d1f33af86f2ad424ebb805863ab"
     },
     {
       "path": "docs/model-integration.md",
@@ -94,15 +94,15 @@
     },
     {
       "path": "AGENTS.md",
-      "bytes": 41954,
-      "sha256": "576d19b911cd21aa29b39f5920b28f9a7dfbcdfeef13a2c3ab6a25a41aa05956",
-      "git_blob_sha": "3dad299ca4dc1f81a8f7d0b706951fe988411dbe"
+      "bytes": 42406,
+      "sha256": "11584153722ccdfd93ba28032f2137e43e7ec62314299ee7bebd10f80e45ff1b",
+      "git_blob_sha": "040557947558ed516ea940af13010f398926827f"
     },
     {
       "path": "docs/advanced-models.md",
-      "bytes": 18214,
-      "sha256": "227d7b958101d535f40063b1f9b566ea7943f6c65f71f2c7b4ee485e0e7da1b6",
-      "git_blob_sha": "91be0762ca7f17ff7d649b5b573617d14d6705cf"
+      "bytes": 20752,
+      "sha256": "0dc2c5da99a4aa4e37c0e223068d09aae237f753232c551aa5d16a594a57f23e",
+      "git_blob_sha": "1bbc23eb3845cbacb704d1321b470ff5fb59cc27"
     }
   ],
   "sections": [
@@ -12794,8 +12794,8 @@
     {
       "document": "docs/football-framework-v1.7.md",
       "line": 658,
-      "sha256": "6c35df403d1bb1253ff4a44c64d8c391a7f2925d73f18db259837d342fea5ebd",
-      "text": "未来确认协议、准备检查、正式激活与最终结论是四个状态。激活前固定一个主要候选与时距、主要概率指标、最小有用改善、允许退化、样本量及依赖处理、最大日历时长、缺失／回退和结束规则，绑定部署代码及真实未来起点；没有实际不可变激活回执不得计正式样本。后续新增特征或改主要候选另立试验，旧失败不追认。独立未来数据不足不能在本轮靠重跑历史补齐。"
+      "sha256": "66668d0bbe6eb596ded1c89b84986359fc9197d7b66e040bcffa50f8244b1c40",
+      "text": "未来确认协议、准备检查、正式激活与最终结论是四个状态。激活前固定一个主要候选与时距、主要概率指标、最小有用改善、允许退化、样本量及依赖处理、最大日历时长、缺失／回退和结束规则，绑定部署代码及真实未来起点；没有实际不可变激活回执不得计正式样本。后续新增特征或改主要候选另立试验，旧失败不追认。开发报告／模型卡／激活另冻结实际算法文件指纹；仅文档提交不变更算法身份，未激活旧实现须重新研究，已激活后算法改变须新协议，不沿用正式样本。独立未来数据不足不能在本轮靠重跑历史补齐。"
     },
     {
       "document": "docs/football-framework-v1.7.md",
@@ -12806,8 +12806,8 @@
     {
       "document": "docs/project-instructions-v1.7.md",
       "line": 51,
-      "sha256": "901d5ffc5139cf00747ca2a7c0cc3b9ba2ce172075dc4992ba4cf542bd31f9a6",
-      "text": "高级特征确认入口分别报告准备、校验、实际激活与最终效果；新协议需在真实未来起点前固定主要候选／时距／指标、最小改善、允许退化、成组样本量、结束及缺失处理。未经不可变激活记录不得计正式样本，不继承旧研究或F5-C计数。数据不齐、候选未拟合、待未来赛果、历史评分未改善、报价不可用、保存未验分别列出；代码完成不能替代这些事实。整体交付按框架16.4报告每项已实现／真实运行／已保存／数据受限／未来待验／效果状态，不能用阶段完成冒充全面效果优化完成。"
+      "sha256": "4e36da53429dc9783951124d320c2fb5b230a232709fe3443364491f33a03ea4",
+      "text": "高级特征确认入口分别报告准备、校验、实际激活与最终效果；新协议需在真实未来起点前固定主要候选／时距／指标、最小改善、允许退化、成组样本量、结束及缺失处理。未经不可变激活记录不得计正式样本，不继承旧研究或F5-C计数；实际算法指纹改变后，未激活者重做开发研究，已激活者另立协议，文档提交本身不更改算法。数据不齐、候选未拟合、待未来赛果、历史评分未改善、报价不可用、保存未验分别列出；代码完成不能替代这些事实。整体交付按框架16.4报告每项已实现／真实运行／已保存／数据受限／未来待验／效果状态，不能用阶段完成冒充全面效果优化完成。"
     },
     {
       "document": "docs/feature-models.md",
@@ -12830,8 +12830,8 @@
     {
       "document": "docs/model-access.md",
       "line": 153,
-      "sha256": "b9a0ae2c570b94794946646158c38acfb70831448efeb62a7424390880ef9ae4",
-      "text": "原件路径可能存储归档，按固定状态真实清单恢复，不能因未直读而断言后台未执行。高级协议hash、同场同父匹配、全部机会台账和首失败各自核验；成功只证明相应实际范围。新增读取／决定入口不自动改变生产采用、正式确认资格或旧F5／v1／v2身份。"
+      "sha256": "eb9172c44c036087c338cd49cf6ba611ce5a13e95b9e0b048f391b8784991a98",
+      "text": "原件路径可能存储归档，按固定状态真实清单恢复，不能因未直读而断言后台未执行。高级研究可能为`advanced-compact-json-v1`分块与共享对象；须沿全部引用核hash并无损重建，不把外层包装当完整报告。嵌入统计／球员投影必须取其原`/fixtures?id`响应并按声明路径重建，不能当作曾请求`/fixtures/players`的证据。高级协议hash、实际算法文件指纹、同场同父匹配、全部机会台账和首失败各自核验；成功只证明相应实际范围。新增读取／决定入口不自动改变生产采用、正式确认资格或旧F5／v1／v2身份。"
     },
     {
       "document": "docs/model-access.md",
@@ -12872,6 +12872,12 @@
     {
       "document": "AGENTS.md",
       "line": 245,
+      "sha256": "c8ef825dbd51cb138770892e271722f9205c61e5db3abde1f2b3d5521ee9a29e",
+      "text": "高级历史采集优先复用获准`/fixtures?id`中的原始嵌入字段和hash引用，不新增`/fixtures/players`请求；无名球员不编ID、真实身份冲突不放行。缓存及研究写入前按现有容量上限检查，额度／时间／容量正常延期保留未完成清单；紧凑分块只改变无损存储形式。确认需核实际算法文件指纹与独立持久证明，文档提交不能冒充算法变更或放宽准入。"
+    },
+    {
+      "document": "AGENTS.md",
+      "line": 247,
       "sha256": "3645ba7a7743153e82672293ca78ca5d9d7fadeb21039d4531c1e48c5f3430f6",
       "text": "本轮按授权完成可执行的数据／工程／测试／发布／真实运行与保存验收。真实资料受限、未来样本未发生、收益证据缺失和效果不达标须作为事实报告，不为“全部完成”伪造输入、确认样本或生产晋级。准备协议、门禁通过、实际激活和未来结论各自留证；继承清单为`docs/evidence/advanced-models-rule-inheritance-r11-20261013.json`。"
     }

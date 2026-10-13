@@ -52,7 +52,7 @@ class ConfirmationTests(unittest.TestCase):
         from football_model.model import score_distribution, MODEL_VERSION
         from football_model.feature_research import score_forecast
         from football_model.feature_correction import predict_correction, CORRECTION_VERSION
-        from football_model.advanced_research import candidate_feature_names
+        from football_model.advanced_research import candidate_feature_names, implementation_fingerprint
         names = candidate_feature_names(advanced(), "M2")
         base_model = {"model_version": MODEL_VERSION, "fit_status": "converged", "graph_connected": True,
             "training_cutoff": "2024-01-01T00:00:00Z", "training_data_sha256": "synthetic-unit-fixture",
@@ -84,13 +84,13 @@ class ConfirmationTests(unittest.TestCase):
         sources = [_ref(self.runtime, source)]
         report = {"schema_version": "advanced-research-v1", "league": "serie_a", "purpose": "historical_development_only",
             "protocol": advanced(), "protocol_sha256": digest(advanced()), "generated_at": NOW.isoformat(),
-            "source_commit": "test-commit", "source_refs": sources,
+            "source_commit": "test-commit", "source_refs": sources, "implementation_fingerprint": implementation_fingerprint(),
             "replays": {"EARLY": {"forecasts": forecasts, "failures": [], "baseline_fits": [{"block": 0, "status": "fitted", "model": base_model}]}},
             "experiments": [{"horizon": "EARLY", "block": 0, "fits": {"M2": {"model": correction}}}],
             "feature_datasets": {"EARLY": {"rows": features}}, "scored_matches": rows}
         card = {"candidate_id": "M2", "fit_status": "fitted", "league": "serie_a", "horizon": "EARLY",
             "protocol_hash": digest(advanced()), "training_cutoff": NOW.isoformat(), "generated_at": NOW.isoformat(),
-            "source_commit": "test-commit", "source_refs": sources}
+            "source_commit": "test-commit", "source_refs": sources, "implementation_fingerprint": implementation_fingerprint()}
         card["model_hash"] = digest(card)
         return _save(self.runtime, "reports", report), _save(self.runtime, "models", card)
 
@@ -350,6 +350,83 @@ class ConfirmationTests(unittest.TestCase):
         result = monitor(self.runtime, self.root, activation, rows, now=NOW + timedelta(days=15), scored_rows_loader=lambda: rows)
         self.assertEqual(result["all_queue_outcomes"]["missed_enrollment"], 2)
         self.assertEqual(result["paired_fixtures"], len(rows) - 2)
+
+    def test_sharded_report_and_card_preserve_native_activation_recomputation(self):
+        from football_model.advanced_storage import save_artifact
+        report_path, card_path = self.development_refs()
+        sharded_report = save_artifact(self.runtime, self.runtime / "sharded", _read(report_path), inline_bytes=1024)
+        sharded_card = save_artifact(self.runtime, self.runtime / "sharded", _read(card_path), inline_bytes=256)
+        self.assertIn("$advanced_object_ref", _read(sharded_report))
+        activation, gate = activate(self.runtime, self.root, design=self.design, advanced_protocol=advanced(),
+            league="serie_a", candidate_id="M2", horizon="EARLY", development_ref=_ref(self.runtime, sharded_report),
+            card_ref=_ref(self.runtime, sharded_card), family_size=1, now=NOW)
+        self.assertEqual(gate["status"], "passed")
+        self.assertEqual(gate["source_and_score_verification"]["baseline_predictions_recomputed"], 80)
+        self.assertEqual(activation["implementation_fingerprint"], _read(report_path)["implementation_fingerprint"])
+
+    def test_missing_report_shard_blocks_activation_instead_of_partial_gate(self):
+        from football_model.advanced_storage import save_artifact
+        report_path, card_path = self.development_refs()
+        sharded = save_artifact(self.runtime, self.runtime / "sharded", _read(report_path), inline_bytes=1024)
+        root_ref = _read(sharded)["$advanced_object_ref"]
+        (self.runtime / root_ref["path"]).unlink()
+        with self.assertRaisesRegex(ConfirmationError, "development_artifact_integrity"):
+            activate(self.runtime, self.root, design=self.design, advanced_protocol=advanced(), league="serie_a",
+                candidate_id="M2", horizon="EARLY", development_ref=_ref(self.runtime, sharded),
+                card_ref=_ref(self.runtime, card_path), family_size=1, now=NOW)
+        namespace = self.runtime / "advanced_models" / "serie_a" / digest(advanced()) / "reports"
+        namespace.mkdir(parents=True)
+        (namespace / "latest.json").write_text(json.dumps({"full_report_ref": _ref(self.runtime, sharded)}))
+        report = run(self.runtime, "serie_a", advanced(), self.design, auto_activate=True, clock=lambda: NOW,
+                     row_loader=lambda _: self.fail("corrupt report must not open a trial"))
+        self.assertEqual(report["trials"][0]["status"], "blocked_integrity_or_execution")
+
+    def test_changed_report_shard_hash_rejected(self):
+        from football_model.advanced_storage import save_artifact
+        report_path, card_path = self.development_refs()
+        sharded = save_artifact(self.runtime, self.runtime / "sharded", _read(report_path), inline_bytes=1024)
+        root_ref = _read(sharded)["$advanced_object_ref"]
+        (self.runtime / root_ref["path"]).write_text("{}")
+        with self.assertRaisesRegex(ConfirmationError, "fingerprint mismatch"):
+            activate(self.runtime, self.root, design=self.design, advanced_protocol=advanced(), league="serie_a",
+                candidate_id="M2", horizon="EARLY", development_ref=_ref(self.runtime, sharded),
+                card_ref=_ref(self.runtime, card_path), family_size=1, now=NOW)
+
+    def test_implementation_change_blocks_formal_activation_and_existing_trial(self):
+        from football_model.advanced_research import implementation_fingerprint
+        activation = self.activation()
+        changed = {**implementation_fingerprint(), "sha256": "f" * 64}
+        report_path, card_path = self.development_refs()
+        with patch("football_model.advanced_research.implementation_fingerprint", return_value=changed):
+            with self.assertRaisesRegex(ConfirmationError, "development_implementation_fingerprint_mismatch"):
+                verify_development(self.runtime, _read(report_path), _read(card_path), protocol=advanced(),
+                    league="serie_a", candidate_id="M2", horizon="EARLY", now=NOW)
+            with self.assertRaisesRegex(ConfirmationError, "implementation_changed_new_protocol_required"):
+                monitor(self.runtime, self.root, activation, self.queue(activation), now=NOW + timedelta(hours=2))
+
+    def test_card_fingerprint_cannot_diverge_from_research_sources(self):
+        report_path, card_path = self.development_refs()
+        report, card = _read(report_path), _read(card_path)
+        card["implementation_fingerprint"]["sha256"] = "e" * 64
+        card["model_hash"] = digest({k: v for k, v in card.items() if k != "model_hash"})
+        with self.assertRaisesRegex(ConfirmationError, "development_implementation_fingerprint_mismatch"):
+            verify_development(self.runtime, report, card, protocol=advanced(), league="serie_a",
+                candidate_id="M2", horizon="EARLY", now=NOW)
+
+    def test_inactive_old_implementation_requests_fresh_study_without_execution_failure(self):
+        report_path, card_path = self.development_refs()
+        report = _read(report_path)
+        report["implementation_fingerprint"]["sha256"] = "0" * 64
+        report["model_cards"] = {"M2": _ref(self.runtime, card_path)}
+        stale = _save(self.runtime, "reports", report)
+        namespace = self.runtime / "advanced_models" / "serie_a" / digest(advanced()) / "reports"
+        namespace.mkdir(parents=True)
+        (namespace / "latest.json").write_text(json.dumps({"full_report_ref": _ref(self.runtime, stale)}))
+        report = run(self.runtime, "serie_a", advanced(), self.design, auto_activate=True, clock=lambda: NOW,
+                     row_loader=lambda _: self.fail("outdated study cannot open a trial"))
+        self.assertEqual(report["trials"][0]["status"], "blocked_pending_development")
+        self.assertEqual(report["trials"][0]["gate"]["failures"], ["implementation_changed_requires_fresh_development_study"])
+        self.assertFalse(report["trials"][0]["confirmation_active"])
 
     def test_no_report_is_blocked_development_not_waiting_results(self):
         result = run(self.runtime, "serie_a", advanced(), self.design, auto_activate=True,

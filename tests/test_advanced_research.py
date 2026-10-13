@@ -3,6 +3,7 @@ import copy
 from datetime import datetime, timedelta, timezone
 import json
 import hashlib
+import io
 from pathlib import Path
 import shutil
 import tempfile
@@ -12,7 +13,8 @@ from unittest.mock import patch
 import numpy as np
 
 from football_model.advanced_research import (FEATURE_GROUPS, study, digest, load_cards,
-    build_live_predictions, predict_saved_goalmodel, verify_goalmodel_probes, validate_protocol)
+    build_live_predictions, predict_saved_goalmodel, verify_goalmodel_probes, validate_protocol, main)
+from football_model.advanced_capacity import CapacityDeferred
 from football_model.goalmodel_adapter import fit_predict_goalmodel
 from football_model.model import ModelDataError, _distribution_from_rates
 from tests.test_feature_research import matches
@@ -170,6 +172,24 @@ class AdvancedResearchTests(unittest.TestCase):
         bundle = json.loads((root / card["correction_training_ref"]["path"]).read_text())
         self.assertTrue(bundle["feature_dataset"]["source_refs"][0]["path"].startswith("advanced_models/inputs/"))
         self.assertTrue(bundle["feature_dataset"]["rows"][0]["source_refs"][0]["path"].startswith("advanced_models/inputs/"))
+
+    def test_cli_capacity_defer_preserves_all_leagues_without_repeated_fit(self):
+        root = self.runtime(matches(10))
+        for league in ("epl", "laliga"):
+            (root / "data" / (league + ".json")).write_text(json.dumps({"matches": matches(10)}))
+        config = root / "test_config.json"
+        config.write_text(json.dumps({"competitions": [{"key": k, "mode": "domestic_baseline"}
+            for k in ("serie_a", "epl", "laliga")]}))
+        with patch("football_model.advanced_research.study", side_effect=CapacityDeferred({"reason": "test_actual_limit"})) as run, \
+                patch("sys.stdout", new_callable=io.StringIO):
+            code = main(["study", "--runtime", str(root), "--league", "all", "--config", str(config),
+                         "--protocol", str(ROOT / "advanced-models-v1.json"), "--source-commit", "test-source"])
+        self.assertEqual(code, 0)
+        self.assertEqual(run.call_count, 1)
+        summary = json.loads((root / "advanced_models/study_runs/latest.json").read_text())
+        self.assertFalse(summary["research_full_completed"])
+        self.assertEqual(summary["capacity_deferred_leagues"], 3)
+        self.assertTrue(all(r["requested_history_matches"] == 10 for r in summary["results"]))
 
     @unittest.skipUnless(shutil.which("Rscript"), "real R is required for pinned upstream integration")
     def test_real_R_saved_coefficients_reproduce_neutral_and_feature_forecasts(self):

@@ -299,7 +299,7 @@ def _independent_results(runtime, context, now):
             or value.get("source_commit") != context["source_commit"]):
         raise ValueError("independent_sync_source_mismatch")
     allowed = ("result_appended", "result_unchanged", "pending_or_not_mature_at_observation", "not_due",
-               "outside_revision_recheck_window", "budget_deferred", "failed", "client_unavailable")
+               "outside_revision_recheck_window", "unscorable_schedule_revision", "budget_deferred", "failed", "client_unavailable")
     counts = value.get("counts", value.get("status_counts"))
     if not isinstance(counts, dict):
         raise ValueError("invalid_sync_counts")
@@ -776,7 +776,7 @@ def markdown(value):
         f"| 本轮前瞻 | {value['step_outcomes']['prospective']}；观测到接受 {n(current, 'observed_accepted_predictions')}、拒绝 {n(current, 'observed_rejected_predictions')}、原模型不支持 {n(current, 'observed_unsupported_predictions')} |",
         f"| 累计前瞻 | 版本 {n(cumulative, 'forecast_versions')}；协议内去重 {n(cumulative, 'unique_primary_matches_by_protocol')}；跨协议独立比赛 {n(cumulative, 'unique_matches_across_protocols')} |",
         f"| 累计成熟结果 | 协议内已评分 {n(cumulative, 'mature_scored_matches_by_protocol')}；待赛果 {n(cumulative, 'pending_matches_by_protocol')}；结果版本 {n(cumulative, 'result_versions')} |",
-        f"| 独立赛果同步 | {value['step_outcomes'].get('result_sync', 'unknown')}；目标 {n(synced, 'target_matches')}；新结果版本 {n(synced.get('status_counts', {}), 'result_appended')}；请求 {n(synced, 'api_requests')} |",
+        f"| 独立赛果同步 | {value['step_outcomes'].get('result_sync', 'unknown')}；目标 {n(synced, 'target_matches')}；新结果版本 {n(synced.get('status_counts', {}), 'result_appended')}；赛程变更不可评分 {n(synced.get('status_counts', {}), 'unscorable_schedule_revision')}；请求 {n(synced, 'api_requests')} |",
         f"| 真实报价积累 | {value['step_outcomes'].get('quotes', 'unknown')}；候选 {n(quotes, 'candidate_matches')}；已解析快照 {n(quotes, 'parsed_snapshots')}；完整参考行 {n(quotes, 'complete_reference_rows')}；请求 {n(quotes, 'api_requests')} |",
         f"| F4 模型影子记录 | {value['step_outcomes'].get('shadow_models', 'unknown')}；记录状态 {shadow_capture.get('status', 'unknown')}；本次预测版本 {n(shadow_capture, 'captured_forecast_versions')}；覆盖比赛 {n(shadow_capture, 'captured_matches_this_run')}；90/180配对版本 {n(shadow_capture, 'primary_pair_captures_this_run')}；准入拒绝 {n(shadow_capture, 'eligibility_rejections')} |",
         f"| F4 影子累计评分 | 预测版本 {n(shadow_score, 'forecast_versions')}；协议内配对比赛 {n(shadow_score, 'selected_matches_by_protocol')}；跨协议独立比赛 {n(shadow_score, 'independent_matches_across_protocols')} |",

@@ -23,7 +23,7 @@ from .data import normalize_fixtures
 from .model import _distribution_from_rates, _iso, _timestamp, score_distribution
 from .prospective import (_baseline, _digest, _forecast_valid, _identity, _json_bytes,
                           _name, _now, _objects, _path, _read, _same_identity,
-                          _append as _unbudgeted_append)
+                          _append as _unbudgeted_append, current_results)
 from .settlement import matrix_array
 
 VERSION = "s2-f5c-daily-total-shrink-pilot-1.0"
@@ -230,7 +230,7 @@ def _selection(root, production, protocol_id, competition, cutoff):
     """Freeze complete observed history; never seed it with known historical scores."""
     forecasts = [f for f in _objects(root, "forecasts")
                  if f["protocol_id"] == protocol_id and f["competition"] == competition]
-    results = [r for r in _objects(production, "results") if r["competition"] == competition]
+    results = [r for r in current_results(production, as_of=cutoff) if r["competition"] == competition]
     grouped = defaultdict(list)
     for forecast in forecasts:
         _saved_forecast_valid(root, forecast, cutoff, validate_selection=False)
@@ -651,7 +651,7 @@ def _score(runtime, *, source_commit=None, clock=None):
         root, now = _root(runtime), _now(clock)
         forecasts = _objects(root, "forecasts")
         production = _path(runtime, "prospective")
-        results = _objects(production, "results")
+        results = current_results(production, as_of=now)
         report = {"version": VERSION, "scored_at": _iso(now), "forecast_versions": len(forecasts),
             "source_commit": source_commit, "run_started_at": _iso(now),
             "confirmation_eligible": False, "accuracy_improvement_verified": False, "profit_evaluation": False,
