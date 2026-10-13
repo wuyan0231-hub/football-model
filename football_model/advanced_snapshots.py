@@ -19,13 +19,14 @@ import re
 import tempfile
 
 from .data import _iso, _utc
+from .advanced_capacity import CapacityGuard, CapacityDeferred
 from .fundamentals import _fixture, build_features
 from .integration import _entry_for_match, match_packet
 from .feature_snapshots import (HORIZONS, SnapshotError, _bytes, _check_times,
-    _digest, _evidence_inputs, _fixture_context, _freeze_source, _horizon_state,
+    _digest, _evidence_inputs, _fixture_context, _horizon_state, _pairs,
     _path_ref, _prediction_same, _read, _reference_path, _save, _sha, _tick,
     _write_bytes, snapshot_from_evidence, verify_baseline_capture)
-from .feature_scoring import _path, _read_ref, _pointer, _reference
+from .feature_scoring import _path, _read_ref, _pointer, _reference, _raw as _pointer_bytes
 
 VERSION = "advanced-snapshots-v1"
 
@@ -71,6 +72,59 @@ def _root(runtime, protocol):
     return Path(runtime).resolve() / "advanced_snapshots" / _digest(protocol)
 
 
+def _guarded_save(root, category, value, guard, *, final=False):
+    raw = _bytes(value)
+    path = root / category / (hashlib.sha256(raw).hexdigest() + ".json")
+    ticket = guard.check_write(path, raw, final=final)
+    result = _save(root, category, value)
+    guard.commit_write(ticket)
+    return result
+
+
+def _guarded_pointer(path, value, guard, *, first=False, final=False):
+    ticket = guard.check_write(path, _pointer_bytes(value), final=final)
+    _pointer(path, value, first=first)
+    guard.commit_write(ticket)
+
+
+def _guarded_freeze(path, runtime, root, cutoff, kind, guard):
+    path = Path(path).resolve()
+    if not path.is_relative_to(runtime):
+        raise SnapshotError("source_path_escapes_runtime")
+    raw = path.read_bytes()
+    suffix = path.suffix if path.suffix in (".json", ".py") else ".bin"
+    sha = hashlib.sha256(raw).hexdigest()
+    destination = root / "sources" / (sha + suffix)
+    value = json.loads(raw, object_pairs_hook=_pairs,
+        parse_constant=lambda _: (_ for _ in ()).throw(SnapshotError("nonfinite_json"))) if suffix == ".json" else None
+    latest = _check_times(value, cutoff) if value is not None else None
+    ticket = guard.check_write(destination, raw)
+    # Same bytes and reference contract as the original feature snapshot
+    # freezer. Validate times before writing so rejected input cannot leave
+    # unaccounted bytes behind after an exception.
+    _write_bytes(destination, raw)
+    guard.commit_write(ticket)
+    reference = {"path": str(destination), "runtime_relative_path": str(destination.relative_to(runtime)),
+        "origin_runtime_path": str(path.relative_to(runtime)), "sha256": sha,
+        "kind": kind, "available_at": _iso(latest or cutoff)}
+    if isinstance(value, dict) and value.get("schema_version") == "fundamentals-evidence-v1":
+        reference["snapshot_id"] = value["snapshot_id"]
+    return reference
+
+
+@contextmanager
+def _capture_storage(runtime, protocol, capacity_guard=None):
+    runtime = Path(runtime).resolve()
+    lockpath = runtime.parent / ".advanced-capture-locks" / (_digest([str(runtime), _digest(protocol)]) + ".lock")
+    lockpath.parent.mkdir(parents=True, exist_ok=True)
+    with lockpath.open("a") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        guard = capacity_guard if capacity_guard is not None else CapacityGuard(runtime)
+        if guard.runtime != runtime:
+            raise SnapshotError("advanced_capacity_runtime_mismatch")
+        yield guard
+
+
 def _refs_in(value):
     if isinstance(value, dict):
         if isinstance(value.get("path"), str) and re.fullmatch(r"[0-9a-f]{64}", str(value.get("sha256", ""))):
@@ -83,9 +137,10 @@ def _refs_in(value):
             yield from _refs_in(item)
 
 
-def freeze_inputs(runtime, root, refs, cutoff):
+def freeze_inputs(runtime, root, refs, cutoff, *, capacity_guard=None):
     """Recursively preserve each runtime input, including card training parents."""
     runtime = Path(runtime).resolve()
+    guard = capacity_guard if capacity_guard is not None else CapacityGuard(runtime)
     pending, saved = list(refs), {}
     while pending:
         ref = pending.pop()
@@ -103,7 +158,7 @@ def freeze_inputs(runtime, root, refs, cutoff):
             if saved[key]["sha256"] != ref["sha256"]:
                 raise SnapshotError("advanced_input_version_conflict")
             continue
-        frozen = _freeze_source(path, runtime, root, cutoff, "advanced_input")
+        frozen = _guarded_freeze(path, runtime, root, cutoff, "advanced_input", guard)
         saved[key] = frozen
         if path.suffix == ".json":
             # References are assertions about exact bytes, not a license to
@@ -224,7 +279,8 @@ def _live(runtime, league, protocol, baseline, values, cutoff, fixture):
 def _features(runtime, league, fixture, cutoff, horizon, protocol):
     from .advanced_features import feature_values
     value = feature_values(runtime, league, fixture, _iso(cutoff), horizon=horizon, mode="prospective",
-        recent_matches=protocol.get("advanced_feature_recent_matches", 5), min_history=protocol.get("advanced_feature_min_history", 3))
+        recent_matches=protocol.get("advanced_feature_recent_matches", 5), min_history=protocol.get("advanced_feature_min_history", 3),
+        national_load_lookback_days=protocol.get("national_load_lookback_days", 14))
     from .feature_dataset import feature_values as schedule_values
     runtime = Path(runtime)
     history = _read(runtime / "data" / (league + ".json"))["matches"]
@@ -298,6 +354,14 @@ def verify_capture(runtime, receipt, *, candidates=True, now=None):
             verified_tags[cid] = {k: v for k, v in item.items() if k.startswith("confirmation_")}
         except (ValueError, KeyError, TypeError, OSError) as exc:
             verified_tags[cid] = {"confirmation_eligible":False, "confirmation_rejection_reason":_reason(exc)}
+    if not any(item.get("status") == "predicted" for item in captured.values()):
+        # Explicit unavailability has no numeric candidate claim to replay.
+        # In particular a capacity rejection must retain its original reason
+        # and the separately verified M0 instead of inventing missing inputs.
+        result["verified_candidates"] = {
+            cid: {**{k: v for k, v in deepcopy(item).items() if not k.startswith("confirmation_")},
+                  **verified_tags[cid]} for cid, item in captured.items()}
+        return result
     try:
         with frozen_runtime(runtime, payload["source_refs"], cutoff) as frozen:
             rebuilt = _features(frozen, payload["league"], fixture, cutoff, payload["horizon"], protocol)
@@ -326,7 +390,7 @@ def verify_capture(runtime, receipt, *, candidates=True, now=None):
     return result
 
 
-def _baseline(runtime, root, league, row, protocol, state_commit, started, clock, config):
+def _baseline(runtime, root, league, row, protocol, state_commit, started, clock, config, guard):
     context, context_path = _fixture_context(runtime, _fixture(row), started)
     snapshots, history, paths, excluded = _evidence_inputs(runtime, context, started)
     packet = match_packet(runtime, config, league, context["match_id"], as_of=_iso(started), state_commit=state_commit)
@@ -340,12 +404,19 @@ def _baseline(runtime, root, league, row, protocol, state_commit, started, clock
         if expected is not None and _sha(path) != expected:
             raise SnapshotError("advanced_baseline_changed_during_capture")
         parents.append((path, kind))
-    refs = [_freeze_source(p, runtime, root, cutoff, k) for p, k in parents]
-    refs.extend(_freeze_source(p, runtime, root, cutoff, "fundamentals") for p in paths)
+    refs = [_guarded_freeze(p, runtime, root, cutoff, k, guard) for p, k in parents]
+    refs.extend(_guarded_freeze(p, runtime, root, cutoff, "fundamentals", guard) for p in paths)
     return context, cutoff, packet, features, refs, excluded
 
 
-def capture_run(runtime, league="serie_a", *, source_commit, protocol, state_commit=None, config=None, clock=None):
+def capture_run(runtime, league="serie_a", *, source_commit, protocol, state_commit=None, config=None, clock=None, capacity_guard=None):
+    runtime = Path(runtime).resolve()
+    with _capture_storage(runtime, protocol, capacity_guard) as guard:
+        return _capture_run_locked(runtime, league, source_commit=source_commit, protocol=protocol,
+            state_commit=state_commit, config=config, clock=clock, guard=guard)
+
+
+def _capture_run_locked(runtime, league="serie_a", *, source_commit, protocol, state_commit=None, config=None, clock=None, guard):
     runtime = Path(runtime).resolve()
     _commit(source_commit); _commit(state_commit, optional=True)
     candidate_ids(protocol)
@@ -359,111 +430,125 @@ def capture_run(runtime, league="serie_a", *, source_commit, protocol, state_com
     report = {"schema_version": VERSION, "league": league, "source_commit": source_commit, "state_commit": state_commit,
         "protocol_sha256": _digest(protocol), "run_started_at": _iso(started), "queue": [], "issues": [],
         "research_only": True, "confirmation_eligible": False, "api_requests": 0}
-    lockpath = runtime.parent / ".advanced-capture-locks" / (_digest([str(runtime), _digest(protocol)]) + ".lock")
-    lockpath.parent.mkdir(parents=True, exist_ok=True)
-    with lockpath.open("a") as lock:
-        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
-        try:
-            entry = _entry_for_match(runtime, config, league)
-            attempt = entry.get("latest_successful_forecast")
-            rows = _read(runtime / "predictions" / attempt["run_id"] / (league + ".json")) if attempt else []
-            if not isinstance(rows, list) or len({r["match_id"] for r in rows}) != len(rows):
-                raise SnapshotError("advanced_forecast_rows_invalid")
-            for row in rows:
-                fixture = _fixture(row)
-                for horizon in HORIZONS:
-                    actual = _tick(clock, started)
-                    state = _horizon_state(fixture, horizon, actual, baseline_protocol(protocol))
-                    item = {"league": league, "fixture": fixture, "match_id": fixture["match_id"], "kickoff": fixture["kickoff"],
-                        "horizon": horizon, "protocol_sha256": _digest(protocol), "queue_observed_at": _iso(actual),
-                        "planned_state_at_observation": state["status"], "status": state["status"]}
-                    folder = root / "captures" / league / str(fixture["match_id"]) / horizon
-                    try:
-                        if row.get("status") != "exploratory_baseline" or not isinstance(row.get("prediction"), dict):
-                            item.update(status="unsupported", reason=row.get("reason", "baseline_unsupported"))
-                            if state["status"] == "due" and row.get("status") == "unsupported":
-                                receipt_ref = _capture_candidate_only(runtime, root, league, row, entry, protocol,
-                                    source_commit, state_commit, horizon, actual, clock)
-                                item.update(status="candidate_only", receipt_ref=receipt_ref)
-                                if not (folder / "first.json").exists():
-                                    _pointer(folder / "first.json", receipt_ref, first=True)
-                        elif entry.get("status") != "available":
-                            item.update(status="ineligible", reason="latest_league_forecast_not_available")
-                        elif state["status"] == "due":
-                            fixture, cutoff, packet, fundamentals, refs, excluded = _baseline(runtime, root, league, row,
-                                protocol, state_commit, actual, clock, config)
-                            base = snapshot_from_evidence(fixture, packet, fundamentals, horizon=horizon, cutoff_at=cutoff,
-                                source_refs=refs, protocol=baseline_protocol(protocol), clock=clock)
-                            base.update(league=league, source_commit=source_commit, state_commit=state_commit,
-                                baseline_parent_row=deepcopy(row), excluded_read_evidence=excluded)
-                            fixture = base["fixture"]
-                            base.pop("snapshot_id", None); base["snapshot_id"] = _digest(base)
-                            base_path = _save(root, "baseline_payloads", base)
-                            base_done = _tick(clock, _utc(base["created_at"]))
-                            base_receipt = {"schema_version": "feature-snapshots-1.0", "league": league, "match_id": fixture["match_id"],
-                                "horizon": horizon, "protocol_sha256": _digest(baseline_protocol(protocol)),
-                                "capture_started_at": _iso(actual), "actual_cutoff_at": _iso(cutoff), "storage_completed_at": _iso(base_done),
-                                "payload_ref": _path_ref(base_path, runtime), "live_capture_verified": True, "status": "captured", "confirmation_eligible": False}
-                            verify_baseline_capture(runtime, base_receipt)
-                            base_receipt_ref = _path_ref(_save(root, "baseline_receipts", base_receipt), runtime)
-                            candidates = {}; advanced_refs = []; numeric = {}
-                            try:
-                                numeric = _features(runtime, league, fixture, cutoff, horizon, protocol)
-                                result = _live(runtime, league, protocol, packet["prediction"], numeric, cutoff, fixture)
-                                origins = list(numeric.get("source_refs", [])) + list(result.get("source_refs", [])) + list(_refs_in(result.get("cards", {})))
-                                advanced_refs = freeze_inputs(runtime, root, origins, cutoff)
-                                for cid in candidate_ids(protocol):
-                                    if (cid == protocol.get("cold_start_candidate") or (cid in protocol.get("candidates", {})
-                                            and protocol["candidates"][cid].get("horizon") != horizon)):
-                                        candidates[cid] = {"status":"not_applicable", "reason":"candidate_not_registered_for_this_horizon_or_supported_baseline"}
-                                        continue
-                                    prediction = result.get("predictions", {}).get(cid)
-                                    candidates[cid] = ({"status": "predicted", "prediction": prediction, "forecast_id": _digest(prediction),
-                                        "model_ref": result.get("cards", {}).get(cid)} if prediction is not None else
-                                        {"status": "unavailable", "reason": result.get("failures", {}).get(cid, "candidate_not_returned")})
-                            except (ImportError, ValueError, KeyError, TypeError, OSError) as exc:
-                                candidates = {cid: {"status": "unavailable", "reason": _reason(exc)} for cid in candidate_ids(protocol)}
-                            for cid, branch in candidates.items():
-                                branch.update(_confirmation_tag(runtime, league, protocol, cid, horizon, fixture, cutoff, branch))
-                            created = _tick(clock, base_done)
-                            payload = {"schema_version": VERSION, "league": league, "fixture": fixture, "horizon": horizon,
-                                "protocol": deepcopy(protocol), "protocol_sha256": _digest(protocol), "source_commit": source_commit,
-                                "state_commit": state_commit, "actual_cutoff_at": _iso(cutoff), "created_at": _iso(created),
-                                "baseline_receipt_ref": base_receipt_ref, "source_refs": advanced_refs,
-                                "feature_values": _rebind_capture_refs(numeric, advanced_refs),
-                                "candidates": _rebind_capture_refs(candidates, advanced_refs), "research_only": True, "confirmation_eligible": False}
-                            payload["snapshot_id"] = _digest(payload)
-                            payload_ref = _path_ref(_save(root, "payloads", payload), runtime)
-                            completed = _tick(clock, created)
-                            live = _horizon_state(fixture, horizon, completed, baseline_protocol(protocol))["status"] == "due"
-                            receipt = {"schema_version": VERSION, "league": league, "match_id": fixture["match_id"], "horizon": horizon,
-                                "protocol_sha256": _digest(protocol), "capture_started_at": _iso(actual), "actual_cutoff_at": _iso(cutoff),
-                                "storage_completed_at": _iso(completed), "payload_ref": payload_ref,
-                                "live_capture_verified": live, "status": "captured" if live else "late", "confirmation_eligible": False}
-                            if live:
-                                checked = verify_capture(runtime, receipt, now=completed)
-                                # Never label a source-replay failure as a successful candidate.
-                                item["candidate_statuses"] = {cid: v["status"] for cid, v in checked["verified_candidates"].items()}
-                                receipt["original_candidate_statuses"] = item["candidate_statuses"]
-                            receipt_ref = _path_ref(_save(root, "receipts", receipt), runtime)
-                            item.update(status=receipt["status"], receipt_ref=receipt_ref)
-                            if live and not (folder / "first.json").exists():
-                                _pointer(folder / "first.json", receipt_ref, first=True)
-                    except (ValueError, KeyError, TypeError, OSError) as exc:
-                        item.update(status="ineligible", reason=_reason(exc))
-                    record_ref = _path_ref(_save(root, "queue/history", item), runtime)
-                    if not (folder / "first_observation.json").exists():
-                        _pointer(folder / "first_observation.json", record_ref, first=True)
-                    if state["status"] in ("due", "late") and not (folder / "first_attempt.json").exists():
-                        _pointer(folder / "first_attempt.json", record_ref, first=True)
-                    report["queue"].append({**item, "queue_record_ref": record_ref})
-        except (ValueError, KeyError, TypeError, OSError) as exc:
-            report["issues"].append({"reason": _reason(exc)})
-        report.update(run_completed_at=_iso(_tick(clock, started)), queue_status_counts=dict(Counter(x["status"] for x in report["queue"])),
-            planned_horizon_count=len(report["queue"]), planned_match_count=len({x["match_id"] for x in report["queue"]}))
-        report["status"] = "partial" if report["issues"] else "complete" if report["queue"] else "no_saved_forecasts"
-        report["report_ref"] = _path_ref(_save(root, "reports/history", report), runtime)
-        _pointer(root / "reports" / league / "latest.json", report)
+    capacity_halted = None
+    try:
+        entry = _entry_for_match(runtime, config, league)
+        attempt = entry.get("latest_successful_forecast")
+        rows = _read(runtime / "predictions" / attempt["run_id"] / (league + ".json")) if attempt else []
+        if not isinstance(rows, list) or len({r["match_id"] for r in rows}) != len(rows):
+            raise SnapshotError("advanced_forecast_rows_invalid")
+        for row in rows:
+            fixture = _fixture(row)
+            for horizon in HORIZONS:
+                actual = _tick(clock, started)
+                state = _horizon_state(fixture, horizon, actual, baseline_protocol(protocol))
+                item = {"league": league, "fixture": fixture, "match_id": fixture["match_id"], "kickoff": fixture["kickoff"],
+                    "horizon": horizon, "protocol_sha256": _digest(protocol), "queue_observed_at": _iso(actual),
+                    "planned_state_at_observation": state["status"], "status": state["status"]}
+                folder = root / "captures" / league / str(fixture["match_id"]) / horizon
+                try:
+                    if capacity_halted is not None and state["status"] == "due":
+                        raise CapacityDeferred(capacity_halted)
+                    if row.get("status") != "exploratory_baseline" or not isinstance(row.get("prediction"), dict):
+                        item.update(status="unsupported", reason=row.get("reason", "baseline_unsupported"))
+                        if state["status"] == "due" and row.get("status") == "unsupported":
+                            receipt_ref = _capture_candidate_only(runtime, root, league, row, entry, protocol,
+                                source_commit, state_commit, horizon, actual, clock, guard)
+                            item.update(status="candidate_only", receipt_ref=receipt_ref)
+                            if not (folder / "first.json").exists():
+                                _guarded_pointer(folder / "first.json", receipt_ref, guard, first=True, final=True)
+                    elif entry.get("status") != "available":
+                        item.update(status="ineligible", reason="latest_league_forecast_not_available")
+                    elif state["status"] == "due":
+                        fixture, cutoff, packet, fundamentals, refs, excluded = _baseline(runtime, root, league, row,
+                            protocol, state_commit, actual, clock, config, guard)
+                        base = snapshot_from_evidence(fixture, packet, fundamentals, horizon=horizon, cutoff_at=cutoff,
+                            source_refs=refs, protocol=baseline_protocol(protocol), clock=clock)
+                        base.update(league=league, source_commit=source_commit, state_commit=state_commit,
+                            baseline_parent_row=deepcopy(row), excluded_read_evidence=excluded)
+                        fixture = base["fixture"]
+                        base.pop("snapshot_id", None); base["snapshot_id"] = _digest(base)
+                        base_path = _guarded_save(root, "baseline_payloads", base, guard)
+                        base_done = _tick(clock, _utc(base["created_at"]))
+                        base_receipt = {"schema_version": "feature-snapshots-1.0", "league": league, "match_id": fixture["match_id"],
+                            "horizon": horizon, "protocol_sha256": _digest(baseline_protocol(protocol)),
+                            "capture_started_at": _iso(actual), "actual_cutoff_at": _iso(cutoff), "storage_completed_at": _iso(base_done),
+                            "payload_ref": _path_ref(base_path, runtime), "live_capture_verified": True, "status": "captured", "confirmation_eligible": False}
+                        verify_baseline_capture(runtime, base_receipt)
+                        base_receipt_ref = _path_ref(_guarded_save(root, "baseline_receipts", base_receipt, guard), runtime)
+                        candidates = {}; advanced_refs = []; numeric = {}
+                        try:
+                            numeric = _features(runtime, league, fixture, cutoff, horizon, protocol)
+                            result = _live(runtime, league, protocol, packet["prediction"], numeric, cutoff, fixture)
+                            origins = list(numeric.get("source_refs", [])) + list(result.get("source_refs", [])) + list(_refs_in(result.get("cards", {})))
+                            advanced_refs = freeze_inputs(runtime, root, origins, cutoff, capacity_guard=guard)
+                            for cid in candidate_ids(protocol):
+                                if (cid == protocol.get("cold_start_candidate") or (cid in protocol.get("candidates", {})
+                                        and protocol["candidates"][cid].get("horizon") != horizon)):
+                                    candidates[cid] = {"status":"not_applicable", "reason":"candidate_not_registered_for_this_horizon_or_supported_baseline"}
+                                    continue
+                                prediction = result.get("predictions", {}).get(cid)
+                                candidates[cid] = ({"status": "predicted", "prediction": prediction, "forecast_id": _digest(prediction),
+                                    "model_ref": result.get("cards", {}).get(cid)} if prediction is not None else
+                                    {"status": "unavailable", "reason": result.get("failures", {}).get(cid, "candidate_not_returned")})
+                        except CapacityDeferred as exc:
+                            capacity_halted = exc.details
+                            item.update(candidate_capacity_deferred=True, capacity=exc.details)
+                            # Keep the independently frozen M0. Unfrozen numeric
+                            # inputs and candidates cannot claim qualification.
+                            numeric = {}; advanced_refs = []
+                            candidates = {cid: {"status": "unavailable", "reason": exc.reason}
+                                for cid in candidate_ids(protocol)}
+                        except (ImportError, ValueError, KeyError, TypeError, OSError) as exc:
+                            candidates = {cid: {"status": "unavailable", "reason": _reason(exc)} for cid in candidate_ids(protocol)}
+                        for cid, branch in candidates.items():
+                            branch.update(_confirmation_tag(runtime, league, protocol, cid, horizon, fixture, cutoff, branch))
+                        created = _tick(clock, base_done)
+                        payload = {"schema_version": VERSION, "league": league, "fixture": fixture, "horizon": horizon,
+                            "protocol": deepcopy(protocol), "protocol_sha256": _digest(protocol), "source_commit": source_commit,
+                            "state_commit": state_commit, "actual_cutoff_at": _iso(cutoff), "created_at": _iso(created),
+                            "baseline_receipt_ref": base_receipt_ref, "source_refs": advanced_refs,
+                            "feature_values": _rebind_capture_refs(numeric, advanced_refs),
+                            "candidates": _rebind_capture_refs(candidates, advanced_refs), "research_only": True, "confirmation_eligible": False}
+                        payload["snapshot_id"] = _digest(payload)
+                        payload_ref = _path_ref(_guarded_save(root, "payloads", payload, guard, final=True), runtime)
+                        completed = _tick(clock, created)
+                        live = _horizon_state(fixture, horizon, completed, baseline_protocol(protocol))["status"] == "due"
+                        receipt = {"schema_version": VERSION, "league": league, "match_id": fixture["match_id"], "horizon": horizon,
+                            "protocol_sha256": _digest(protocol), "capture_started_at": _iso(actual), "actual_cutoff_at": _iso(cutoff),
+                            "storage_completed_at": _iso(completed), "payload_ref": payload_ref,
+                            "live_capture_verified": live, "status": "captured" if live else "late", "confirmation_eligible": False}
+                        if live:
+                            checked = verify_capture(runtime, receipt, now=completed)
+                            # Never label a source-replay failure as a successful candidate.
+                            item["candidate_statuses"] = {cid: v["status"] for cid, v in checked["verified_candidates"].items()}
+                            receipt["original_candidate_statuses"] = item["candidate_statuses"]
+                        receipt_ref = _path_ref(_guarded_save(root, "receipts", receipt, guard, final=True), runtime)
+                        item.update(status=receipt["status"], receipt_ref=receipt_ref)
+                        if live and not (folder / "first.json").exists():
+                            _guarded_pointer(folder / "first.json", receipt_ref, guard, first=True, final=True)
+                except CapacityDeferred as exc:
+                    capacity_halted = exc.details
+                    item.update(status="capacity_deferred", reason=exc.reason, capacity=exc.details)
+                except (ValueError, KeyError, TypeError, OSError) as exc:
+                    item.update(status="ineligible", reason=_reason(exc))
+                record_ref = _path_ref(_guarded_save(root, "queue/history", item, guard, final=True), runtime)
+                if not (folder / "first_observation.json").exists():
+                    _guarded_pointer(folder / "first_observation.json", record_ref, guard, first=True, final=True)
+                if state["status"] in ("due", "late") and not (folder / "first_attempt.json").exists():
+                    _guarded_pointer(folder / "first_attempt.json", record_ref, guard, first=True, final=True)
+                report["queue"].append({**item, "queue_record_ref": record_ref})
+    except (ValueError, KeyError, TypeError, OSError) as exc:
+        report["issues"].append({"reason": _reason(exc)})
+    report.update(run_completed_at=_iso(_tick(clock, started)), queue_status_counts=dict(Counter(x["status"] for x in report["queue"])),
+        planned_horizon_count=len(report["queue"]), planned_match_count=len({x["match_id"] for x in report["queue"]}))
+    report["capacity_deferred_horizon_count"] = sum(x["status"] == "capacity_deferred" or
+        bool(x.get("candidate_capacity_deferred")) for x in report["queue"])
+    report["execution_status"] = "failed" if report["issues"] else "deferred" if report["capacity_deferred_horizon_count"] else "complete"
+    report["status"] = "partial" if report["issues"] or report["capacity_deferred_horizon_count"] else "complete" if report["queue"] else "no_saved_forecasts"
+    report["storage_capacity_before_report_writes"] = guard.summary()
+    report["report_ref"] = _path_ref(_guarded_save(root, "reports/history", report, guard, final=True), runtime)
+    _guarded_pointer(root / "reports" / league / "latest.json", report, guard, final=True)
     return int(bool(report["issues"])), report
 
 
@@ -507,7 +592,7 @@ def _only_parents(runtime, payload):
     return model
 
 
-def _capture_candidate_only(runtime,root,league,row,entry,protocol,source_commit,state_commit,horizon,started,clock):
+def _capture_candidate_only(runtime,root,league,row,entry,protocol,source_commit,state_commit,horizon,started,clock,guard):
     context, context_path=_fixture_context(runtime,_fixture(row),started)
     if context["status"]!="NS": raise SnapshotError("candidate_only_fixture_not_scheduled")
     snapshots,history,paths,excluded=_evidence_inputs(runtime,context,started)
@@ -519,11 +604,11 @@ def _capture_candidate_only(runtime,root,league,row,entry,protocol,source_commit
     parents=[(runtime/"integration/index.json","integration_index"),(context_path,"current_fixture_context"),
         (model_path,"baseline_model"),(runtime/"predictions"/run/(league+".json"),"baseline_forecast"),
         (runtime/"reports/history"/(run+".json"),"baseline_report")]
-    refs=[_freeze_source(p,runtime,root,cutoff,k) for p,k in parents]
-    refs.extend(_freeze_source(p,runtime,root,cutoff,"fundamentals") for p in paths)
+    refs=[_guarded_freeze(p,runtime,root,cutoff,k,guard) for p,k in parents]
+    refs.extend(_guarded_freeze(p,runtime,root,cutoff,"fundamentals",guard) for p in paths)
     numeric=_features(runtime,league,context,cutoff,horizon,protocol)
     generated=_live(runtime,league,protocol,None,numeric,cutoff,context)
-    refs.extend(freeze_inputs(runtime,root,list(numeric.get("source_refs",[]))+list(generated.get("source_refs",[]))+list(_refs_in(generated.get("cards",{}))),cutoff))
+    refs.extend(freeze_inputs(runtime,root,list(numeric.get("source_refs",[]))+list(generated.get("source_refs",[]))+list(_refs_in(generated.get("cards",{}))),cutoff,capacity_guard=guard))
     candidates={}
     for cid in candidate_ids(protocol):
         prediction=generated.get("predictions",{}).get(cid)
@@ -539,7 +624,7 @@ def _capture_candidate_only(runtime,root,league,row,entry,protocol,source_commit
         "fundamentals":build_features(context,cutoff=cutoff,snapshots=snapshots,fixture_history=history),
         "candidates":_rebind_capture_refs(candidates,refs),"research_only":True,"confirmation_eligible":False}
     payload["snapshot_id"]=_digest(payload)
-    reference=_path_ref(_save(root,"payloads",payload),runtime); completed=_tick(clock,_utc(payload["created_at"]))
+    reference=_path_ref(_guarded_save(root,"payloads",payload,guard),runtime); completed=_tick(clock,_utc(payload["created_at"]))
     live=_horizon_state(context,horizon,completed,baseline_protocol(protocol))["status"]=="due"
     receipt={"schema_version":VERSION,"league":league,"match_id":row["match_id"],"horizon":horizon,
         "protocol_sha256":_digest(protocol),"capture_started_at":_iso(started),"actual_cutoff_at":_iso(cutoff),
@@ -547,7 +632,7 @@ def _capture_candidate_only(runtime,root,league,row,entry,protocol,source_commit
         "status":"captured" if live else "late","confirmation_eligible":False}
     checked=verify_capture(runtime,receipt,now=completed)
     receipt["original_candidate_statuses"]={cid:v["status"] for cid,v in checked["verified_candidates"].items()}
-    return _path_ref(_save(root,"receipts",receipt),runtime)
+    return _path_ref(_guarded_save(root,"receipts",receipt,guard,final=True),runtime)
 
 
 def _verify_candidate_only(runtime,payload,receipt,*,candidates=True):
@@ -594,7 +679,7 @@ def queue_members(runtime, league, protocol, now=None):
         member["observations"].sort(key=lambda x: (x[0], x[2]["sha256"]))
         member["first_observed_at"] = _iso(member["observations"][0][0])
         member["latest_status"] = member["observations"][-1][1]["status"]
-        member["first_failures"] = [ref for _, v, ref in member["observations"] if v["status"] in ("ineligible", "unsupported", "late", "failed")]
+        member["first_failures"] = [ref for _, v, ref in member["observations"] if v["status"] in ("ineligible", "unsupported", "late", "failed", "capacity_deferred")]
     return list(members.values())
 
 
@@ -668,9 +753,14 @@ def main(argv=None):
     args = parser.parse_args(argv); protocol = _read(args.protocol); config = _read(args.config)
     leagues = [x["key"] for x in config["competitions"] if x.get("enabled", True)] if args.league == "all" else [args.league]
     code = 0
-    for league in leagues:
-        status, report = capture_run(args.runtime, league, protocol=protocol, config=config, source_commit=args.source_commit, state_commit=args.state_commit)
-        code = max(code, status); print(json.dumps({k: report[k] for k in ("league", "status", "planned_horizon_count", "queue_status_counts", "report_ref")}, ensure_ascii=False))
+    # One guarded sequential session measures the complete runtime only once,
+    # with the same lock protecting both the estimate and all league writes.
+    with _capture_storage(args.runtime, protocol) as guard:
+        for league in leagues:
+            status, report = _capture_run_locked(args.runtime, league, protocol=protocol, config=config,
+                source_commit=args.source_commit, state_commit=args.state_commit, guard=guard)
+            code = max(code, status); print(json.dumps({k: report[k] for k in ("league", "status", "execution_status",
+                "capacity_deferred_horizon_count", "planned_horizon_count", "queue_status_counts", "report_ref")}, ensure_ascii=False))
     return code
 
 

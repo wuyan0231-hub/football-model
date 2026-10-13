@@ -502,6 +502,7 @@ def match_packet(runtime, config, league, match_id, as_of=None, state_commit=Non
         "unquantified_factors": ["球员与伤停/预计及实际阵容", "射门事件xG", "战术变化", "旅行与赛程特征", "天气与场地变化", "参数不确定性"],
         "market_mapping": {"status": "not_executed" if feature_decision["status"] == "no_quote_supplied" else feature_decision["status"],
             "feature_decision_status": feature_decision["status"], "comparison_id": feature_decision["comparison_id"],
+            "decision_record_status": feature_decision["decision"]["status"],
             "instruction": "实际同价计算见feature_decision_comparison；无合法报价或费用分别保留未知。参考价不等于开放或成交，计算不自动产生推荐。预测λ不是射门xG。"},
         "usage": "仅为已读取并复算的探索性常规时间比分基线。尚须外部核实本场资料；不能称已纳入全部信息、已验证优势或已自动推荐。90分钟含补时，不含加时与点球大战。",
     }

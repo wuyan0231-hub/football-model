@@ -26,6 +26,12 @@ FEATURE_GROUPS = {
     "lineup_confirmed": ("confirmed_xi_overlap", "opponent_confirmed_xi_overlap"),
     "lineup_minutes": ("confirmed_xi_prior_minutes_share", "opponent_confirmed_xi_prior_minutes_share"),
     "lineup_rating": ("confirmed_xi_prior_rating_delta", "opponent_confirmed_xi_prior_rating_delta"),
+    "personnel_early": ("reported_absence_recent_minutes_share", "reported_absence_previous_xi_share",
+        "opponent_reported_absence_recent_minutes_share", "opponent_reported_absence_previous_xi_share"),
+    "restricted_observed_national_load": ("restricted_observed_national_minutes_per_matched_xi",
+        "restricted_observed_national_xi_match_count", "restricted_observed_national_xi_match_fraction",
+        "opponent_restricted_observed_national_minutes_per_matched_xi",
+        "opponent_restricted_observed_national_xi_match_count", "opponent_restricted_observed_national_xi_match_fraction"),
 }
 FEATURE_NAMES = tuple(n for group in FEATURE_GROUPS.values() for n in group)
 RESULT_DELAY = timedelta(hours=4)
@@ -249,7 +255,11 @@ def load_sources(runtime, league, records=None):
             snapshots.setdefault((snap["kind"], mid), []).append((snap, source_ref(path, runtime)))
         except (ValueError, TypeError, KeyError, OSError, AttributeError):
             issues.append({"path": str(path.relative_to(runtime)), "reason": "invalid_source_snapshot"})
+    from .advanced_personnel import load_personnel_sources
+    from .advanced_player_load import load_player_load_sources
     return {"history": sorted(history, key=lambda r: (r["kickoff"], r["match_id"])),
+        "personnel_sources": load_personnel_sources(runtime, league, records),
+        "player_load_sources": load_player_load_sources(runtime, league, records),
         "snapshots": snapshots, "history_source": source_ref(runtime / "data" / (league + ".json"), runtime),
         "history_observed_at": saved.get("observed_at"),
         "dependencies": dependencies,
@@ -291,7 +301,7 @@ def _stats(snap, team):
 
 
 def feature_values(runtime, league, fixture, cutoff_at, *, horizon="EARLY", mode="prospective",
-                   recent_matches=5, min_history=3, records=None, sources=None):
+                   recent_matches=5, min_history=3, records=None, sources=None, national_load_lookback_days=14):
     """Return numeric per-side features and exact inputs, never a probability."""
     if horizon not in ("EARLY", "LINEUP") or mode not in ("historical", "prospective"):
         raise DataError("invalid_feature_mode_or_horizon")
@@ -389,6 +399,33 @@ def feature_values(runtime, league, fixture, cutoff_at, *, horizon="EARLY", mode
             "confirmed_xi_prior_rating_delta": a["confirmed_xi_prior_rating_delta"],
             "opponent_confirmed_xi_prior_rating_delta": b["confirmed_xi_prior_rating_delta"]}
     home, away = side(target["home_id"],target["away_id"]), side(target["away_id"],target["home_id"])
+    # Current reported absences require an actual pre-cutoff injury archive even
+    # in historical development; eventual injuries cannot be backfilled as EARLY.
+    from .advanced_personnel import personnel_features
+    personnel = personnel_features(runtime, league, fixture, cutoff_at,
+        horizon=horizon, mode=mode, recent_matches=recent_matches,
+        min_history=min_history, records=records, sources=sources)
+    home.update(personnel["home"]); away.update(personnel["away"])
+    refs.update((ref["path"], ref) for ref in personnel["source_refs"])
+    evidence["personnel_early"] = personnel["evidence"]
+    missing.extend(personnel["missing"])
+    from .advanced_player_load import feature_values as player_load_values
+    try:
+        player_load = player_load_values(runtime, league, fixture, cutoff_at,
+            horizon=horizon, mode=mode, lookback_days=national_load_lookback_days,
+            sources=sources.get("player_load_sources"), club_sources=sources)
+    except (DataError, OSError) as exc:
+        # An optional national-team source must not invalidate legal club
+        # opportunity/personnel inputs. Missing and damaged sources have the
+        # same null numerical qualification; diagnostics remain separate and
+        # are never presented as a verified numerical source closure.
+        values = {name: None for name in FEATURE_GROUPS["restricted_observed_national_load"]}
+        player_load = {"home": values, "away": values.copy(), "source_refs": [],
+            "evidence": {"scope": "uefa_nations_league_only", "status": "optional_source_unavailable"},
+            "source_issues": [{"reason": str(exc)}], "diagnostic_refs": []}
+    home.update(player_load["home"]); away.update(player_load["away"])
+    refs.update((ref["path"], ref) for ref in player_load["source_refs"])
+    evidence["restricted_observed_national_load"] = player_load["evidence"]
     groups = {name: all(values[k] is not None for values in (home,away) for k in names)
         for name,names in FEATURE_GROUPS.items()}
     for side_name, values in (("home",home),("away",away)):
@@ -401,7 +438,13 @@ def feature_values(runtime, league, fixture, cutoff_at, *, horizon="EARLY", mode
         "feature_groups": {k:list(v) for k,v in FEATURE_GROUPS.items()}, "groups": groups,
         "feature_available_at": {n:_iso(cutoff) for n in FEATURE_NAMES},
         "source_refs": sorted(refs.values(), key=lambda r:r["path"]), "missing": missing,
-        "evidence": evidence, "source_issues": sources["source_issues"],
+        "evidence": evidence, "source_issues": sources["source_issues"] + personnel["source_issues"] + player_load.get("source_issues", []),
+        # Diagnostics are observations about rejected bytes, not dependencies.
+        # Complete training bundles retain this row; generic source-closure
+        # walkers must not read these paths as admitted numerical parents.
+        "optional_diagnostic_refs": [{"observed_path": ref["path"], "observed_sha256": ref["sha256"]}
+            for ref in player_load.get("diagnostic_refs", [])],
+        "optional_diagnostic_bytes_frozen": False,
         "availability_basis": "historical_kickoff_plus_four_hours_assumption" if mode == "historical" else "validated_source_known_at_not_after_cutoff",
         "historical_current_lineup_assumed_available": mode == "historical" and horizon == "LINEUP",
         "prospective_qualified": mode == "prospective", "target_match_statistics_excluded": True,
@@ -416,7 +459,7 @@ def historical_features(runtime, league, matches, target, cutoff, protocol=None)
 
 
 def build_feature_rows(runtime, league, matches=None, *, horizon="EARLY", horizon_hours=10,
-                       cutoff_at=None, mode="historical", recent_matches=5, min_history=3):
+                       cutoff_at=None, mode="historical", recent_matches=5, min_history=3, national_load_lookback_days=14):
     sources = load_sources(runtime,league,matches)
     targets = matches if matches is not None else sources["history"]
     rows, failures = [], []
@@ -424,7 +467,8 @@ def build_feature_rows(runtime, league, matches=None, *, horizon="EARLY", horizo
         cutoff = cutoff_at if cutoff_at is not None else _iso(_utc(target["kickoff"])-timedelta(hours=horizon_hours))
         try:
             rows.append(feature_values(runtime,league,target,cutoff,horizon=horizon,mode=mode,
-                recent_matches=recent_matches,min_history=min_history,sources=sources))
+                recent_matches=recent_matches,min_history=min_history,sources=sources,
+                national_load_lookback_days=national_load_lookback_days))
         except (ValueError,TypeError,KeyError,OSError):
             failures.append({"match_id": target.get("match_id"), "reason": "feature_build_failed"})
     refs = {r["path"]:r for row in rows for r in row["source_refs"]}

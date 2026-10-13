@@ -58,15 +58,15 @@
   "current_documents": [
     {
       "path": "docs/football-framework-v1.7.md",
-      "bytes": 95819,
-      "sha256": "e4a52f2a954e09a3e5c0991b071948b8e14bae477a35ec4e756fb3b11fd50131",
-      "git_blob_sha": "bdb0c52456bc7f7ccdd5c3e2ba0028dd03384a3f"
+      "bytes": 97866,
+      "sha256": "fe52b55948a7a68ed8e87a77cf2cfd8ce662e37e13347e50b2383d7c3911068b",
+      "git_blob_sha": "bdc85509ac2b245252333cdabe223dec62a695e4"
     },
     {
       "path": "docs/project-instructions-v1.7.md",
-      "bytes": 17253,
-      "sha256": "d3dbc212cc16ddb7a3d979c8182338d9b9eeb7f5e2c1023d6a8796ed57201cf6",
-      "git_blob_sha": "814bf6961990045bae0b7af7299b89faa000eb14"
+      "bytes": 19300,
+      "sha256": "067afc1943ad29f75e0d1ebc16274e36572c8c97d4dd688a666bbb9d4a09ab43",
+      "git_blob_sha": "5b6eb11cd295551bed1cbcf47072045427eba88d"
     },
     {
       "path": "docs/feature-models.md",
@@ -100,9 +100,9 @@
     },
     {
       "path": "docs/advanced-models.md",
-      "bytes": 20752,
-      "sha256": "0dc2c5da99a4aa4e37c0e223068d09aae237f753232c551aa5d16a594a57f23e",
-      "git_blob_sha": "1bbc23eb3845cbacb704d1321b470ff5fb59cc27"
+      "bytes": 29550,
+      "sha256": "b3bfd7b8a6e4facca62d74948fff31dd2e58c791e983d5ba93e89da863573133",
+      "git_blob_sha": "1050732c9d4d6cee7613c8445a43be573eebacc5"
     }
   ],
   "sections": [
@@ -12804,10 +12804,70 @@
       "text": "每轮交付用一张实施状态表分别列：代码已实现、针对性检查、真实数据运行、真实拟合／预测、远端持久保存及回读、未来待结算、数据受限、效果待验、生产是否采用。不得把所有这些合并为“优化全部完成”。测试用例通过仅证明其覆盖的行为；数值可复算、部署成功、资料覆盖与概率／收益改善分别核验。尚未存在的未来比赛、人员质量真值及合法实盘价格不是工程成功可以替代的证据。"
     },
     {
+      "document": "docs/football-framework-v1.7.md",
+      "line": 729,
+      "sha256": "3b6d13f0be750dd322d3e741438f951731ca6e3f5fc13bd7496009dbf3854d34",
+      "text": "### 批次十一接续补修的执行要求"
+    },
+    {
+      "document": "docs/football-framework-v1.7.md",
+      "line": 731,
+      "sha256": "a8668ac92a97e197ddff7a2678e58f589eb3565ed5d8d29b647a2dac33bc6a98",
+      "text": "本轮交付前的继续执行仍属于批次十一。EARLY新增已报告缺阵代理：只消费真实截点前保存的伤停、覆盖声明和过去已知用人；当前明确缺阵者的近期分钟／上场首发份额由程序构造，再由过去样本训练offset系数。历史研究不能回填后来下载的当场伤停；空响应、疑似状态、同刻冲突及缺分钟均保留未知。确认首发版本不叠加这份伤停特征，避免同一替换重复修正。当前尚无可靠预计首发概率时，不能假造预计XI或情景权重。"
+    },
+    {
+      "document": "docs/football-framework-v1.7.md",
+      "line": 733,
+      "sha256": "88316619a59623c84619b1a89ab86e9061f9a3556d3b53594047aa34df476c99",
+      "text": "国家队出场负荷新增限定欧国联范围的已观察球员分钟代理，分别绑定EARLY上场XI与LINEUP当前XI；窗口、实际匹配人数和XI分母一并冻结。完整赛事赛程来源与窗口内逐场详情未齐、无人匹配或身份／分钟未知时不填0。此组不是世界杯预选赛、友谊赛、各洲赛事或全体国家队的总负荷；完整球员能力及全部国际赛程覆盖仍按实际数据另验。"
+    },
+    {
+      "document": "docs/football-framework-v1.7.md",
+      "line": 735,
+      "sha256": "a86e22678698a0902d1365eca6597df6b0d14dcad35e8700dbbf4d52026d8d29",
+      "text": "新候选到决定的程序入口可接原生`s2-decision-1.0`及其真实计算绑定，复用原单关／串腿审计、最近替代、条件、影子等级和模型分歧处置校验，HTML／ZIP展示同一派生视图。缺项标incomplete，冲突标blocked；不自动以最大EV改主票，不把这个只读核验视图冒充已独立生成／发表的F2决定或成交。实际输入字段见`docs/advanced-models.md`。"
+    },
+    {
+      "document": "docs/football-framework-v1.7.md",
+      "line": 737,
+      "sha256": "7186847bb3c2d9a06edbe4349fe13f137748ce61e5aa22479be67353563d718d",
+      "text": "高级采集／捕获对每项实际字节在写前检查容量，正常延期保留全部请求、首次失败、合法M0与候选缺失，不突破硬限。研究、特征、捕获、评分、入组和持久资格的实际本地依赖共同进入实现指纹；实现改变后重新研究，已经激活的试验须另立协议身份，不沿旧样本继续计数。确认设计中的80%仅为单项近似规划，不保证含最小均值改善、全部守门指标与覆盖条件的联合终局功效；实际状态以当轮不可变回执为准。"
+    },
+    {
       "document": "docs/project-instructions-v1.7.md",
       "line": 51,
       "sha256": "4e36da53429dc9783951124d320c2fb5b230a232709fe3443364491f33a03ea4",
       "text": "高级特征确认入口分别报告准备、校验、实际激活与最终效果；新协议需在真实未来起点前固定主要候选／时距／指标、最小改善、允许退化、成组样本量、结束及缺失处理。未经不可变激活记录不得计正式样本，不继承旧研究或F5-C计数；实际算法指纹改变后，未激活者重做开发研究，已激活者另立协议，文档提交本身不更改算法。数据不齐、候选未拟合、待未来赛果、历史评分未改善、报价不可用、保存未验分别列出；代码完成不能替代这些事实。整体交付按框架16.4报告每项已实现／真实运行／已保存／数据受限／未来待验／效果状态，不能用阶段完成冒充全面效果优化完成。"
+    },
+    {
+      "document": "docs/project-instructions-v1.7.md",
+      "line": 64,
+      "sha256": "3b6d13f0be750dd322d3e741438f951731ca6e3f5fc13bd7496009dbf3854d34",
+      "text": "### 批次十一接续补修的执行要求"
+    },
+    {
+      "document": "docs/project-instructions-v1.7.md",
+      "line": 66,
+      "sha256": "a8668ac92a97e197ddff7a2678e58f589eb3565ed5d8d29b647a2dac33bc6a98",
+      "text": "本轮交付前的继续执行仍属于批次十一。EARLY新增已报告缺阵代理：只消费真实截点前保存的伤停、覆盖声明和过去已知用人；当前明确缺阵者的近期分钟／上场首发份额由程序构造，再由过去样本训练offset系数。历史研究不能回填后来下载的当场伤停；空响应、疑似状态、同刻冲突及缺分钟均保留未知。确认首发版本不叠加这份伤停特征，避免同一替换重复修正。当前尚无可靠预计首发概率时，不能假造预计XI或情景权重。"
+    },
+    {
+      "document": "docs/project-instructions-v1.7.md",
+      "line": 68,
+      "sha256": "88316619a59623c84619b1a89ab86e9061f9a3556d3b53594047aa34df476c99",
+      "text": "国家队出场负荷新增限定欧国联范围的已观察球员分钟代理，分别绑定EARLY上场XI与LINEUP当前XI；窗口、实际匹配人数和XI分母一并冻结。完整赛事赛程来源与窗口内逐场详情未齐、无人匹配或身份／分钟未知时不填0。此组不是世界杯预选赛、友谊赛、各洲赛事或全体国家队的总负荷；完整球员能力及全部国际赛程覆盖仍按实际数据另验。"
+    },
+    {
+      "document": "docs/project-instructions-v1.7.md",
+      "line": 70,
+      "sha256": "a86e22678698a0902d1365eca6597df6b0d14dcad35e8700dbbf4d52026d8d29",
+      "text": "新候选到决定的程序入口可接原生`s2-decision-1.0`及其真实计算绑定，复用原单关／串腿审计、最近替代、条件、影子等级和模型分歧处置校验，HTML／ZIP展示同一派生视图。缺项标incomplete，冲突标blocked；不自动以最大EV改主票，不把这个只读核验视图冒充已独立生成／发表的F2决定或成交。实际输入字段见`docs/advanced-models.md`。"
+    },
+    {
+      "document": "docs/project-instructions-v1.7.md",
+      "line": 72,
+      "sha256": "7186847bb3c2d9a06edbe4349fe13f137748ce61e5aa22479be67353563d718d",
+      "text": "高级采集／捕获对每项实际字节在写前检查容量，正常延期保留全部请求、首次失败、合法M0与候选缺失，不突破硬限。研究、特征、捕获、评分、入组和持久资格的实际本地依赖共同进入实现指纹；实现改变后重新研究，已经激活的试验须另立协议身份，不沿旧样本继续计数。确认设计中的80%仅为单项近似规划，不保证含最小均值改善、全部守门指标与覆盖条件的联合终局功效；实际状态以当轮不可变回执为准。"
     },
     {
       "document": "docs/feature-models.md",
@@ -12897,5 +12957,6 @@
     },
     "modified_by_this_revision": false
   },
-  "implementation_status_note": "Implementation, actual runtime, remote persistence/readback, data constraints, future qualification and effects require separate real receipts; no acceptance counts invented here."
+  "implementation_status_note": "Implementation, actual runtime, remote persistence/readback, data constraints, future qualification and effects require separate real receipts; no acceptance counts invented here.",
+  "continuation_note": "批次十一接续补修：真实已报告伤停、欧国联限定负荷、决定计算绑定、写前容量保护和实现指纹；960项父要求映射不变。"
 }

@@ -155,7 +155,10 @@ def collect_run(config, runtime, league="all", *, client=None, clock=None, max_s
     if type(reserve_requests)is not int or reserve_requests<0: raise DataError("invalid_request_reservation")
     if not kinds or any(k not in ENDPOINTS for k in kinds) or len(set(kinds))!=len(kinds): raise DataError("invalid_kinds")
     clock=clock or (lambda:datetime.now(timezone.utc))
-    started=_utc(clock()); runtime=Path(runtime)
+    # Writers below address paths from cwd, while CapacityGuard interprets a
+    # relative admission path from runtime. Resolve once so CLI --runtime
+    # runtime writes and its capacity tickets always refer to the same file.
+    started=_utc(clock()); runtime=Path(runtime).resolve()
     guard=capacity_guard if capacity_guard is not None else CapacityGuard(runtime)
     def now():
         value=_utc(clock())

@@ -15,6 +15,8 @@ from football_model.advanced_scoring import score_run, verified_confirmation_row
 from football_model.advanced_research import implementation_fingerprint
 from football_model.feature_snapshots import _digest, _read, SnapshotError
 from football_model.model import _distribution_from_rates
+from football_model.advanced_capacity import CapacityGuard, CapacityDeferred
+from football_model.state_storage import estimate_runtime
 from tests.test_cli import BASE_CONFIG, FakeClient as TrainingClient
 from tests.test_feature_scoring import FakeClient
 
@@ -57,10 +59,11 @@ class AdvancedSnapshotTests(unittest.TestCase):
         root=Path(runtime);p=root/"test-card.json";card=_read(p)
         prediction=_distribution_from_rates(1.4+card["beta"],1.1)
         return {"predictions":{"M_test":prediction},"failures":{"G0_full":"no_card"},"source_refs":[ref(root,p)],"cards":{"M_test":ref(root,p)}}
-    def capture(self,at=CAPTURE,live=None):
+    def capture(self,at=CAPTURE,live=None,capacity_guard=None):
         with patch("football_model.integration.datetime") as dt,patch("football_model.advanced_snapshots._live",side_effect=live or self.live):
             dt.now.return_value=at
-            return capture_run(self.runtime,"epl",source_commit=SHA,protocol=PROTOCOL,config=BASE_CONFIG,clock=lambda:at)
+            return capture_run(self.runtime,"epl",source_commit=SHA,protocol=PROTOCOL,config=BASE_CONFIG,clock=lambda:at,
+                capacity_guard=capacity_guard)
     def comparison(self,now=CAPTURE,**kw):
         with patch("football_model.advanced_snapshots._live",side_effect=self.live):
             return load_verified_comparison(self.runtime,"epl",2000,"EARLY",PROTOCOL,now=now,**kw)
@@ -136,6 +139,93 @@ class AdvancedSnapshotTests(unittest.TestCase):
     def test_freeze_rejects_unsafe_parent_path(self):
         with self.assertRaisesRegex(SnapshotError,"unsafe"):
             freeze_inputs(self.runtime,_root(self.runtime,PROTOCOL),[{"path":"../secret","sha256":"a"*64}],CAPTURE)
+
+    def test_freeze_admission_precedes_copy_and_checks_both_hard_limits(self):
+        source=write(self.runtime/'large-training.json',{'unchanged_training':'x'*8192})
+        original=source.read_bytes();before=estimate_runtime(self.runtime)
+        for limit in ('logical','physical'):
+            with self.subTest(limit=limit):
+                guard=CapacityGuard(self.runtime,reserve_logical=0,reserve_physical=0,
+                    max_logical=before['logical_bytes']+(64 if limit=='logical' else 100000),
+                    max_physical=before['persisted_bytes']+(64 if limit=='physical' else 100000))
+                with self.assertRaises(CapacityDeferred):
+                    freeze_inputs(self.runtime,_root(self.runtime,PROTOCOL),[ref(self.runtime,source)],CAPTURE,
+                        capacity_guard=guard)
+                self.assertEqual(estimate_runtime(self.runtime),before)
+                self.assertEqual(source.read_bytes(),original)
+                self.assertFalse(list((_root(self.runtime,PROTOCOL)/'sources').glob('*')))
+
+    def test_rejected_future_freeze_leaves_no_unaccounted_source(self):
+        source=write(self.runtime/'future-source.json',{'observed_at':iso(CAPTURE+timedelta(seconds=1))})
+        before=estimate_runtime(self.runtime);guard=CapacityGuard(self.runtime)
+        with self.assertRaises(SnapshotError):
+            freeze_inputs(self.runtime,_root(self.runtime,PROTOCOL),[ref(self.runtime,source)],CAPTURE,
+                capacity_guard=guard)
+        self.assertEqual(estimate_runtime(self.runtime),before)
+        self.assertEqual(guard.logical,before['logical_bytes'])
+        self.assertEqual(guard.physical,before['persisted_bytes'])
+
+    def test_capacity_deferral_keeps_full_queue_first_failure_and_exact_accounting(self):
+        before=estimate_runtime(self.runtime)
+        guard=CapacityGuard(self.runtime,max_logical=before['logical_bytes']+256*1024,
+            reserve_logical=256*1024,reserve_physical=0)
+        code,report=self.capture(capacity_guard=guard)
+        self.assertEqual(code,0);self.assertEqual(report['execution_status'],'deferred')
+        self.assertEqual(report['planned_horizon_count'],2)
+        early=next(item for item in report['queue'] if item['horizon']=='EARLY')
+        self.assertEqual(early['status'],'capacity_deferred')
+        self.assertEqual(early['reason'],'storage_capacity_deferred')
+        members=queue_members(self.runtime,'epl',PROTOCOL,CAPTURE)
+        self.assertEqual(len(members),2)
+        first=next(item for item in members if item['horizon']=='EARLY')['first_failures']
+        self.assertEqual(len(first),1)
+        self.assertEqual(json.loads((self.runtime/first[0]['path']).read_text())['status'],'capacity_deferred')
+        root=_root(self.runtime,PROTOCOL)
+        self.assertFalse(list((root/'sources').glob('*')))
+        measured=estimate_runtime(self.runtime)
+        self.assertEqual(guard.logical,measured['logical_bytes'])
+        self.assertEqual(guard.physical,measured['persisted_bytes'])
+        attempt=(root/'captures/epl/2000/EARLY/first_attempt.json').read_bytes()
+        self.capture(CAPTURE+timedelta(minutes=1))
+        self.assertEqual((root/'captures/epl/2000/EARLY/first_attempt.json').read_bytes(),attempt)
+        self.assertEqual(next(item for item in queue_members(self.runtime,'epl',PROTOCOL,CAPTURE+timedelta(minutes=1))
+            if item['horizon']=='EARLY')['first_failures'],first)
+        self.assertLessEqual(guard.logical,guard.max_logical)
+        self.assertLessEqual(guard.physical,guard.max_physical)
+
+    def test_candidate_capacity_failure_preserves_m0_and_original_unavailability(self):
+        source=write(self.runtime/'large-training.json',{'training':'x'*(2*1024*1024)})
+        original=source.read_bytes();before=estimate_runtime(self.runtime)
+        guard=CapacityGuard(self.runtime,max_logical=before['logical_bytes']+512*1024,
+            reserve_logical=256*1024,reserve_physical=0)
+        def large(*args,**kwargs):
+            result=self.live(*args,**kwargs)
+            result['source_refs'].append(ref(self.runtime,source))
+            return result
+        code,report=self.capture(live=large,capacity_guard=guard)
+        self.assertEqual(code,0);self.assertEqual(report['execution_status'],'deferred')
+        self.assertEqual(report['planned_horizon_count'],2)
+        got=self.comparison();self.assertEqual(got['status'],'available')
+        self.assertEqual(got['baseline']['prediction'],self.row['prediction'])
+        self.assertEqual(got['candidates']['M_test']['status'],'unavailable')
+        self.assertEqual(got['candidates']['M_test']['reason'],'storage_capacity_deferred')
+        self.assertEqual(source.read_bytes(),original)
+        self.assertFalse((_root(self.runtime,PROTOCOL)/'sources'/(hashlib.sha256(original).hexdigest()+'.json')).exists())
+        measured=estimate_runtime(self.runtime)
+        self.assertEqual(guard.logical,measured['logical_bytes'])
+        self.assertEqual(guard.physical,measured['persisted_bytes'])
+        self.assertLessEqual(guard.logical,guard.max_logical)
+        first=(_root(self.runtime,PROTOCOL)/'captures/epl/2000/EARLY/first.json').read_bytes()
+        self.capture(CAPTURE+timedelta(minutes=1))
+        self.assertEqual((_root(self.runtime,PROTOCOL)/'captures/epl/2000/EARLY/first.json').read_bytes(),first)
+        self.assertEqual(self.comparison(CAPTURE+timedelta(minutes=1))['candidates']['M_test']['reason'],'storage_capacity_deferred')
+
+    def test_diagnostic_reserve_never_bypasses_hard_limit(self):
+        before=estimate_runtime(self.runtime)
+        guard=CapacityGuard(self.runtime,max_logical=before['logical_bytes'],reserve_logical=0,reserve_physical=0)
+        with self.assertRaises(CapacityDeferred):
+            self.capture(capacity_guard=guard)
+        self.assertEqual(estimate_runtime(self.runtime),before)
     def test_result_revision_appended_without_changing_first(self):
         self.capture();self.score();root=self.runtime/'advanced_scoring'/_digest(PROTOCOL)/'scores/epl/2000/EARLY'
         original=(root/'first.json').read_bytes();now=self.kickoff+timedelta(days=2)

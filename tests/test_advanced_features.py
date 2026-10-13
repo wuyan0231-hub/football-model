@@ -11,6 +11,7 @@ from football_model.advanced_collection import collect_run, _save
 from football_model.advanced_capacity import CapacityGuard, CapacityDeferred
 from football_model.data import DataError, RequestBudgetError
 from football_model.fundamentals import make_snapshot, save_snapshot
+from football_model.state_storage import estimate_runtime
 
 
 def fixture(mid, day, *, status="FT", team=1):
@@ -204,6 +205,54 @@ class FakeClient:
 
 
 class AdvancedCollectionTests(unittest.TestCase):
+    def test_relative_runtime_collects_cached_and_new_evidence_with_exact_capacity(self):
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as directory:
+            root=Path(directory);(root/"data").mkdir();rows=[fixture(1,2),fixture(2,4)]
+            (root/"data/a.json").write_text(json.dumps({"matches":rows}))
+            raw=api_fixture(rows[0])
+            for kind in ("statistics","lineups","players"):
+                raw[kind]=envelope(kind,rows[0])["response"]
+            cached={"endpoint":"/fixtures","params":{"id":1},"response":[raw],
+                "fetched_at":"2026-02-01T00:00:00Z"}
+            original=root/"cache/api_cache/original.json";original.parent.mkdir(parents=True)
+            original.write_text(json.dumps(cached));original_bytes=original.read_bytes()
+            guard=CapacityGuard(root);client=FakeClient(rows)
+            code,report=collect_run({"competitions":[{"key":"a"}]},
+                str(root.relative_to(Path.cwd())),league="a",client=client,capacity_guard=guard,
+                clock=lambda:datetime(2026,2,2,tzinfo=timezone.utc))
+            self.assertEqual(code,0);self.assertTrue(report["full_collection_completed"])
+            self.assertEqual(client.order,[2])
+            self.assertEqual(original.read_bytes(),original_bytes)
+            for match in report["matches"]:
+                for item in match["kinds"].values():
+                    evidence=json.loads((root/item["source"]["path"]).read_text())
+                    self.assertEqual(validate_evidence(evidence,root)["fixture"]["match_id"],match["match_id"])
+            for pointer in ("advanced_features/collection/latest.json",
+                            "advanced_features/collection/by_selection/a/latest.json"):
+                self.assertEqual(json.loads((root/pointer).read_text()),report)
+            measured=estimate_runtime(root)
+            self.assertEqual(guard.logical,measured["logical_bytes"])
+            self.assertEqual(guard.physical,measured["persisted_bytes"])
+            self.assertFalse((root/root.name).exists())
+
+    def test_relative_runtime_capacity_deferral_preserves_report(self):
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as directory:
+            root=Path(directory);(root/"data").mkdir();rows=[fixture(1,2)]
+            (root/"data/a.json").write_text(json.dumps({"matches":rows}))
+            guard=CapacityGuard(root,max_logical=80_000,max_physical=8*1024*1024,
+                reserve_logical=80_000,reserve_physical=0)
+            code,report=collect_run({"competitions":[{"key":"a"}]},
+                str(root.relative_to(Path.cwd())),league="a",client=FakeClient(rows),capacity_guard=guard,
+                clock=lambda:datetime(2026,2,2,tzinfo=timezone.utc))
+            self.assertEqual(code,0);self.assertEqual(report["execution_status"],"deferred")
+            self.assertEqual(report["capacity_deferred_requests"],3)
+            self.assertEqual(report["engineering_failure_count"],0)
+            self.assertFalse(list((root/"advanced_features/contexts").glob("*.json")))
+            self.assertEqual(json.loads((root/"advanced_features/collection/by_selection/a/latest.json").read_text()),report)
+            measured=estimate_runtime(root)
+            self.assertEqual(guard.logical,measured["logical_bytes"])
+            self.assertEqual(guard.physical,measured["persisted_bytes"])
+
     def test_invalid_complete_context_retries_only_affected_fixture_once(self):
         for outcome in ("valid","invalid","invalid_schema","quota"):
             with self.subTest(outcome=outcome),tempfile.TemporaryDirectory() as directory:

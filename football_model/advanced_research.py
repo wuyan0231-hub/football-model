@@ -34,16 +34,39 @@ FEATURE_GROUPS = {
     "lineup_confirmed": ["confirmed_xi_overlap", "opponent_confirmed_xi_overlap"],
     "lineup_minutes": ["confirmed_xi_prior_minutes_share", "opponent_confirmed_xi_prior_minutes_share"],
     "lineup_rating": ["confirmed_xi_prior_rating_delta", "opponent_confirmed_xi_prior_rating_delta"],
+    "personnel_early": ["reported_absence_recent_minutes_share", "reported_absence_previous_xi_share",
+        "opponent_reported_absence_recent_minutes_share", "opponent_reported_absence_previous_xi_share"],
+    "restricted_observed_national_load": ["restricted_observed_national_minutes_per_matched_xi",
+        "restricted_observed_national_xi_match_count", "restricted_observed_national_xi_match_fraction",
+        "opponent_restricted_observed_national_minutes_per_matched_xi",
+        "opponent_restricted_observed_national_xi_match_count", "opponent_restricted_observed_national_xi_match_fraction"],
 }
 
 
 def implementation_fingerprint():
     root = Path(__file__).resolve().parents[1]
-    paths = ("football_model/advanced_research.py", "football_model/advanced_features.py",
-        "football_model/advanced_storage.py", "football_model/feature_correction.py",
-        "football_model/feature_dataset.py", "football_model/model.py", "football_model/cold_start.py",
-        "football_model/feature_research.py", "football_model/settlement.py", "requirements.txt",
-        "football_model/goalmodel_adapter.py", "scripts/goalmodel_bridge.R",
+    # Freeze the complete local execution dependency closure, not just fitted
+    # coefficient arithmetic. Admission, first-opportunity enrollment, fallback,
+    # result normalization and durable-save verification can all change which
+    # observations enter the same named trial. Their changes require fresh
+    # development, or a new protocol if confirmation has already started.
+    # Keep documentation/tests outside this identity. The dependency-closure
+    # regression requires newly imported local modules to be added here too.
+    modules = (
+        "__init__", "advanced_capacity", "advanced_confirmation", "advanced_durability",
+        "advanced_features", "advanced_personnel", "advanced_player_load", "advanced_research", "advanced_scoring",
+        "advanced_snapshots", "advanced_storage", "cli", "cold_start",
+        "coverage_audit", "data", "decision_audit", "decision_quotes", "decision_record",
+        "evidence", "f5c_access",
+        "feature_correction", "feature_dataset", "feature_decisions",
+        "feature_research", "feature_schedule", "feature_scoring",
+        "feature_snapshots", "fundamentals", "goalmodel_adapter", "integration",
+        "match_locations", "model", "nations", "production_replay", "prospective", "quality",
+        "settlement", "shadow_grading", "shadow_models", "state_storage", "storage_policy",
+        "total_shrink_shadow", "venue_registry",
+    )
+    paths = tuple("football_model/" + name + ".py" for name in modules) + (
+        "requirements.txt", "scripts/goalmodel_bridge.R",
         "third_party/goalmodel/R/goalmodel_fit.R", "third_party/goalmodel/R/goalmodel_predict.R")
     files = {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in paths}
     return {"schema_version": "advanced-implementation-fingerprint-v1", "files": files,
@@ -127,6 +150,13 @@ def validate_protocol(protocol):
             raise ModelDataError("unknown/duplicate feature family")
         if {"lineup_confirmed", "lineup_minutes", "lineup_rating"} & set(groups) and spec["horizon"] != "LINEUP":
             raise ModelDataError("confirmed lineup cannot enter EARLY model")
+        if "personnel_early" in groups and spec["horizon"] != "EARLY":
+            raise ModelDataError("reported absence cannot duplicate confirmed lineup adjustment")
+    if any("restricted_observed_national_load" in spec["groups"] for spec in protocol["candidates"].values()):
+        if (protocol.get("national_load_scope") != "uefa_nations_league_only"
+                or type(protocol.get("national_load_lookback_days")) is not int
+                or not 1 <= protocol["national_load_lookback_days"] <= 30):
+            raise ModelDataError("restricted national workload scope or window invalid")
     return protocol
 
 
@@ -388,7 +418,8 @@ def study(runtime, league, protocol, *, source_commit, state_commit=None, run_go
             ridge=protocol["baseline_ridge"], schedule_events=schedule_events)
         dataset = build_feature_rows(root, league, matches=matches, horizon=horizon,
             horizon_hours=hours, mode="historical", recent_matches=protocol["advanced_feature_recent_matches"],
-            min_history=protocol["advanced_feature_min_history"])
+            min_history=protocol["advanced_feature_min_history"],
+            national_load_lookback_days=protocol.get("national_load_lookback_days", 14))
         features = {r["match_id"]: r for r in dataset["rows"]}
         for m in matches:
             cutoff = _iso(_timestamp(m["kickoff"], "kickoff") - timedelta(hours=hours))

@@ -147,6 +147,13 @@ jobs:
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
         run: python -m football_model.advanced_collection --runtime runtime --league all --max-seconds 600 --reserve-requests 500
+      - name: 限定欧国联个人出场负荷断点续采
+        id: player_load_collection
+        if: env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true'
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python -m football_model.advanced_player_load --runtime runtime --config config.json --national-league unl --max-seconds 300 --reserve-requests 400
       - name: 各联赛独立研究与真实R拟合
         id: research
         if: env.STUDY_RUN == 'true'
@@ -200,6 +207,7 @@ jobs:
           PRE_STUDY_CAPTURE: ${{ needs.pre_study_capture.result }}
           PILOT_COLLECTION: ${{ steps.pilot_collection.outcome }}
           COLLECTION: ${{ steps.collection.outcome }}
+          PLAYER_LOAD_COLLECTION: ${{ steps.player_load_collection.outcome }}
           RESEARCH: ${{ steps.research.outcome }}
           FACTS: ${{ steps.facts.outcome }}
           CONFIRMATION: ${{ steps.confirmation.outcome }}
@@ -211,7 +219,7 @@ jobs:
           python - <<'PY'
           import json,os
           from pathlib import Path
-          keys=['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','ADVANCED_PARENT_STATE','IS_RELEASE','STUDY_RUN','RESTORE','DURABLE','PRE_STUDY_CAPTURE','PILOT_COLLECTION','COLLECTION','RESEARCH','FACTS','CONFIRMATION','CAPTURE','SCORING','CHECK','PERSIST']
+          keys=['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','ADVANCED_PARENT_STATE','IS_RELEASE','STUDY_RUN','RESTORE','DURABLE','PRE_STUDY_CAPTURE','PILOT_COLLECTION','COLLECTION','PLAYER_LOAD_COLLECTION','RESEARCH','FACTS','CONFIRMATION','CAPTURE','SCORING','CHECK','PERSIST']
           receipt={k:os.environ.get(k) for k in keys}
           import hashlib
           reports={}
@@ -233,6 +241,16 @@ jobs:
                   'deferred_leagues':study.get('capacity_deferred_leagues'),
                   'failed_leagues':sum(r.get('status')=='failed' for r in study.get('results',[]))}
           receipt['research_full_completed']=receipt['RESEARCH']=='success' and receipt.get('research_report',{}).get('research_full_completed') is True
+          player_reports=[]
+          for path in Path('runtime/advanced_features/player_load/manifests').glob('*.json'):
+              raw=path.read_bytes(); value=json.loads(raw)
+              player_reports.append((value.get('finished_at',''),path,raw,value))
+          if player_reports:
+              _,path,raw,value=max(player_reports,key=lambda item:(item[0],str(item[1])))
+              receipt['player_load_report']={'path':str(path),'sha256':hashlib.sha256(raw).hexdigest(),
+                  'scope':value.get('scope'),'full_collection_completed':value.get('full_collection_completed'),
+                  'execution_status':value.get('execution_status'),'detail_counts':value.get('detail_counts'),
+                  'pending_requests':len(value.get('pending_requests',[])),'api_requests':value.get('api_requests')}
           Path('advanced-run-receipt.json').write_text(json.dumps(receipt,indent=2))
           summary={k:v for k,v in receipt.items() if k != 'collection_reports'}
           summary['collection_reports']={selection:{
@@ -293,7 +311,7 @@ jobs:
           steps.check.outcome != 'success' ||
           (env.STUDY_RUN == 'true' && steps.research.outcome != 'success') ||
           (env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true' &&
-          (steps.pilot_collection.outcome != 'success' || steps.collection.outcome != 'success')) ||
+          (steps.pilot_collection.outcome != 'success' || steps.collection.outcome != 'success' || steps.player_load_collection.outcome != 'success')) ||
           (env.IS_RELEASE == 'true' && (steps.persist.outcome != 'success' ||
           steps.facts.outcome != 'success' || steps.confirmation.outcome != 'success' ||
           steps.capture.outcome != 'success' || steps.scoring.outcome != 'success')))

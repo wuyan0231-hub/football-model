@@ -6,6 +6,7 @@
   "minimum_effect_rationale": "prespecified practical log-score improvement; approximately 1 percent geometric likelihood gain, not a return-on-investment threshold",
   "alpha": 0.05,
   "power": 0.8,
+  "power_scope": "approximate_individual_metric_normal_planning_only; primary tests zero improvement assuming true gain equals minimum_effect_nll; terminal also requires observed mean gain at least minimum_effect_nll, so joint terminal power is not guaranteed to be 0.8 and at that boundary its primary pass probability is at most approximately 0.5 under the planning normal model",
   "family_control": "bonferroni_all_registered_league_candidate_horizons_and_metrics",
   "unit": "unique_fixture_within_candidate_horizon",
   "min_pilot_matches": 60,

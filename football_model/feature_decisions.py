@@ -69,8 +69,8 @@ def stage_decision_input(runtime, input_path, *, source_root):
         raise ValueError("decision_input_schema_required")
     if not isinstance(document.get("sources"), list):
         raise ValueError("decision_sources_list_required")
-    prepared = []
-    for ref in document["sources"]:
+    prepared, decision_prepared = [], []
+    def prepare(ref):
         content, checked = _read_ref(source_root, ref)
         suffix = Path(checked["path"]).suffix.lower()
         if suffix not in IMAGE_SUFFIXES | {".json", ".txt", ".md", ".csv", ".tsv"}:
@@ -79,7 +79,21 @@ def stage_decision_input(runtime, input_path, *, source_root):
             from .state_storage import _valid_decision_image_header
             if not _valid_decision_image_header(suffix, content):
                 raise ValueError("decision_image_header_invalid")
-        prepared.append((ref, content, "feature_decisions/sources/" + checked["sha256"] + suffix))
+        return content, "feature_decisions/sources/" + checked["sha256"] + suffix
+    for ref in document["sources"]:
+        content, destination = prepare(ref)
+        prepared.append((ref, content, destination))
+    if document.get("decision_record") is not None:
+        record = document["decision_record"]
+        if not isinstance(record, dict):
+            raise ValueError("native_s2_decision_record_required")
+        for group in ("inputs", "derived_artifacts"):
+            rows = record.get(group, [])
+            if not isinstance(rows, list) or any(not isinstance(item, dict) for item in rows):
+                raise ValueError("native_decision_evidence_list_required")
+            for index, item in enumerate(rows):
+                content, destination = prepare(item)
+                decision_prepared.append((group, index, item["path"], content, destination))
     def save(relative, content):
         target = runtime / relative
         if any(p.is_symlink() for p in (target, *target.parents)):
@@ -97,11 +111,21 @@ def stage_decision_input(runtime, input_path, *, source_root):
     staged["sources"] = []
     for ref, content, destination in prepared:
         copied = save(destination, content)
-        staged["sources"].append({**ref, **copied})
+        moved = {**ref, **copied}
+        if "runtime_relative_path" in moved:
+            moved["runtime_relative_path"] = copied["path"]
+        staged["sources"].append(moved)
         mapping.append({"original_path": ref["path"], "copied_ref": copied, "source_id": ref.get("source_id")})
+    decision_paths = []
+    for group, index, old_path, content, destination in decision_prepared:
+        copied = save(destination, content)
+        staged["decision_record"][group][index]["path"] = copied["path"]
+        decision_paths.append({"group": group, "index": index, "original_path": old_path, "copied_ref": copied})
     staged["staging"] = {"operation": "exact_source_bytes_path_relocation_only", "original_input_ref": original,
                          "sources": mapping, "created_at": datetime.now(timezone.utc).isoformat(),
                          "qualification": "archived_now_does_not_establish_historical_blindness"}
+    if decision_paths:
+        staged["staging"]["decision_paths"] = decision_paths
     payload = json.dumps(staged, ensure_ascii=False, sort_keys=True, allow_nan=False).encode()
     return save("feature_decisions/inputs/" + hashlib.sha256(payload).hexdigest() + ".json", payload)["path"]
 
@@ -232,9 +256,23 @@ def _load_quotes(runtime, input_path, match_id, now):
             raise ValueError("decision_staging_sources_mismatch")
         for old, new, mapping in zip(original["sources"], rebuilt["sources"], mapped):
             expected = {**old, **mapping["copied_ref"]}
+            if "runtime_relative_path" in expected:
+                expected["runtime_relative_path"] = mapping["copied_ref"]["path"]
             if mapping["original_path"] != old["path"] or new != expected or old["sha256"] != new["sha256"]:
                 raise ValueError("decision_staging_source_changed")
         rebuilt["sources"] = original["sources"]
+        for mapping in staging.get("decision_paths", []):
+            group, index = mapping["group"], mapping["index"]
+            if group not in {"inputs", "derived_artifacts"} or type(index) is not int or index < 0:
+                raise ValueError("decision_staging_record_path_invalid")
+            if index >= len(rebuilt["decision_record"].get(group, [])) or index >= len(original["decision_record"].get(group, [])):
+                raise ValueError("decision_staging_record_path_invalid")
+            target = rebuilt["decision_record"][group][index]
+            old = original["decision_record"][group][index]
+            if (mapping["original_path"] != old["path"] or target["path"] != mapping["copied_ref"]["path"]
+                    or target["sha256"] != mapping["copied_ref"]["sha256"]):
+                raise ValueError("decision_staging_record_source_changed")
+            target["path"] = old["path"]
         if rebuilt != original:
             raise ValueError("decision_staging_changed_input_content")
         evidence.append(original_ref)
@@ -313,6 +351,131 @@ def _diagnostics(prediction, baseline):
             "expected_goals": rates, "delta_expected_goals": {s: rates[s]-brates[s] for s in ("home", "away")} if rates and brates else None,
             "score_matrix_shape": list(matrix.shape), "score_matrix_sha256": _digest(prediction["score_matrix"]),
             "tail_handling": prediction.get("tail_handling", prediction.get("score_matrix_axes"))}
+
+
+def _decision_record_link(runtime, value, result, row, now):
+    """Replay the existing S2 decision schema, then bind its declared choices.
+
+    This is a read-only derived view, not a newly published S2 bundle. Neither
+    candidate roles nor fit/grade declarations are generated from EV rankings.
+    """
+    from .decision_record import _collect_evidence, _compile, _validation, _views, _issue
+    record = value.get("decision_record")
+    if not isinstance(record, dict):
+        raise ValueError("native_s2_decision_record_required")
+    if str(record.get("match_id")) != str(result["match_id"]):
+        raise ValueError("native_decision_match_mismatch")
+    if _time(record.get("analysis_cutoff")) != now or _time(record.get("kickoff_at")) != _time(row["kickoff"]):
+        raise ValueError("native_decision_time_mismatch")
+    issues = []
+    actual = datetime.now(timezone.utc)
+    entries, _, reasons = _collect_evidence(record, Path(runtime), actual, issues)
+    evidence = []
+    for entry in entries:
+        if entry.get("read_status") == "failed":
+            continue
+        # Re-read exact original bytes rather than trusting a compiled source.
+        _, checked = _read_ref(runtime, {"path": entry["original_path"], "sha256": entry["sha256"]})
+        evidence.append(checked)
+    if any(reason in reasons for reason in ("observed_after_cutoff", "published_after_cutoff")):
+        _issue(issues, "native_decision_external_information_after_cutoff", "inputs")
+    effective = {**record, "membership_view_version": "all_candidates_v1",
+                 "api_ah_mapping_policy_version": "api-ah-quarantine-v1"}
+    core = _compile(effective, entries, issues)
+    quotes = {q["quote_row_id"]: q for q in result["quote_records"]}
+    for quoted in core["adapted_quote_rows"]:
+        other = quotes.get(quoted["quote_row_id"])
+        if other is None or other["original_row"] != quoted["original_row"]:
+            _issue(issues, "native_decision_quote_not_selected_at_cutoff", "quote_rows")
+    links = value.get("decision_calculation_links", [])
+    if not isinstance(links, list) or any(not isinstance(link, dict) for link in links):
+        raise ValueError("decision_calculation_links_list_required")
+    candidates = {c.get("candidate_id"): c for c in core["archive"]["candidates"]}
+    mapping = {}
+    for link in links:
+        cid = link.get("candidate_id")
+        if not isinstance(cid, str) or cid not in candidates or cid in mapping:
+            _issue(issues, "native_decision_candidate_link_not_unique", "decision_calculation_links")
+            continue
+        mapping[cid] = link
+    handling = (core.get("decision_chain") or {}).get("model_disagreements", [])
+    if not isinstance(handling, list) or any(not isinstance(item, dict) for item in handling):
+        _issue(issues, "native_decision_disagreements_list_required", "decision_chain")
+        handling = []
+    bindings, disagreements = [], []
+    for cid, candidate in candidates.items():
+        link = mapping.get(cid)
+        if link is None:
+            _issue(issues, "native_decision_numeric_binding_not_supplied", cid, "not_evaluated")
+            continue
+        matches = [c for c in result["calculations"] if c["model_key"] == link.get("model_key")
+                   and c["quote_offer_id"] == candidate.get("quote_offer_id")
+                   and c["contract_id"] == candidate.get("contract_id") and c["status"] == "calculated"]
+        if len(matches) != 1:
+            _issue(issues, "native_decision_calculation_unavailable", cid)
+            continue
+        calculated = matches[0]
+        binding = {"candidate_id": cid, "model_key": calculated["model_key"],
+            "calculation_id": calculated["calculation_id"], "forecast_id": calculated.get("forecast_id"),
+            "contract_id": calculated["contract_id"], "quote_offer_id": calculated["quote_offer_id"],
+            "formal_fit": deepcopy(candidate["formal_fit"]), "result": deepcopy(calculated["result"])}
+        bindings.append(binding)
+        declared_value = candidate.get("value") or {}
+        if declared_value.get("ev") is not None:
+            computed_ev = calculated["result"]["net_ev"]
+            if computed_ev is None or not math.isclose(declared_value["ev"], computed_ev, abs_tol=1e-12, rel_tol=1e-9):
+                _issue(issues, "native_decision_ev_does_not_match_calculation", cid)
+        if declared_value.get("ev") is not None or declared_value.get("breakeven_odds") is not None:
+            archived_calculation = next((c for c in core["archive"]["calculation_records"]
+                if c.get("calculation_record_id") == declared_value.get("calculation_record_id")), {})
+            archived_model = next((m for m in core["archive"]["model_records"]
+                if m.get("model_record_id") == archived_calculation.get("model_record_id")), {})
+            if archived_model.get("forecast_id") != calculated.get("forecast_id"):
+                _issue(issues, "native_decision_numeric_forecast_mismatch", cid)
+        if declared_value.get("breakeven_odds") is not None:
+            p = calculated["result"]["probabilities"]
+            denominator = p["win"] + .5 * p["half_win"]
+            fee = calculated["result"]["cost_per_unit"]
+            expected = 1 + (p["loss"] + .5*p["half_loss"] + fee)/denominator if fee is not None and denominator > 0 else None
+            if expected is None or not math.isclose(declared_value["breakeven_odds"], expected, abs_tol=1e-12, rel_tol=1e-9):
+                _issue(issues, "native_decision_breakeven_does_not_match_calculation", cid)
+        if calculated["model_key"] != "M0" and declared_value.get("status") in {"confirmed_positive", "confirmed_adverse"}:
+            _issue(issues, "research_candidate_cannot_confirm_value", cid)
+        # Every sign disagreement for this declared ticket is retained, even
+        # when the analyst chose M0 or a different candidate model.
+        for peer in result["calculations"]:
+            if (peer["quote_offer_id"] != candidate.get("quote_offer_id")
+                    or peer.get("net_ev_sign_disagreement") is not True):
+                continue
+            declarations = [d for d in handling if d.get("candidate_id") == cid and d.get("model_key") == peer["model_key"]]
+            declaration = declarations[0] if len(declarations) == 1 else None
+            valid = (declaration is not None and declaration.get("treatment") in
+                     {"retain", "reduce", "switch", "condition", "reject"}
+                     and all(isinstance(declaration.get(k), str) and declaration[k].strip()
+                             for k in ("reason", "information_basis")))
+            disagreements.append({"candidate_id": cid, "model_key": peer["model_key"],
+                "calculation_id": peer["calculation_id"], "net_ev": peer["result"]["net_ev"],
+                "delta_net_ev": peer["delta_net_ev"], "handling": deepcopy(declaration),
+                "status": "declared_semantics_require_review" if valid else "unhandled"})
+            if not valid:
+                _issue(issues, "native_decision_model_disagreement_unhandled", cid + ":" + peer["model_key"], "not_evaluated")
+    primary = next((b for b in bindings if b["candidate_id"] == core.get("primary_candidate_id")), None)
+    selection = value.get("selection")
+    if selection is not None and (primary is None or result["decision"].get("calculation_id") != primary["calculation_id"]):
+        _issue(issues, "native_decision_conflicts_with_selection", "selection")
+    if primary and core.get("forecast_id") is not None and core["forecast_id"] != primary["forecast_id"]:
+        _issue(issues, "native_decision_adopted_forecast_mismatch", "forecast_id")
+    validation = _validation(core, issues)
+    eligibility = {"qualification": "research_only", "reasons": reasons,
+        "historical_blindness_proven": False, "prediction_validated": False,
+        "scope": "read_only_decision_replay_not_publication_or_confirmatory_evidence"}
+    views = _views(core, validation, eligibility)
+    return {"status": validation["status"], "schema_version": "feature-s2-decision-link-v1",
+        "decision_record": core, "validation": validation, "views": views, "eligibility": eligibility,
+        "candidate_calculations": bindings, "model_disagreements": disagreements,
+        "primary_calculation_id": primary["calculation_id"] if primary else None,
+        "automatic_recommendation": False, "formal_grade_verified": False,
+        "independent_gpt_runs_verified": False, "execution_status": "unknown", "evidence": evidence}
 
 
 def comparison(runtime, league, match_id, *, row, now, baseline_refs=(),
@@ -438,6 +601,17 @@ def comparison(runtime, league, match_id, *, row, now, baseline_refs=(),
                             "selected_model_net_ev_negative" if chosen["result"]["net_ev"] < 0 else
                             "model_and_baseline_ev_sign_disagree" if chosen["net_ev_sign_disagreement"] else
                             "quantified_diagnostics_do_not_validate_fit_or_grades"}
+            if value.get("decision_record") is not None:
+                try:
+                    linked_record = _decision_record_link(runtime, value, result, row, now)
+                    result["evidence"].extend(linked_record.pop("evidence"))
+                    # Preserve an old selection declaration as a separately
+                    # checked input; the native record owns the rendered views.
+                    linked_record["selection_declaration"] = deepcopy(result["decision"])
+                    result["decision"] = linked_record
+                except (ValueError, KeyError, TypeError, OSError) as exc:
+                    result["decision"] = {"status": "blocked", "reason": str(exc),
+                        "automatic_recommendation": False, "formal_grade_verified": False}
         except (ValueError, KeyError, TypeError, OSError) as exc:
             result.update(status="quote_input_rejected", quote_issues=[{"reason": str(exc)}],
                           calculations=[], quote_records=[],
@@ -462,9 +636,30 @@ def html_section(result):
         rows.append("<tr>" + "".join("<td>" + cell(v) + "</td>" for v in
             (c["model_key"], c["quote_offer_id"], c["status"], values.get("gross_ev"),
              values.get("net_ev"), c.get("delta_net_ev"), c.get("net_ev_sign_disagreement"))) + "</tr>")
+    decision = result.get("decision", {})
+    decision_section = ""
+    if decision.get("schema_version") == "feature-s2-decision-link-v1":
+        core = decision["decision_record"]
+        def pre(value):
+            return "<pre>" + html.escape(json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False)) + "</pre>"
+        fit_rows = []
+        for candidate in core["archive"]["candidates"]:
+            fits = candidate.get("formal_fit", {})
+            fit_rows.append("<tr>" + "".join("<td>" + cell(v) + "</td>" for v in
+                (candidate["candidate_id"], candidate.get("role"),
+                 "是" if candidate["candidate_id"] == core.get("primary_candidate_id") else "否",
+                 fits.get("single"), fits.get("parlay_leg"), candidate.get("action_status"))) + "</tr>")
+        decision_section = ("<h3>实际决定：原生S2记录与双用途核验</h3><p>结构状态：" + cell(decision["status"])
+            + "；足球依据、分歧理由仍须人工语义复核。四态和影子等级不证明预测有效或已经成交。</p>"
+            + "<table id='feature-decision-fits'><tr><th>候选</th><th>角色</th><th>主选</th><th>单关</th><th>串关腿</th><th>行动</th></tr>"
+            + "".join(fit_rows) + "</table><h3>最近替代、比较理由与分歧处置</h3>"
+            + pre({"decision_chain": core.get("decision_chain"), "detected_disagreements": decision["model_disagreements"]})
+            + "<h3>条件及单关／串腿影子等级</h3>" + pre({"conditions": core["archive"]["conditions"],
+                "shadow_grading": core.get("shadow_grading")}) + "<h3>实际决定计算绑定及校验缺件</h3>"
+            + pre({"candidate_calculations": decision["candidate_calculations"], "validation": decision["validation"]}))
     return ("<h2>新候选：同合约、同参考价计算</h2><p>状态：" + html.escape(result.get("status", "未知"))
         + "。未提供费用则净EV未知；参考价、当前开放与实际成交分别记录。计算不自动产生推荐等级或替换生产模型。</p>"
         + "<table id='feature-models'><tr><th>模型</th><th>状态</th><th>主客λ</th><th>λ差</th><th>胜平负概率差</th><th>缺失或拒绝原因</th></tr>"
         + "".join(models) + "</table>"
         + "<table id='feature-decisions'><tr><th>模型</th><th>报价</th><th>状态</th><th>费用前EV</th><th>净EV</th><th>净EV差</th><th>正负分歧</th></tr>"
-        + "".join(rows) + "</table><p>选择记录：" + html.escape(result.get("decision", {}).get("status", "未提供")) + "</p>")
+        + "".join(rows) + "</table><p>选择记录：" + html.escape(decision.get("status", "未提供")) + "</p>" + decision_section)

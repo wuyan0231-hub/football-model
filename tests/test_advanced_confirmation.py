@@ -404,6 +404,71 @@ class ConfirmationTests(unittest.TestCase):
             with self.assertRaisesRegex(ConfirmationError, "implementation_changed_new_protocol_required"):
                 monitor(self.runtime, self.root, activation, self.queue(activation), now=NOW + timedelta(hours=2))
 
+    def test_semantic_source_byte_changes_block_development_and_active_confirmation(self):
+        from football_model.advanced_research import implementation_fingerprint
+        activation = self.activation()
+        report_path, card_path = self.development_refs()
+        report, card = _read(report_path), _read(card_path)
+        before = implementation_fingerprint()
+        repo = Path(__file__).resolve().parents[1]
+        read_bytes = Path.read_bytes
+        for relative in (
+            "football_model/advanced_confirmation.py", "football_model/advanced_snapshots.py",
+            "football_model/advanced_scoring.py", "football_model/advanced_durability.py",
+            "football_model/fundamentals.py", "football_model/feature_schedule.py",
+            "football_model/data.py", "football_model/state_storage.py",
+            "football_model/integration.py",
+        ):
+            with self.subTest(source=relative):
+                target = repo / relative
+                def changed_bytes(path):
+                    raw = read_bytes(path)
+                    return raw + b"\n# changed semantic source bytes\n" if path == target else raw
+                # Exercise real source hashing and both gates, rather than
+                # replacing implementation_fingerprint with a fake result.
+                with patch.object(Path, "read_bytes", changed_bytes):
+                    self.assertNotEqual(before["sha256"], implementation_fingerprint()["sha256"])
+                    with self.assertRaisesRegex(ConfirmationError, "development_implementation_fingerprint_mismatch"):
+                        verify_development(self.runtime, report, card, protocol=advanced(),
+                            league="serie_a", candidate_id="M2", horizon="EARLY", now=NOW)
+                    with self.assertRaisesRegex(ConfirmationError, "implementation_changed_new_protocol_required"):
+                        monitor(self.runtime, self.root, activation, self.queue(activation), now=NOW + timedelta(hours=2))
+
+    def test_fingerprint_covers_local_execution_dependencies_but_not_documentation(self):
+        import ast
+        from football_model.advanced_research import implementation_fingerprint
+        repo = Path(__file__).resolve().parents[1]
+        before = implementation_fingerprint()
+        pending = ["advanced_research", "advanced_snapshots", "advanced_scoring",
+                   "advanced_confirmation", "advanced_durability"]
+        seen = set()
+        while pending:
+            module = pending.pop()
+            if module in seen:
+                continue
+            seen.add(module)
+            relative = "football_model/" + module + ".py"
+            self.assertIn(relative, before["files"], "unfrozen execution dependency: " + relative)
+            tree = ast.parse((repo / relative).read_bytes())
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and node.level == 1 and node.module:
+                    pending.append(node.module.split(".")[0])
+                elif isinstance(node, ast.ImportFrom) and node.level == 1 and node.module is None:
+                    pending.append("__init__")
+                    pending.extend(name.name for name in node.names
+                                   if (repo / "football_model" / (name.name + ".py")).is_file())
+                elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module and node.module.startswith("football_model."):
+                    pending.append(node.module.split(".")[1])
+                elif isinstance(node, ast.Import):
+                    pending.extend(name.name.split(".")[1] for name in node.names
+                                   if name.name.startswith("football_model."))
+        read_bytes = Path.read_bytes
+        def changed_docs(path):
+            raw = read_bytes(path)
+            return raw + b"\nDocumentation revision\n" if path.suffix == ".md" else raw
+        with patch.object(Path, "read_bytes", changed_docs):
+            self.assertEqual(before, implementation_fingerprint())
+
     def test_card_fingerprint_cannot_diverge_from_research_sources(self):
         report_path, card_path = self.development_refs()
         report, card = _read(report_path), _read(card_path)
