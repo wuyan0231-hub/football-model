@@ -109,7 +109,12 @@ def _candidates(runtime, config, league, match_id, now, horizon):
     for path in sorted((runtime / "cache" / "api_cache").glob("*.json")):
         try:
             envelope = _read(path)
-            if envelope.get("endpoint") != "/fixtures" or "season" not in envelope.get("params", {}):
+            # Team-season/all-competition feature backfills are not complete
+            # league-season candidate inventories. Do not index their absent
+            # league parameter or misreport these valid caches as corruption.
+            params = envelope.get("params", {})
+            if (envelope.get("endpoint") != "/fixtures" or not isinstance(params, dict)
+                    or set(params) != {"league", "season"}):
                 continue
             observed = _utc(envelope["fetched_at"])
             if observed > now or envelope.get("errors"):

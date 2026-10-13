@@ -19,7 +19,7 @@ from .cli import atomic_json, safe_error
 from .data import APIClient, APIError, RequestBudgetError, normalize_fixtures
 from .model import RESULT_AVAILABILITY_DELAY, _timestamp, _iso, _integer
 from .prospective import (_append, _digest, _identity, _now, _objects, _path, _read,
-                          _same_identity, append_result, ledger_writer, summarize)
+                          _same_identity, append_result, ledger_writer, summarize, record_schedule_revision, _event_order)
 
 SCHEMA = "independent_regulation_result_sync_v1"
 
@@ -90,6 +90,9 @@ def _targets(root: Path, forecasts: list[dict], now: datetime, recheck_days: int
     results = defaultdict(list)
     for row in _objects(root, "results"):
         results[(row["competition"], row["match_id"])].append(row)
+    revisions = defaultdict(list)
+    for row in _objects(root, "schedule_revisions"):
+        revisions[(row["competition"], row["match_id"])].append(row)
     due, skipped = [], []
     for key, rows in sorted(groups.items()):
         # Any mature registered identity makes the match eligible for inspection;
@@ -100,6 +103,14 @@ def _targets(root: Path, forecasts: list[dict], now: datetime, recheck_days: int
             continue
         latest = max(results[key], key=lambda r: (_timestamp(r["observed_at"], "observed_at"),
             _timestamp(r["captured_at"], "captured_at"), r["object_id"]), default=None)
+        revision = max(revisions[key], key=lambda r: (_timestamp(r["observed_at"], "observed_at"),
+            _timestamp(r["captured_at"], "captured_at"), r["object_id"]), default=None)
+        if (revision and (latest is None or _event_order(revision) > _event_order(latest))
+                and not any(_same_identity(revision, r) for r in rows)
+                and all(_timestamp(r["kickoff"], "kickoff") + timedelta(days=recheck_days) < now for r in rows + [revision])):
+            skipped.append({"competition": key[0], "match_id": key[1], "status": "unscorable_schedule_revision",
+                            "schedule_revision_id": revision["object_id"], "reason": "outside_revision_recheck_window"})
+            continue
         pending_independent_shadow = any(r.get("_result_sync_ledger") == "shadow_models" for r in rows) and (
             latest is None or latest.get("collection_method") != "independent_fixture_sync")
         if latest and not pending_independent_shadow and all(_timestamp(r["kickoff"], "kickoff") + timedelta(days=recheck_days) < now for r in mature):
@@ -208,11 +219,15 @@ def run(runtime: Path, config: dict, *, client=None, clock=None,
                 identity = {"match_id": mid, "kickoff": item["fixture"]["date"],
                     "home_id": item["teams"]["home"]["id"], "away_id": item["teams"]["away"]["id"]}
                 _identity(identity)
-                if not any(_same_identity(identity, forecast) for forecast in related):
-                    raise ValueError("result_identity_or_kickoff_mismatch")
                 rows = normalize_fixtures(items, observed)
                 entry.update(observed_at=_iso(observed), provider_status=item["fixture"]["status"]["short"])
-                if not rows:
+                if not any(_same_identity(identity, forecast) for forecast in related):
+                    revision_id = record_schedule_revision(root, competition, identity,
+                        observed=observed, captured=received, source_id=source_id, forecasts=related,
+                        collection_method="independent_fixture_sync")
+                    entry.update(status="unscorable_schedule_revision", schedule_revision_id=revision_id,
+                                 reason="source_kickoff_changed_from_all_frozen_forecasts", result_id=None)
+                elif not rows:
                     entry["status"] = "pending_or_not_mature_at_observation"
                 else:
                     result_id = append_result(root, competition, rows[0], observed=observed, captured=received,

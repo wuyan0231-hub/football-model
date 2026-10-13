@@ -401,12 +401,17 @@ def export_report(packet, runtime, html_path, zip_path, *, state_tree=None):
         rates, probabilities = prediction["expected_goals"], prediction["probabilities"]
         rows.append(f"<tr><td>{html.escape(name)}</td><td>{rates['home']:.6f}</td><td>{rates['away']:.6f}</td>"
             f"<td>{probabilities['home_win']:.6%}</td><td>{probabilities['draw']:.6%}</td><td>{probabilities['away_win']:.6%}</td></tr>")
+    feature = packet.get("feature_decision_comparison")
+    feature_section = ""
+    if feature is not None:
+        from .feature_decisions import html_section
+        feature_section = html_section(feature)
     document = ('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>' + html.escape(title)
         + '</title><style>body{max-width:1050px;margin:40px auto;font:16px/1.7 sans-serif}table{border-collapse:collapse}td,th{border:1px solid #bbb;padding:8px}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style><h1>'
         + html.escape(title) + '</h1><p>当前状态：' + html.escape(f5c["status"])
         + '</p>' + summary + '<p>工程影子试运行；五档不是五个独立样本。α=0沿用生产原件，未通过未来确认与推广验收。历史审计不新增赛前资格。</p>'
         + primary_table + '<h2>探索性附表：全部五档</h2><table id="exploratory-grid"><tr><th>力度</th><th>主λ</th><th>客λ</th><th>主胜</th><th>平</th><th>客胜</th></tr>'
-        + ''.join(rows) + '</table><h2>完整读取、父预测、评分及失败记录</h2><pre>'
+        + ''.join(rows) + '</table>' + feature_section + '<h2>完整读取、父预测、评分及失败记录</h2><pre>'
         + html.escape(json.dumps(packet, ensure_ascii=False, indent=2, allow_nan=False)) + '</pre></html>')
     html_path, zip_path = _new_output(html_path, runtime), _new_output(zip_path, runtime)
     if html_path == zip_path:
@@ -429,6 +434,11 @@ def export_report(packet, runtime, html_path, zip_path, *, state_tree=None):
         if hashlib.sha256(raw).hexdigest() != evidence["sha256"] or len(raw) != evidence["bytes"]:
             raise ValueError("f5c_attempt_summary_changed_before_export")
         items["attempts/" + evidence["path"]] = raw
+    for evidence in (feature or {}).get("evidence", []):
+        raw = originals.raw(evidence["path"])
+        if hashlib.sha256(raw).hexdigest() != evidence["sha256"] or len(raw) != evidence["bytes"]:
+            raise ValueError("feature_decision_original_changed_before_export")
+        items["originals/" + evidence["path"]] = raw
     manifest = {"schema_version": 1, "files": [{"path": name, "sha256": hashlib.sha256(raw).hexdigest(),
         "bytes": len(raw)} for name, raw in sorted(items.items())]}
     html_path.parent.mkdir(parents=True, exist_ok=True)

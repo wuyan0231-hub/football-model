@@ -1,0 +1,318 @@
+name: 足球全面特征：补采、训练、未来对照与确认
+
+on:
+  push:
+    branches: [main, codex/s3-r11-complete]
+    paths:
+      - 'football_model/advanced_*.py'
+      - 'football_model/cold_start.py'
+      - 'football_model/feature_decisions.py'
+      - 'football_model/state_storage.py'
+      - 'advanced-models-v1.json'
+      - 'advanced-confirmation-v1.json'
+      - 'tests/test_advanced*.py'
+      - '.github/workflows/advanced-models.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '10,40 * * * *'
+    - cron: '7 2 * * *'
+
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: ${{ github.ref == 'refs/heads/main' && 'football-model-state' || format('football-model-research-{0}', github.ref) }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  pre_study_capture:
+    if: >-
+      github.event.repository.private == true && github.ref == 'refs/heads/main' &&
+      (github.event_name != 'schedule' || vars.ENABLE_SCHEDULE == 'true') &&
+      (github.event_name != 'schedule' || github.event.schedule == '7 2 * * *')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PYTHONUNBUFFERED: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: python -m pip install -r requirements.txt
+      - name: 恢复完整固定状态
+        id: restore
+        run: |
+          python scripts/cloud_state.py load --runtime runtime
+          python - <<'PY'
+          import json,os,subprocess
+          from pathlib import Path
+          directory=Path(subprocess.check_output(['git','rev-parse','--absolute-git-dir'],text=True).strip())
+          marker=json.loads((directory/'football-cloud-state.json').read_text())
+          with Path(os.environ['GITHUB_ENV']).open('a') as f:
+              f.write('ADVANCED_PARENT_STATE='+str(marker.get('state_oid') or '')+'\n')
+          PY
+      - name: 长任务前同步与捕获现有合法候选
+        id: capture
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python -m football_model.advanced_durability --runtime runtime --state-commit "$ADVANCED_PARENT_STATE"
+          python -m football_model.collect_fundamentals --runtime runtime --config config.json --league all --horizon-hours 11 --recent-matches 5
+          python -m football_model.advanced_confirmation --runtime runtime --league all --advanced-protocol advanced-models-v1.json --protocol advanced-confirmation-v1.json --auto-activate
+          python -m football_model.advanced_snapshots capture --runtime runtime --league all --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE"
+      - name: 立即保存赛前原件并结束独立短任务
+        id: persist
+        if: always() && steps.restore.outcome == 'success'
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: |
+          python scripts/cloud_state.py check --runtime runtime
+          python scripts/cloud_state.py save --runtime runtime
+      - name: 捕获与保存错误保持失败
+        if: always() && (steps.restore.outcome != 'success' || steps.capture.outcome != 'success' || steps.persist.outcome != 'success')
+        run: exit 1
+  advanced:
+    needs: pre_study_capture
+    if: >-
+      always() && (needs.pre_study_capture.result == 'success' || needs.pre_study_capture.result == 'skipped') &&
+      github.event.repository.private == true &&
+      (github.event_name != 'schedule' || vars.ENABLE_SCHEDULE == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    env:
+      PYTHONUNBUFFERED: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+      IS_RELEASE: ${{ github.ref == 'refs/heads/main' }}
+      STUDY_RUN: ${{ github.event_name != 'schedule' || github.event.schedule == '7 2 * * *' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: python -m pip install -r requirements.txt
+      - name: 安装并验证真实R与完整代码回归
+        if: env.STUDY_RUN == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends r-base-core r-cran-jsonlite
+          Rscript --vanilla -e 'stopifnot(requireNamespace("jsonlite", quietly=TRUE))'
+          python -m unittest discover -s tests -v
+      - name: 恢复完整固定状态
+        id: restore
+        run: python scripts/cloud_state.py load --runtime runtime
+      - name: 登记真实父状态
+        run: |
+          python - <<'PY'
+          import json,os,subprocess
+          from pathlib import Path
+          directory=Path(subprocess.check_output(['git','rev-parse','--absolute-git-dir'],text=True).strip())
+          marker=json.loads((directory/'football-cloud-state.json').read_text())
+          with Path(os.environ['GITHUB_ENV']).open('a') as f:
+              f.write('ADVANCED_PARENT_STATE='+str(marker.get('state_oid') or '')+'\n')
+          Path('advanced-run-parent.json').write_text(json.dumps({k:v for k,v in marker.items() if k in ['source_sha','state_oid','loaded_at']},indent=2))
+          PY
+      - name: 验证已恢复赛前原件的远端保存证据
+        id: durable
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python -m football_model.advanced_durability --runtime runtime --state-commit "$ADVANCED_PARENT_STATE"
+      - name: 优先补齐意甲机会和球员历史
+        id: pilot_collection
+        if: env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true'
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python -m football_model.advanced_collection --runtime runtime --league serie_a --max-seconds 1200 --reserve-requests 700
+      - name: 跨联赛断点续采与覆盖登记
+        id: collection
+        if: env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true'
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python -m football_model.advanced_collection --runtime runtime --league all --max-seconds 600 --reserve-requests 500
+      - name: 限定欧国联个人出场负荷断点续采
+        id: player_load_collection
+        if: env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true'
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python -m football_model.advanced_player_load --runtime runtime --config config.json --national-league unl --max-seconds 300 --reserve-requests 400
+      - name: 各联赛独立研究与真实R拟合
+        id: research
+        if: env.STUDY_RUN == 'true'
+        continue-on-error: true
+        run: python -m football_model.advanced_research study --runtime runtime --league all --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE" --run-goalmodel
+      - name: 同步全部联赛未来11小时的真实信息
+        id: facts
+        if: env.IS_RELEASE == 'true'
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python -m football_model.collect_fundamentals --runtime runtime --config config.json --league all --horizon-hours 11 --recent-matches 5
+      - name: 检查独立确认准入与到期评估
+        id: confirmation
+        if: env.IS_RELEASE == 'true'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python -m football_model.advanced_confirmation --runtime runtime --league all --advanced-protocol advanced-models-v1.json --protocol advanced-confirmation-v1.json --auto-activate
+      - name: 捕获真实双时点全部候选
+        id: capture
+        if: env.IS_RELEASE == 'true'
+        continue-on-error: true
+        run: python -m football_model.advanced_snapshots capture --runtime runtime --league all --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE"
+      - name: 独立结果与完整请求评分
+        id: scoring
+        if: env.IS_RELEASE == 'true'
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python -m football_model.advanced_scoring score --runtime runtime --league all --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA"
+      - name: 核验存储与完整性
+        id: check
+        if: always() && steps.restore.outcome == 'success'
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python scripts/cloud_state.py check --runtime runtime
+      - name: 保存所有成果与失败记录
+        id: persist
+        if: always() && env.IS_RELEASE == 'true' && steps.check.outcome == 'success'
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python scripts/cloud_state.py save --runtime runtime
+      - name: 保存逐步骤事实回执
+        if: always()
+        env:
+          RESTORE: ${{ steps.restore.outcome }}
+          DURABLE: ${{ steps.durable.outcome }}
+          PRE_STUDY_CAPTURE: ${{ needs.pre_study_capture.result }}
+          PILOT_COLLECTION: ${{ steps.pilot_collection.outcome }}
+          COLLECTION: ${{ steps.collection.outcome }}
+          PLAYER_LOAD_COLLECTION: ${{ steps.player_load_collection.outcome }}
+          RESEARCH: ${{ steps.research.outcome }}
+          FACTS: ${{ steps.facts.outcome }}
+          CONFIRMATION: ${{ steps.confirmation.outcome }}
+          CAPTURE: ${{ steps.capture.outcome }}
+          SCORING: ${{ steps.scoring.outcome }}
+          CHECK: ${{ steps.check.outcome }}
+          PERSIST: ${{ steps.persist.outcome }}
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          keys=['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','ADVANCED_PARENT_STATE','IS_RELEASE','STUDY_RUN','RESTORE','DURABLE','PRE_STUDY_CAPTURE','PILOT_COLLECTION','COLLECTION','PLAYER_LOAD_COLLECTION','RESEARCH','FACTS','CONFIRMATION','CAPTURE','SCORING','CHECK','PERSIST']
+          receipt={k:os.environ.get(k) for k in keys}
+          import hashlib
+          reports={}
+          for selection in ['serie_a','all']:
+              path=Path('runtime/advanced_features/collection/by_selection')/selection/'latest.json'
+              if path.is_file():
+                  raw=path.read_bytes(); report=json.loads(raw)
+                  reports[selection]={'path':str(path),'sha256':hashlib.sha256(raw).hexdigest(),'report':report}
+          all_report=reports.get('all',{}).get('report',{})
+          receipt.update(production_promoted=False,accuracy_improvement_verified=False,collection_reports=reports,
+                         full_collection_completed=receipt['COLLECTION']=='success' and all_report.get('full_collection_completed') is True)
+          study_path=Path('runtime/advanced_models/study_runs/latest.json')
+          if study_path.is_file():
+              study_raw=study_path.read_bytes(); study=json.loads(study_raw)
+              receipt['research_report']={'path':str(study_path),'sha256':hashlib.sha256(study_raw).hexdigest(),
+                  'research_full_completed':study.get('research_full_completed'),
+                  'requested_leagues':len(study.get('configured_leagues',[])),
+                  'completed_leagues':study.get('completed_leagues'),
+                  'deferred_leagues':study.get('capacity_deferred_leagues'),
+                  'failed_leagues':sum(r.get('status')=='failed' for r in study.get('results',[]))}
+          receipt['research_full_completed']=receipt['RESEARCH']=='success' and receipt.get('research_report',{}).get('research_full_completed') is True
+          player_reports=[]
+          for path in Path('runtime/advanced_features/player_load/manifests').glob('*.json'):
+              raw=path.read_bytes(); value=json.loads(raw)
+              player_reports.append((value.get('finished_at',''),path,raw,value))
+          if player_reports:
+              _,path,raw,value=max(player_reports,key=lambda item:(item[0],str(item[1])))
+              receipt['player_load_report']={'path':str(path),'sha256':hashlib.sha256(raw).hexdigest(),
+                  'scope':value.get('scope'),'full_collection_completed':value.get('full_collection_completed'),
+                  'execution_status':value.get('execution_status'),'detail_counts':value.get('detail_counts'),
+                  'pending_requests':len(value.get('pending_requests',[])),'api_requests':value.get('api_requests')}
+          Path('advanced-run-receipt.json').write_text(json.dumps(receipt,indent=2))
+          summary={k:v for k,v in receipt.items() if k != 'collection_reports'}
+          summary['collection_reports']={selection:{
+              'path':entry['path'],'sha256':entry['sha256'],
+              'status':entry['report'].get('status'),
+              'execution_status':entry['report'].get('execution_status'),
+              'full_collection_completed':entry['report'].get('full_collection_completed'),
+              'league_count':len(entry['report'].get('leagues',[])),
+              'fixture_count':len(entry['report'].get('matches',[])),
+              'pending_requests':entry['report'].get('pending_requests'),
+              'deferred_requests':entry['report'].get('deferred_requests'),
+              'engineering_failure_count':entry['report'].get('engineering_failure_count'),
+              'api_requests':entry['report'].get('api_requests')
+          } for selection,entry in reports.items()}
+          summary['full_receipt_artifact']='advanced-run-receipt.json'
+          with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a') as f:
+              f.write('# 全面特征实际执行\n\n```json\n'+json.dumps(summary,indent=2)+'\n```\n\n数据延期、试验阻断及效果待验均按各报告原件；完整实施不等于效果已获确认。\n')
+          PY
+      - name: 顺序打包完整研究原件
+        if: always() && steps.check.outcome == 'success'
+        run: |
+          python - <<'PY'
+          import hashlib,json,tarfile
+          from pathlib import Path
+          archive=Path('advanced-models-evidence.tar.gz')
+          paths=[Path(p) for p in ['runtime/advanced_models','runtime/advanced_features','runtime/advanced_snapshots','runtime/advanced_scoring','advanced-run-parent.json','advanced-run-receipt.json']]
+          count=0
+          with tarfile.open(archive,'w:gz',compresslevel=6) as out:
+              for root in paths:
+                  if not root.exists():
+                      continue
+                  files=sorted(root.rglob('*')) if root.is_dir() else [root]
+                  for path in files:
+                      if path.is_symlink():
+                          raise ValueError('evidence archive refuses symlinks')
+                      if path.is_file():
+                          out.add(path,arcname=path.as_posix(),recursive=False)
+                          count+=1
+          digest=hashlib.file_digest(archive.open('rb'),'sha256').hexdigest()
+          Path('advanced-models-evidence.sha256').write_text(digest+'  '+archive.name+'\n')
+          print(json.dumps({'archive':archive.name,'sha256':digest,'bytes':archive.stat().st_size,'files':count}))
+          PY
+      - uses: actions/upload-artifact@v7
+        if: always() && steps.check.outcome == 'success'
+        with:
+          name: advanced-models-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            advanced-models-evidence.tar.gz
+            advanced-models-evidence.sha256
+            advanced-run-parent.json
+            advanced-run-receipt.json
+          compression-level: 0
+          retention-days: 14
+          if-no-files-found: error
+      - name: 工程失败保持失败
+        if: >-
+          always() && (steps.restore.outcome != 'success' || steps.durable.outcome != 'success' ||
+          steps.check.outcome != 'success' ||
+          (env.STUDY_RUN == 'true' && steps.research.outcome != 'success') ||
+          (env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true' &&
+          (steps.pilot_collection.outcome != 'success' || steps.collection.outcome != 'success' || steps.player_load_collection.outcome != 'success')) ||
+          (env.IS_RELEASE == 'true' && (steps.persist.outcome != 'success' ||
+          steps.facts.outcome != 'success' || steps.confirmation.outcome != 'success' ||
+          steps.capture.outcome != 'success' || steps.scoring.outcome != 'success')))
+        run: exit 1

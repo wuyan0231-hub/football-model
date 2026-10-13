@@ -1,0 +1,209 @@
+{
+  "schema_version": "advanced-model-protocol-v1",
+  "protocol_id": "s3-opportunity-personnel-development-20261013-v1",
+  "leagues": "all",
+  "purpose": "historical_development_and_future_engineering_shadow",
+  "confirmation_active": false,
+  "production_promotion": false,
+  "target": "regulation_time_90_plus_stoppage",
+  "baseline_half_life_days": 180,
+  "baseline_ridge": 3.0,
+  "baseline_min_train": 180,
+  "horizon_hours": 10,
+  "lineup_horizon_hours": 0.75,
+  "block_days": 30,
+  "correction_min_matches": 40,
+  "correction_alpha_grid": [
+    0.1,
+    1.0,
+    10.0
+  ],
+  "inner_validation_fraction": 0.2,
+  "advanced_feature_recent_matches": 5,
+  "advanced_feature_min_history": 3,
+  "primary_metric": "scoreline_negative_log_probability",
+  "fallback": "unchanged_baseline_with_recorded_reason",
+  "early_min_hours": 9,
+  "early_max_hours": 11,
+  "lineup_max_minutes": 90,
+  "max_model_age_days": 14,
+  "independent_units": "fixture_id; horizons and candidates are paired repeated measurements",
+  "goalmodel_feature_candidate": "M_shots_lineup",
+  "goalmodel_candidates": [
+    "G0_full",
+    "G0",
+    "G1"
+  ],
+  "goalmodel_horizons": [
+    "EARLY",
+    "LINEUP"
+  ],
+  "candidates": {
+    "M_schedule": {
+      "horizon": "EARLY",
+      "groups": [
+        "schedule"
+      ]
+    },
+    "M_shots": {
+      "horizon": "EARLY",
+      "groups": [
+        "schedule",
+        "opportunity_shots"
+      ]
+    },
+    "M_xg": {
+      "horizon": "EARLY",
+      "groups": [
+        "schedule",
+        "opportunity_xg"
+      ]
+    },
+    "M_lineup_early": {
+      "horizon": "EARLY",
+      "groups": [
+        "schedule",
+        "lineup_early"
+      ]
+    },
+    "M_shots_xg": {
+      "horizon": "EARLY",
+      "groups": [
+        "schedule",
+        "opportunity_shots",
+        "opportunity_xg"
+      ]
+    },
+    "M_shots_lineup": {
+      "horizon": "EARLY",
+      "groups": [
+        "schedule",
+        "opportunity_shots",
+        "lineup_early"
+      ]
+    },
+    "M_full_early": {
+      "horizon": "EARLY",
+      "groups": [
+        "schedule",
+        "opportunity_shots",
+        "opportunity_xg",
+        "lineup_early"
+      ]
+    },
+    "M_lineup_confirmed": {
+      "horizon": "LINEUP",
+      "groups": [
+        "schedule",
+        "lineup_confirmed"
+      ]
+    },
+    "M_lineup_minutes": {
+      "horizon": "LINEUP",
+      "groups": [
+        "schedule",
+        "lineup_confirmed",
+        "lineup_minutes"
+      ]
+    },
+    "M_lineup_rating": {
+      "horizon": "LINEUP",
+      "groups": [
+        "schedule",
+        "lineup_confirmed",
+        "lineup_rating"
+      ]
+    },
+    "M_full_lineup": {
+      "horizon": "LINEUP",
+      "groups": [
+        "schedule",
+        "opportunity_shots",
+        "opportunity_xg",
+        "lineup_confirmed",
+        "lineup_minutes",
+        "lineup_rating"
+      ]
+    },
+    "M_reported_absence_early": {
+      "horizon": "EARLY",
+      "groups": [
+        "schedule",
+        "personnel_early"
+      ]
+    },
+    "M_national_load_early": {
+      "horizon": "EARLY",
+      "groups": [
+        "schedule",
+        "lineup_early",
+        "restricted_observed_national_load"
+      ]
+    },
+    "M_national_load_lineup": {
+      "horizon": "LINEUP",
+      "groups": [
+        "schedule",
+        "lineup_confirmed",
+        "restricted_observed_national_load"
+      ]
+    }
+  },
+  "family_increment_comparisons": [
+    [
+      "M_shots",
+      "M_schedule"
+    ],
+    [
+      "M_xg",
+      "M_schedule"
+    ],
+    [
+      "M_lineup_early",
+      "M_schedule"
+    ],
+    [
+      "M_shots_xg",
+      "M_shots"
+    ],
+    [
+      "M_shots_lineup",
+      "M_shots"
+    ],
+    [
+      "M_full_early",
+      "M_shots_lineup"
+    ],
+    [
+      "M_lineup_rating",
+      "M_lineup_confirmed"
+    ],
+    [
+      "M_lineup_minutes",
+      "M_lineup_confirmed"
+    ],
+    [
+      "M_full_lineup",
+      "M_lineup_rating"
+    ],
+    [
+      "M_reported_absence_early",
+      "M_schedule"
+    ],
+    [
+      "M_national_load_early",
+      "M_lineup_early"
+    ],
+    [
+      "M_national_load_lineup",
+      "M_lineup_confirmed"
+    ]
+  ],
+  "panna": "deferred",
+  "cold_start_candidate": "COLD_START",
+  "historical_availability": "result_delay_assumption_and_later_downloads_not_prospective",
+  "unknown_team_policy": "baseline_failure_preserved; no silent league-average production substitution",
+  "current_injury_availability": "actual archived pre-cutoff snapshots only, including historical training; no post-hoc backfill",
+  "national_load_scope": "uefa_nations_league_only",
+  "national_load_lookback_days": 14
+}
