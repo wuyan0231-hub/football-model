@@ -14,7 +14,8 @@ on:
       - '.github/workflows/feature-models.yml'
   workflow_dispatch:
   schedule:
-    - cron: '*/30 * * * *'
+    # Future v1/v2 capture and scoring share the advanced short-cycle state
+    # transaction. Keep this workflow's daily research and release behavior.
     - cron: '47 1 * * *'
 
 permissions:

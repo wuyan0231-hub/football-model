@@ -1,12 +1,12 @@
-# 高级特征、未来对照与同价决定：批次十一实施入口
+# 高级特征、未来对照与同价决定：批次十二实施入口
 
-配套完整框架为v1.7修订批次十一。本页说明实现入口、数据准入和验收口径，不是部署或效果回执。每轮实际源码／状态提交、命令、测试、真实数据运行、远端保存及回读另以运行原件核验。用户2026年10月13日已要求自主继续完成规划中的可执行工作，无逐阶段审批要求；不能以此替代未发生的未来样本或未取得的数据。
+配套完整框架为v1.7修订批次十二。本页说明实现入口、数据准入和验收口径，不是部署或效果回执。每轮实际源码／状态提交、命令、测试、真实数据运行、远端保存及回读另以运行原件核验。用户2026年10月13日已要求自主继续完成规划中的可执行工作，无逐阶段审批要求；不能以此替代未发生的未来样本或未取得的数据。
 
 生产基线仍是原攻防泊松模型，180天表示历史权重的半衰期：样本早180天权重约减半，更早合格比赛仍可参与；不是只训练最近180天。F5另外的过去180天选参窗口保留其自身含义。旧`feature-models.json`、`feature-models-v2.json`与F5-C保持原身份、原首输出、失败和队列；本批不把旧样本升级为高级模型或正式确认样本。panna按用户先前决定暂缓。
 
 ## 范围与分支
 
-新工程协议为`advanced-models-v1.json`，当前用途为历史开发与未来工程影子。各非仅审计配置赛事独立拟合，国内与国家队不混参数；`--league all`表示请求该配置范围，不意味着每个联赛已取得高级数据、完成拟合或具备未来有效预测。欧冠原仅审计身份不改变。
+批次十一新增的独立工程协议为`advanced-models-v1.json`，当前用途为历史开发与未来工程影子。各非仅审计配置赛事独立拟合，国内与国家队不混参数；`--league all`表示请求该配置范围，不意味着每个联赛已取得高级数据、完成拟合或具备未来有效预测。欧冠原仅审计身份不改变。
 
 | 分支 | 使用的特征组 | 截点 |
 |---|---|---|
@@ -44,17 +44,20 @@ G0_full与M0完整训练池的精确对齐仅适用于EARLY，该比较才可在
 - 历史射门／xG、过去球员分钟及LINEUP研究使用后来下载资料时明确历史可用性假设；历史确认XI不能追认为当时提前10小时已知。**本场伤停没有此回填例外**：历史训练也必须具有当时截点前真实取得的伤停及覆盖上下文，否则该目标没有合格伤停特征。真正未来的所有使用来源均须有截点前真实取得与保存链。
 - 赛程特征继续按俱乐部跨赛事来源准入，供应商全量分母尚未独立核定的限制保留。新增个人负荷只覆盖已核欧国联赛程、球员ID及出场分钟，并显示XI匹配人数和比例；其他国家队赛事仍不在范围内。未匹配者不填0，不称全队完整负荷或全球国家队覆盖；`all`只是请求配置赛事范围。
 
+跨赛事赛程覆盖必须逐联赛读取实际`feature_models/schedules/<league>/latest.json`及原响应确认。接续检查时既有自动赛程补采仅针对意甲；其他联赛没有合法全俱乐部来源时，研究保留实际`same_competition`范围或对应回退，不写成跨赛事已齐。后续续采入口支持其他配置只证明可请求，是否返回完整、是否保存及实际入模仍按每联赛报告核验，不能由`all`或代码存在推断完成。
+
 采集优先复用已获准的`/fixtures?id=比赛ID`详情中实际存在的statistics／lineups／players，紧凑投影包装只指向原始响应及其hash，明确字段路径，不伪装额外网络响应；已有合格原件复用不耗新请求。缺球员字段保持不支持／延期，不调用另一个`/fixtures/players`接口；其他缺字段只按客户端原白名单处理。FT球员分钟允许供应商实际记录的伤停补时，未识别球员隔离保留原行、不编造ID，球队／比赛身份冲突继续拒绝。这样解析通过也不等于分钟完整、所有球员有评分或历史资料具备当时可得资格。
 
 采集器按真实5000次日额、当日已用量、分钟限速、缓存、重试、软截止和生产请求预留运行，逐比赛逐资料类保存已有、缺失、受限、延期和错误。纯额度、软截止或容量延期返回`execution_status=deferred`、`status=partial`及`full_collection_completed=false`，CLI可正常退出；容量原因明确为`storage_capacity_deferred`。真实数据／身份／schema／保存等错误保持非零退出。意甲与all分别保存`advanced_features/collection/by_selection/<selection>/latest.json`，不能拿阶段成功覆盖另一阶段结果。它可续跑，不为赶一次运行写成功；全部历史逐场三类资料可能需要多日配额。供应商覆盖标志不等于逐场实际字段齐全。
 
-采集缓存及研究新文件在写入前核实际字节增量与压缩传输成本，保留128 MiB逻辑／32 MiB物理余量供报告及后处理；原4 GiB逻辑、1 GiB物理及60 MiB单文件硬上限不提高。研究原件使用`advanced-compact-json-v1`无损内容寻址、共享子树去重和至多4 MiB的分块，按完整引用及hash重建原JSON值；不能只读外层包装或少量成功行，也不删除失败／来源来减体积。空间耗尽保持延期及完整待办，不把分块工程当成长期容量已验收。
+采集缓存及研究新文件在写入前核实际字节增量与压缩传输成本，保留128 MiB逻辑／32 MiB物理余量供报告及后处理。批次十二当前硬限为8 GiB逻辑／1792 MiB物理，影子新增写入阈值1536 MiB；单文件60 MiB不变，旧4 GiB／1 GiB和2 GiB／500 MiB清单兼容验读。研究原件仍用`advanced-compact-json-v1`无损内容寻址、共享子树去重和至多4 MiB分块，须按全部引用及hash重建原JSON值；不删除失败／来源减体积。`cloud_state`在推送前检查新增Git pack保守实际打包不超过1900 MiB（小于1.9 GiB），以及磁盘／内存余量，压缩估计不能代替实际pack。空间或推送门未过保留失败／延期和完整待办；本次仅有限缓解，长期增长及整个确认周期容量尚须真实观察和另验。
 
 ## 实际入口
 
 以下`ACTUAL_SOURCE_SHA`、`ACTUAL_STATE_SHA`和比赛ID须换成本轮真实值，命令示意不构成运行回执；使用当次固定源码的`--help`核参数。
 
 ```sh
+python -m football_model.feature_schedule --runtime runtime --config config.json --league all --source-commit ACTUAL_SOURCE_SHA --max-run-seconds 600 --reserve-requests 1500 --current-cache-seconds 21600
 python -m football_model.advanced_collection --runtime runtime --config config.json --league all
 python -m football_model.advanced_player_load --runtime runtime --config config.json --national-league unl --max-seconds 300 --reserve-requests 400
 python -m football_model.advanced_research study --runtime runtime --config config.json --league all --protocol advanced-models-v1.json --source-commit ACTUAL_SOURCE_SHA --state-commit ACTUAL_STATE_SHA --run-goalmodel
@@ -105,7 +108,7 @@ EARLY窗口为开球前9—11小时；LINEUP为开球前至多90分钟并实际�
 
 独立工作流为`.github/workflows/advanced-models.yml`。当前配置每小时第10／40分钟尝试未来处理，每天UTC 02:07（北京时间10:07）尝试补采及完整研究；原生产北京时间09:17日程保留。定时任务受`ENABLE_SCHEDULE`及私有仓库条件控制；main使用与生产／旧影子相同的`football-model-state`互斥锁，不并发改状态。工程分支只读恢复状态作研究验证，使用分支独立并发组，不占生产状态锁，也不保存生产状态；该分支与主分支均启用保留排队，不由新运行取消已有运行；各自仍按所属并发组顺序执行。调度延迟、长研究、API配额及排队都可能错过捕获窗口，每30分钟只是尝试频率，不保证30分钟内完成或有有效首发。
 
-完整研究的main运行先执行独立短任务`pre_study_capture`：恢复固定状态、验证已有持久证明、同步当前资料、检查确认、捕获已有合法候选并立即保存后结束该job。后续`advanced`任务重新恢复这个真实状态，绑定保存提交与该短任务的服务端完成时间，再进行耗时补采和研究；研究后再同步／捕获。持久证明必须核固定run attempt、实际已完成job日志中的精确状态SHA、服务端`completed_at`和完整原件闭包，不能只信本地提交时间或metadata自报。短任务失败按真实状态阻断后续，已保存部分成果与失败不抹去。
+完整研究的main运行先执行独立短任务`pre_study_capture`：恢复固定状态、验证已有持久证明、同步当前资料、检查确认、捕获已有合法候选并立即保存后结束该job。后续`advanced`任务重新恢复这个真实状态，绑定保存提交与该短任务的服务端完成时间，再进行耗时补采和研究；研究后再同步／捕获。持久证明必须核固定run attempt、实际已完成job日志中的精确状态SHA、服务端`completed_at`和完整原件闭包，不能只信本地提交时间或metadata自报。批次十二将durable、facts、confirmation、capture拆成四个独立continue-on-error步骤，各自保留真实失败；例如facts因日额度失败时，仍尝试用已有合格原件捕获。后续研究只在前置job不适用，或其restore与persist均成功时继续；恢复或保存失败仍阻断研究。前置四步的失败进入PRE_DURABLE／PRE_FACTS／PRE_CONFIRMATION／PRE_CAPTURE回执及最终工作流失败判定，不能因后续研究成功将其抹去。已保存部分成果、失败与资格限制继续保留。
 
 这种拆分避免已经捕获的资料等待整段研究结束才首次持久保存，但工作流仍占用共享状态锁；长研究期间后续LINEUP窗口仍可能错过。不能由短任务存在宣称不再丢窗口，实际错过照常进入机会分母。
 
@@ -174,3 +177,19 @@ HTML可见全部候选各自的单关／串腿四态、角色、主选、最近�
 ### 便捷附件的历史来源闭包
 
 本轮离线核验发现高级模型的直接训练输入已冻结，但部分深层来源引用指向 `runtime/feature_models/schedules` 中按内容指纹保存的赛程原响应，原高级附件没有打包该目录。完整高级附件因此加入该目录，其中 `responses/<sha>.json` 是不可变原件，`latest.json` 是该次头报告；保留现有源路径与原字节；不改模型参数、训练协议或资料时间。可变 `runtime/data` 的历史身份仍按已经冻结的内容寻址原件及对应指纹恢复，不能用后来同路径文件代替。附件闭包与远端完整状态回读仍分别核验，不由新增打包路径直接推定成功。
+
+## 批次十二：接续维护的实际边界
+
+采集失败增加`failure_category`、`failure_code`和`identity_findings`。缺失首发球员ID、重复球员／球队、首发替补重叠、球队／赛事冲突、非法schema、请求或保存失败各自保留固定代码；诊断仅投影安全整数ID、字段及原行位置，不抄任意异常文本。完整失败来源继续隔离，不能作为合格特征；拒绝逻辑、非零真实错误和全部请求分母不变。更细分类不是修好了供应商原始资料，也不能把failed改称deferred或成功。
+
+半小时短轮在高级工作流内依次执行高级及旧v1／v2捕获和评分，共用同一固定父状态、当轮全联赛事实及最后一次持久保存。旧`feature-models.yml`仅移出半小时schedule，原每日09:47研究及发布入口保留；高级每日10:07研究、pre_study_capture和原生产09:17日程保留。v1／v2／高级各自协议、模型卡、队列、首输出、失败及评分身份不变，不合并独立样本或转移确认资格。逐步骤回执分别记录，容量／排队／错过照常进入分母；一次绿色运行不证明所有子步骤成功。
+
+当前容量扩充、旧清单兼容、写前保留、实际push pack与磁盘门禁须从固定源码及真实运行验收。源码影响既有implementation_fingerprint时，未激活模型按新实现重新研究；已激活试验仍执行另立身份要求，不移除依赖来维持旧卡资格。本文不改`advanced-models-v1.json`、确认协议、候选数学、旧v1／v2或F5-C。测试、真实分类回放、共同短轮、重研究、push和远端原字节回读分别由新验收记录给出，不能把本页提交当作成功回执。
+
+### 全国内联赛跨赛事赛程续采
+
+批次十二高级每日研究在训练前执行上述`feature_schedule --league all`。此处all限定配置中的18个`domestic_baseline`，不把欧国联或仅审计欧冠当俱乐部赛事采集；排除项写入`excluded_non_domestic_leagues`。全批共用一个APIClient、一次真实账户状态、日余额、分钟限速和600秒网络软截止，预留1500次请求供后续流程。未完成联赛和队伍赛季优先，持久轮转只在实际网络请求发生时推进，避免截止后纯缓存扫描将轮转位置移回已完成前缀。
+
+当前赛季缓存按真实带时区`fetched_at`核6小时新鲜度，复用不重写原取得时间；旧意甲每日任务仍按原方式强刷，批入口可复用其新原件。正常额度／时间／容量延期保留待续，不等于完整采集；身份、比分、schema或保存错误仍失败。跨赛事资料只有在该联赛实际报告和原响应合格后才进入研究，未齐时保留实际范围及同赛事回退，不以命令或all标记称18联赛已补齐。
+
+批次报告保存于`runtime/feature_models/schedules/collection/runs/<实际SHA256>.json`及`collection/latest.json`；每联赛原目录不变，`results[].report_ref`绑定其真实报告。核`configured_domestic_leagues`、`processing_order`、`last_attempted_league`、逐联赛`request_status_counts`／`api_requests`／`cache_reused_responses`及`provider_queries_complete`。顶层分列`completed_leagues`／`deferred_leagues`／`failed_leagues`、`full_collection_completed`、`execution_status`与`api_budget`；高级工作流另以`club_schedule_report`及`full_club_schedule_collection_completed`记录本轮实际批报告和是否完成；`complete_provider_scope`仅表示供应商请求范围完成，独立赛程普查和历史时点可用性仍未由此验证。更新`feature_schedule`会进入高级实现指纹，本轮必须真实重研究，不能沿旧卡继续声称指纹匹配。

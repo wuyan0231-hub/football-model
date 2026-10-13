@@ -301,7 +301,12 @@ def validate_storage_tree(tree: Path, *, max_file_bytes=MAX_FILE_BYTES,
             if not path.is_file():
                 raise StorageError("状态包含非常规文件，已停止。")
             _relative(path.relative_to(tree).as_posix())
-            physical += path.stat().st_size
+            size = path.stat().st_size
+            # Includes the manifest/metadata, not just restored runtime blobs.
+            # An unreadably large manifest must not be published as valid.
+            if size > max_file_bytes:
+                raise StorageError("状态单文件超过安全大小，已停止。")
+            physical += size
             if physical > max_physical_bytes:
                 raise StorageError("状态超过安全物理保存大小，已停止。")
             if top.name not in ("runtime", ARCHIVE_DIR):
