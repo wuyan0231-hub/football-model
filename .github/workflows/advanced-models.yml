@@ -251,17 +251,40 @@ jobs:
           with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a') as f:
               f.write('# 全面特征实际执行\n\n```json\n'+json.dumps(summary,indent=2)+'\n```\n\n数据延期、试验阻断及效果待验均按各报告原件；完整实施不等于效果已获确认。\n')
           PY
+      - name: 顺序打包完整研究原件
+        if: always() && steps.check.outcome == 'success'
+        run: |
+          python - <<'PY'
+          import hashlib,json,tarfile
+          from pathlib import Path
+          archive=Path('advanced-models-evidence.tar.gz')
+          paths=[Path(p) for p in ['runtime/advanced_models','runtime/advanced_features','runtime/advanced_snapshots','runtime/advanced_scoring','advanced-run-parent.json','advanced-run-receipt.json']]
+          count=0
+          with tarfile.open(archive,'w:gz',compresslevel=6) as out:
+              for root in paths:
+                  if not root.exists():
+                      continue
+                  files=sorted(root.rglob('*')) if root.is_dir() else [root]
+                  for path in files:
+                      if path.is_symlink():
+                          raise ValueError('evidence archive refuses symlinks')
+                      if path.is_file():
+                          out.add(path,arcname=path.as_posix(),recursive=False)
+                          count+=1
+          digest=hashlib.file_digest(archive.open('rb'),'sha256').hexdigest()
+          Path('advanced-models-evidence.sha256').write_text(digest+'  '+archive.name+'\n')
+          print(json.dumps({'archive':archive.name,'sha256':digest,'bytes':archive.stat().st_size,'files':count}))
+          PY
       - uses: actions/upload-artifact@v7
         if: always() && steps.check.outcome == 'success'
         with:
           name: advanced-models-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            runtime/advanced_models/
-            runtime/advanced_features/
-            runtime/advanced_snapshots/
-            runtime/advanced_scoring/
+            advanced-models-evidence.tar.gz
+            advanced-models-evidence.sha256
             advanced-run-parent.json
             advanced-run-receipt.json
+          compression-level: 0
           retention-days: 14
           if-no-files-found: error
       - name: 工程失败保持失败

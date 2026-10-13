@@ -55,7 +55,9 @@ def _read(path):
 
 
 def _write(path, value, guard=None, *, final=False):
-    path = Path(path)
+    # The writer and the admission guard must address the same file. The guard
+    # interprets relative paths from its runtime, whereas this writer uses cwd.
+    path = Path(path).resolve()
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(".tmp")
     raw = (json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n").encode()
@@ -718,33 +720,35 @@ def main(argv=None):
     parser.add_argument("--state-commit")
     parser.add_argument("--run-goalmodel", action="store_true")
     args = parser.parse_args(argv)
+    runtime = Path(args.runtime).resolve()
     protocol = validate_protocol(_read(args.protocol))
     leagues = [c["key"] for c in _read(args.config)["competitions"] if c.get("mode") != "audit_only"] if args.league == "all" else [args.league]
     results = []
     from .advanced_capacity import CapacityGuard, CapacityDeferred
-    guard = CapacityGuard(args.runtime)
+    guard = CapacityGuard(runtime)
     def record_attempt(value):
-        directory = Path(args.runtime) / "advanced_models" / value["league"] / digest(protocol) / "reports"
-        path = save_artifact(Path(args.runtime), directory / "failures", value, guard=guard, final=True)
-        _write(directory / "latest_attempt.json", {**value, "failure_ref": _ref(Path(args.runtime), path)}, guard, final=True)
+        directory = runtime / "advanced_models" / value["league"] / digest(protocol) / "reports"
+        path = save_artifact(runtime, directory / "failures", value, guard=guard, final=True)
+        _write(directory / "latest_attempt.json", {**value, "failure_ref": _ref(runtime, path)}, guard, final=True)
         results.append(value)
-        print(json.dumps(value, ensure_ascii=False), flush=True)
+        print(json.dumps({**value, "capacity_after_report": guard.summary()}, ensure_ascii=False), flush=True)
 
     for index, league in enumerate(leagues):
-        print(json.dumps({"league": league, "status": "research_started"}, ensure_ascii=False), flush=True)
+        print(json.dumps({"league": league, "status": "research_started", "capacity": guard.summary()}, ensure_ascii=False), flush=True)
         try:
-            report = study(args.runtime, league, protocol, source_commit=args.source_commit,
+            report = study(runtime, league, protocol, source_commit=args.source_commit,
                 state_commit=args.state_commit, run_goalmodel=args.run_goalmodel, capacity_guard=guard)
             results.append({"league": league, "status": "completed_development",
                 "requested_matches": report["requested_matches"], "latest_fits": report["latest_fits"],
                 "request_coverage": report["request_coverage"], "accuracy_improvement_verified": False})
             print(json.dumps({"league": league, "status": "research_completed", "requested_matches": report["requested_matches"],
-                "fitted_candidates": [k for k,v in report["latest_fits"].items() if v["status"] == "fitted"]}, ensure_ascii=False), flush=True)
+                "fitted_candidates": [k for k,v in report["latest_fits"].items() if v["status"] == "fitted"],
+                "capacity": guard.summary()}, ensure_ascii=False), flush=True)
         except CapacityDeferred as exc:
             # Preserve the remaining configured denominator without launching
             # additional expensive fits once the shared guard is exhausted.
             for pending in leagues[index:]:
-                history_path = Path(args.runtime) / "data" / (pending + ".json")
+                history_path = runtime / "data" / (pending + ".json")
                 try:
                     count = len(_read(history_path)["matches"])
                 except (OSError, ValueError, KeyError, TypeError):
@@ -766,9 +770,9 @@ def main(argv=None):
         "capacity_deferred_leagues": sum(r["status"] == "capacity_deferred" for r in results),
         "source_commit": args.source_commit, "protocol_hash": digest(protocol),
         "generated_at": _iso(datetime.now(timezone.utc)), "capacity": guard.summary()}
-    run_root = Path(args.runtime) / "advanced_models" / "study_runs"
-    path = save_artifact(Path(args.runtime), run_root / "history", summary, guard=guard, final=True)
-    _write(run_root / "latest.json", {**summary, "full_report_ref": _ref(Path(args.runtime), path)}, guard, final=True)
+    run_root = runtime / "advanced_models" / "study_runs"
+    path = save_artifact(runtime, run_root / "history", summary, guard=guard, final=True)
+    _write(run_root / "latest.json", {**summary, "full_report_ref": _ref(runtime, path)}, guard, final=True)
     print(json.dumps(summary, ensure_ascii=False), flush=True)
     return int(any(r["status"] == "failed" for r in results))
 

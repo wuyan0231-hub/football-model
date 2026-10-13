@@ -7,6 +7,7 @@ import unittest
 
 from football_model.advanced_storage import save_artifact, load_report, MAX_PIECE_BYTES
 from football_model.advanced_capacity import CapacityGuard, CapacityDeferred
+from football_model.state_storage import estimate_runtime, pack_runtime, restore_runtime
 
 
 def ref(root, path):
@@ -14,6 +15,29 @@ def ref(root, path):
 
 
 class AdvancedStorageTests(unittest.TestCase):
+    def test_small_shared_sections_do_not_create_a_file_for_every_summary(self):
+        # Repeated 600-byte sections mirror the real report's repeated small
+        # diagnostics. They remain fully present in the reconstructed document.
+        rows = [{"match_id": i, "diagnostic": "x"*560} for i in range(200)]
+        original = {"training": rows, "replay": rows, "failed": [None, False, "missing"]}
+        with tempfile.TemporaryDirectory() as temporary:
+            base=Path(temporary)
+            old, new = base/"old", base/"new"
+            old.mkdir(); new.mkdir()
+            before=save_artifact(old,old/"advanced_models/epl/reports/history",original,intern_minimum=512)
+            after=save_artifact(new,new/"advanced_models/epl/reports/history",original)
+            old_stats,new_stats=estimate_runtime(old),estimate_runtime(new)
+            self.assertEqual(load_report(old,ref(old,before)),original)
+            self.assertEqual(load_report(new,ref(new,after)),original)
+            self.assertLess(new_stats["file_count"],old_stats["file_count"]//10)
+            self.assertLess(new_stats["persisted_bytes"],old_stats["persisted_bytes"]*.7)
+            self.assertLess(new_stats["logical_bytes"],old_stats["logical_bytes"]*1.5)
+            transport=base/"transport";transport.mkdir()
+            pack_runtime(new,transport)
+            restored=base/"restored";restore_runtime(transport,restored)
+            self.assertEqual(load_report(restored,ref(new,after)),original)
+            self.assertTrue(all(p.stat().st_size<=MAX_PIECE_BYTES for p in restored.rglob("*.json")))
+
     def test_roundtrip_large_report_and_reuse_unchanged_training_sections(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

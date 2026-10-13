@@ -15,6 +15,8 @@ import numpy as np
 from football_model.advanced_research import (FEATURE_GROUPS, study, digest, load_cards,
     build_live_predictions, predict_saved_goalmodel, verify_goalmodel_probes, validate_protocol, main)
 from football_model.advanced_capacity import CapacityDeferred
+from football_model.advanced_storage import load_artifact, save_artifact
+from football_model.state_storage import estimate_runtime
 from football_model.goalmodel_adapter import fit_predict_goalmodel
 from football_model.model import ModelDataError, _distribution_from_rates
 from tests.test_feature_research import matches
@@ -190,6 +192,57 @@ class AdvancedResearchTests(unittest.TestCase):
         self.assertFalse(summary["research_full_completed"])
         self.assertEqual(summary["capacity_deferred_leagues"], 3)
         self.assertTrue(all(r["requested_history_matches"] == 10 for r in summary["results"]))
+
+    def test_cli_relative_runtime_actual_capacity_defer_preserves_completed_and_pending(self):
+        root = self.runtime(matches(10))
+        for league in ("epl", "laliga"):
+            (root / "data" / (league + ".json")).write_text(json.dumps({"matches": matches(10)}))
+        config = root / "test_config.json"
+        config.write_text(json.dumps({"competitions": [{"key": k, "mode": "domestic_baseline"}
+            for k in ("serie_a", "epl", "laliga")]}))
+        admitted_guard = []
+        def limited_study(runtime, league, protocol, *, capacity_guard, **kwargs):
+            self.assertEqual(runtime, root.resolve())
+            if league == "serie_a":
+                admitted_guard.append(capacity_guard)
+                save_artifact(runtime, runtime / "advanced_models" / "test_completed", {"completed": league}, guard=capacity_guard)
+                return {"requested_matches": 10, "latest_fits": {}, "request_coverage": {}}
+            # Real admission raises the same exception as the cloud storage
+            # boundary, leaving the guard's diagnostic reserve available.
+            capacity_guard.max_logical = capacity_guard.logical + capacity_guard.reserve_logical
+            capacity_guard.check_write(runtime / "advanced_models" / "rejected.json", b"{}")
+            self.fail("Expected real capacity admission to defer the second study")
+        with patch("football_model.advanced_research.study", side_effect=limited_study) as run, \
+                patch("sys.stdout", new_callable=io.StringIO) as output:
+            code = main(["study", "--runtime", str(root.relative_to(Path.cwd())), "--league", "all",
+                         "--config", str(config), "--protocol", str(ROOT / "advanced-models-v1.json"),
+                         "--source-commit", "test-source"])
+        self.assertEqual(code, 0)  # Expected deferral is explicitly partial, not an engineering crash.
+        self.assertEqual(run.call_count, 2)
+        summary = json.loads((root / "advanced_models/study_runs/latest.json").read_text())
+        self.assertFalse(summary["research_full_completed"])
+        self.assertEqual(summary["completed_leagues"], 1)
+        self.assertEqual(summary["capacity_deferred_leagues"], 2)
+        self.assertEqual([r["status"] for r in summary["results"]],
+                         ["completed_development", "capacity_deferred", "capacity_deferred"])
+        self.assertEqual([r["fit_attempted_this_run"] for r in summary["results"][1:]], [True, False])
+        self.assertEqual(load_artifact(root, summary["full_report_ref"]),
+                         {k:v for k,v in summary.items() if k != "full_report_ref"})
+        for league in ("epl", "laliga"):
+            attempted = json.loads((root / "advanced_models" / league / digest(json.loads((ROOT / "advanced-models-v1.json").read_text())) /
+                                   "reports/latest_attempt.json").read_text())
+            self.assertEqual(attempted["requested_history_matches"], 10)
+            self.assertEqual(load_artifact(root, attempted["failure_ref"]),
+                             {k:v for k,v in attempted.items() if k != "failure_ref"})
+        self.assertFalse((root / "advanced_models/rejected.json").exists())
+        self.assertFalse((root / root.name).exists())
+        self.assertEqual(admitted_guard[0].logical, estimate_runtime(root)["logical_bytes"])
+        progress = [json.loads(line) for line in output.getvalue().splitlines()]
+        before = next(r for r in progress if r.get("status") == "research_started")
+        completed = next(r for r in progress if r.get("status") == "research_completed")
+        deferred = [r for r in progress if r.get("status") == "capacity_deferred"]
+        self.assertGreater(completed["capacity"]["accounted_writes"], before["capacity"]["accounted_writes"])
+        self.assertTrue(all("capacity_after_report" in r for r in deferred))
 
     @unittest.skipUnless(shutil.which("Rscript"), "real R is required for pinned upstream integration")
     def test_real_R_saved_coefficients_reproduce_neutral_and_feature_forecasts(self):
