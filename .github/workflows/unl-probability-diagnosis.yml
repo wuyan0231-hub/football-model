@@ -1,0 +1,180 @@
+# Isolated diagnosis: exact r12 algorithm and saved state, no state publishing.
+name: UNL probability failure — fixed-input diagnosis
+
+on:
+  push:
+    branches: [codex/s3-unl-diagnosis]
+    paths:
+      - '.github/workflows/unl-probability-diagnosis.yml'
+      - 'scripts/diagnose_unl_probability.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    if: github.event.repository.private == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SOURCE_COMMIT: '9603500cfc322fdcb76af65ef78e25dafd8f77e4'
+      # Complete r12 save from run 38386824669, including its feature caches.
+      # UNL data bytes were independently read back against the ec904 parent.
+      STATE_COMMIT: '5bb91f0543f79a63e2e2057635fd8a173505ebc1'
+      INPUT_SHA256: '047139912aa06ebe08894e4b1612887b9012aeba7e391e865e15857284971e2f'
+      # Optional: fill the original UNL study-start ISO timestamp from its run
+      # log before publishing. Empty means no clock override is requested.
+      STUDY_START: ''
+      PYTHONUNBUFFERED: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+      # No Football API secret or application GitHub token is supplied.
+      FOOTBALL_API_KEY: ''
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Initialize diagnostic log
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/diagnostics"
+          printf '%s\n' 'Fixed-input UNL diagnosis; no state publishing.' > "$GITHUB_WORKSPACE/diagnostics/run.log"
+
+      - name: Checkout reviewed diagnostic harness
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: harness
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Checkout immutable research source
+        uses: actions/checkout@v7
+        with:
+          ref: '9603500cfc322fdcb76af65ef78e25dafd8f77e4'
+          path: source
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Check immutable inputs and resources before state checkout
+        run: |
+          python - <<'PY' 2>&1 | tee -a "$GITHUB_WORKSPACE/diagnostics/run.log"
+          import importlib.util, json, os, re, subprocess
+          from pathlib import Path
+          workspace = Path(os.environ['GITHUB_WORKSPACE'])
+          source = workspace / 'source'
+          state_sha = os.environ['STATE_COMMIT']
+          if re.fullmatch(r'[0-9a-f]{40}', state_sha) is None:
+              raise SystemExit('STATE_COMMIT must be the full immutable 40-character r12 state commit; replace draft placeholder before publishing')
+          actual_source = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD'], text=True).strip()
+          if actual_source != os.environ['SOURCE_COMMIT']:
+              raise SystemExit('fixed research source commit mismatch')
+          if not (workspace / 'harness/scripts/diagnose_unl_probability.py').is_file():
+              raise SystemExit('reviewed diagnostic harness has not been installed')
+          spec = importlib.util.spec_from_file_location('fixed_cloud_state', source / 'scripts/cloud_state.py')
+          cloud = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(cloud)
+          cloud._ensure_memory()
+          cloud._ensure_disk_space(workspace, 2 * cloud._MAX_TOTAL_BYTES)
+          record = {'source_commit': actual_source, 'state_commit': state_sha,
+                    'expected_input_sha256': os.environ['INPUT_SHA256'],
+                    'harness_commit': subprocess.check_output(['git', '-C', str(workspace / 'harness'), 'rev-parse', 'HEAD'], text=True).strip(),
+                    'study_start': os.environ.get('STUDY_START') or None,
+                    'workflow_run_id': os.environ['GITHUB_RUN_ID'],
+                    'workflow_run_attempt': os.environ['GITHUB_RUN_ATTEMPT'],
+                    'minimum_available_memory_bytes': cloud._MIN_AVAILABLE_MEMORY_BYTES,
+                    'disk_reserve_bytes': cloud._DISK_RESERVE_BYTES}
+          (workspace / 'diagnostics/inputs.json').write_text(json.dumps(record, indent=2) + '\n')
+          print(json.dumps(record))
+          PY
+
+      - name: Checkout exact r12 state without following model-state latest
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.STATE_COMMIT }}
+          path: state-tree
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install pinned Python requirements and real R only
+        run: |
+          {
+            python -m pip install -r "$GITHUB_WORKSPACE/source/requirements.txt"
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends r-base-core r-cran-jsonlite
+            Rscript --vanilla -e 'stopifnot(requireNamespace("jsonlite", quietly=TRUE)); print(R.version.string)'
+            python -m pip freeze
+          } 2>&1 | tee -a "$GITHUB_WORKSPACE/diagnostics/run.log"
+
+      - name: Validate exact state and restore one runtime with disk and memory gates
+        run: |
+          python - <<'PY' 2>&1 | tee -a "$GITHUB_WORKSPACE/diagnostics/run.log"
+          import hashlib, importlib.util, json, os, shutil, subprocess
+          from pathlib import Path
+          workspace = Path(os.environ['GITHUB_WORKSPACE'])
+          source, tree, runtime = workspace / 'source', workspace / 'state-tree', workspace / 'runtime'
+          actual_state = subprocess.check_output(['git', '-C', str(tree), 'rev-parse', 'HEAD'], text=True).strip()
+          if actual_state != os.environ['STATE_COMMIT']:
+              raise SystemExit('fixed r12 state commit mismatch')
+          spec = importlib.util.spec_from_file_location('fixed_cloud_state', source / 'scripts/cloud_state.py')
+          cloud = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(cloud)
+          cloud._ensure_memory()
+          limits = dict(max_file_bytes=cloud._MAX_FILE_BYTES,
+                        max_physical_bytes=cloud._MAX_TOTAL_BYTES,
+                        max_logical_bytes=cloud._MAX_LOGICAL_BYTES)
+          stats = cloud.state_storage.validate_storage_tree(tree, **limits)
+          restored_bytes = stats['raw_bytes'] + sum(entry['raw_bytes'] for entry in stats['entries'])
+          cloud._ensure_disk_space(workspace, restored_bytes)
+          # restore_runtime validates again, then restores inline files and all
+          # archived original bytes. This is the sole restored runtime; the
+          # harness must use it directly rather than copying it a second time.
+          cloud.state_storage.restore_runtime(tree, runtime, **limits)
+          actual_input = hashlib.sha256((runtime / 'data/unl.json').read_bytes()).hexdigest()
+          if actual_input != os.environ['INPUT_SHA256']:
+              raise SystemExit('restored UNL input SHA-256 mismatch')
+          record = {'state_commit': actual_state, 'input_sha256': actual_input,
+                    'restored_bytes': restored_bytes, 'archive_entries': len(stats['entries']),
+                    'logical_bytes': stats.get('logical_bytes'), 'physical_bytes': stats['physical_bytes'],
+                    'available_memory_bytes': cloud._available_memory_bytes(),
+                    'free_disk_bytes_after_restore': shutil.disk_usage(workspace).free}
+          (workspace / 'diagnostics/restore.json').write_text(json.dumps(record, indent=2) + '\n')
+          print(json.dumps(record))
+          cloud._ensure_memory()
+          cloud._ensure_disk_space(workspace, 0)
+          PY
+
+      - name: Diagnose UNL only against unchanged fixed research source
+        run: |
+          args=(
+            --source-root "$GITHUB_WORKSPACE/source"
+            --runtime "$GITHUB_WORKSPACE/runtime"
+            --source-commit "$SOURCE_COMMIT"
+            --state-commit "$STATE_COMMIT"
+            --expected-input-sha256 "$INPUT_SHA256"
+            --output "$GITHUB_WORKSPACE/diagnostics"
+          )
+          if [[ -n "$STUDY_START" ]]; then
+            args+=(--study-start "$STUDY_START")
+          fi
+          cd "$GITHUB_WORKSPACE/source"
+          python "$GITHUB_WORKSPACE/harness/scripts/diagnose_unl_probability.py" "${args[@]}" \
+            2>&1 | tee -a "$GITHUB_WORKSPACE/diagnostics/run.log"
+
+      # This upload runs after a diagnostic exception/nonzero exit as well.
+      # A hard runner loss or job timeout can still prevent artifact completion.
+      - name: Preserve diagnosis and log even if diagnosis failed
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: unl-probability-diagnosis-${{ github.run_id }}-${{ github.run_attempt }}
+          path: diagnostics/
+          if-no-files-found: error
+          retention-days: 14
+
+# Intentionally no collection/API calls, all-league study, regression suite,
+# cloud_state load/save/check invocation, Git push, or state write credential.
