@@ -1,0 +1,144 @@
+{
+  "receipt": {
+    "GITHUB_SHA": "46dce2e55a2229c88dab0dfbe2df1e4f7f25c556",
+    "GITHUB_RUN_ID": "38331823533",
+    "GITHUB_RUN_ATTEMPT": "1",
+    "FEATURE_PARENT_STATE": "d3b13fc387f90366e8e9ee0c3be51b121cd4a8b6",
+    "IS_RELEASE": "true",
+    "STUDY_RUN": "true",
+    "RESTORE_OUTCOME": "success",
+    "SCHEDULE_OUTCOME": "success",
+    "RESEARCH_OUTCOME": "success",
+    "RESEARCH_V2_OUTCOME": "success",
+    "FACTS_OUTCOME": "success",
+    "CAPTURE_OUTCOME": "success",
+    "CAPTURE_V2_OUTCOME": "success",
+    "SCORING_OUTCOME": "success",
+    "SCORING_V2_OUTCOME": "success",
+    "CHECK_OUTCOME": "success",
+    "PERSIST_OUTCOME": "success",
+    "confirmation_active": false,
+    "production_promoted": false
+  },
+  "state_commit": "a7c6143e07fface7d52ea7274379300016e0bba9",
+  "artifact_sha256": "e9006227cefc778b16db8e4d1c551786a9f0f06cdf3c8829ff27b6622e682dbb",
+  "full_report_ref": {
+    "path": "feature_models/reports/serie_a/490123d4e2e900e2bdc48e5e6dcaa3bdb878e240dfda8b8c9609151d31dcd83d/history/5d8c44d5bc9eeb09ee0fd358dade5ec4637dd6ab89c233deec35aeb0c14b75b9.json",
+    "sha256": "7352d042578cb50c05c7700bd663d4ab7aa5cc00864986ab67aadf72a1728350"
+  },
+  "request_count": 818,
+  "baseline_n": 615,
+  "comparisons": {
+    "M1": {
+      "n": 527,
+      "scoreline_difference": 0.004738118590267416
+    },
+    "M1_policy": {
+      "n": 615,
+      "scoreline_difference": 0.004060143897676307
+    },
+    "G0": {
+      "n": 615,
+      "scoreline_difference": 0.012779945252403347
+    },
+    "G1": {
+      "n": 615,
+      "scoreline_difference": 0.025352082374248377
+    },
+    "G0_full": {
+      "n": 615,
+      "scoreline_difference": 0.01070604423155888
+    },
+    "G0_policy": {
+      "n": 615,
+      "scoreline_difference": 0.012779945252403347
+    },
+    "G1_policy": {
+      "n": 615,
+      "scoreline_difference": 0.025352082374248377
+    },
+    "G0_full_policy": {
+      "n": 615,
+      "scoreline_difference": 0.01070604423155888
+    }
+  },
+  "goalmodel_execution": {
+    "requested": true,
+    "status": "executed_on_real_data",
+    "branches": {
+      "G0": {
+        "successful_forecast_matches": 615,
+        "successful_fits": 18,
+        "failures": 13
+      },
+      "G1": {
+        "successful_forecast_matches": 615,
+        "successful_fits": 18,
+        "failures": 13
+      },
+      "G0_full": {
+        "successful_forecast_matches": 615,
+        "successful_fits": 18,
+        "failures": 13
+      }
+    }
+  },
+  "future_capture": {
+    "status": "complete",
+    "planned_match_count": 10,
+    "planned_horizon_count": 20,
+    "captured_candidates_by_horizon": {
+      "EARLY": 0,
+      "LINEUP": 0
+    },
+    "cumulative_queue_latest_status_counts": {
+      "late": 4,
+      "not_due": 16
+    }
+  },
+  "future_scoring": {
+    "status": "complete",
+    "requested_horizon_records": 20,
+    "scored_horizon_records": 0,
+    "scored_independent_matches": 0,
+    "queue_status_counts": {
+      "missed_window": 4,
+      "pending_capture": 16
+    }
+  },
+  "persistent_readback_verified": true,
+  "readback_files": 4,
+  "production_promoted": false,
+  "accuracy_improvement_verified": false,
+  "research_summary_readback_verified": true,
+  "schema_version": "s3-v2-release-acceptance-1",
+  "completed_at": "2026-10-13T01:41:38.860982+00:00",
+  "code_release_commit": "46dce2e55a2229c88dab0dfbe2df1e4f7f25c556",
+  "pr_url": "https://github.com/wuyan0231-hub/football-model/pull/35",
+  "local_regression": {
+    "total": 1141,
+    "skipped_real_R": 3,
+    "result": "passed"
+  },
+  "cloud_regression": {
+    "total": 1141,
+    "skipped": 0,
+    "result": "passed",
+    "real_R_tests": 3
+  },
+  "independent_score_recomputation": {
+    "recomputed_goalmodel_forecasts": 1845,
+    "independent_matches": 615,
+    "max_score_difference": 0,
+    "input_report_sha256": "36105450a822e855168ba8ca7d4deb4dcbbd642c61f0f5029880045686611a96",
+    "source_commit": "b4dcaa2b5644c984c6cb7dfa2d15f0e27a9c6d20"
+  },
+  "warmup_no_forecast": 195,
+  "unsupported_team_no_forecast": 8,
+  "current_numeric_features": "four_schedule_features_only",
+  "xg_numeric_layer": "not_implemented",
+  "light_lineup_numeric_layer": "not_implemented",
+  "future_goalmodel_capture": "not_implemented",
+  "panna": "deferred",
+  "confirmation_active": false
+}
