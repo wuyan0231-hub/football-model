@@ -12,9 +12,9 @@ from unittest.mock import patch
 import numpy as np
 
 from football_model.feature_correction import fit_correction
-from football_model.feature_dataset import FEATURE_NAMES
+from football_model.feature_dataset import FEATURE_NAMES, build_replay
 from football_model.feature_research import (
-    choose_alpha, digest, save_immutable, score_forecast, study,
+    _mean_metrics, choose_alpha, digest, save_immutable, score_forecast, study,
 )
 from football_model.model import ModelDataError, _distribution_from_rates
 
@@ -241,6 +241,127 @@ class FeatureResearchTests(unittest.TestCase):
             with self.assertRaisesRegex(ModelDataError, "collision"):
                 save_immutable(directory, value)
             self.assertEqual(json.loads(path.read_text()), {"candidate": "tampered"})
+
+    def test_extended_scores_project_one_matrix_and_preserve_legacy_output(self):
+        prediction = _distribution_from_rates(0.7, 2.2)
+        observed = {"home_goals": 0, "away_goals": 3}
+        legacy = score_forecast(prediction, observed)
+        self.assertNotIn("total_goal_nll", legacy)
+        self.assertNotIn("away_net_ge3", legacy["events"])
+        extended = score_forecast(prediction, observed, extended_diagnostics=True)
+        matrix = np.asarray(prediction["score_matrix"])
+        home, away = np.indices(matrix.shape)
+        self.assertAlmostEqual(extended["total_goal_nll"], -math.log(matrix[home + away == 3].sum()))
+        self.assertAlmostEqual(extended["goal_difference_nll"], -math.log(matrix[home - away == -3].sum()))
+        self.assertAlmostEqual(extended["events"]["away_net_ge3"]["probability"], matrix[away-home >= 3].sum())
+        self.assertEqual(extended["events"]["away_net_ge3"]["observed"], 1)
+        self.assertEqual(extended["scoreline_nll"], legacy["scoreline_nll"])
+        aggregate = _mean_metrics([legacy])
+        self.assertIsNone(aggregate["total_goal_nll"])
+        self.assertEqual(aggregate["total_goal_nll_available_n"], 0)
+        self.assertIsNone(aggregate["event_calibration"]["away_net_ge2"]["brier"])
+
+    def test_v2_requests_all_targets_and_isolates_artifact_namespace(self):
+        root = self.runtime(matches())
+        old_model = root / "feature_models" / "models" / "serie_a" / "latest.json"
+        old_report = root / "feature_models" / "reports" / "serie_a" / "latest.json"
+        for path in (old_model, old_report):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text('{"unchanged_v1":true}\n')
+        spec = {**protocol(), "research_design_version": "feature-research-v2",
+                "research_artifact_namespace": "protocol_hash_v2"}
+        report = study(root, "serie_a", spec, source_commit="source-test",
+                       clock=lambda: datetime(2024, 2, 15, tzinfo=timezone.utc))
+        self.assertEqual(report["requested_matches"], 30)
+        self.assertEqual(len(report["scored_matches"]), 30)
+        self.assertEqual(sum("M0" not in row["scores"] for row in report["scored_matches"]), len(report["replay"]["failures"]))
+        for candidate in ("M1", "G0", "G1", "G0_full"):
+            coverage = report["request_coverage"][candidate]
+            self.assertEqual(coverage["requested_matches"], 30)
+            self.assertTrue(coverage["denominator_preserved"])
+            self.assertTrue(all(candidate in row["candidate_status"] for row in report["scored_matches"]))
+        self.assertIn(digest(spec), report["model_card_path"])
+        self.assertTrue((root / "feature_models" / "reports" / "serie_a" / digest(spec) / "latest.json").exists())
+        self.assertEqual(old_model.read_text(), '{"unchanged_v1":true}\n')
+        self.assertEqual(old_report.read_text(), '{"unchanged_v1":true}\n')
+        self.assertNotIn("G0_full", study(self.runtime(matches()), "serie_a", protocol(),
+            source_commit="source-test", clock=lambda: datetime(2024, 2, 15, tzinfo=timezone.utc))["comparisons"])
+
+    def test_v2_goalmodel_full_pool_and_candidate_only_fallbacks(self):
+        records = matches()
+        replay = build_replay(records, horizon_hours=10, block_days=7, min_train=6)
+        rejected = replay["forecasts"].pop()
+        target = rejected["match_id"]
+        failure = {key: value for key, value in rejected.items() if key != "baseline_prediction"}
+        failure.update(stage="baseline_prediction", code="baseline_prediction_failed", reason="original failure retained")
+        replay["failures"].append(failure)
+        replay["coverage"]["baseline_forecasts"] -= 1
+        replay["coverage"]["baseline_failures"] += 1
+        replay["correction_rows"] = [row for row in replay["correction_rows"] if row["match_id"] != target]
+        replay["rows"] = replay["correction_rows"]
+        calls = []
+        def adapter(training, fixtures, **kwargs):
+            calls.append((copy.deepcopy(training), copy.deepcopy(fixtures), copy.deepcopy(kwargs)))
+            forecasts, errors = [], []
+            for fixture in fixtures:
+                if fixture["match_id"] == 28:
+                    errors.append({"match_id": 28, "code": "fit_rejected", "message": "first failure"})
+                else:
+                    forecasts.append({**_distribution_from_rates(1.4, 1.1), **fixture})
+            return {"forecasts": forecasts, "errors": errors}
+        spec = {**protocol(), "research_design_version": "feature-research-v2"}
+        with patch("football_model.feature_research.build_replay", return_value=replay), \
+                patch("football_model.goalmodel_adapter.fit_predict_goalmodel", side_effect=adapter):
+            report = study(self.runtime(records), "serie_a", spec, source_commit="source-test", run_goalmodel=True,
+                clock=lambda: datetime(2024, 2, 15, tzinfo=timezone.utc))
+        by_cutoff = {}
+        for train, fixtures, kwargs in calls:
+            by_cutoff.setdefault(kwargs["cutoff"], []).append((train, fixtures, kwargs))
+        for variants in by_cutoff.values():
+            # The full pool may satisfy the minimum earlier than the common
+            # feature-complete pool. That one-sided availability is retained.
+            self.assertIn(len(variants), (1, 3))
+            full = variants[-1]
+            if len(variants) == 3:
+                g0, g1, _ = variants
+                self.assertEqual(g0[0], g1[0])
+                self.assertEqual(g0[1], g1[1])
+            cutoff = datetime.fromisoformat(full[2]["cutoff"].replace("Z", "+00:00"))
+            expected = [m["match_id"] for m in records if datetime.fromisoformat(m["kickoff"]) + timedelta(hours=4) <= cutoff]
+            self.assertEqual([m["match_id"] for m in full[0]], expected)
+        only = next(row for row in report["scored_matches"] if row["match_id"] == target)
+        self.assertNotIn("M0", only["scores"])
+        self.assertIn("G0_full", only["scores"])
+        self.assertEqual(only["policy_status"]["G0_full"], "candidate")
+        self.assertIn(target, report["request_coverage"]["G0_full"]["candidate_only_match_ids"])
+        fallback = next(row for row in report["scored_matches"] if row["match_id"] == 28)
+        self.assertEqual(fallback["candidate_failures"]["G0_full"]["code"], "fit_rejected")
+        self.assertEqual(fallback["policy_status"]["G0_full"], "unchanged_baseline_fallback")
+        self.assertEqual(fallback["scores"]["G0_full_policy"], fallback["scores"]["M0"])
+        self.assertTrue(all(report["request_coverage"][k]["denominator_preserved"] for k in ("M1", "G0", "G1", "G0_full")))
+
+    def test_latest_fit_failure_saves_partial_research_and_keeps_prior_card(self):
+        root = self.runtime(matches())
+        clock = lambda: datetime(2024, 2, 15, tzinfo=timezone.utc)
+        successful = study(root, "serie_a", protocol(), source_commit="source-test", clock=clock)
+        card = root / "feature_models" / "models" / "serie_a" / "latest.json"
+        previous = card.read_bytes()
+        actual = choose_alpha
+        def fail_latest(rows, spec, cutoff):
+            if cutoff == "2024-02-15T00:00:00Z":
+                raise ModelDataError("controlled latest fit rejection")
+            return actual(rows, spec, cutoff)
+        with patch("football_model.feature_research.choose_alpha", side_effect=fail_latest):
+            partial = study(root, "serie_a", protocol(), source_commit="source-test", clock=clock)
+        self.assertEqual(partial["latest_fit"]["status"], "failed")
+        self.assertIn("controlled latest fit rejection", partial["latest_fit"]["detail"])
+        self.assertIsNone(partial["model_card_path"])
+        self.assertEqual(card.read_bytes(), previous)
+        self.assertEqual(partial["scored_matches"], successful["scored_matches"])
+        self.assertTrue(partial["latest_fit"]["previous_latest_preserved"])
+        latest = json.loads((root / "feature_models" / "reports" / "serie_a" / "latest.json").read_text())
+        full = json.loads((root / latest["full_report_ref"]["path"]).read_text())
+        self.assertEqual(full, partial)
 
 
 if __name__ == "__main__":

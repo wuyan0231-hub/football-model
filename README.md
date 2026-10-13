@@ -4,9 +4,9 @@
 
 **2026-10-06 第4—6项修复：** 新增真实赛前预测冻结账本、同样本概率评分、实际生产流程离线重演、结构化决策检查及证据截点控制。具体实现和验收边界见[第4—6项实施记录](docs/model-improvements-456-20261006.md)。历史回放不升级为前瞻样本；没有真实赔率不报模拟收益；结构检查不等于预测准确性验收。前三项已由[PR #9](https://github.com/wuyan0231-hub/football-model/pull/9)发布，基本面特征仍未参与概率计算。
 
-**当前分析入口（2026-10-13）：** 使用[完整框架 v1.7 修订批次9](docs/football-framework-v1.7.md)及[项目指令](docs/project-instructions-v1.7.md)。有图执行项目唯一现行《赔率截图读取规范》，不绑定版本。首次使用须读全文，先按[模型读取操作指导](docs/model-access.md)取得原件，再按[单场接入说明](docs/model-integration.md)复算；单场包同步读取F5-C或披露缺失／拒绝原因。旧冻结规则和历史报告保留。
+**当前分析入口（2026-10-13）：** 使用[完整框架 v1.7 修订批次10](docs/football-framework-v1.7.md)及[项目指令](docs/project-instructions-v1.7.md)。有图执行项目唯一现行《赔率截图读取规范》，不绑定版本。首次使用须读全文，先按[模型读取操作指导](docs/model-access.md)取得原件，再按[单场接入说明](docs/model-integration.md)复算；单场包同步读取F5-C或披露缺失／拒绝原因。旧冻结规则和历史报告保留。
 
-**特征模型研究与试点影子：** [实施入口](docs/feature-models.md)提供statsmodels固定基线修正、goalmodel独立R对照、完整俱乐部赛程与双时点冻结。仅赛程特征首批量化，人员/xG尚未接入候选数值；工程部署和未来效果分别验收，不自动替换生产基线。panna暂缓。
+**特征模型研究与试点影子：** 独立v2补齐完整训练池G0_full、逐分支请求与回退分母、冻结原件重建以及总球／净胜球投影诊断；旧v1继续原身份运行。 [实施入口](docs/feature-models.md)提供statsmodels固定基线修正、goalmodel独立R对照、完整俱乐部赛程与双时点冻结。仅赛程特征首批量化，人员/xG尚未接入候选数值；工程部署和未来效果分别验收，不自动替换生产基线。panna暂缓。
 
 **2026-10-04 API额度调整：** 按用户确认的每日5000次额度，`config.json`设置`api_daily_limit=5000`、`max_requests_per_run=null`。默认不再设24个场馆查询或80次网络请求的每轮上限；启动读取账户当日已用量，运行中用供应商响应头校正剩余量，并按实际分钟限速平滑请求。日额度不是每轮重新获得5000次。每次报告的`api_budget`记录额度证据与执行设置，不保存账户资料；详情见[欧国联接入说明](docs/nations-league-integration.md)。
 
