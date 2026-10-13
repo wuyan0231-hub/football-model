@@ -2,17 +2,17 @@
   "schema_version": "feature-model-card-v1",
   "league": "serie_a",
   "candidate_id": "M1_schedule_offset_l2_v2",
-  "source_commit": "58e8cd88a0d83b28119fba9a6a971417959eb04d",
-  "state_commit": "b7c500593b37c2c88d8eac3e823ec9fbc63b0e68",
-  "training_cutoff": "2026-10-13T02:19:45.607043Z",
-  "generated_at": "2026-10-13T02:22:10.512976Z",
+  "source_commit": "9603500cfc322fdcb76af65ef78e25dafd8f77e4",
+  "state_commit": "a020be1c6f02f85217c3144b611a202d75542057",
+  "training_cutoff": "2026-10-13T11:13:21.921628Z",
+  "generated_at": "2026-10-13T11:14:45.856263Z",
   "feature_names": [
     "rest_days_capped",
     "matches_last14d",
     "opponent_rest_days_capped",
     "opponent_matches_last14d"
   ],
-  "feature_scope": "all_club_competitions_provider_scope",
+  "feature_scope": "same_competition",
   "correction_model": {
     "model_version": "poisson_fixed_log_offset_l2_shared_v1",
     "model_scope": "fixed_baseline_log_offset_feature_correction",
@@ -22,7 +22,7 @@
     "trained": true,
     "validated_for_production": false,
     "automatic_promotion": false,
-    "training_cutoff": "2026-10-13T02:19:45.607043Z",
+    "training_cutoff": "2026-10-13T11:13:21.921628Z",
     "feature_names": [
       "rest_days_capped",
       "matches_last14d",
@@ -30,37 +30,37 @@
       "opponent_matches_last14d"
     ],
     "coefficients": {
-      "rest_days_capped": -0.016307602039380902,
-      "matches_last14d": -0.02813125755693599,
-      "opponent_rest_days_capped": 0.013750689345881044,
-      "opponent_matches_last14d": 0.03222702837024412
+      "rest_days_capped": -0.002579267915506409,
+      "matches_last14d": -0.002572930337475571,
+      "opponent_rest_days_capped": -0.005481403235566767,
+      "opponent_matches_last14d": -0.0038940969445411494
     },
     "feature_scaling": {
       "rest_days_capped": {
-        "mean": 7.024655746470624,
-        "scale": 3.0839936325149133,
+        "mean": 7.792624740386571,
+        "scale": 3.0106238924331437,
         "constant_in_training": false
       },
       "matches_last14d": {
-        "mean": 1.7066545039007723,
-        "scale": 0.9300047018635295,
+        "mean": 1.3737455020345362,
+        "scale": 0.76385670101015,
         "constant_in_training": false
       },
       "opponent_rest_days_capped": {
-        "mean": 7.024655746470624,
-        "scale": 3.0839936325149133,
+        "mean": 7.7926247403865725,
+        "scale": 3.0106238924331437,
         "constant_in_training": false
       },
       "opponent_matches_last14d": {
-        "mean": 1.7066545039007723,
-        "scale": 0.9300047018635296,
+        "mean": 1.3737455020345362,
+        "scale": 0.76385670101015,
         "constant_in_training": false
       }
     },
     "intercept_added": false,
     "shared_home_away_coefficients": true,
     "offset_definition": "log(out_of_sample_baseline_lambda), coefficient fixed to 1",
-    "alpha": 0.1,
+    "alpha": 1.0,
     "L1_wt": 0.0,
     "refit": false,
     "loss_definition": "mean(mean_one_time_weight * poisson_nll) + 0.5 * alpha * sum(beta**2)",
@@ -69,7 +69,7 @@
       "origin": "kickoff",
       "reference": "correction_training_cutoff",
       "normalization": "mean_one",
-      "raw_weight_sum": 417.0132603078718,
+      "raw_weight_sum": 416.41862513488513,
       "normalized_weight_sum": 1234.0000000000002
     },
     "n_rows": 1234,
@@ -694,16 +694,16 @@
       1550145,
       1550146
     ],
-    "training_data_sha256": "065a34914a41081d66bf73d9d08564de51861edceb3d9235ffcbed72af0e47b5",
+    "training_data_sha256": "96bb9d55b3dea5897a99f774bfc333a8ae2da9bf8edce370feb5d522e853251a",
     "last_result_available_at": "2026-10-12T22:45:00Z",
-    "effective_side_sample_size": 850.8004679998205,
-    "effective_match_sample_size": 425.40023399991026,
+    "effective_side_sample_size": 850.8004679998207,
+    "effective_match_sample_size": 425.40023399991037,
     "independent_evaluation_unit": "match_id, never a side row or repeated forecast version",
     "optimizer": {
       "method": "statsmodels_GLM_fit_regularized_bfgs",
-      "gradient_norm": 3.941778218141285e-06,
+      "gradient_norm": 5.269632995400815e-06,
       "gradient_norm_tolerance": 2e-05,
-      "objective": 1.3764261022003017
+      "objective": 1.3768459188585238
     },
     "numeric_environment": {
       "numpy": "2.3.5",
@@ -716,9 +716,9 @@
       "Target regulation-time final-status verification belongs to the replay builder.",
       "Recorded historical availability assumptions are not observed live publication times."
     ],
-    "correction_model_sha256": "0c36c363ba5d92690731d757d5d8792e2f5b6a933fe33bffe765392cb9a62468"
+    "correction_model_sha256": "186a520f1b8438dba67d90c96353ce32c79fd020cead31e0a03df831c12e9239"
   },
-  "model_hash": "b22552508e27a63e906d04d3109a9ec673dec8b48406dd46cc81c88ff73c63aa",
+  "model_hash": "b3232c32e75b7842150a23c441d8364d1a39f5b546aa5eefc888e92174c18716",
   "protocol_hash": "490123d4e2e900e2bdc48e5e6dcaa3bdb878e240dfda8b8c9609151d31dcd83d",
   "usage": "engineering_shadow_only",
   "lineup_adjusted": false,
@@ -729,13 +729,8 @@
       "original_path": "data/serie_a.json"
     },
     {
-      "path": "feature_models/inputs/a5a8d75c452df6c837b222a70dc557464b08fb13fae56aca7eb279a8a52cc231.json",
-      "sha256": "a5a8d75c452df6c837b222a70dc557464b08fb13fae56aca7eb279a8a52cc231",
-      "original_path": "feature_models/schedules/serie_a/latest.json"
-    },
-    {
-      "path": "feature_models/training_inputs/847b841a0ec6e9441220f7daf298290da41600e8e7db08cadd68bf7073886912.json",
-      "sha256": "e5527f14ac93e085d2e1133358ca0ef0805195d3f24558a6b3155ca0c4ab717b",
+      "path": "feature_models/training_inputs/6ae393f71d00e75824fdb92cd6e877a00cf784fb4ab355ae7736ac6ecaf8da48.json",
+      "sha256": "e225c10f8d02af756dbb6dae4a39339a423ed8678c2fc3c8d4d09afa969367be",
       "kind": "training_bundle"
     }
   ],
@@ -747,21 +742,21 @@
     "trials": [
       {
         "alpha": 0.01,
-        "score": 1.3806398117713865,
+        "score": 1.3823808423889905,
         "status": "scored"
       },
       {
         "alpha": 0.1,
-        "score": 1.380605214554859,
+        "score": 1.3820904883818788,
         "status": "scored"
       },
       {
         "alpha": 1.0,
-        "score": 1.3807411603845983,
+        "score": 1.3814575760991283,
         "status": "scored"
       }
     ],
-    "selected_alpha": 0.1
+    "selected_alpha": 1.0
   },
   "predictive_improvement_verified": false,
   "automatic_promotion": false
