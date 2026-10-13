@@ -1,41 +1,27 @@
 {
   "version": "s2-f5c-daily-total-shrink-pilot-1.0",
-  "started_at": "2026-10-12T17:06:11.334594Z",
-  "protocol_id": "dcb62b24644fdd591acfc99376b9b59bcb8fca4644d048f840d4ffafab8b45b5",
-  "source_commit": "362edc54159f3d7e311ed4f7cee8cc1c0ccc783b",
-  "state_commit": "f1064482dc9ff99863711c5e36529068b5e779b6",
-  "index_source": "7d88cccf4e6554a3c8545041bb195dd3b8ffae10a830b91696df4a9269729032",
-  "numerical_environment": {
-    "python_version": "3.12.15",
-    "numpy_version": "2.3.5",
-    "scipy_version": "1.17.0",
-    "platform_machine": "x86_64"
-  },
-  "new_fits": 0,
-  "new_api_calls": 0,
-  "production_models_changed": false,
+  "status": "capacity_deferred",
+  "operation": "capture",
+  "run_started_at": "2026-10-13T01:58:08.424466Z",
+  "started_at": "2026-10-13T01:58:08.424466Z",
+  "completed_at": "2026-10-13T02:00:41.801755Z",
+  "generated_at": "2026-10-13T02:00:41.801755Z",
+  "source_commit": "46dce2e55a2229c88dab0dfbe2df1e4f7f25c556",
+  "reason": "shadow_storage_capacity_deferred",
+  "runtime_bytes": 2378549433,
+  "logical_bytes": 2731206977,
+  "estimated_persisted_bytes": 974587212,
+  "limit_bytes": 838860800,
+  "logical_limit_bytes": 4294967296,
+  "file_limit_bytes": 62914560,
+  "logical_capture_limit_bytes": 4294705152,
+  "capacity_measurement": "lossless_archive_conservative_persisted_and_original_logical_bytes",
+  "capacity_constraint": "estimated_persisted_limit",
+  "partial_objects_preserved": true,
   "confirmation_eligible": false,
+  "production_models_changed": false,
   "accuracy_improvement_verified": false,
-  "errors": [],
-  "completed_at": "2026-10-12T17:10:07.420977Z",
-  "captured_forecasts": 0,
-  "captured_matches": 0,
-  "coverage_status_counts": {
-    "already_captured": 202,
-    "rejected": 6
-  },
-  "coverage_rejection_reasons": {
-    "not_future_at_real_capture": 6
-  },
-  "storage_budget": {
-    "runtime_bytes": 2002012822,
-    "logical_bytes": 2306560299,
-    "estimated_persisted_bytes": 838324468,
-    "limit_bytes": 838860800,
-    "logical_limit_bytes": 4294967296,
-    "file_limit_bytes": 62914560,
-    "logical_capture_limit_bytes": 4294705152,
-    "capacity_measurement": "lossless_archive_conservative_persisted_and_original_logical_bytes"
-  },
-  "report_id": "b8d04bddc6d7962134e1a1c43a7e1188fb08872449a5c3a8bdbdfc63ecb24964"
+  "immutable_event_saved": false,
+  "diagnostic_evidence": "bounded_current_latest_only",
+  "capacity_event_id": null
 }

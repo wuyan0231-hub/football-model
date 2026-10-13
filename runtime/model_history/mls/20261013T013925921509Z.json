@@ -1,0 +1,396 @@
+{
+  "schema_version": 2,
+  "time_semantics": "observed_wall_clock_v1",
+  "run_started_at": "2026-10-13T01:39:25.921509Z",
+  "training_cutoff": "2026-10-13T01:39:25.921509Z",
+  "data_observed_at": "2026-10-13T01:40:10.961352Z",
+  "model_fitted_at": "2026-10-13T01:40:11.295133Z",
+  "program_version": "0.1.0",
+  "model_id": "mls-20261013T013925921509Z",
+  "competition": {
+    "key": "mls",
+    "label": "美职联MLS",
+    "name": "Major League Soccer",
+    "country": "USA",
+    "mode": "domestic_baseline"
+  },
+  "data_fingerprint": "4507c999c7a46c21275545ce4d4f4cdb127b329714183e44b8f2dc4878a8fab4",
+  "trained_at": "2026-10-13T01:39:25.921509Z",
+  "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
+  "maturity": "exploratory_baseline",
+  "lineup_effects": "未量化",
+  "ev": "未量化",
+  "model": {
+    "model_version": "independent_poisson_time_decay_l2_v1",
+    "model_scope": "baseline_unadjusted_lineup",
+    "fit_status": "converged",
+    "trained": true,
+    "validated_for_production": false,
+    "training_cutoff": "2026-10-13T01:39:25.921509Z",
+    "last_match_kickoff": "2026-10-11T23:00:00Z",
+    "last_result_assumed_available_at": "2026-10-12T03:00:00Z",
+    "n_matches": 1482,
+    "n_teams": 30,
+    "min_team_matches": 67,
+    "low_sample_team_threshold": 5,
+    "low_sample_team_ids": [],
+    "excluded_after_cutoff_or_availability_delay": 0,
+    "training_data_sha256": "57f622ab147c4eaf5aa97b1ae50f9dac9a4389f631b56274b1f59b3be8c12054",
+    "half_life_days": 180.0,
+    "ridge": 3.0,
+    "effective_sample_size": 704.0855807620586,
+    "intercept": 0.3202410914641724,
+    "home_advantage": 0.23776900386590422,
+    "team_parameters": {
+      "1595": {
+        "name": "Seattle Sounders",
+        "attack": -0.08107525299132676,
+        "defence": 0.15672500252406502,
+        "training_matches": 103
+      },
+      "1596": {
+        "name": "San Jose Earthquakes",
+        "attack": 0.03943498541878875,
+        "defence": -0.05507478141230725,
+        "training_matches": 96
+      },
+      "1597": {
+        "name": "FC Dallas",
+        "attack": 0.10382626987859624,
+        "defence": -0.029160695294214268,
+        "training_matches": 98
+      },
+      "1598": {
+        "name": "Orlando City SC",
+        "attack": 0.17497083826920395,
+        "defence": -0.21808586664168148,
+        "training_matches": 102
+      },
+      "1599": {
+        "name": "Philadelphia Union",
+        "attack": 0.24013862723908794,
+        "defence": 0.09161090434816417,
+        "training_matches": 99
+      },
+      "1600": {
+        "name": "Houston Dynamo",
+        "attack": -0.24070201258576157,
+        "defence": 0.2272251896679989,
+        "training_matches": 98
+      },
+      "1601": {
+        "name": "Toronto FC",
+        "attack": -0.11720989280075922,
+        "defence": -0.03302202694670263,
+        "training_matches": 96
+      },
+      "1602": {
+        "name": "New York Red Bulls",
+        "attack": -0.15291072703394867,
+        "defence": -0.015654395498671245,
+        "training_matches": 101
+      },
+      "1603": {
+        "name": "Vancouver Whitecaps",
+        "attack": 0.22638112847298145,
+        "defence": 0.2450136665551451,
+        "training_matches": 105
+      },
+      "1604": {
+        "name": "New York City FC",
+        "attack": -0.07354469103961332,
+        "defence": 0.1815124437391201,
+        "training_matches": 105
+      },
+      "1605": {
+        "name": "Los Angeles Galaxy",
+        "attack": -0.06838797657693939,
+        "defence": -0.13932370944650113,
+        "training_matches": 102
+      },
+      "1606": {
+        "name": "Real Salt Lake",
+        "attack": -0.13241875384506224,
+        "defence": -0.03003178003566116,
+        "training_matches": 99
+      },
+      "1607": {
+        "name": "Chicago Fire",
+        "attack": 0.14772593171857437,
+        "defence": 0.03359003792473325,
+        "training_matches": 99
+      },
+      "1608": {
+        "name": "Atlanta United FC",
+        "attack": -0.2651865959494291,
+        "defence": -0.043179184453093565,
+        "training_matches": 101
+      },
+      "1609": {
+        "name": "New England Revolution",
+        "attack": -0.029404474885022867,
+        "defence": 0.024332301723128138,
+        "training_matches": 96
+      },
+      "1610": {
+        "name": "Colorado Rapids",
+        "attack": -0.1759196862256261,
+        "defence": 0.03225693429954377,
+        "training_matches": 98
+      },
+      "1611": {
+        "name": "Sporting Kansas City",
+        "attack": -0.1043227017692763,
+        "defence": -0.3704400260129862,
+        "training_matches": 96
+      },
+      "1612": {
+        "name": "Minnesota United FC",
+        "attack": 0.008431059408199777,
+        "defence": -0.11778343077957606,
+        "training_matches": 103
+      },
+      "1613": {
+        "name": "Columbus Crew",
+        "attack": -0.028688339997034476,
+        "defence": 0.014765078292481823,
+        "training_matches": 101
+      },
+      "1614": {
+        "name": "CF Montreal",
+        "attack": -0.27678884268848114,
+        "defence": -0.1389771505235373,
+        "training_matches": 97
+      },
+      "1615": {
+        "name": "DC United",
+        "attack": -0.2320402606645735,
+        "defence": -0.10426115734198545,
+        "training_matches": 95
+      },
+      "1616": {
+        "name": "Los Angeles FC",
+        "attack": 0.00432024750722091,
+        "defence": 0.30968745174863654,
+        "training_matches": 104
+      },
+      "1617": {
+        "name": "Portland Timbers",
+        "attack": 0.0529736093278061,
+        "defence": -0.1427452650285577,
+        "training_matches": 101
+      },
+      "2242": {
+        "name": "FC Cincinnati",
+        "attack": 0.206400287644166,
+        "defence": -0.2451987487566187,
+        "training_matches": 102
+      },
+      "9568": {
+        "name": "Inter Miami",
+        "attack": 0.444726648894579,
+        "defence": -0.05821993235802185,
+        "training_matches": 105
+      },
+      "9569": {
+        "name": "Nashville SC",
+        "attack": 0.18209750802644337,
+        "defence": 0.4186661890191073,
+        "training_matches": 99
+      },
+      "16489": {
+        "name": "Austin",
+        "attack": -0.18562930399505936,
+        "defence": -0.06628773064438878,
+        "training_matches": 98
+      },
+      "18310": {
+        "name": "Charlotte",
+        "attack": 0.06561066408030329,
+        "defence": 0.11722864059975664,
+        "training_matches": 102
+      },
+      "20787": {
+        "name": "St. Louis City",
+        "attack": 0.20259196629311088,
+        "defence": 0.02535860537687643,
+        "training_matches": 96
+      },
+      "25484": {
+        "name": "San Diego",
+        "attack": 0.06459974086885219,
+        "defence": -0.0705265646442524,
+        "training_matches": 67
+      }
+    },
+    "graph_connected": true,
+    "constraints": {
+      "attack_sum": 2.914335439641036e-16,
+      "defence_sum": -1.1102230246251565e-16
+    },
+    "optimizer": {
+      "success": true,
+      "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+      "iterations": 27,
+      "objective": 1193.3675472712514,
+      "parameter_at_bound": false
+    },
+    "warnings": [
+      "仅为球队比分基线，未量化伤停、预计阵容、球员、xG、天气及赛程因素。",
+      "已拟合不代表已通过有效性验证；参数须通过实际运行程序才能更新。",
+      "输入须由上游核准为常规时间终场比分，不能包含加时或点球大战。"
+    ]
+  },
+  "validation": {
+    "validation_status": "exploratory_single_fixed_holdout",
+    "deployment_approved": false,
+    "is_rolling_backtest": false,
+    "minimum_test_matches": 40,
+    "meets_minimum_supported_test_matches": true,
+    "evaluation_data_cutoff": "2026-10-13T01:39:25.921509Z",
+    "split": {
+      "method": "chronological_fixed_model_holdout",
+      "grouped_by": "kickoff_utc_calendar_date",
+      "train_cutoff": "2026-04-23T00:00:00Z",
+      "train_last_kickoff": "2026-04-19T23:00:00Z",
+      "test_start": "2026-04-23T00:30:00Z",
+      "test_end": "2026-10-11T23:00:00Z",
+      "training_count": 1180,
+      "testing_count": 296,
+      "result_availability_delay_hours": 4,
+      "embargoed_count": 6,
+      "embargoed_match_ids": [
+        1490225,
+        1490226,
+        1490227,
+        1490228,
+        1490230,
+        1490229
+      ]
+    },
+    "coverage": {
+      "total": 296,
+      "scored": 296,
+      "excluded": 0,
+      "ratio": 1.0,
+      "exclusions": []
+    },
+    "model_metrics": {
+      "n": 296,
+      "log_loss": 1.100135452214665,
+      "brier_score": 0.6658651513878159,
+      "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+      "log_loss_probability_floor": 1e-15
+    },
+    "baseline_metrics": {
+      "n": 296,
+      "log_loss": 1.0731487699142879,
+      "brier_score": 0.6483315680097067,
+      "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+      "log_loss_probability_floor": 1e-15
+    },
+    "baseline": {
+      "name": "training_league_home_away_mean_poisson",
+      "home_rate": 1.7174925878864888,
+      "away_rate": 1.3574756459127488,
+      "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
+      "same_scored_matches_as_model": true
+    },
+    "comparison": {
+      "model_minus_baseline_log_loss": 0.02698668230037704,
+      "model_minus_baseline_brier_score": 0.017533583378109174,
+      "lower_is_better": true
+    },
+    "warnings": [
+      "单次固定模型留出验证仅为探索性检查，不是滚动回测，也不构成上线或盈利证明。",
+      "不含赔率、投注收益、阵容修正或提前十小时伤停历史快照验证。",
+      "超参数为显式默认值，不能根据本留出期反复挑选参数后再声称独立验证。",
+      "未知球队比赛单独列为未覆盖，指标只针对 model_metrics.n 场已覆盖比赛。"
+    ]
+  },
+  "source_seasons": [
+    {
+      "year": 2026,
+      "coverage_flags": {
+        "fixtures": {
+          "events": true,
+          "lineups": true,
+          "statistics_fixtures": true,
+          "statistics_players": true
+        },
+        "standings": true,
+        "players": true,
+        "top_scorers": true,
+        "top_assists": true,
+        "top_cards": true,
+        "injuries": true,
+        "predictions": true,
+        "odds": true
+      },
+      "fixtures": 510,
+      "fetched_at": "2026-10-13T01:40:10.893195Z",
+      "received_at": "2026-10-13T01:40:10.912025Z",
+      "from_cache": false,
+      "status_counts": {
+        "FT": 420,
+        "NS": 90
+      }
+    },
+    {
+      "year": 2025,
+      "coverage_flags": {
+        "fixtures": {
+          "events": true,
+          "lineups": true,
+          "statistics_fixtures": true,
+          "statistics_players": true
+        },
+        "standings": true,
+        "players": true,
+        "top_scorers": true,
+        "top_assists": true,
+        "top_cards": true,
+        "injuries": true,
+        "predictions": true,
+        "odds": false
+      },
+      "fixtures": 540,
+      "fetched_at": "2026-10-07T07:09:05.938559Z",
+      "received_at": "2026-10-13T01:40:10.929731Z",
+      "from_cache": true,
+      "status_counts": {
+        "FT": 533,
+        "PEN": 7
+      }
+    },
+    {
+      "year": 2024,
+      "coverage_flags": {
+        "fixtures": {
+          "events": true,
+          "lineups": true,
+          "statistics_fixtures": true,
+          "statistics_players": true
+        },
+        "standings": true,
+        "players": true,
+        "top_scorers": true,
+        "top_assists": true,
+        "top_cards": true,
+        "injuries": true,
+        "predictions": true,
+        "odds": false
+      },
+      "fixtures": 526,
+      "fetched_at": "2026-10-07T07:09:06.145918Z",
+      "received_at": "2026-10-13T01:40:10.949546Z",
+      "from_cache": true,
+      "status_counts": {
+        "CANC": 4,
+        "FT": 512,
+        "PEN": 9,
+        "AET": 1
+      }
+    }
+  ]
+}

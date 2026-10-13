@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
   "time_semantics": "observed_wall_clock_v1",
-  "run_started_at": "2026-10-12T01:37:32.019444Z",
-  "training_cutoff": "2026-10-12T01:37:32.019444Z",
-  "data_observed_at": "2026-10-12T01:37:38.962446Z",
-  "model_fitted_at": "2026-10-12T01:37:39.056156Z",
+  "run_started_at": "2026-10-13T01:39:25.921509Z",
+  "training_cutoff": "2026-10-13T01:39:25.921509Z",
+  "data_observed_at": "2026-10-13T01:39:38.437008Z",
+  "model_fitted_at": "2026-10-13T01:39:38.630025Z",
   "program_version": "0.1.0",
-  "model_id": "serie_a-20261012T013732019444Z",
+  "model_id": "serie_a-20261013T013925921509Z",
   "competition": {
     "key": "serie_a",
     "label": "意甲",
@@ -14,8 +14,8 @@
     "country": "Italy",
     "mode": "domestic_baseline"
   },
-  "data_fingerprint": "8bc41ac70084f477bb23313f6b224eab8000c4c401a45fa6987d6b7cd1f48b29",
-  "trained_at": "2026-10-12T01:37:32.019444Z",
+  "data_fingerprint": "01ea8d139597c102d479afe21324fd48104226b54099bd0e0c9c6e96304e81c0",
+  "trained_at": "2026-10-13T01:39:25.921509Z",
   "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
   "maturity": "exploratory_baseline",
   "lineup_effects": "未量化",
@@ -26,177 +26,177 @@
     "fit_status": "converged",
     "trained": true,
     "validated_for_production": false,
-    "training_cutoff": "2026-10-12T01:37:32.019444Z",
-    "last_match_kickoff": "2026-10-11T18:45:00Z",
-    "last_result_assumed_available_at": "2026-10-11T22:45:00Z",
-    "n_matches": 818,
+    "training_cutoff": "2026-10-13T01:39:25.921509Z",
+    "last_match_kickoff": "2026-10-12T18:45:00Z",
+    "last_result_assumed_available_at": "2026-10-12T22:45:00Z",
+    "n_matches": 820,
     "n_teams": 24,
     "min_team_matches": 6,
     "low_sample_team_threshold": 5,
     "low_sample_team_ids": [],
     "excluded_after_cutoff_or_availability_delay": 0,
-    "training_data_sha256": "e7c078d6962e9fc546845aea388dbeb90bb18ebbf1d69662c6624c509e23994f",
+    "training_data_sha256": "55de11f0e3e9043a0feff347539208e8c94bacae944255be938311b86cfac723",
     "half_life_days": 180.0,
     "ridge": 3.0,
-    "effective_sample_size": 480.3143794384542,
-    "intercept": 0.1420783652534002,
-    "home_advantage": 0.10401330026030627,
+    "effective_sample_size": 479.7101905401686,
+    "intercept": 0.14249305901042658,
+    "home_advantage": 0.1087054716098872,
     "team_parameters": {
       "487": {
         "name": "Lazio",
-        "attack": 0.056163809727656284,
-        "defence": 0.17766420763517107,
+        "attack": 0.05204206399908078,
+        "defence": 0.1796226866970443,
         "training_matches": 82
       },
       "488": {
         "name": "Sassuolo",
-        "attack": 0.10020221266406276,
-        "defence": -0.08389611449352094,
+        "attack": 0.09946625728205905,
+        "defence": -0.0804374914944308,
         "training_matches": 44
       },
       "489": {
         "name": "AC Milan",
-        "attack": 0.17928621063971778,
-        "defence": 0.22541431545511095,
+        "attack": 0.17613390070989998,
+        "defence": 0.22886188009964104,
         "training_matches": 82
       },
       "490": {
         "name": "Cagliari",
-        "attack": -0.10467904075732602,
-        "defence": 0.0910854303685685,
+        "attack": -0.1073118153478223,
+        "defence": 0.09343288380821813,
         "training_matches": 82
       },
       "492": {
         "name": "Napoli",
-        "attack": 0.2477630598362474,
-        "defence": 0.315087800419358,
+        "attack": 0.24596662081027348,
+        "defence": 0.316366317403224,
         "training_matches": 82
       },
       "494": {
         "name": "Udinese",
-        "attack": 0.05228865829211149,
-        "defence": -0.0688214895051303,
-        "training_matches": 81
+        "attack": 0.03845000970535301,
+        "defence": -0.08450521668423125,
+        "training_matches": 82
       },
       "495": {
         "name": "Genoa",
-        "attack": -0.12572817513221973,
-        "defence": -0.0784190277513629,
+        "attack": -0.12735083511304762,
+        "defence": -0.07693371119455866,
         "training_matches": 82
       },
       "496": {
         "name": "Juventus",
-        "attack": 0.24366171449048304,
-        "defence": 0.3001006696810411,
+        "attack": 0.24173724124158807,
+        "defence": 0.3026016897921274,
         "training_matches": 82
       },
       "497": {
         "name": "AS Roma",
-        "attack": 0.37870822800217097,
-        "defence": 0.4461575835974249,
+        "attack": 0.3771163801870171,
+        "defence": 0.44907429945909444,
         "training_matches": 82
       },
       "499": {
         "name": "Atalanta",
-        "attack": 0.143480388977381,
-        "defence": 0.1977239753205047,
-        "training_matches": 81
+        "attack": 0.16122228951644307,
+        "defence": 0.18959446624743775,
+        "training_matches": 82
       },
       "500": {
         "name": "Bologna",
-        "attack": 0.015266854292255837,
-        "defence": 0.04178766542063293,
+        "attack": 0.013739882940047542,
+        "defence": 0.04525448101056116,
         "training_matches": 82
       },
       "502": {
         "name": "Fiorentina",
-        "attack": -0.010324048472743892,
-        "defence": -0.11294343355199221,
+        "attack": -0.01358683973505935,
+        "defence": -0.10973445647230096,
         "training_matches": 82
       },
       "503": {
         "name": "Torino",
-        "attack": -0.027214583684026208,
-        "defence": -0.1560009575213148,
-        "training_matches": 81
+        "attack": -0.006933046084927309,
+        "defence": -0.14419494298398264,
+        "training_matches": 82
       },
       "504": {
         "name": "Hellas Verona",
-        "attack": -0.4587879512537885,
-        "defence": -0.15015907215387253,
+        "attack": -0.4598959672066671,
+        "defence": -0.14769307411166685,
         "training_matches": 76
       },
       "505": {
         "name": "Inter",
-        "attack": 0.6780067441946025,
-        "defence": 0.16249801362152103,
+        "attack": 0.6753838788418048,
+        "defence": 0.16403247496900542,
         "training_matches": 82
       },
       "511": {
         "name": "Empoli",
-        "attack": -0.16501530176879706,
-        "defence": -0.15421110001054206,
+        "attack": -0.16741613755001594,
+        "defence": -0.15179315569858678,
         "training_matches": 38
       },
       "512": {
         "name": "Frosinone",
-        "attack": 0.15185500844123764,
-        "defence": 0.06984107178114236,
+        "attack": 0.14418243098047928,
+        "defence": 0.07216993533331661,
         "training_matches": 6
       },
       "517": {
         "name": "Venezia",
-        "attack": -0.25003589778201374,
-        "defence": -0.4236013363539045,
-        "training_matches": 43
+        "attack": -0.22703440201867542,
+        "defence": -0.45715951933599064,
+        "training_matches": 44
       },
       "520": {
         "name": "Cremonese",
-        "attack": -0.2907815096572782,
-        "defence": -0.16621283030928305,
+        "attack": -0.29177652223095224,
+        "defence": -0.16422714812905137,
         "training_matches": 38
       },
       "523": {
         "name": "Parma",
-        "attack": -0.3497306762242865,
-        "defence": 0.01346634568698872,
+        "attack": -0.35121893357150774,
+        "defence": 0.01527761669305834,
         "training_matches": 82
       },
       "801": {
         "name": "Pisa",
-        "attack": -0.430202617231608,
-        "defence": -0.37857840823580424,
+        "attack": -0.4307184767892827,
+        "defence": -0.3764038748867863,
         "training_matches": 38
       },
       "867": {
         "name": "Lecce",
-        "attack": -0.33650757497864864,
-        "defence": -0.12217715552372792,
+        "attack": -0.3394309935307756,
+        "defence": -0.11958139077038457,
         "training_matches": 82
       },
       "895": {
         "name": "Como",
-        "attack": 0.30035108412174966,
-        "defence": 0.317836743017466,
+        "attack": 0.2981681160537705,
+        "defence": 0.3189274766248085,
         "training_matches": 82
       },
       "1579": {
         "name": "Monza",
-        "attack": 0.0019734032630601126,
-        "defence": -0.46364289659447505,
+        "attack": -0.0009351030890834358,
+        "defence": -0.4625522263755663,
         "training_matches": 44
       }
     },
     "graph_connected": true,
     "constraints": {
-      "attack_sum": -1.1102230246251565e-16,
-      "defence_sum": -1.6653345369377348e-16
+      "attack_sum": 1.1102230246251565e-16,
+      "defence_sum": -1.1102230246251565e-16
     },
     "optimizer": {
       "success": true,
       "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
-      "iterations": 29,
-      "objective": 606.4565545471015,
+      "iterations": 25,
+      "objective": 609.2594128560477,
       "parameter_at_bound": false
     },
     "warnings": [
@@ -211,25 +211,25 @@
     "is_rolling_backtest": false,
     "minimum_test_matches": 40,
     "meets_minimum_supported_test_matches": true,
-    "evaluation_data_cutoff": "2026-10-12T01:37:32.019444Z",
+    "evaluation_data_cutoff": "2026-10-13T01:39:25.921509Z",
     "split": {
       "method": "chronological_fixed_model_holdout",
       "grouped_by": "kickoff_utc_calendar_date",
       "train_cutoff": "2026-03-08T00:00:00Z",
       "train_last_kickoff": "2026-03-07T19:45:00Z",
       "test_start": "2026-03-08T11:30:00Z",
-      "test_end": "2026-10-11T18:45:00Z",
+      "test_end": "2026-10-12T18:45:00Z",
       "training_count": 654,
-      "testing_count": 164,
+      "testing_count": 166,
       "result_availability_delay_hours": 4,
       "embargoed_count": 0,
       "embargoed_match_ids": []
     },
     "coverage": {
-      "total": 164,
-      "scored": 158,
+      "total": 166,
+      "scored": 160,
       "excluded": 6,
-      "ratio": 0.9634146341463414,
+      "ratio": 0.963855421686747,
       "exclusions": [
         {
           "match_id": 1550090,
@@ -258,16 +258,16 @@
       ]
     },
     "model_metrics": {
-      "n": 158,
-      "log_loss": 0.9782856674200036,
-      "brier_score": 0.5818344956516093,
+      "n": 160,
+      "log_loss": 0.9755451658226495,
+      "brier_score": 0.5799094367517833,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
     "baseline_metrics": {
-      "n": 158,
-      "log_loss": 1.0733363328784455,
-      "brier_score": 0.6504091460509782,
+      "n": 160,
+      "log_loss": 1.0714811907315398,
+      "brier_score": 0.6491340396986387,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
@@ -279,8 +279,8 @@
       "same_scored_matches_as_model": true
     },
     "comparison": {
-      "model_minus_baseline_log_loss": -0.09505066545844199,
-      "model_minus_baseline_brier_score": -0.06857465039936894,
+      "model_minus_baseline_log_loss": -0.0959360249088903,
+      "model_minus_baseline_brier_score": -0.0692246029468554,
       "lower_is_better": true
     },
     "warnings": [
@@ -310,12 +310,12 @@
         "odds": true
       },
       "fixtures": 380,
-      "fetched_at": "2026-10-12T01:37:38.933943Z",
-      "received_at": "2026-10-12T01:37:38.942173Z",
+      "fetched_at": "2026-10-13T01:39:38.387329Z",
+      "received_at": "2026-10-13T01:39:38.401674Z",
       "from_cache": false,
       "status_counts": {
-        "FT": 58,
-        "NS": 322
+        "FT": 60,
+        "NS": 320
       }
     },
     {
@@ -338,7 +338,7 @@
       },
       "fixtures": 380,
       "fetched_at": "2026-10-07T01:33:01.582168Z",
-      "received_at": "2026-10-12T01:37:38.949901Z",
+      "received_at": "2026-10-13T01:39:38.415908Z",
       "from_cache": true,
       "status_counts": {
         "FT": 380
@@ -364,7 +364,7 @@
       },
       "fixtures": 380,
       "fetched_at": "2026-10-07T01:33:01.859769Z",
-      "received_at": "2026-10-12T01:37:38.957776Z",
+      "received_at": "2026-10-13T01:39:38.429987Z",
       "from_cache": true,
       "status_counts": {
         "FT": 380

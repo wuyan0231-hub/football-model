@@ -1,0 +1,332 @@
+{
+  "content": {
+    "competition": {
+      "country": "Sweden",
+      "key": "allsvenskan",
+      "label": "瑞典超",
+      "mode": "domestic_baseline",
+      "name": "Allsvenskan"
+    },
+    "data_fingerprint": "83b9dcad9092e181b80da0ec9c57d3d9b26a1a8cf01c643555599d0ede549e09",
+    "data_observed_at": "2026-10-13T01:39:52.918779Z",
+    "ev": "未量化",
+    "lineup_effects": "未量化",
+    "maturity": "exploratory_baseline",
+    "model": {
+      "constraints": {
+        "attack_sum": -7.632783294297951e-17,
+        "defence_sum": -1.4224732503009818e-16
+      },
+      "effective_sample_size": 325.89702168122983,
+      "excluded_after_cutoff_or_availability_delay": 0,
+      "fit_status": "converged",
+      "graph_connected": true,
+      "half_life_days": 180.0,
+      "home_advantage": 0.16879487066357213,
+      "intercept": 0.22594732627870162,
+      "last_match_kickoff": "2026-10-12T17:00:00Z",
+      "last_result_assumed_available_at": "2026-10-12T21:00:00Z",
+      "low_sample_team_ids": [
+        2176
+      ],
+      "low_sample_team_threshold": 5,
+      "min_team_matches": 2,
+      "model_scope": "baseline_unadjusted_lineup",
+      "model_version": "independent_poisson_time_decay_l2_v1",
+      "n_matches": 668,
+      "n_teams": 20,
+      "optimizer": {
+        "iterations": 35,
+        "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "objective": 539.9936570807643,
+        "parameter_at_bound": false,
+        "success": true
+      },
+      "ridge": 3.0,
+      "team_parameters": {
+        "2163": {
+          "attack": -0.06900947670360705,
+          "defence": -0.32016216226147887,
+          "name": "IFK Varnamo",
+          "training_matches": 62
+        },
+        "2166": {
+          "attack": -0.18113384186016926,
+          "defence": -0.32427847110474256,
+          "name": "Orgryte IS",
+          "training_matches": 25
+        },
+        "2170": {
+          "attack": -0.06423369386982142,
+          "defence": 0.4269745853482752,
+          "name": "Gais",
+          "training_matches": 83
+        },
+        "2172": {
+          "attack": -0.34186870761803984,
+          "defence": -0.007574602162065504,
+          "name": "Degerfors IF",
+          "training_matches": 53
+        },
+        "2174": {
+          "attack": -0.18965335483343934,
+          "defence": -0.10260351841345913,
+          "name": "Osters IF",
+          "training_matches": 30
+        },
+        "2176": {
+          "attack": -0.03845431764744495,
+          "defence": -0.009713524624589277,
+          "name": "Landskrona BoIS",
+          "training_matches": 2
+        },
+        "2240": {
+          "attack": 0.007733954256717316,
+          "defence": 0.017662548014691935,
+          "name": "Mjallby AIF",
+          "training_matches": 83
+        },
+        "2241": {
+          "attack": 0.04499616108722831,
+          "defence": 0.0288841486017002,
+          "name": "Vasteras SK FK",
+          "training_matches": 53
+        },
+        "363": {
+          "attack": 0.3624571842668963,
+          "defence": 0.38621783184885056,
+          "name": "Hammarby FF",
+          "training_matches": 83
+        },
+        "364": {
+          "attack": 0.3708813711055964,
+          "defence": 0.3902434808017408,
+          "name": "Djurgardens IF",
+          "training_matches": 83
+        },
+        "366": {
+          "attack": 0.001292102803459283,
+          "defence": -0.06055865339577246,
+          "name": "IFK Goteborg",
+          "training_matches": 83
+        },
+        "367": {
+          "attack": 0.2056125994336775,
+          "defence": 0.03600535049097132,
+          "name": "BK Hacken",
+          "training_matches": 83
+        },
+        "370": {
+          "attack": 0.39758893250226957,
+          "defence": 0.03794787552926477,
+          "name": "Sirius",
+          "training_matches": 83
+        },
+        "371": {
+          "attack": 0.13674027948004724,
+          "defence": -0.1826584135323091,
+          "name": "IF Brommapojkarna",
+          "training_matches": 83
+        },
+        "372": {
+          "attack": 0.10055637534663835,
+          "defence": 0.16681497484478316,
+          "name": "IF Elfsborg",
+          "training_matches": 83
+        },
+        "374": {
+          "attack": -0.34334863070448585,
+          "defence": -0.07873713890639132,
+          "name": "Kalmar FF",
+          "training_matches": 53
+        },
+        "375": {
+          "attack": 0.14607420357993425,
+          "defence": 0.09604179968679996,
+          "name": "Malmo FF",
+          "training_matches": 83
+        },
+        "377": {
+          "attack": 0.13275380209457324,
+          "defence": -0.11541156516563855,
+          "name": "AIK Stockholm",
+          "training_matches": 83
+        },
+        "378": {
+          "attack": -0.156324976351755,
+          "defence": -0.18729126418027886,
+          "name": "IFK Norrkoping",
+          "training_matches": 62
+        },
+        "766": {
+          "attack": -0.522659966368275,
+          "defence": -0.1978032814203523,
+          "name": "Halmstad",
+          "training_matches": 83
+        }
+      },
+      "trained": true,
+      "training_cutoff": "2026-10-13T01:39:25.921509Z",
+      "training_data_sha256": "34b95183dc430d6f6770fa12a671947be56b2949bbc4dc13ef7cae2f3830a9d9",
+      "validated_for_production": false,
+      "warnings": [
+        "球队 [2176] 各自训练不足 5 场，估计强烈依赖正则化，须保留小样本标记。",
+        "仅为球队比分基线，未量化伤停、预计阵容、球员、xG、天气及赛程因素。",
+        "已拟合不代表已通过有效性验证；参数须通过实际运行程序才能更新。",
+        "输入须由上游核准为常规时间终场比分，不能包含加时或点球大战。"
+      ]
+    },
+    "model_fitted_at": "2026-10-13T01:39:53.102443Z",
+    "model_id": "allsvenskan-20261013T013925921509Z",
+    "program_version": "0.1.0",
+    "run_started_at": "2026-10-13T01:39:25.921509Z",
+    "schema_version": 2,
+    "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
+    "source_seasons": [
+      {
+        "coverage_flags": {
+          "fixtures": {
+            "events": true,
+            "lineups": true,
+            "statistics_fixtures": true,
+            "statistics_players": true
+          },
+          "injuries": true,
+          "odds": true,
+          "players": true,
+          "predictions": true,
+          "standings": true,
+          "top_assists": true,
+          "top_cards": true,
+          "top_scorers": true
+        },
+        "fetched_at": "2026-10-13T01:39:52.883006Z",
+        "fixtures": 240,
+        "from_cache": false,
+        "received_at": "2026-10-13T01:39:52.895229Z",
+        "status_counts": {
+          "FT": 184,
+          "NS": 56
+        },
+        "year": 2026
+      },
+      {
+        "coverage_flags": {
+          "fixtures": {
+            "events": true,
+            "lineups": true,
+            "statistics_fixtures": true,
+            "statistics_players": true
+          },
+          "injuries": true,
+          "odds": false,
+          "players": true,
+          "predictions": true,
+          "standings": true,
+          "top_assists": true,
+          "top_cards": true,
+          "top_scorers": true
+        },
+        "fetched_at": "2026-10-08T01:33:53.985628Z",
+        "fixtures": 242,
+        "from_cache": true,
+        "received_at": "2026-10-13T01:39:52.904384Z",
+        "status_counts": {
+          "FT": 242
+        },
+        "year": 2025
+      },
+      {
+        "coverage_flags": {
+          "fixtures": {
+            "events": true,
+            "lineups": true,
+            "statistics_fixtures": true,
+            "statistics_players": true
+          },
+          "injuries": true,
+          "odds": false,
+          "players": true,
+          "predictions": true,
+          "standings": true,
+          "top_assists": true,
+          "top_cards": true,
+          "top_scorers": true
+        },
+        "fetched_at": "2026-10-08T01:33:54.193832Z",
+        "fixtures": 242,
+        "from_cache": true,
+        "received_at": "2026-10-13T01:39:52.913170Z",
+        "status_counts": {
+          "FT": 242
+        },
+        "year": 2024
+      }
+    ],
+    "time_semantics": "observed_wall_clock_v1",
+    "trained_at": "2026-10-13T01:39:25.921509Z",
+    "training_cutoff": "2026-10-13T01:39:25.921509Z",
+    "validation": {
+      "baseline": {
+        "away_rate": 1.3055295220243675,
+        "home_rate": 1.5435801312089972,
+        "name": "training_league_home_away_mean_poisson",
+        "same_scored_matches_as_model": true,
+        "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)"
+      },
+      "baseline_metrics": {
+        "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+        "brier_score": 0.6444624275382926,
+        "log_loss": 1.0632854315011127,
+        "log_loss_probability_floor": 1e-15,
+        "n": 135
+      },
+      "comparison": {
+        "lower_is_better": true,
+        "model_minus_baseline_brier_score": -0.033235413843710204,
+        "model_minus_baseline_log_loss": -0.04212411478131051
+      },
+      "coverage": {
+        "excluded": 0,
+        "exclusions": [],
+        "ratio": 1.0,
+        "scored": 135,
+        "total": 135
+      },
+      "deployment_approved": false,
+      "evaluation_data_cutoff": "2026-10-13T01:39:25.921509Z",
+      "is_rolling_backtest": false,
+      "meets_minimum_supported_test_matches": true,
+      "minimum_test_matches": 40,
+      "model_metrics": {
+        "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+        "brier_score": 0.6112270136945824,
+        "log_loss": 1.0211613167198021,
+        "log_loss_probability_floor": 1e-15,
+        "n": 135
+      },
+      "split": {
+        "embargoed_count": 0,
+        "embargoed_match_ids": [],
+        "grouped_by": "kickoff_utc_calendar_date",
+        "method": "chronological_fixed_model_holdout",
+        "result_availability_delay_hours": 4,
+        "test_end": "2026-10-12T17:00:00Z",
+        "test_start": "2026-05-09T13:00:00Z",
+        "testing_count": 135,
+        "train_cutoff": "2026-05-09T00:00:00Z",
+        "train_last_kickoff": "2026-05-08T17:00:00Z",
+        "training_count": 533
+      },
+      "validation_status": "exploratory_single_fixed_holdout",
+      "warnings": [
+        "单次固定模型留出验证仅为探索性检查，不是滚动回测，也不构成上线或盈利证明。",
+        "不含赔率、投注收益、阵容修正或提前十小时伤停历史快照验证。",
+        "超参数为显式默认值，不能根据本留出期反复挑选参数后再声称独立验证。",
+        "未知球队比赛单独列为未覆盖，指标只针对 model_metrics.n 场已覆盖比赛。"
+      ]
+    }
+  },
+  "kind": "model_bundle",
+  "original_bytes_sha256": "1efdc21a0deb8d38c6aa2e45904273f17ec683bce8bd8b0de9ee41d9108ee224"
+}

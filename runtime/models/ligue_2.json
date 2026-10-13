@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
   "time_semantics": "observed_wall_clock_v1",
-  "run_started_at": "2026-10-11T01:33:06.415389Z",
-  "training_cutoff": "2026-10-11T01:33:06.415389Z",
-  "data_observed_at": "2026-10-11T01:33:19.911720Z",
-  "model_fitted_at": "2026-10-11T01:33:20.018306Z",
+  "run_started_at": "2026-10-13T01:39:25.921509Z",
+  "training_cutoff": "2026-10-13T01:39:25.921509Z",
+  "data_observed_at": "2026-10-13T01:39:47.213032Z",
+  "model_fitted_at": "2026-10-13T01:39:47.354606Z",
   "program_version": "0.1.0",
-  "model_id": "ligue_2-20261011T013306415389Z",
+  "model_id": "ligue_2-20261013T013925921509Z",
   "competition": {
     "key": "ligue_2",
     "label": "法乙",
@@ -14,8 +14,8 @@
     "country": "France",
     "mode": "domestic_baseline"
   },
-  "data_fingerprint": "36b27ff1ac0534c3d90eb85d665cafd3e1054bf5cde078d0534d6a5607aa0b10",
-  "trained_at": "2026-10-11T01:33:06.415389Z",
+  "data_fingerprint": "3524e30dcd4d03a465499d4d3bcb10023b4f28b38a43bb23bff92d516008a3d1",
+  "trained_at": "2026-10-13T01:39:25.921509Z",
   "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
   "maturity": "exploratory_baseline",
   "lineup_effects": "未量化",
@@ -26,10 +26,10 @@
     "fit_status": "converged",
     "trained": true,
     "validated_for_production": false,
-    "training_cutoff": "2026-10-11T01:33:06.415389Z",
-    "last_match_kickoff": "2026-10-10T18:00:00Z",
-    "last_result_assumed_available_at": "2026-10-10T22:00:00Z",
-    "n_matches": 690,
+    "training_cutoff": "2026-10-13T01:39:25.921509Z",
+    "last_match_kickoff": "2026-10-12T18:45:00Z",
+    "last_result_assumed_available_at": "2026-10-12T22:45:00Z",
+    "n_matches": 691,
     "n_teams": 28,
     "min_team_matches": 2,
     "low_sample_team_threshold": 5,
@@ -37,192 +37,192 @@
       3221
     ],
     "excluded_after_cutoff_or_availability_delay": 0,
-    "training_data_sha256": "09ad514d2bfcb35c39dbda755a12639fa982f7828119a17673f9a93e6127e608",
+    "training_data_sha256": "1db919688b13f89e0f1b422f2aa5391337484275745081c6d5e5d0f767ba6663",
     "half_life_days": 180.0,
     "ridge": 3.0,
-    "effective_sample_size": 392.8279792133878,
-    "intercept": 0.11787362962444925,
-    "home_advantage": 0.12378784004157731,
+    "effective_sample_size": 392.78728345266273,
+    "intercept": 0.12846062382705592,
+    "home_advantage": 0.1315952738981736,
     "team_parameters": {
       "82": {
         "name": "Montpellier",
-        "attack": -0.06642194678294222,
-        "defence": 0.40311527048881723,
+        "attack": -0.07285064498516451,
+        "defence": 0.41531290013361444,
         "training_matches": 42
       },
       "83": {
         "name": "Nantes",
-        "attack": -0.07198791701009992,
-        "defence": -0.23099938177596813,
+        "attack": -0.07659429903630512,
+        "defence": -0.22624072001132278,
         "training_matches": 8
       },
       "87": {
         "name": "Amiens",
-        "attack": -0.11383338134693714,
-        "defence": -0.391248194346476,
+        "attack": -0.11985841572054964,
+        "defence": -0.3855746795046739,
         "training_matches": 68
       },
       "88": {
         "name": "Caen",
-        "attack": -0.1658965116151562,
-        "defence": -0.22799399223422867,
+        "attack": -0.173619253577607,
+        "defence": -0.2227505133475429,
         "training_matches": 34
       },
       "89": {
         "name": "Dijon",
-        "attack": 0.1481668015171807,
-        "defence": -0.12039317846884265,
-        "training_matches": 7
+        "attack": 0.3322662735743677,
+        "defence": -0.15053574475940032,
+        "training_matches": 8
       },
       "90": {
         "name": "Guingamp",
-        "attack": 0.007866855861330645,
-        "defence": -0.1473009494105923,
+        "attack": -0.0033295274889858944,
+        "defence": -0.14012904215201838,
         "training_matches": 77
       },
       "93": {
         "name": "Reims",
-        "attack": 0.2630388670037461,
-        "defence": 0.1323529604697711,
+        "attack": 0.25759225717944706,
+        "defence": 0.1371929851986379,
         "training_matches": 42
       },
       "97": {
         "name": "Lorient",
-        "attack": 0.3207538731308459,
-        "defence": 0.1410882287747363,
+        "attack": 0.310957138517554,
+        "defence": 0.14408216186482709,
         "training_matches": 34
       },
       "98": {
         "name": "Ajaccio",
-        "attack": -0.16636668384446002,
-        "defence": -0.005244843431583588,
+        "attack": -0.1734718971561647,
+        "defence": -0.0012558205562173148,
         "training_matches": 34
       },
       "99": {
         "name": "Clermont Foot",
-        "attack": -0.16478118663960908,
-        "defence": -0.013212442282684787,
+        "attack": -0.17309397358925757,
+        "defence": -0.0004306318907710403,
         "training_matches": 78
       },
       "101": {
         "name": "Grenoble",
-        "attack": -0.15596446028904992,
-        "defence": -0.002745350982667816,
+        "attack": -0.16625182903112773,
+        "defence": 0.0034863369147007978,
         "training_matches": 76
       },
       "102": {
         "name": "Nancy",
-        "attack": -0.08366630352755237,
-        "defence": -0.06031029110188268,
+        "attack": -0.0884187101575379,
+        "defence": -0.054966040850556286,
         "training_matches": 42
       },
       "104": {
         "name": "RED Star FC 93",
-        "attack": 0.13708877647210008,
-        "defence": -0.02382336974726212,
+        "attack": 0.12469583971410224,
+        "defence": -0.01689934069232123,
         "training_matches": 76
       },
       "110": {
         "name": "Estac Troyes",
-        "attack": 0.2499529585677539,
-        "defence": 0.20701377848725924,
+        "attack": 0.24338674919965714,
+        "defence": 0.2116993371912938,
         "training_matches": 68
       },
       "112": {
         "name": "Metz",
-        "attack": 0.18940951290609598,
-        "defence": 0.17237431278017737,
-        "training_matches": 42
+        "attack": 0.206580077725933,
+        "defence": 0.011296938946852426,
+        "training_matches": 43
       },
       "114": {
         "name": "Paris FC",
-        "attack": 0.1421211436295372,
-        "defence": 0.10541239240519594,
+        "attack": 0.13343374683090403,
+        "defence": 0.10863315530400776,
         "training_matches": 34
       },
       "115": {
         "name": "Sochaux",
-        "attack": -0.45197649779971794,
-        "defence": 0.31597084611674076,
+        "attack": -0.452798537308003,
+        "defence": 0.31800781687294166,
         "training_matches": 8
       },
       "433": {
         "name": "Laval",
-        "attack": -0.1192594265010418,
-        "defence": -0.21609147541533197,
+        "attack": -0.13272807695733002,
+        "defence": -0.19935299238712778,
         "training_matches": 78
       },
       "1063": {
         "name": "Saint Etienne",
-        "attack": 0.4377852722889667,
-        "defence": 0.1620619044763243,
+        "attack": 0.42330531269824306,
+        "defence": 0.178649944707718,
         "training_matches": 43
       },
       "1297": {
         "name": "PAU",
-        "attack": 0.05576677713306664,
-        "defence": -0.2627227439115672,
+        "attack": 0.04716209705762377,
+        "defence": -0.24821678489723703,
         "training_matches": 76
       },
       "1298": {
         "name": "Le Mans",
-        "attack": 0.18330746500515527,
-        "defence": 0.28067524997208765,
+        "attack": 0.1786285768400008,
+        "defence": 0.284653133665193,
         "training_matches": 34
       },
       "1299": {
         "name": "Boulogne",
-        "attack": -0.32408382859536267,
-        "defence": 0.004902646780729006,
+        "attack": -0.33110488089484497,
+        "defence": 0.01960862759469302,
         "training_matches": 44
       },
       "1301": {
         "name": "Rodez",
-        "attack": 0.20114194774538285,
-        "defence": -0.14372178333432636,
+        "attack": 0.19035743766809293,
+        "defence": -0.13729653701048936,
         "training_matches": 78
       },
       "1304": {
         "name": "Dunkerque",
-        "attack": 0.11335209384966709,
-        "defence": -0.11089296801025529,
+        "attack": 0.10659517107332991,
+        "defence": -0.10561698949296894,
         "training_matches": 78
       },
       "1305": {
         "name": "Bastia",
-        "attack": -0.2669901522220889,
-        "defence": 0.07623970509901429,
+        "attack": -0.27237726902949444,
+        "defence": 0.0811674339802226,
         "training_matches": 67
       },
       "3012": {
         "name": "Annecy",
-        "attack": 0.10570835537905296,
-        "defence": 0.07965141492304043,
+        "attack": 0.09144443471335038,
+        "defence": 0.09459515157516463,
         "training_matches": 76
       },
       "3200": {
         "name": "Martigues",
-        "attack": -0.1500253683995998,
-        "defence": -0.14200235179265808,
+        "attack": -0.15769167863178657,
+        "defence": -0.1372381911273394,
         "training_matches": 34
       },
       "3221": {
         "name": "Rouen",
-        "attack": -0.25420703591626415,
-        "defence": 0.017844605472434084,
+        "attack": -0.25221611922844694,
+        "defence": 0.01811810473011957,
         "training_matches": 2
       }
     },
     "graph_connected": true,
     "constraints": {
-      "attack_sum": 2.220446049250313e-16,
-      "defence_sum": 6.245004513516506e-17
+      "attack_sum": 3.885780586188048e-16,
+      "defence_sum": 1.0408340855860843e-17
     },
     "optimizer": {
       "success": true,
       "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
-      "iterations": 26,
-      "objective": 549.5755214820172,
+      "iterations": 27,
+      "objective": 549.7638626345131,
       "parameter_at_bound": false
     },
     "warnings": [
@@ -238,25 +238,25 @@
     "is_rolling_backtest": false,
     "minimum_test_matches": 40,
     "meets_minimum_supported_test_matches": true,
-    "evaluation_data_cutoff": "2026-10-11T01:33:06.415389Z",
+    "evaluation_data_cutoff": "2026-10-13T01:39:25.921509Z",
     "split": {
       "method": "chronological_fixed_model_holdout",
       "grouped_by": "kickoff_utc_calendar_date",
       "train_cutoff": "2026-03-20T00:00:00Z",
       "train_last_kickoff": "2026-03-16T19:45:00Z",
       "test_start": "2026-03-20T19:00:00Z",
-      "test_end": "2026-10-10T18:00:00Z",
+      "test_end": "2026-10-12T18:45:00Z",
       "training_count": 552,
-      "testing_count": 138,
+      "testing_count": 139,
       "result_availability_delay_hours": 4,
       "embargoed_count": 0,
       "embargoed_match_ids": []
     },
     "coverage": {
-      "total": 138,
+      "total": 139,
       "scored": 114,
-      "excluded": 24,
-      "ratio": 0.8260869565217391,
+      "excluded": 25,
+      "ratio": 0.8201438848920863,
       "exclusions": [
         {
           "match_id": 1545224,
@@ -353,6 +353,10 @@
         {
           "match_id": 1552491,
           "reason": "未知球队 ID：[83]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1552487,
+          "reason": "未知球队 ID：[89]；缺少训练数据，当前模型不支持。"
         }
       ]
     },
@@ -409,12 +413,12 @@
         "odds": true
       },
       "fixtures": 306,
-      "fetched_at": "2026-10-11T01:33:19.875660Z",
-      "received_at": "2026-10-11T01:33:19.886476Z",
+      "fetched_at": "2026-10-13T01:39:47.173025Z",
+      "received_at": "2026-10-13T01:39:47.184121Z",
       "from_cache": false,
       "status_counts": {
-        "FT": 71,
-        "NS": 235
+        "FT": 72,
+        "NS": 234
       }
     },
     {
@@ -437,7 +441,7 @@
       },
       "fixtures": 310,
       "fetched_at": "2026-10-08T01:33:51.120521Z",
-      "received_at": "2026-10-11T01:33:19.896806Z",
+      "received_at": "2026-10-13T01:39:47.195580Z",
       "from_cache": true,
       "status_counts": {
         "FT": 308,
@@ -465,7 +469,7 @@
       },
       "fixtures": 310,
       "fetched_at": "2026-10-08T01:33:51.369588Z",
-      "received_at": "2026-10-11T01:33:19.906785Z",
+      "received_at": "2026-10-13T01:39:47.207175Z",
       "from_cache": true,
       "status_counts": {
         "FT": 310

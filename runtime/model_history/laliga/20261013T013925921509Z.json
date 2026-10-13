@@ -1,0 +1,455 @@
+{
+  "schema_version": 2,
+  "time_semantics": "observed_wall_clock_v1",
+  "run_started_at": "2026-10-13T01:39:25.921509Z",
+  "training_cutoff": "2026-10-13T01:39:25.921509Z",
+  "data_observed_at": "2026-10-13T01:39:32.803545Z",
+  "model_fitted_at": "2026-10-13T01:39:33.034138Z",
+  "program_version": "0.1.0",
+  "model_id": "laliga-20261013T013925921509Z",
+  "competition": {
+    "key": "laliga",
+    "label": "西甲",
+    "name": "La Liga",
+    "country": "Spain",
+    "mode": "domestic_baseline"
+  },
+  "data_fingerprint": "436a8624143b8672b48dfffa19dd455eca14102465762c5f730868237b3af595",
+  "trained_at": "2026-10-13T01:39:25.921509Z",
+  "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
+  "maturity": "exploratory_baseline",
+  "lineup_effects": "未量化",
+  "ev": "未量化",
+  "model": {
+    "model_version": "independent_poisson_time_decay_l2_v1",
+    "model_scope": "baseline_unadjusted_lineup",
+    "fit_status": "converged",
+    "trained": true,
+    "validated_for_production": false,
+    "training_cutoff": "2026-10-13T01:39:25.921509Z",
+    "last_match_kickoff": "2026-10-12T19:00:00Z",
+    "last_result_assumed_available_at": "2026-10-12T23:00:00Z",
+    "n_matches": 838,
+    "n_teams": 26,
+    "min_team_matches": 8,
+    "low_sample_team_threshold": 5,
+    "low_sample_team_ids": [],
+    "excluded_after_cutoff_or_availability_delay": 0,
+    "training_data_sha256": "d84003096f84b4dc291b5ff9ac5056d51e15ff3b822df752475844ce2253ace2",
+    "half_life_days": 180.0,
+    "ridge": 3.0,
+    "effective_sample_size": 484.7819148993435,
+    "intercept": 0.12047495039578687,
+    "home_advantage": 0.31034404599310694,
+    "team_parameters": {
+      "529": {
+        "name": "Barcelona",
+        "attack": 0.7638245141311085,
+        "defence": 0.3325841459431619,
+        "training_matches": 84
+      },
+      "530": {
+        "name": "Atletico Madrid",
+        "attack": 0.3234835112098183,
+        "defence": 0.2101396196468099,
+        "training_matches": 84
+      },
+      "531": {
+        "name": "Athletic Club",
+        "attack": -0.061189143310537694,
+        "defence": 0.10886460406753645,
+        "training_matches": 82
+      },
+      "532": {
+        "name": "Valencia",
+        "attack": -0.1208140752200306,
+        "defence": -0.021861718518580774,
+        "training_matches": 84
+      },
+      "533": {
+        "name": "Villarreal",
+        "attack": 0.315619823466614,
+        "defence": 0.06166361818401125,
+        "training_matches": 84
+      },
+      "534": {
+        "name": "Las Palmas",
+        "attack": -0.14560732335918639,
+        "defence": -0.06571560129172746,
+        "training_matches": 38
+      },
+      "535": {
+        "name": "Malaga",
+        "attack": -0.5232537721624365,
+        "defence": -0.06359759682778533,
+        "training_matches": 8
+      },
+      "536": {
+        "name": "Sevilla",
+        "attack": 0.01355201884270747,
+        "defence": -0.03520651344322158,
+        "training_matches": 84
+      },
+      "537": {
+        "name": "Leganes",
+        "attack": -0.09248003822432131,
+        "defence": -0.013528854797909362,
+        "training_matches": 38
+      },
+      "538": {
+        "name": "Celta Vigo",
+        "attack": -0.013719235584917954,
+        "defence": 0.17412623903329186,
+        "training_matches": 84
+      },
+      "539": {
+        "name": "Levante",
+        "attack": 0.07902279376696547,
+        "defence": -0.16155740847661615,
+        "training_matches": 45
+      },
+      "540": {
+        "name": "Espanyol",
+        "attack": -0.10119742974086124,
+        "defence": 0.004300626723439171,
+        "training_matches": 84
+      },
+      "541": {
+        "name": "Real Madrid",
+        "attack": 0.44851827717595333,
+        "defence": 0.3447414100871214,
+        "training_matches": 84
+      },
+      "542": {
+        "name": "Alaves",
+        "attack": -0.03389233641266708,
+        "defence": 0.049071858350283666,
+        "training_matches": 84
+      },
+      "543": {
+        "name": "Real Betis",
+        "attack": 0.21879172696391838,
+        "defence": 0.12646109720958415,
+        "training_matches": 84
+      },
+      "544": {
+        "name": "Deportivo La Coruna",
+        "attack": 0.09425939834319665,
+        "defence": -0.046523800012259024,
+        "training_matches": 8
+      },
+      "546": {
+        "name": "Getafe",
+        "attack": -0.4950025575758619,
+        "defence": 0.3154806633209421,
+        "training_matches": 84
+      },
+      "547": {
+        "name": "Girona",
+        "attack": -0.17145801733616256,
+        "defence": 0.041340127092184875,
+        "training_matches": 76
+      },
+      "548": {
+        "name": "Real Sociedad",
+        "attack": 0.16327500674237344,
+        "defence": -0.1404677606832701,
+        "training_matches": 84
+      },
+      "718": {
+        "name": "Oviedo",
+        "attack": -0.4469790317081578,
+        "defence": -0.06191813830216753,
+        "training_matches": 38
+      },
+      "720": {
+        "name": "Valladolid",
+        "attack": -0.283242386666763,
+        "defence": -0.3816896828112051,
+        "training_matches": 38
+      },
+      "727": {
+        "name": "Osasuna",
+        "attack": -0.07830059475711103,
+        "defence": -0.13188092226358686,
+        "training_matches": 84
+      },
+      "728": {
+        "name": "Rayo Vallecano",
+        "attack": -0.04642507180540844,
+        "defence": 0.044716553055543895,
+        "training_matches": 83
+      },
+      "797": {
+        "name": "Elche",
+        "attack": 0.03141907572959672,
+        "defence": -0.12802987229020196,
+        "training_matches": 46
+      },
+      "798": {
+        "name": "Mallorca",
+        "attack": -0.052705882298808696,
+        "defence": 0.009894122096165123,
+        "training_matches": 76
+      },
+      "4665": {
+        "name": "Racing Santander",
+        "attack": 0.21450074979098005,
+        "defence": -0.5714068150915446,
+        "training_matches": 8
+      }
+    },
+    "graph_connected": true,
+    "constraints": {
+      "attack_sum": 1.6653345369377348e-16,
+      "defence_sum": 1.1102230246251565e-16
+    },
+    "optimizer": {
+      "success": true,
+      "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+      "iterations": 34,
+      "objective": 671.6940893929959,
+      "parameter_at_bound": false
+    },
+    "warnings": [
+      "仅为球队比分基线，未量化伤停、预计阵容、球员、xG、天气及赛程因素。",
+      "已拟合不代表已通过有效性验证；参数须通过实际运行程序才能更新。",
+      "输入须由上游核准为常规时间终场比分，不能包含加时或点球大战。"
+    ]
+  },
+  "validation": {
+    "validation_status": "exploratory_single_fixed_holdout",
+    "deployment_approved": false,
+    "is_rolling_backtest": false,
+    "minimum_test_matches": 40,
+    "meets_minimum_supported_test_matches": true,
+    "evaluation_data_cutoff": "2026-10-13T01:39:25.921509Z",
+    "split": {
+      "method": "chronological_fixed_model_holdout",
+      "grouped_by": "kickoff_utc_calendar_date",
+      "train_cutoff": "2026-04-03T00:00:00Z",
+      "train_last_kickoff": "2026-03-22T20:00:00Z",
+      "test_start": "2026-04-03T19:00:00Z",
+      "test_end": "2026-10-12T19:00:00Z",
+      "training_count": 670,
+      "testing_count": 168,
+      "result_availability_delay_hours": 4,
+      "embargoed_count": 0,
+      "embargoed_match_ids": []
+    },
+    "coverage": {
+      "total": 168,
+      "scored": 145,
+      "excluded": 23,
+      "ratio": 0.8630952380952381,
+      "exclusions": [
+        {
+          "match_id": 1570339,
+          "reason": "未知球队 ID：[4665]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570337,
+          "reason": "未知球队 ID：[544]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570334,
+          "reason": "未知球队 ID：[535]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570348,
+          "reason": "未知球队 ID：[4665]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570349,
+          "reason": "未知球队 ID：[535, 544]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570359,
+          "reason": "未知球队 ID：[4665]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570360,
+          "reason": "未知球队 ID：[535]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570356,
+          "reason": "未知球队 ID：[544]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570370,
+          "reason": "未知球队 ID：[4665]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570372,
+          "reason": "未知球队 ID：[544]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570369,
+          "reason": "未知球队 ID：[535]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570378,
+          "reason": "未知球队 ID：[4665]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570374,
+          "reason": "未知球队 ID：[535]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570375,
+          "reason": "未知球队 ID：[544]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570387,
+          "reason": "未知球队 ID：[544]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570385,
+          "reason": "未知球队 ID：[4665]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570390,
+          "reason": "未知球队 ID：[535]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570395,
+          "reason": "未知球队 ID：[4665]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570398,
+          "reason": "未知球队 ID：[535]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570396,
+          "reason": "未知球队 ID：[544]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570408,
+          "reason": "未知球队 ID：[535]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570412,
+          "reason": "未知球队 ID：[544]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1570409,
+          "reason": "未知球队 ID：[4665]；缺少训练数据，当前模型不支持。"
+        }
+      ]
+    },
+    "model_metrics": {
+      "n": 145,
+      "log_loss": 0.98252436654872,
+      "brier_score": 0.5826853268744684,
+      "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+      "log_loss_probability_floor": 1e-15
+    },
+    "baseline_metrics": {
+      "n": 145,
+      "log_loss": 1.0489821067893073,
+      "brier_score": 0.6323885251629371,
+      "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+      "log_loss_probability_floor": 1e-15
+    },
+    "baseline": {
+      "name": "training_league_home_away_mean_poisson",
+      "home_rate": 1.505592841163311,
+      "away_rate": 1.1491424310216256,
+      "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
+      "same_scored_matches_as_model": true
+    },
+    "comparison": {
+      "model_minus_baseline_log_loss": -0.06645774024058726,
+      "model_minus_baseline_brier_score": -0.0497031982884687,
+      "lower_is_better": true
+    },
+    "warnings": [
+      "单次固定模型留出验证仅为探索性检查，不是滚动回测，也不构成上线或盈利证明。",
+      "不含赔率、投注收益、阵容修正或提前十小时伤停历史快照验证。",
+      "超参数为显式默认值，不能根据本留出期反复挑选参数后再声称独立验证。",
+      "未知球队比赛单独列为未覆盖，指标只针对 model_metrics.n 场已覆盖比赛。"
+    ]
+  },
+  "source_seasons": [
+    {
+      "year": 2026,
+      "coverage_flags": {
+        "fixtures": {
+          "events": true,
+          "lineups": true,
+          "statistics_fixtures": true,
+          "statistics_players": true
+        },
+        "standings": true,
+        "players": true,
+        "top_scorers": true,
+        "top_assists": true,
+        "top_cards": true,
+        "injuries": true,
+        "predictions": true,
+        "odds": true
+      },
+      "fixtures": 380,
+      "fetched_at": "2026-10-13T01:39:32.754728Z",
+      "received_at": "2026-10-13T01:39:32.768013Z",
+      "from_cache": false,
+      "status_counts": {
+        "ABD": 1,
+        "FT": 78,
+        "NS": 301
+      }
+    },
+    {
+      "year": 2025,
+      "coverage_flags": {
+        "fixtures": {
+          "events": true,
+          "lineups": true,
+          "statistics_fixtures": true,
+          "statistics_players": true
+        },
+        "standings": true,
+        "players": true,
+        "top_scorers": true,
+        "top_assists": true,
+        "top_cards": true,
+        "injuries": true,
+        "predictions": true,
+        "odds": false
+      },
+      "fixtures": 380,
+      "fetched_at": "2026-10-07T01:32:59.103676Z",
+      "received_at": "2026-10-13T01:39:32.781861Z",
+      "from_cache": true,
+      "status_counts": {
+        "FT": 380
+      }
+    },
+    {
+      "year": 2024,
+      "coverage_flags": {
+        "fixtures": {
+          "events": true,
+          "lineups": true,
+          "statistics_fixtures": true,
+          "statistics_players": true
+        },
+        "standings": true,
+        "players": true,
+        "top_scorers": true,
+        "top_assists": true,
+        "top_cards": true,
+        "injuries": true,
+        "predictions": true,
+        "odds": false
+      },
+      "fixtures": 380,
+      "fetched_at": "2026-10-07T01:32:59.378713Z",
+      "received_at": "2026-10-13T01:39:32.795254Z",
+      "from_cache": true,
+      "status_counts": {
+        "FT": 380
+      }
+    }
+  ]
+}
