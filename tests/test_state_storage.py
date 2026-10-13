@@ -121,8 +121,8 @@ class StateStorageTests(unittest.TestCase):
         self.assertEqual((self.root / "restored/models/epl.json").read_bytes(), b'{"model": "legacy"}\n')
 
     def test_physical_and_logical_limits_are_independent_and_finite(self):
-        self.assertEqual(storage.MAX_PHYSICAL_BYTES, 1024 * 1024 * 1024)
-        self.assertEqual(storage.MAX_LOGICAL_BYTES, 4 * 1024 * 1024 * 1024)
+        self.assertEqual(storage.MAX_PHYSICAL_BYTES, 1792 * 1024 * 1024)
+        self.assertEqual(storage.MAX_LOGICAL_BYTES, 8 * 1024 * 1024 * 1024)
         self.write("quotes/raw/1/old.json", b'{"pad":"' + b"x" * 20000 + b'"}')
         self.pack()
         stats = storage.validate_storage_tree(self.tree, max_physical_bytes=2000, max_logical_bytes=30000)
@@ -146,6 +146,24 @@ class StateStorageTests(unittest.TestCase):
             storage.validate_storage_tree(self.tree)
         with self.assertRaises(storage.StorageError):
             storage.read_archive_bytes(self.tree, name)
+
+    def test_r11_manifest_remains_readable_under_bounded_r12_limits(self):
+        content = b'{ "r11_original":true }\n'
+        name = "advanced_models/objects/" + "b" * 64 + ".json"
+        self.write(name, content)
+        self.pack()
+        self.mutate(lambda m: m.update(logical_limit_bytes=4 * 1024**3, physical_limit_bytes=1024**3))
+        storage.restore_runtime(self.tree, self.root / "restored")
+        self.assertEqual((self.root / "restored" / name).read_bytes(), content)
+        self.assertEqual(storage.read_archive_bytes(self.tree, name), content)
+
+    def test_oversized_manifest_or_metadata_is_rejected_before_restore(self):
+        self.write("models/epl.json", b"{}")
+        self.pack()
+        (self.tree / "state_metadata.json").write_bytes(b"x" * 1025)
+        with self.assertRaisesRegex(storage.StorageError, "单文件"):
+            storage.restore_runtime(self.tree, self.root / "restored", max_file_bytes=1024)
+        self.assertFalse((self.root / "restored").exists())
 
     def test_traversal_absolute_hidden_and_backslash_paths_rejected_before_write(self):
         for name in ("../outside.json", "/absolute.json", "quotes/raw/../bad.json", "quotes/raw/.hidden.json", "quotes\\raw\\bad.json"):

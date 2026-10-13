@@ -91,8 +91,8 @@ class CapacityBudgetTest(unittest.TestCase):
             self.assertEqual(result.returncode,0,result.stderr)
             output=json.loads(result.stdout)
             self.assertFalse(output['mutates_state'])
-            self.assertEqual(output['limits'], {'hard_physical_bytes': 1024**3,
-                'hard_logical_bytes': 4*1024**3, 'conservative_writer_bytes': 800*1024**2})
+            self.assertEqual(output['limits'], {'hard_physical_bytes': 1792*1024**2,
+                'hard_logical_bytes': 8192*1024**2, 'conservative_writer_bytes': 1536*1024**2})
             self.assertEqual(original,{p.name:p.read_bytes() for p in root.iterdir()})
 
 

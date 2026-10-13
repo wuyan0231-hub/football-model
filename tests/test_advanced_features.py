@@ -7,9 +7,9 @@ import unittest
 
 from football_model.advanced_features import (feature_values, build_feature_rows,
     make_players_snapshot, validate_players_snapshot, validate_evidence, FEATURE_GROUPS)
-from football_model.advanced_collection import collect_run, _save
+from football_model.advanced_collection import collect_run, _save, _failure_details
 from football_model.advanced_capacity import CapacityGuard, CapacityDeferred
-from football_model.data import DataError, RequestBudgetError
+from football_model.data import APIError, DataError, RequestBudgetError
 from football_model.fundamentals import make_snapshot, save_snapshot
 from football_model.state_storage import estimate_runtime
 
@@ -205,6 +205,73 @@ class FakeClient:
 
 
 class AdvancedCollectionTests(unittest.TestCase):
+    def test_provider_identity_failures_are_distinguished_without_relaxing_admission(self):
+        cases = (
+            ("missing_starter", "lineups", "provider_data_missing", "missing_starter_player_id"),
+            ("invalid_starter", "lineups", "provider_schema_invalid", "invalid_player_id"),
+            ("duplicate_starter", "lineups", "provider_identity_conflict", "duplicate_starter"),
+            ("duplicate_substitute", "lineups", "provider_identity_conflict", "duplicate_substitute"),
+            ("starter_substitute_overlap", "lineups", "provider_identity_conflict", "starter_substitute_overlap"),
+            ("duplicate_player", "players", "provider_identity_conflict", "duplicate_player"),
+        )
+        for mutation, kind, category, failure_code in cases:
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as directory:
+                root=Path(directory);(root/"data").mkdir();rows=[fixture(1,2)]
+                (root/"data/a.json").write_text(json.dumps({"matches":rows}))
+                class ProviderClient(FakeClient):
+                    original=None
+                    def fetch_fixture(self,mid,**kwargs):
+                        result=super().fetch_fixture(mid,**kwargs)
+                        team=result["response"][0][kind][0]
+                        if mutation=="missing_starter":team["startXI"][0]["player"]["id"]=None
+                        elif mutation=="invalid_starter":
+                            # A later genuine omission must not hide an earlier malformed ID.
+                            team["startXI"][0]["player"]["id"]="untrusted-id-value"
+                            team["startXI"][1]["player"]["id"]=None
+                        elif mutation=="duplicate_starter":team["startXI"][1]=copy.deepcopy(team["startXI"][0])
+                        elif mutation=="duplicate_substitute":
+                            team["substitutes"]=[{"player":{"id":199}}, {"player":{"id":199}}]
+                        elif mutation=="starter_substitute_overlap":team["substitutes"]=[copy.deepcopy(team["startXI"][0])]
+                        else:team["players"].append(copy.deepcopy(team["players"][0]))
+                        self.original=copy.deepcopy(result)
+                        return result
+                client=ProviderClient(rows)
+                code,report=collect_run({"competitions":[{"key":"a"}]},root,client=client,
+                    clock=lambda:datetime(2026,2,2,tzinfo=timezone.utc))
+                self.assertEqual(code,1);self.assertEqual(report["execution_status"],"failed")
+                self.assertEqual(report["engineering_failure_count"],1)
+                self.assertFalse(report["full_collection_completed"])
+                self.assertEqual(report["failure_category_counts"],{category:1})
+                self.assertEqual(report["failure_code_counts"],{failure_code:1})
+                item=report["matches"][0]["kinds"][kind]
+                self.assertEqual(item["status"],"failed")
+                self.assertEqual(item["failure_code"],failure_code)
+                self.assertFalse(list((root/"advanced_features/evidence"/kind/"1").glob("*.json")))
+                diagnostic=json.loads((root/item["diagnostic_ref"]["path"]).read_text())
+                self.assertFalse(diagnostic["feature_eligible"])
+                self.assertEqual(diagnostic["identity_findings"],item["identity_findings"])
+                self.assertEqual(diagnostic["failure_category"],category)
+                original=json.loads((root/diagnostic["fixture_envelope_ref"]["path"]).read_text())
+                self.assertEqual(original,client.original)
+                findings=item["identity_findings"]
+                if mutation=="missing_starter":
+                    self.assertIn({"team_id":1,"field":"startXI","code":"missing_player_ids",
+                        "source_row_indices":[0]},findings)
+                elif mutation=="duplicate_substitute":self.assertEqual(findings[0]["player_ids"],[199])
+                elif mutation in ("duplicate_starter","duplicate_player","starter_substitute_overlap"):
+                    self.assertEqual(findings[0]["player_ids"],[101])
+                self.assertNotIn("untrusted-id-value",json.dumps(item))
+
+    def test_failure_details_never_copy_arbitrary_exception_text(self):
+        for error in (APIError("SECRET-provider-response"), OSError("SECRET-private-path"),
+                      DataError("SECRET-validation-text"), KeyError("SECRET-private-field")):
+            with self.subTest(type=type(error)):
+                details=_failure_details(error)
+                self.assertNotIn("SECRET",json.dumps(details))
+                self.assertEqual(details["identity_findings"],[])
+        self.assertEqual(_failure_details(APIError("private"))["failure_category"],"provider_request_failure")
+        self.assertEqual(_failure_details(OSError("private"))["failure_category"],"storage_failure")
+
     def test_relative_runtime_collects_cached_and_new_evidence_with_exact_capacity(self):
         with tempfile.TemporaryDirectory(dir=Path.cwd()) as directory:
             root=Path(directory);(root/"data").mkdir();rows=[fixture(1,2),fixture(2,4)]

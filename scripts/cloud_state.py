@@ -25,6 +25,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 from typing import Iterator
 
 # Resolve the helper from this checked-out source, including direct script use.
@@ -46,6 +47,10 @@ _ALLOWED_SUFFIXES = {".json", ".jsonl", ".csv", ".tsv", ".md", ".txt", ".npz", "
 _MAX_FILE_BYTES = 60 * 1024 * 1024
 _MAX_TOTAL_BYTES = state_storage.MAX_PHYSICAL_BYTES
 _MAX_LOGICAL_BYTES = state_storage.MAX_LOGICAL_BYTES
+_DISK_RESERVE_BYTES = 512 * 1024 * 1024
+_MIN_AVAILABLE_MEMORY_BYTES = 1024 * 1024 * 1024
+_MAX_PUSH_PACK_BYTES = 1900 * 1024 * 1024
+_PACK_TIMEOUT_SECONDS = 180
 
 
 StateError = state_storage.StorageError
@@ -53,6 +58,94 @@ StateError = state_storage.StorageError
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _ensure_disk_space(path: Path, additional_bytes: int) -> None:
+    # This measures the filesystem actually used; unknown is not zero/free.
+    if type(additional_bytes) is not int or additional_bytes < 0:
+        raise StateError("状态磁盘需求无效，已停止。")
+    try:
+        available = shutil.disk_usage(path).free
+    except OSError as exc:
+        raise StateError("无法核实状态磁盘余量，已停止。") from exc
+    if available < additional_bytes + _DISK_RESERVE_BYTES:
+        raise StateError("状态磁盘余量不足，已停止；本次未覆盖远端状态。")
+
+
+def _available_memory_bytes() -> int | None:
+    available = None
+    try:
+        fields = dict(line.split(":", 1) for line in Path("/proc/meminfo").read_text().splitlines())
+        available = int(fields["MemAvailable"].split()[0]) * 1024
+    except (OSError, ValueError, KeyError):
+        try:
+            available = os.sysconf("SC_AVPHYS_PAGES") * os.sysconf("SC_PAGE_SIZE")
+        except (OSError, ValueError, AttributeError):
+            pass
+    # On Linux containers the host reading alone can overstate our allowance.
+    for limit_path, used_path in (("/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory.current"),
+        ("/sys/fs/cgroup/memory/memory.limit_in_bytes", "/sys/fs/cgroup/memory/memory.usage_in_bytes")):
+        try:
+            limit_text = Path(limit_path).read_text().strip()
+            if limit_text == "max":
+                continue
+            remaining = max(0, int(limit_text) - int(Path(used_path).read_text()))
+            available = remaining if available is None else min(available, remaining)
+        except (OSError, ValueError):
+            continue
+    return available
+
+
+def _ensure_memory() -> None:
+    available = _available_memory_bytes()
+    if available is None or available < _MIN_AVAILABLE_MEMORY_BYTES:
+        raise StateError("状态可用内存不足或无法核实，已停止；本次未覆盖远端状态。")
+
+
+def _measure_push_pack(repo: Path, commit: str, previous: str | None) -> int:
+    """Count new reachable Git bytes without materializing a second pack.
+
+    No deltas/reuse and compression level 0 provide a conservative wire-size
+    probe. Exclude only the exact remote state parent, never the source branch
+    or arbitrary local refs. Missing history/objects fail closed.
+    """
+    if any(not re.fullmatch(r"[0-9a-f]{40,64}", value)
+           for value in (commit, previous) if value is not None):
+        raise StateError("状态推送提交无效，已停止。")
+    _ensure_memory()
+    command = ["git", "-C", str(repo), "pack-objects", "--revs", "--stdout",
+               "--no-reuse-delta", "--no-reuse-object", "--window=0", "--threads=1", "--compression=0"]
+    process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                               stderr=subprocess.DEVNULL)
+    expired = threading.Event()
+    def expire():
+        expired.set()
+        try:
+            process.kill()
+        except ProcessLookupError:
+            pass
+    timer = threading.Timer(_PACK_TIMEOUT_SECONDS, expire)
+    total = 0
+    timer.start()
+    try:
+        revisions = commit + "\n" + ("^" + previous + "\n" if previous else "")
+        process.stdin.write(revisions.encode("ascii"))
+        process.stdin.close()
+        while chunk := process.stdout.read(1024 * 1024):
+            total += len(chunk)
+            if total > _MAX_PUSH_PACK_BYTES:
+                raise StateError("状态新增 Git pack 超过安全单次推送大小，已停止；未推送。")
+        if process.wait() or expired.is_set():
+            raise StateError("无法核实状态新增 Git pack，已停止；未推送。")
+        return total
+    finally:
+        timer.cancel()
+        if process.poll() is None:
+            process.kill()
+        process.wait()
+        process.stdout.close()
+        if not process.stdin.closed:
+            process.stdin.close()
 
 
 def _git(repo: Path, *args: str, check: bool = True,
@@ -107,7 +200,9 @@ def _remote_oid(repo: Path) -> str | None:
 def _worktree(repo: Path, oid: str) -> Iterator[Path]:
     # This directory is independent of the source checkout. Cleanup is scoped
     # to this exact temporary directory; no glob or source reset is used.
-    with tempfile.TemporaryDirectory(prefix="football-state-") as temp:
+    # Same filesystem as the checked-out repository, so resource checks cover
+    # both the temporary transport and newly written Git objects.
+    with tempfile.TemporaryDirectory(prefix="football-state-", dir=repo) as temp:
         path = Path(temp) / "checkout"
         _git(repo, "worktree", "add", "--detach", str(path), oid)
         try:
@@ -116,15 +211,17 @@ def _worktree(repo: Path, oid: str) -> Iterator[Path]:
             _git(repo, "worktree", "remove", "--force", str(path), check=False)
 
 
-def _validate_runtime(runtime: Path) -> None:
+def _validate_runtime(runtime: Path) -> dict:
     state_storage.validate_runtime(runtime, max_file_bytes=_MAX_FILE_BYTES,
                                    max_logical_bytes=_MAX_LOGICAL_BYTES)
-    if state_storage.estimate_runtime(runtime)["persisted_bytes"] > _MAX_TOTAL_BYTES:
+    estimate = state_storage.estimate_runtime(runtime)
+    if estimate["persisted_bytes"] > _MAX_TOTAL_BYTES:
         raise StateError("状态预计超过安全物理保存大小，请检查缓存体积；未覆盖远端。")
+    return estimate
 
 
-def _validate_tree(tree: Path) -> None:
-    state_storage.validate_storage_tree(tree, max_file_bytes=_MAX_FILE_BYTES,
+def _validate_tree(tree: Path) -> dict:
+    return state_storage.validate_storage_tree(tree, max_file_bytes=_MAX_FILE_BYTES,
                                        max_physical_bytes=_MAX_TOTAL_BYTES,
                                        max_logical_bytes=_MAX_LOGICAL_BYTES)
 
@@ -143,10 +240,16 @@ def load_state(repo: Path, runtime: Path = Path("runtime")) -> str | None:
         raise StateError("runtime 已有内容。请使用全新工作目录恢复，避免覆盖本地结果。")
     oid = _remote_oid(repo)
     if oid is not None:
-        _git(repo, "fetch", "--no-tags", "origin", STATE_REF)
+        _ensure_memory()
+        # Fetch only the current complete snapshot, not an ever-growing history
+        # of retained state commits. Remote old commits remain untouched.
+        _ensure_disk_space(repo, 2 * _MAX_TOTAL_BYTES)
+        _git(repo, "fetch", "--depth=1", "--no-tags", "origin", STATE_REF)
         oid = _git(repo, "rev-parse", "FETCH_HEAD").stdout.strip()
         with _worktree(repo, oid) as tree:
-            _validate_tree(tree)
+            stats = _validate_tree(tree)
+            restored_bytes = stats["raw_bytes"] + sum(e["raw_bytes"] for e in stats["entries"])
+            _ensure_disk_space(repo, restored_bytes)
             # Validation precedes all destination writes. A partial local copy
             # still has no marker and therefore cannot be pushed by save.
             # Copy the whole tree: restoring only models/reports would lose
@@ -179,7 +282,12 @@ def save_state(repo: Path, runtime: Path = Path("runtime")) -> str:
         raise StateError("本地状态基线损坏，拒绝保存。")
     if baseline.get("source_sha") != _git(repo, "rev-parse", "HEAD").stdout.strip():
         raise StateError("程序版本在运行中改变，拒绝混用版本保存。")
-    _validate_runtime(runtime)
+    _ensure_memory()
+    estimate = _validate_runtime(runtime)
+    # The temporary transport replaces its old content before packing; reserve
+    # one bounded old checkout plus the new transport's Git objects, not another
+    # full uncompressed runtime. Runtime bytes are never rewritten here.
+    _ensure_disk_space(repo, max(_MAX_TOTAL_BYTES, estimate["persisted_bytes"]) + estimate["persisted_bytes"])
     if _remote_oid(repo) != oid:
         raise StateError("远端 model-state 已变化；本次结果未覆盖它。请从最新状态重新运行。")
     if oid is None:
@@ -232,7 +340,10 @@ def save_state(repo: Path, runtime: Path = Path("runtime")) -> str:
         # Use source checkout for authenticated network commands. Its configured
         # checkout credential may be scoped to its git directory. A normal push
         # rejects a concurrent branch update; --force is deliberately absent.
-        result = _git(repo, "push", "--porcelain", "origin", f"{commit}:{STATE_REF}", check=False)
+        pack_bytes = _measure_push_pack(repo, commit, oid)
+        print("MODEL_STATE_NEW_PACK_BYTES=" + str(pack_bytes))
+        result = _git(repo, "-c", "pack.threads=1", "-c", "pack.windowMemory=64m",
+                      "-c", "pack.window=0", "push", "--porcelain", "origin", f"{commit}:{STATE_REF}", check=False)
         if result.returncode:
             raise StateError("状态 push 失败（权限、网络或并发更新）。远端未被强制覆盖，请保留报告后重试。")
     baseline["state_oid"] = commit

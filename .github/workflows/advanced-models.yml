@@ -7,6 +7,7 @@ on:
       - 'football_model/advanced_*.py'
       - 'football_model/cold_start.py'
       - 'football_model/feature_decisions.py'
+      - 'football_model/feature_schedule.py'
       - 'football_model/state_storage.py'
       - 'advanced-models-v1.json'
       - 'advanced-confirmation-v1.json'
@@ -33,6 +34,13 @@ jobs:
       (github.event_name != 'schedule' || github.event.schedule == '7 2 * * *')
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    outputs:
+      restore_outcome: ${{ steps.restore.outcome }}
+      persist_outcome: ${{ steps.persist.outcome }}
+      durable_outcome: ${{ steps.durable.outcome }}
+      facts_outcome: ${{ steps.facts.outcome }}
+      confirmation_outcome: ${{ steps.confirmation.outcome }}
+      capture_outcome: ${{ steps.capture.outcome }}
     env:
       PYTHONUNBUFFERED: '1'
       OPENBLAS_NUM_THREADS: '1'
@@ -60,17 +68,28 @@ jobs:
           with Path(os.environ['GITHUB_ENV']).open('a') as f:
               f.write('ADVANCED_PARENT_STATE='+str(marker.get('state_oid') or '')+'\n')
           PY
-      - name: 长任务前同步与捕获现有合法候选
-        id: capture
+      - name: 长任务前验证已保存原件
+        id: durable
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python -m football_model.advanced_durability --runtime runtime --state-commit "$ADVANCED_PARENT_STATE"
+      - name: 长任务前同步真实信息
+        id: facts
         continue-on-error: true
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python -m football_model.collect_fundamentals --runtime runtime --config config.json --league all --horizon-hours 11 --recent-matches 5
+      - name: 长任务前检查确认准入
+        id: confirmation
+        continue-on-error: true
+        env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          python -m football_model.advanced_durability --runtime runtime --state-commit "$ADVANCED_PARENT_STATE"
-          python -m football_model.collect_fundamentals --runtime runtime --config config.json --league all --horizon-hours 11 --recent-matches 5
-          python -m football_model.advanced_confirmation --runtime runtime --league all --advanced-protocol advanced-models-v1.json --protocol advanced-confirmation-v1.json --auto-activate
-          python -m football_model.advanced_snapshots capture --runtime runtime --league all --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE"
+        run: python -m football_model.advanced_confirmation --runtime runtime --league all --advanced-protocol advanced-models-v1.json --protocol advanced-confirmation-v1.json --auto-activate
+      - name: 长任务前捕获现有合法候选
+        id: capture
+        continue-on-error: true
+        run: python -m football_model.advanced_snapshots capture --runtime runtime --league all --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE"
       - name: 立即保存赛前原件并结束独立短任务
         id: persist
         if: always() && steps.restore.outcome == 'success'
@@ -81,22 +100,28 @@ jobs:
           python scripts/cloud_state.py check --runtime runtime
           python scripts/cloud_state.py save --runtime runtime
       - name: 捕获与保存错误保持失败
-        if: always() && (steps.restore.outcome != 'success' || steps.capture.outcome != 'success' || steps.persist.outcome != 'success')
+        if: >-
+          always() && (steps.restore.outcome != 'success' || steps.durable.outcome != 'success' ||
+          steps.facts.outcome != 'success' || steps.confirmation.outcome != 'success' ||
+          steps.capture.outcome != 'success' || steps.persist.outcome != 'success')
         run: exit 1
   advanced:
     needs: pre_study_capture
     if: >-
-      always() && (needs.pre_study_capture.result == 'success' || needs.pre_study_capture.result == 'skipped') &&
+      always() && (needs.pre_study_capture.result == 'skipped' ||
+      (needs.pre_study_capture.outputs.restore_outcome == 'success' &&
+      needs.pre_study_capture.outputs.persist_outcome == 'success')) &&
       github.event.repository.private == true &&
       (github.event_name != 'schedule' || vars.ENABLE_SCHEDULE == 'true')
     runs-on: ubuntu-latest
-    timeout-minutes: 110
+    timeout-minutes: ${{ (github.event_name != 'schedule' || github.event.schedule == '7 2 * * *') && 180 || 110 }}
     env:
       PYTHONUNBUFFERED: '1'
       OPENBLAS_NUM_THREADS: '1'
       OMP_NUM_THREADS: '1'
       IS_RELEASE: ${{ github.ref == 'refs/heads/main' }}
       STUDY_RUN: ${{ github.event_name != 'schedule' || github.event.schedule == '7 2 * * *' }}
+      LEGACY_SHORT_RUN: ${{ github.event_name == 'schedule' && github.event.schedule != '7 2 * * *' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -134,6 +159,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python -m football_model.advanced_durability --runtime runtime --state-commit "$ADVANCED_PARENT_STATE"
+      - name: 全部国内联赛跨赛事赛程公平续采
+        id: club_schedule_collection
+        if: env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true'
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python -m football_model.feature_schedule --runtime runtime --config config.json --league all --source-commit "$GITHUB_SHA" --max-run-seconds 600 --reserve-requests 1500 --current-cache-seconds 21600
       - name: 优先补齐意甲机会和球员历史
         id: pilot_collection
         if: env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true'
@@ -179,6 +211,18 @@ jobs:
         if: env.IS_RELEASE == 'true'
         continue-on-error: true
         run: python -m football_model.advanced_snapshots capture --runtime runtime --league all --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE"
+      # Reuse the all-league facts above and the same loaded parent state. The
+      # legacy protocols retain their own namespaces, first outputs and failures.
+      - name: 同轮冻结原v1真实双时点
+        id: legacy_capture_v1
+        if: env.IS_RELEASE == 'true' && env.LEGACY_SHORT_RUN == 'true'
+        continue-on-error: true
+        run: python -m football_model.feature_snapshots capture --runtime runtime --config config.json --league serie_a --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE" --protocol feature-models.json
+      - name: 同轮冻结原v2原件重建与双时点
+        id: legacy_capture_v2
+        if: env.IS_RELEASE == 'true' && env.LEGACY_SHORT_RUN == 'true'
+        continue-on-error: true
+        run: python -m football_model.feature_snapshots capture --runtime runtime --config config.json --league serie_a --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE" --protocol feature-models-v2.json
       - name: 独立结果与完整请求评分
         id: scoring
         if: env.IS_RELEASE == 'true'
@@ -186,6 +230,20 @@ jobs:
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
         run: python -m football_model.advanced_scoring score --runtime runtime --league all --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA"
+      - name: 同轮原v1独立赛果与候选评分
+        id: legacy_scoring_v1
+        if: env.IS_RELEASE == 'true' && env.LEGACY_SHORT_RUN == 'true'
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python -m football_model.feature_scoring score --runtime runtime --config config.json --league serie_a --source-commit "$GITHUB_SHA" --protocol feature-models.json
+      - name: 同轮原v2全机会评分与基线回退
+        id: legacy_scoring_v2
+        if: env.IS_RELEASE == 'true' && env.LEGACY_SHORT_RUN == 'true'
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python -m football_model.feature_scoring score --runtime runtime --config config.json --league serie_a --source-commit "$GITHUB_SHA" --protocol feature-models-v2.json
       - name: 核验存储与完整性
         id: check
         if: always() && steps.restore.outcome == 'success'
@@ -206,6 +264,13 @@ jobs:
           RESTORE: ${{ steps.restore.outcome }}
           DURABLE: ${{ steps.durable.outcome }}
           PRE_STUDY_CAPTURE: ${{ needs.pre_study_capture.result }}
+          PRE_RESTORE: ${{ needs.pre_study_capture.outputs.restore_outcome }}
+          PRE_PERSIST: ${{ needs.pre_study_capture.outputs.persist_outcome }}
+          PRE_DURABLE: ${{ needs.pre_study_capture.outputs.durable_outcome }}
+          PRE_FACTS: ${{ needs.pre_study_capture.outputs.facts_outcome }}
+          PRE_CONFIRMATION: ${{ needs.pre_study_capture.outputs.confirmation_outcome }}
+          PRE_CAPTURE: ${{ needs.pre_study_capture.outputs.capture_outcome }}
+          CLUB_SCHEDULE_COLLECTION: ${{ steps.club_schedule_collection.outcome }}
           PILOT_COLLECTION: ${{ steps.pilot_collection.outcome }}
           COLLECTION: ${{ steps.collection.outcome }}
           PLAYER_LOAD_COLLECTION: ${{ steps.player_load_collection.outcome }}
@@ -214,15 +279,42 @@ jobs:
           CONFIRMATION: ${{ steps.confirmation.outcome }}
           CAPTURE: ${{ steps.capture.outcome }}
           SCORING: ${{ steps.scoring.outcome }}
+          LEGACY_CAPTURE_V1: ${{ steps.legacy_capture_v1.outcome }}
+          LEGACY_CAPTURE_V2: ${{ steps.legacy_capture_v2.outcome }}
+          LEGACY_SCORING_V1: ${{ steps.legacy_scoring_v1.outcome }}
+          LEGACY_SCORING_V2: ${{ steps.legacy_scoring_v2.outcome }}
           CHECK: ${{ steps.check.outcome }}
           PERSIST: ${{ steps.persist.outcome }}
         run: |
           python - <<'PY'
           import json,os
           from pathlib import Path
-          keys=['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','ADVANCED_PARENT_STATE','IS_RELEASE','STUDY_RUN','RESTORE','DURABLE','PRE_STUDY_CAPTURE','PILOT_COLLECTION','COLLECTION','PLAYER_LOAD_COLLECTION','RESEARCH','FACTS','CONFIRMATION','CAPTURE','SCORING','CHECK','PERSIST']
+          keys=['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','ADVANCED_PARENT_STATE','IS_RELEASE','STUDY_RUN','LEGACY_SHORT_RUN','RESTORE','DURABLE','PRE_STUDY_CAPTURE','PRE_RESTORE','PRE_PERSIST','PRE_DURABLE','PRE_FACTS','PRE_CONFIRMATION','PRE_CAPTURE','CLUB_SCHEDULE_COLLECTION','PILOT_COLLECTION','COLLECTION','PLAYER_LOAD_COLLECTION','RESEARCH','FACTS','CONFIRMATION','CAPTURE','SCORING','LEGACY_CAPTURE_V1','LEGACY_CAPTURE_V2','LEGACY_SCORING_V1','LEGACY_SCORING_V2','CHECK','PERSIST']
           receipt={k:os.environ.get(k) for k in keys}
+          if receipt['IS_RELEASE']=='true' and receipt['LEGACY_SHORT_RUN']=='true':
+              legacy={k:receipt[k] for k in ['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','IS_RELEASE','STUDY_RUN']}
+              legacy.update(FEATURE_PARENT_STATE=receipt['ADVANCED_PARENT_STATE'],
+                  RESTORE_OUTCOME=receipt['RESTORE'],SCHEDULE_OUTCOME='skipped',
+                  RESEARCH_OUTCOME='skipped',RESEARCH_V2_OUTCOME='skipped',
+                  FACTS_OUTCOME=receipt['FACTS'],CAPTURE_OUTCOME=receipt['LEGACY_CAPTURE_V1'],
+                  CAPTURE_V2_OUTCOME=receipt['LEGACY_CAPTURE_V2'],SCORING_OUTCOME=receipt['LEGACY_SCORING_V1'],
+                  SCORING_V2_OUTCOME=receipt['LEGACY_SCORING_V2'],CHECK_OUTCOME=receipt['CHECK'],
+                  PERSIST_OUTCOME=receipt['PERSIST'],confirmation_active=False,production_promoted=False,
+                  source_workflow='advanced-models.yml',dispatch_mode='shared_short_cycle',facts_scope='all')
+              Path('feature-run-receipt.json').write_text(json.dumps(legacy,indent=2))
+              Path('feature-run-parent.json').write_bytes(Path('advanced-run-parent.json').read_bytes())
+              receipt['legacy_short_cycle_receipt']='feature-run-receipt.json'
           import hashlib
+          club_path=Path('runtime/feature_models/schedules/collection/latest.json')
+          if club_path.is_file():
+              raw=club_path.read_bytes(); club=json.loads(raw)
+              receipt['club_schedule_report']={'path':str(club_path),'sha256':hashlib.sha256(raw).hexdigest(),
+                  'execution_status':club.get('execution_status'),'full_collection_completed':club.get('full_collection_completed'),
+                  'configured_domestic_leagues':club.get('configured_domestic_leagues'),
+                  'completed_leagues':club.get('completed_leagues'),'deferred_leagues':club.get('deferred_leagues'),
+                  'failed_leagues':club.get('failed_leagues'),'last_attempted_league':club.get('last_attempted_league'),
+                  'api_requests':club.get('api_requests')}
+          receipt['full_club_schedule_collection_completed']=receipt['CLUB_SCHEDULE_COLLECTION']=='success' and receipt.get('club_schedule_report',{}).get('full_collection_completed') is True
           reports={}
           for selection in ['serie_a','all']:
               path=Path('runtime/advanced_features/collection/by_selection')/selection/'latest.json'
@@ -278,6 +370,9 @@ jobs:
           from pathlib import Path
           archive=Path('advanced-models-evidence.tar.gz')
           paths=[Path(p) for p in ['runtime/advanced_models','runtime/advanced_features','runtime/advanced_snapshots','runtime/advanced_scoring','runtime/feature_models/schedules','advanced-run-parent.json','advanced-run-receipt.json']]
+          if Path('feature-run-receipt.json').is_file():
+              paths=[p for p in paths if p.as_posix()!='runtime/feature_models/schedules']
+              paths.extend(Path(p) for p in ['runtime/feature_models','runtime/feature_snapshots','feature-run-receipt.json','feature-run-parent.json'])
           count=0
           with tarfile.open(archive,'w:gz',compresslevel=6) as out:
               for root in paths:
@@ -303,6 +398,8 @@ jobs:
             advanced-models-evidence.sha256
             advanced-run-parent.json
             advanced-run-receipt.json
+            feature-run-receipt.json
+            feature-run-parent.json
           compression-level: 0
           retention-days: 14
           if-no-files-found: error
@@ -312,8 +409,12 @@ jobs:
           steps.check.outcome != 'success' ||
           (env.STUDY_RUN == 'true' && steps.research.outcome != 'success') ||
           (env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true' &&
-          (steps.pilot_collection.outcome != 'success' || steps.collection.outcome != 'success' || steps.player_load_collection.outcome != 'success')) ||
+          (steps.club_schedule_collection.outcome != 'success' || steps.pilot_collection.outcome != 'success' || steps.collection.outcome != 'success' || steps.player_load_collection.outcome != 'success')) ||
           (env.IS_RELEASE == 'true' && (steps.persist.outcome != 'success' ||
           steps.facts.outcome != 'success' || steps.confirmation.outcome != 'success' ||
           steps.capture.outcome != 'success' || steps.scoring.outcome != 'success')))
+          || (always() && env.IS_RELEASE == 'true' && env.LEGACY_SHORT_RUN == 'true' &&
+          (steps.legacy_capture_v1.outcome != 'success' || steps.legacy_capture_v2.outcome != 'success' ||
+          steps.legacy_scoring_v1.outcome != 'success' || steps.legacy_scoring_v2.outcome != 'success'))
+          || (always() && needs.pre_study_capture.result == 'failure')
         run: exit 1

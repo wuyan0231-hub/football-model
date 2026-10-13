@@ -25,6 +25,70 @@ from .fundamentals import make_snapshot
 ENDPOINTS = {"statistics":"/fixtures/statistics", "lineups":"/fixtures/lineups", "players":"/fixtures/players"}
 
 
+def _failure_details(error, *, kind=None, rows=None):
+    """Safe diagnostics only; do not alter rejection or retain exception text.
+
+    Provider omissions and conflicting positive identities need different
+    remediation. Report only fixed codes, integer IDs and source row positions;
+    arbitrary API errors, names and other free text never enter this projection.
+    """
+    codes = {
+        "startXI 含重复球员": ("provider_identity_conflict", "duplicate_starter"),
+        "substitutes 含重复球员": ("provider_identity_conflict", "duplicate_substitute"),
+        "首发与替补名单重叠": ("provider_identity_conflict", "starter_substitute_overlap"),
+        "duplicate_player": ("provider_identity_conflict", "duplicate_player"),
+        "基本面记录球队与本场身份不符": ("provider_identity_conflict", "team_identity_mismatch"),
+        "基本面响应包含重复球队": ("provider_identity_conflict", "duplicate_team"),
+        "players_team_identity_invalid": ("provider_identity_conflict", "players_team_identity_invalid"),
+        "fixture_context_identity_or_clock_invalid": ("source_identity_or_clock_invalid", "fixture_context_identity_or_clock_invalid"),
+        "fixture_league_identity_invalid": ("provider_identity_conflict", "fixture_league_identity_invalid"),
+        "embedded_field_schema_invalid": ("provider_schema_invalid", "embedded_field_schema_invalid"),
+        "player.id 必须为不小于 1 的整数": ("provider_schema_invalid", "invalid_player_id"),
+    }
+    default = ("provider_request_failure" if isinstance(error, APIError) else
+               "storage_failure" if isinstance(error, OSError) else "validation_failure")
+    category, code = codes.get(str(error), (default, default))
+    findings = []
+    first_invalid_player = None
+    for row in rows if kind in ("lineups", "players") and isinstance(rows, list) else []:
+        if not isinstance(row, dict): continue
+        team = row.get("team")
+        tid = team.get("id") if isinstance(team, dict) else None
+        tid = tid if type(tid) is int and tid > 0 else None
+        fields = ("startXI", "substitutes") if kind == "lineups" else ("players",)
+        ids_by_field = {}
+        for field in fields:
+            values = row.get(field)
+            if not isinstance(values, list): continue
+            ids, missing_indices = [], []
+            for index, value in enumerate(values):
+                player = value.get("player") if isinstance(value, dict) else None
+                if not isinstance(player, dict): continue
+                pid = player.get("id")
+                if type(pid) is int and pid > 0: ids.append(pid)
+                elif pid is None:
+                    missing_indices.append(index)
+                    if field == "startXI" and first_invalid_player is None:
+                        first_invalid_player = "missing"
+                elif first_invalid_player is None:
+                    first_invalid_player = "invalid"
+            ids_by_field[field] = set(ids)
+            duplicates = sorted(pid for pid, count in Counter(ids).items() if count > 1)
+            if duplicates:
+                findings.append({"team_id": tid, "field": field,
+                    "code": "duplicate_player_ids", "player_ids": duplicates})
+            if missing_indices:
+                findings.append({"team_id": tid, "field": field,
+                    "code": "missing_player_ids", "source_row_indices": missing_indices})
+        overlap = sorted(ids_by_field.get("startXI", set()) & ids_by_field.get("substitutes", set()))
+        if overlap:
+            findings.append({"team_id": tid, "field": "startXI_and_substitutes",
+                "code": "starter_substitute_overlap", "player_ids": overlap})
+    if code == "invalid_player_id" and first_invalid_player == "missing":
+        category, code = "provider_data_missing", "missing_starter_player_id"
+    return {"failure_category": category, "failure_code": code, "identity_findings": findings}
+
+
 @contextmanager
 def _offline_requests(client, reason=None):
     """Continue valid cache reads after deferral, without another HTTP attempt."""
@@ -249,14 +313,15 @@ def collect_run(config, runtime, league="all", *, client=None, clock=None, max_s
                                 if not isinstance(cached[1][invalid_kind],list):
                                     raise DataError("embedded_field_schema_invalid")
                                 embedded_snapshot(invalid_kind,cached[0],mid)
-                    except (ValueError,KeyError,TypeError,AttributeError):
+                    except (ValueError,KeyError,TypeError,AttributeError) as exc:
                         old_envelope,_,old_path,old_projection=contexts[mid]
                         old_ref,old_projection=_save_context(runtime,old_envelope,old_path,old_projection,guard)
                         diagnostic={"schema_version":"advanced-source-failure-v1","kind":invalid_kind,
                             "match_id":mid,"recorded_at":_iso(now()),"evidence_envelope":None,
                             "fixture_envelope_ref":old_ref,"fixture_envelope_projection":old_projection,
                             "embedded_field":None if invalid_kind=="context" else invalid_kind,
-                            "reason":"cached_context_schema_or_identity_invalid","feature_eligible":False}
+                            "reason":"cached_context_schema_or_identity_invalid","feature_eligible":False,
+                            **_failure_details(exc,kind=invalid_kind,rows=contexts[mid][1].get(invalid_kind))}
                         diagnostic_ref=_save(runtime,Path("advanced_features/failures")/invalid_kind/str(mid),diagnostic,guard=guard)
                         item["cached_context_retry"]={"reason":"cached_context_schema_or_identity_invalid",
                             "diagnostic_ref":diagnostic_ref,"force_fixture_request":True}
@@ -307,8 +372,10 @@ def collect_run(config, runtime, league="all", *, client=None, clock=None, max_s
                     except RequestBudgetError as exc:
                         halted=True;halted_reason=getattr(exc,"reason","real_budget_or_runtime_deferred")
                         item["kinds"][kind]={"status":"deferred","reason":halted_reason}
-                    except (APIError,ValueError,KeyError,TypeError,OSError,AttributeError):
-                        item["kinds"][kind]={"status":"failed","reason":"provider_schema_identity_or_storage_failure"}
+                    except (APIError,ValueError,KeyError,TypeError,OSError,AttributeError) as exc:
+                        details=_failure_details(exc,kind=kind,
+                            rows=source.get("response") if isinstance(source,dict) else raw.get(kind))
+                        item["kinds"][kind]={"status":"failed","reason":"provider_schema_identity_or_storage_failure",**details}
                         # APIClient already redacts credential echoes. Preserve
                         # the actual returned envelope when normalization failed;
                         # it stays quarantined and is never a feature snapshot.
@@ -319,7 +386,7 @@ def collect_run(config, runtime, league="all", *, client=None, clock=None, max_s
                                     "fixture_envelope_ref":context_refs[context_key][1],
                                     "fixture_envelope_projection":context_refs[context_key][2],
                                     "embedded_field":kind if source is None else None,
-                                    "reason":"provider_schema_identity_or_storage_failure","feature_eligible":False}
+                                    "reason":"provider_schema_identity_or_storage_failure","feature_eligible":False,**details}
                                 item["kinds"][kind]["diagnostic_ref"]=_save(runtime,Path("advanced_features/failures")/kind/str(mid),diagnostic,guard=guard)
                             except (ValueError,TypeError,OSError):
                                 item["kinds"][kind]["diagnostic_save_failed"]=True
@@ -328,8 +395,8 @@ def collect_run(config, runtime, league="all", *, client=None, clock=None, max_s
                 halted=True;halted_reason=getattr(exc,"reason","real_budget_or_runtime_deferred")
                 for kind in pending: item["kinds"].setdefault(kind,{"status":"deferred","reason":halted_reason})
                 item["status"]="deferred"
-            except (APIError,ValueError,KeyError,TypeError,OSError,AttributeError):
-                for kind in pending: item["kinds"].setdefault(kind,{"status":"failed","reason":"fixture_metadata_or_context_invalid"})
+            except (APIError,ValueError,KeyError,TypeError,OSError,AttributeError) as exc:
+                for kind in pending: item["kinds"].setdefault(kind,{"status":"failed","reason":"fixture_metadata_or_context_invalid",**_failure_details(exc)})
                 item["status"]="failed"
     for summary in report["leagues"]:
         items=[i for i in report["matches"] if i["league"]==summary["league"]]
@@ -345,6 +412,9 @@ def collect_run(config, runtime, league="all", *, client=None, clock=None, max_s
     report["failed_requests"]=sum(v["status"]=="failed" for i in report["matches"] for v in i["kinds"].values())
     report["deferred_requests"]=sum(v["status"]=="deferred" for i in report["matches"] for v in i["kinds"].values())
     report["capacity_deferred_requests"]=sum(v.get("reason")=="storage_capacity_deferred" for i in report["matches"] for v in i["kinds"].values())
+    failures=[v for i in report["matches"] for v in i["kinds"].values() if v["status"]=="failed"]
+    report["failure_category_counts"]=dict(Counter(v["failure_category"] for v in failures))
+    report["failure_code_counts"]=dict(Counter(v["failure_code"] for v in failures))
     report["engineering_failures"]={"failed_endpoint_requests":report["failed_requests"],
         "history_missing_or_invalid_leagues":sum(l["status"]=="history_missing_or_invalid" for l in report["leagues"]),
         "initialization_or_collection_issues":len(report["issues"]),
