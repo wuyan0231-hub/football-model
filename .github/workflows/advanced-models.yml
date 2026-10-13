@@ -22,7 +22,8 @@ permissions:
   actions: read
 concurrency:
   group: ${{ github.ref == 'refs/heads/main' && 'football-model-state' || format('football-model-research-{0}', github.ref) }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: false
+  queue: max
 
 jobs:
   pre_study_capture:
