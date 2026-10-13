@@ -22,7 +22,16 @@ MANIFEST_NAME = "state_storage.json"
 ARCHIVE_DIR = "state_archives"
 SCHEMA_VERSION = 1
 _SUFFIXES = {".json", ".jsonl", ".csv", ".tsv", ".md", ".txt", ".npz", ".npy"}
+_DECISION_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
 _SHA = re.compile(r"[0-9a-f]{64}")
+
+
+def _valid_decision_image_header(suffix, content):
+    if suffix == ".png":
+        return content.startswith(b"\x89PNG\r\n\x1a\n")
+    if suffix in {".jpg", ".jpeg"}:
+        return content.startswith(b"\xff\xd8\xff")
+    return suffix == ".webp" and len(content) >= 12 and content[:4] == b"RIFF" and content[8:12] == b"WEBP"
 
 
 def _supported_limits(document):
@@ -116,7 +125,9 @@ def validate_runtime(runtime: Path, *, max_file_bytes: int = MAX_FILE_BYTES,
     total = expanded = count = 0
     for relative, path in _files(Path(runtime)):
         replay = bool(re.fullmatch(r"replay/bundles/[0-9a-f]{64}\.json\.gz", relative))
-        if path.suffix.lower() not in _SUFFIXES and not replay:
+        decision_image = (relative.startswith("feature_decisions/sources/")
+                          and path.suffix.lower() in _DECISION_IMAGE_SUFFIXES)
+        if path.suffix.lower() not in _SUFFIXES and not replay and not decision_image:
             raise StorageError("runtime 包含不允许上传的文件类型，已停止。")
         size = path.stat().st_size
         total += size
@@ -126,6 +137,9 @@ def validate_runtime(runtime: Path, *, max_file_bytes: int = MAX_FILE_BYTES,
         content = path.read_bytes()
         if len(content) != size:
             raise StorageError("状态文件在读取时改变，已停止。")
+        if decision_image:
+            if not _valid_decision_image_header(path.suffix.lower(), content):
+                raise StorageError("报价图片格式标记无效，已停止。")
         _scan_secret(content)
         if replay:
             plain = _expand(content, min(max_file_bytes, max_logical_bytes - total - expanded))
@@ -193,11 +207,15 @@ def should_archive(relative_path: str, retained_inline=frozenset()) -> bool:
     name = _relative(relative_path)
     if name in retained_inline or not name.endswith(".json"):
         return False
-    return (name.startswith(("quotes/raw/", "quotes/snapshots/", "validation/"))
+    return (name.startswith(("quotes/raw/", "quotes/snapshots/", "quotes/fixtures/", "validation/"))
             or (name.startswith(("shadow_models/", "total_shrink_shadow/")) and name.split("/")[1] != "reports"
                 and bool(re.fullmatch(r"[0-9a-f]{64}\.json", name.split("/")[-1])))
-            or (name.startswith(("feature_models/", "feature_snapshots/"))
-                and bool(re.fullmatch(r"[0-9a-f]{64}\.json",name.split("/")[-1]))))
+            or (name.startswith(("feature_models/", "feature_snapshots/", "advanced_models/",
+                                 "advanced_snapshots/", "advanced_scoring/", "advanced_confirmation/",
+                                 "advanced_collection/", "advanced_features/", "prospective/"))
+                and bool(re.fullmatch(r"[0-9a-f]{64}\.json",name.split("/")[-1])))
+            or (name.startswith(("fundamentals/snapshots/", "fundamentals/raw/",
+                                 "fundamentals/fixtures/", "cache/"))))
 
 
 def storage_cost(relative_path: str, raw_bytes: bytes, retained_inline=frozenset()) -> int:

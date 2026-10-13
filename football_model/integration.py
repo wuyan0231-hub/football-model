@@ -356,7 +356,7 @@ def _same(actual, expected, path="prediction"):
         raise IntegrationError(f"{path}与原模型输出不一致。")
 
 
-def match_packet(runtime, config, league, match_id, as_of=None, state_commit=None):
+def match_packet(runtime, config, league, match_id, as_of=None, state_commit=None, *, decision_input=None):
     """Read, validate and reproduce a saved forecast without fitting parameters."""
     runtime = Path(runtime)
     if any((base / "RESEARCH_REPLAY.json").exists() for base in (runtime, runtime.parent)):
@@ -468,6 +468,13 @@ def match_packet(runtime, config, league, match_id, as_of=None, state_commit=Non
     # binds all saved metadata and tail accounting to that implementation.
     from .f5c_access import comparison
     f5c_comparison = comparison(runtime, league, match_id, row=row, now=now)
+    from .feature_decisions import comparison as feature_comparison
+    feature_decision = feature_comparison(runtime, league, match_id, row=row, now=now,
+        baseline_refs=[{"path": str(path.relative_to(runtime)), "sha256": _sha(path)}
+            for path in (model_path, prediction_path,
+                runtime / "reports" / "history" / f"{attempt['run_id']}.json",
+                runtime / "integration" / "index.json")],
+        f5c=f5c_comparison, decision_input=decision_input)
     return {
         "schema_version": 1, "packet_type": "saved_exploratory_forecast_for_framework",
         "created_at": iso(datetime.now(UTC)), "analysis_as_of": iso(now),
@@ -488,11 +495,14 @@ def match_packet(runtime, config, league, match_id, as_of=None, state_commit=Non
         "latest_league_attempt": latest,
         "prediction": prediction, "validation": validation,
         "f5c_comparison": f5c_comparison,
+        "feature_decision_comparison": feature_decision,
         "external_checks": {"current_fixture_status_and_kickoff": "pending", "actual_venue_and_neutral_status": "pending",
                             "team_identity_against_current_schedule": "pending", "lineups_injuries_news": "pending",
                             "current_odds_and_settlement_contract": "pending"},
         "unquantified_factors": ["球员与伤停/预计及实际阵容", "射门事件xG", "战术变化", "旅行与赛程特征", "天气与场地变化", "参数不确定性"],
-        "market_mapping": {"status": "not_executed", "instruction": "以框架§8按真实合约映射五态及EV；本包未读取赔率、不计算盘口EV。预测λ不是射门xG。"},
+        "market_mapping": {"status": "not_executed" if feature_decision["status"] == "no_quote_supplied" else feature_decision["status"],
+            "feature_decision_status": feature_decision["status"], "comparison_id": feature_decision["comparison_id"],
+            "instruction": "实际同价计算见feature_decision_comparison；无合法报价或费用分别保留未知。参考价不等于开放或成交，计算不自动产生推荐。预测λ不是射门xG。"},
         "usage": "仅为已读取并复算的探索性常规时间比分基线。尚须外部核实本场资料；不能称已纳入全部信息、已验证优势或已自动推荐。90分钟含补时，不含加时与点球大战。",
     }
 
@@ -512,6 +522,8 @@ def main(argv=None):
             target.add_argument("--state-commit")
             target.add_argument("--html", help="Export visible F5-C comparison together with --zip")
             target.add_argument("--zip", help="Export exact F5-C originals together with --html")
+            target.add_argument("--decision-input", help="Runtime-relative reviewed feature-decision-input-v1 JSON; explicit whole quote rows, source hashes and optional fees/selection")
+            target.add_argument("--decision-source-root", help="Explicit external source directory: copy --decision-input and its named original sources into immutable feature_decisions paths; no image review is inferred")
     args = parser.parse_args(argv)
     try:
         config = _read(Path(args.config))
@@ -525,7 +537,14 @@ def main(argv=None):
                 from .f5c_access import _new_output
                 _new_output(args.html, args.runtime)
                 _new_output(args.zip, args.runtime)
-            result = match_packet(args.runtime, config, args.league, args.match_id, args.as_of, args.state_commit)
+            decision_input = args.decision_input
+            if args.decision_source_root:
+                if not decision_input:
+                    raise IntegrationError("--decision-source-root 需要 --decision-input。")
+                from .feature_decisions import stage_decision_input
+                decision_input = stage_decision_input(args.runtime, decision_input, source_root=args.decision_source_root)
+            result = match_packet(args.runtime, config, args.league, args.match_id, args.as_of, args.state_commit,
+                                  decision_input=decision_input)
             call_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
             output = Path(args.output) if args.output else Path(args.runtime) / "match_calls" / f"{call_id}-{args.league}-{args.match_id}.json"
             atomic_json(output, result)

@@ -251,7 +251,7 @@ def main(argv: list[str] | None = None) -> int:
             oid = load_state(args.repo, args.runtime)
             print("已恢复 model-state 状态。" if oid else "首次运行：远端尚无 model-state 状态。")
         elif args.operation == "save":
-            save_state(args.repo, args.runtime)
+            print("MODEL_STATE_SAVED_COMMIT=" + save_state(args.repo, args.runtime))
             print("已保存到独立 model-state 分支，程序分支未改动。")
         else:
             _, runtime, _ = _paths(args.repo, args.runtime)

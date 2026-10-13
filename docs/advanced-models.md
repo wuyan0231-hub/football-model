@@ -1,0 +1,121 @@
+# 高级特征、未来对照与同价决定：批次十一实施入口
+
+配套完整框架为v1.7修订批次十一。本页说明实现入口、数据准入和验收口径，不是部署或效果回执。每轮实际源码／状态提交、命令、测试、真实数据运行、远端保存及回读另以运行原件核验。用户2026年10月13日已要求自主继续完成规划中的可执行工作，无逐阶段审批要求；不能以此替代未发生的未来样本或未取得的数据。
+
+生产基线仍是原攻防泊松模型，180天表示历史权重的半衰期：样本早180天权重约减半，更早合格比赛仍可参与；不是只训练最近180天。F5另外的过去180天选参窗口保留其自身含义。旧`feature-models.json`、`feature-models-v2.json`与F5-C保持原身份、原首输出、失败和队列；本批不把旧样本升级为高级模型或正式确认样本。panna按用户先前决定暂缓。
+
+## 范围与分支
+
+新工程协议为`advanced-models-v1.json`，当前用途为历史开发与未来工程影子。各非仅审计配置赛事独立拟合，国内与国家队不混参数；`--league all`表示请求该配置范围，不意味着每个联赛已取得高级数据、完成拟合或具备未来有效预测。欧冠原仅审计身份不改变。
+
+| 分支 | 使用的特征组 | 截点 |
+|---|---|---|
+| M_schedule | 原四项赛程特征 | EARLY |
+| M_shots | 赛程＋射门／射正代理 | EARLY |
+| M_xg | 赛程＋同源历史xG | EARLY |
+| M_lineup_early | 赛程＋历史首发延续 | EARLY |
+| M_shots_xg | 赛程＋射门／射正＋xG | EARLY |
+| M_shots_lineup | 赛程＋射门／射正＋历史首发延续 | EARLY |
+| M_full_early | 赛程＋射门／射正＋xG＋历史首发延续 | EARLY |
+| M_lineup_confirmed | 赛程＋本场确认首发相对上场XI的延续 | LINEUP |
+| M_lineup_minutes | M_lineup_confirmed＋本场首发的历史分钟留存 | LINEUP |
+| M_lineup_rating | M_lineup_confirmed＋本场首发的历史评分代理；不要求分钟留存分支可用 | LINEUP |
+| M_full_lineup | 赛程＋射门／射正＋xG＋确认阵容＋历史分钟留存＋历史评分代理 | LINEUP |
+| G0_full | 完整合格比分训练池，无用户协变量 | EARLY／LINEUP分别记录 |
+| G0 | M_shots_lineup特征合格训练池，无用户协变量 | EARLY／LINEUP分别记录 |
+| G1 | 与G0同训练池及预测目标，使用M_shots_lineup同定义协变量 | EARLY／LINEUP分别记录 |
+
+M系列使用过去样本外M0的logλ作固定offset，主客共享系数、不另加截距，以训练内预处理及L2拟合。当前协议至少40个完整历史OOF比赛才拟合，0.1／1／10惩罚网格仅在过去训练数据内按时间选取；它们不是原模型ridge或F5的α。每个组合有独立可用性、训练池、卡及失败状态，不能用M_schedule成功代表M_full成功。
+
+G0_full与M0完整训练池的精确对齐仅适用于EARLY，该比较才可在其时间边界内解释结构差异。G0_full／G0／G1的LINEUP预测复用真实EARLY拟合参数，并在LINEUP截点重建预测特征，与未来运行保持同一政策；LINEUP的M0训练年龄／训练池可不同，不能宣称这一时距也是同池纯结构比较。G0相对G0_full包含特征完整性筛样影响；G1相对G0才是相同池下的协变量增量。M系列另按协议固定的父子组合比较新增特征，并在子分支实际完整训练池上重拟父分支作同池消融；只有相同预测目标／时间边界与可比训练池时才作限定归因。不把同时换库、换训练池、换特征的差异称为单项效果。
+
+## 特征实际含义与数据边界
+
+射门／xG／人员统计优先使用目标截点前本赛事最近5场合格历史，最低已观测历史数由协议固定为3；不同字段各有覆盖与缺失。特征列顺序以代码`FEATURE_GROUPS`及候选卡为准。
+
+- 射门代理包含本队场均射门、射正，以及对手历史被射门、被射正。它是可训练的机会代理，不是完整战术或机会质量模型。
+- xG只取合法同源的本队历史xG与对手历史被创造xG。null、未提供、非法、明确0分开；缺xG不以射门乘任意系数或0补填。
+- EARLY阵容仅描述已知历史首发延续，不读取本场最终XI，不假装已处理本场尚未公布的人员变化。
+- LINEUP将XI延续、分钟留存和历史评分拆成独立数据组。XI延续不以球员分钟资料齐全为前提；分钟留存要求完整分钟资料，供应商替补null不能擅自填0。评分扩展以同一过去评分表计算“本场XI平均历史评分−上一场XI平均历史评分”：球员历史评分按实际已观测出场分钟加权，两套XI每名球员都须至少90分钟可用评分，本队至少3场存在已观测评分及分钟的历史比赛；缺失评分／分钟不参与计算、不填0，覆盖另列。评分是代理，不是已证明的因果球员能力值。目标比赛自己的赛后分钟和评分不能进入预测。
+- 伤停并非独立“缺一个人扣多少λ”的系数；已确认XI可以反映实际替换，但伤病严重程度、替代质量和EARLY预计阵容权重未因此自动解决。长期已吸收缺阵不重复人工扣减，未量化机制仍按框架定性。
+- 历史训练使用后来下载资料时明确历史可用性假设；历史确认XI不能追认为当时提前10小时已知。真正未来必须有截点前真实取得与保存链。
+- 赛程统计按完整俱乐部跨赛事来源准入，仍单列供应商全量分母未独立核定及球员国家队个人负荷缺口；`all`不是全球数据全覆盖。
+
+采集器按真实5000次日额、当日已用量、分钟限速、缓存、重试、软截止和生产请求预留运行，逐比赛逐接口保存已有、缺失、受限、延期和错误。纯额度或软截止延期返回`execution_status=deferred`、`status=partial`及`full_collection_completed=false`，CLI可正常退出；真实数据／身份／schema／保存等错误保持非零退出。意甲与all分别保存`advanced_features/collection/by_selection/<selection>/latest.json`，不能拿阶段成功覆盖另一阶段结果。它可续跑，不为赶一次运行写成功；全部历史逐场三类原件可能需要多日配额。供应商覆盖标志不等于逐场实际字段齐全。
+
+## 实际入口
+
+以下`ACTUAL_SOURCE_SHA`、`ACTUAL_STATE_SHA`和比赛ID须换成本轮真实值，命令示意不构成运行回执；使用当次固定源码的`--help`核参数。
+
+```sh
+python -m football_model.advanced_collection --runtime runtime --config config.json --league all
+python -m football_model.advanced_research study --runtime runtime --config config.json --league all --protocol advanced-models-v1.json --source-commit ACTUAL_SOURCE_SHA --state-commit ACTUAL_STATE_SHA --run-goalmodel
+python -m football_model.advanced_snapshots capture --runtime runtime --config config.json --league all --protocol advanced-models-v1.json --source-commit ACTUAL_SOURCE_SHA --state-commit ACTUAL_STATE_SHA
+python -m football_model.advanced_scoring score --runtime runtime --config config.json --league all --protocol advanced-models-v1.json --source-commit ACTUAL_SOURCE_SHA --state-commit ACTUAL_STATE_SHA
+python -m football_model.advanced_confirmation --runtime runtime --league serie_a --advanced-protocol advanced-models-v1.json --protocol advanced-confirmation-v1.json --auto-activate
+```
+
+高级采集器保存statistics／lineups／players原件，与旧事实采集共用实际已取得来源。研究命令不带`--run-goalmodel`时不能称R分支已执行。正式R训练固定`third_party/goalmodel`源码及依赖；未来捕获按已保存实际R参数确定性计算并核工程探针，不把探针合成对阵算真实比赛。
+
+普通单场的报价计算接入为：
+
+```sh
+python -m football_model.integration match --runtime runtime --config config.json --league serie_a --match-id ACTUAL_MATCH_ID --as-of ACTUAL_ANALYSIS_ISO --state-commit ACTUAL_STATE_SHA --decision-input reviewed/current-decision.json --output runtime/match_calls/actual.json --html runtime/match_calls/actual.html --zip runtime/match_calls/actual.zip
+```
+
+`ACTUAL_ANALYSIS_ISO`必须是本次真实分析截点，并与输入的`analysis_as_of`一致；不能拿后来资料倒填旧赛前资格。`--decision-input`是runtime内实际保存、已审核的`feature-decision-input-v1`对象，包含绑定本场及实际分析截点的整行报价、冻结来源引用与hash、审核和取得时间、可选费用及明确选择。不是把任意JSON或旧审计模板改名后提交；实际字段和报价schema按`feature_decisions.py`、`decision_quotes.py`及固定源码检查。缺输入仍输出候选读取状态，价格计算保留`no_quote_supplied`；未知费用不默认为0。
+
+原截图或原文位于本次显式授权的外部目录时，可在上述命令追加`--decision-source-root ACTUAL_SOURCE_DIRECTORY`，并让`--decision-input`指向该目录内的真实输入文件。程序只复制该输入及其明确列出的来源，保存到`feature_decisions/sources/<原字节SHA256>.<扩展名>`与不可变输入目录，记录路径迁移及真实归档时间；原始输入另存。图片仅在这个专用目录准入PNG、JPG／JPEG、WebP，仍受原单件／整体大小及内容检查，不扩大整个runtime的任意文件上传范围。保存成功不表示已经实际看图、审核转录正确或恢复历史盲测资格；`reviewed=true`仍须对应真实执行者的回图证据。
+
+## 未来捕获与评分
+
+EARLY窗口为开球前9—11小时；LINEUP为开球前至多90分钟并实际取得合法两队XI。历史LINEUP研究的45分钟截点假设不保证真实接口该时刻有首发。只接受真正未赛且来源／输出时序合格的记录；30分钟调度不能保证任何指定分钟必然获得资料。
+
+先从冻结完整生产父行及原函数重建M0，再重建高级原件、特征、实际卡／系数和候选矩阵。goalmodel保持其已拟合分布。候选绑定同一首合法基线捕获，后来的候选成功不得覆盖首次失败；真实错过窗口、不合格、未到期、缺预测和待赛果各自计量。两个时距、多个候选与多次尝试不是多场独立比赛。
+
+全机会台账先登记再判资格，评分不只扫描成功预测。合法M0存在、候选失败且协议准许时，政策评分回退该M0，并同时报告候选原生成功子样本、基线单侧、双侧失败和全部请求分母；没有合格M0或结果时保持未知。不把预测在后来损坏或赛程修订后已不合格的记录偷偷换成新的成功，保留原评分版本和当前验证状态。
+
+| 原件位置 | 内容与核验 |
+|---|---|
+| `runtime/advanced_features/evidence/` | 内容寻址的实际历史统计、阵容、球员原件 |
+| `runtime/advanced_features/collection/` | 完整采集请求、已有来源、错误和预算延期 |
+| `runtime/advanced_models/<league>/<protocol_hash>/` | 各分支卡、训练输入、报告、失败和确认记录 |
+| `runtime/advanced_snapshots/<protocol_hash>/` | 独立机会队列、捕获、冻结输入和首记录 |
+| `runtime/advanced_scoring/<protocol_hash>/` | 实际结果绑定与独立评分版本 |
+| 单场包`feature_decision_comparison` | 同父候选状态、五态／EV计算、明确选择和证据闭包 |
+
+所有目录只作定位，实际可用记录必须沿引用逐hash恢复；状态归档按固定提交真实`state_storage`清单核原字节。latest只是入口，最近失败与最后成功分别报告。
+
+## 调度及执行回执
+
+独立工作流为`.github/workflows/advanced-models.yml`。当前配置每小时第10／40分钟尝试未来处理，每天UTC 02:07（北京时间10:07）尝试补采及完整研究；原生产北京时间09:17日程保留。定时任务受`ENABLE_SCHEDULE`及私有仓库条件控制，使用与生产／旧影子相同的`football-model-state`互斥锁，不并发改状态。调度延迟、长研究、API配额及排队都可能错过捕获窗口，每30分钟只是尝试频率，不保证30分钟内完成或有有效首发。
+
+完整研究的main运行先执行独立短任务`pre_study_capture`：恢复固定状态、验证已有持久证明、同步当前资料、检查确认、捕获已有合法候选并立即保存后结束该job。后续`advanced`任务重新恢复这个真实状态，绑定保存提交与该短任务的服务端完成时间，再进行耗时补采和研究；研究后再同步／捕获。持久证明必须核固定run attempt、实际已完成job日志中的精确状态SHA、服务端`completed_at`和完整原件闭包，不能只信本地提交时间或metadata自报。短任务失败按真实状态阻断后续，已保存部分成果与失败不抹去。
+
+这种拆分避免已经捕获的资料等待整段研究结束才首次持久保存，但工作流仍占用共享状态锁；长研究期间后续LINEUP窗口仍可能错过。不能由短任务存在宣称不再丢窗口，实际错过照常进入机会分母。
+
+main发布及手动运行按工作流实际分支执行，工程分支研究不能冒称正式API补采／远端状态保存。每项读取其真实step outcome和对应报告：预算／软截止的正常延期保留未采集分母，不能把正常退出等同采集完成；真实错误、研究失败、未来捕获、独立评分、确认阻断与持久保存分别展示。本页不预填任何部署提交、测试数量、采集场数或已评分未来数量，最终执行结果以本轮固定回执为准。
+
+## 同价计算、选择与报告
+
+普通接入的新增计算链检查赛程v2、高级EARLY／LINEUP及已核同父F5-C；旧v1仍用原读取及评分入口。本链拒绝不同生产父行的混配。每个合法候选从完整矩阵计算相同合约与参考价下的五态、盈利／不亏概率、费用前EV、有明确费用后的净EV、与M0差值及正负分歧。报价使用真实截点选行；未认证API亚洲盘不因进入高级模块就解禁。
+
+可选选择声明绑定一个实际计算ID，记录选的是哪一模型、报价及方向。该链接不是自动推荐、正式等级验收或成交证据；程序不按最高EV擅自改主票。足球机制、反证、条件和单关／串腿四态仍由完整框架执行，A/B/C/D/U仍是影子用途。没有两份真实独立GPT输出，不声称已经测得框架政策效果；没有联合分布和整串票据，不报告整串预测或实盘ROI。
+
+## 确认准备与自动执行边界
+
+`advanced-confirmation-v1.json`预先固定主比分NLL、最小有用改善0.01、1X2／总球／双方净胜尾部不退化容差、覆盖和样本量设计。这些是研究设计假设，不是已证明的经济门槛。每个登记联赛×候选×时距为一个假设，按整个登记家族及指标校正，不能逐日挑最好的一项。
+
+当前配置11个offset分支各有其固定时距，3个goalmodel分支各对应EARLY／LINEUP两个时距，合计每联赛17个确认假设；19个登记联赛共323个假设，另对5项指标作家族校正。冷启动诊断不进入这组确认。协议hash和候选集合变更需另立实际身份，不能借文件名相同延续旧样本。
+
+当前设计要求至少60个有效开发配对及规定覆盖，按开发差分方差上界规划80%功效；该正态近似规划与终局配对t区间仍依赖比赛差分的独立性假设，同队／时间相关性没有因此消失，不能保证实际功效；初始基线暖期按明确规则单列，未知球队和其他失败保留。只有通过实际重算开发门、从已保存训练块参数／特征重建M0及候选预测、模型卡与协议绑定等检查，`--auto-activate`才保存不可变激活记录。未通过留下阻断回执，不能把运行退出正常称为已开测。
+
+真实激活后起点延后24小时，按预定数量的首批唯一机会、最长730天和7天结果成熟等待运行；监控错过的应入组机会仍消耗首N名额并保持无资格，不能用后来的比赛补招；每日监控在终局前不读取正式确认评分。停止、有效配对不足及失效按协议给结论不充分，不能不断延长至显著。源码中的准备协议不等于已激活，工程影子仍不是正式确认。即便概率确认通过，也不自动改生产、更不证明收益；采用须有独立范围适用和实际实施记录。
+
+独立冷启动函数为`football_model.cold_start.score_cold_start(model, fixture)`，版本`unseen_team_league_centred_prior_v1`；高级研究在M0因未知球队失败时另存`COLD_START`诊断分支。它保留已知对手参数，只给未见球队零中心攻防先验，明确未知ID、训练场数0、无已校准不确定性及不与M0配对。未来捕获遇到原M0真实未知球队unsupported时，也可冻结同一原模型、赛程和来源生成独立候选，并对其单侧预测评分；原M0的unsupported保留，新增覆盖与共同可评分集分开。未见球队没有真实球队参数，不包装成问题已在预测效果上解决。此分支不是正式确认协议中的主候选，也不自动成为生产预测。
+
+## 如何判定本轮完成度
+
+必须分别回答：代码是否存在且针对性检查通过；数据请求是否实际发出且报告完整；各分支是否真正拟合／产生预测；本轮保存及回读是否完成；多少数据受限／未到窗口／未来待赛果；主要指标是否改善；正式确认是否激活／完成；生产是否采用。测试数量、Action绿色、全部命令运行完和文档升版均不能代替这些问题。
+
+尚未发生的未来比赛、API实际缺失字段、预计阵容的可靠权重、完整球员能力／国家队个人负荷以及真实投注价格和执行不是本轮工程能制造的结果。已有调度可按部署的固定流程继续采集、拟合、捕获及评分，不会自动发明这些缺失模型。逐项数据阻断应披露真实数量与原因；未验证效果应明确写未验证，不能总括为“全面准确率优化成功”。
