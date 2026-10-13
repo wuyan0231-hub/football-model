@@ -2,13 +2,14 @@ name: 足球特征模型：历史研究与双时点影子
 
 on:
   push:
-    branches: [main, codex/feature-models-20261013]
+    branches: [main, codex/feature-models-20261013, codex/s3-paired-research-20261013]
     paths:
       - 'football_model/feature_*.py'
       - 'football_model/goalmodel_adapter.py'
       - 'scripts/goalmodel_bridge.R'
       - 'third_party/goalmodel/**'
       - 'feature-models.json'
+      - 'feature-models-v2.json'
       - 'requirements.txt'
       - '.github/workflows/feature-models.yml'
   workflow_dispatch:
@@ -85,6 +86,11 @@ jobs:
         if: env.STUDY_RUN == 'true'
         continue-on-error: true
         run: python -m football_model.feature_research study --runtime runtime --league serie_a --source-commit "$GITHUB_SHA" --state-commit "$FEATURE_PARENT_STATE" --run-goalmodel
+      - name: 运行v2完整训练池与全请求研究
+        id: research_v2
+        if: env.STUDY_RUN == 'true'
+        continue-on-error: true
+        run: python -m football_model.feature_research study --runtime runtime --league serie_a --source-commit "$GITHUB_SHA" --state-commit "$FEATURE_PARENT_STATE" --protocol feature-models-v2.json --run-goalmodel
       - name: 取得未来11小时试点最新事实
         id: facts
         if: env.IS_RELEASE == 'true'
@@ -97,6 +103,11 @@ jobs:
         if: env.IS_RELEASE == 'true'
         continue-on-error: true
         run: python -m football_model.feature_snapshots capture --runtime runtime --config config.json --league serie_a --source-commit "$GITHUB_SHA" --state-commit "$FEATURE_PARENT_STATE" --protocol feature-models.json
+      - name: 冻结v2原件重建与真实双时点
+        id: capture_v2
+        if: env.IS_RELEASE == 'true'
+        continue-on-error: true
+        run: python -m football_model.feature_snapshots capture --runtime runtime --config config.json --league serie_a --source-commit "$GITHUB_SHA" --state-commit "$FEATURE_PARENT_STATE" --protocol feature-models-v2.json
       - name: 独立赛果同步与首次候选评分
         id: scoring
         if: env.IS_RELEASE == 'true'
@@ -104,6 +115,13 @@ jobs:
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
         run: python -m football_model.feature_scoring score --runtime runtime --config config.json --league serie_a --source-commit "$GITHUB_SHA" --protocol feature-models.json
+      - name: v2全机会独立评分与基线回退
+        id: scoring_v2
+        if: env.IS_RELEASE == 'true'
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python -m football_model.feature_scoring score --runtime runtime --config config.json --league serie_a --source-commit "$GITHUB_SHA" --protocol feature-models-v2.json
       - name: 核输出完整性与既有存储上限
         id: check
         if: always() && steps.restore.outcome == 'success'
@@ -124,16 +142,19 @@ jobs:
           RESTORE_OUTCOME: ${{ steps.restore.outcome }}
           SCHEDULE_OUTCOME: ${{ steps.schedule.outcome }}
           RESEARCH_OUTCOME: ${{ steps.research.outcome }}
+          RESEARCH_V2_OUTCOME: ${{ steps.research_v2.outcome }}
           FACTS_OUTCOME: ${{ steps.facts.outcome }}
           CAPTURE_OUTCOME: ${{ steps.capture.outcome }}
+          CAPTURE_V2_OUTCOME: ${{ steps.capture_v2.outcome }}
           SCORING_OUTCOME: ${{ steps.scoring.outcome }}
+          SCORING_V2_OUTCOME: ${{ steps.scoring_v2.outcome }}
           CHECK_OUTCOME: ${{ steps.check.outcome }}
           PERSIST_OUTCOME: ${{ steps.persist.outcome }}
         run: |
           python - <<'PY'
           import json,os
           from pathlib import Path
-          receipt={k:os.environ.get(k) for k in ['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','FEATURE_PARENT_STATE','IS_RELEASE','STUDY_RUN','RESTORE_OUTCOME','SCHEDULE_OUTCOME','RESEARCH_OUTCOME','FACTS_OUTCOME','CAPTURE_OUTCOME','SCORING_OUTCOME','CHECK_OUTCOME','PERSIST_OUTCOME']}
+          receipt={k:os.environ.get(k) for k in ['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','FEATURE_PARENT_STATE','IS_RELEASE','STUDY_RUN','RESTORE_OUTCOME','SCHEDULE_OUTCOME','RESEARCH_OUTCOME','RESEARCH_V2_OUTCOME','FACTS_OUTCOME','CAPTURE_OUTCOME','CAPTURE_V2_OUTCOME','SCORING_OUTCOME','SCORING_V2_OUTCOME','CHECK_OUTCOME','PERSIST_OUTCOME']}
           receipt.update(confirmation_active=False,production_promoted=False)
           Path('feature-run-receipt.json').write_text(json.dumps(receipt,indent=2))
           with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a') as out:
@@ -160,7 +181,7 @@ jobs:
         if: >-
           always() &&
           (steps.restore.outcome != 'success' || steps.check.outcome != 'success' ||
-          (env.STUDY_RUN == 'true' && steps.research.outcome != 'success') ||
-          (env.IS_RELEASE == 'true' && (steps.persist.outcome != 'success' || steps.facts.outcome != 'success' || steps.capture.outcome != 'success' || steps.scoring.outcome != 'success')) ||
+          (env.STUDY_RUN == 'true' && (steps.research.outcome != 'success' || steps.research_v2.outcome != 'success')) ||
+          (env.IS_RELEASE == 'true' && (steps.persist.outcome != 'success' || steps.facts.outcome != 'success' || steps.capture.outcome != 'success' || steps.capture_v2.outcome != 'success' || steps.scoring.outcome != 'success' || steps.scoring_v2.outcome != 'success')) ||
           (env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true' && steps.schedule.outcome != 'success'))
         run: exit 1

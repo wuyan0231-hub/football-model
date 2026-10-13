@@ -9,12 +9,16 @@ import unittest
 from unittest.mock import patch
 
 from football_model.feature_snapshots import (SnapshotError, _digest, capture_run,
-    snapshot_from_evidence, verify_capture, verify_snapshot)
+    snapshot_from_evidence, verify_baseline_capture, verify_capture, verify_snapshot, _windows)
 from football_model.fundamentals import build_features, make_snapshot, save_snapshot
 from football_model.model import _distribution_from_rates
 
 NOW = datetime(2025, 1, 1, 8, tzinfo=timezone.utc)
 PROTOCOL = {"version": "schedule-offset-engineering-v1", "confirmation_active": False}
+V2_PROTOCOL = {"schema_version": "feature-model-protocol-v2", "research_design_version": "feature-research-v2",
+    "snapshot_source_validation": "rebuild_from_frozen_sources_v2", "future_scoring_denominator": "all_queue",
+    "research_artifact_namespace": "protocol_hash_v2", "early_min_hours": 9, "early_max_hours": 11,
+    "lineup_max_minutes": 75, "confirmation_active": False}
 SHA = "a" * 40
 
 
@@ -146,6 +150,182 @@ class FeatureSnapshotTests(unittest.TestCase):
             "league": "serie_a", "generated_at": iso(NOW), "collection_finished_at": iso(NOW),
             "schedule_matches": matches, "coverage": coverage})
         return latest, requests
+
+    def real_v2_capture(self, *, allclub=False, with_candidate=True, horizon="EARLY", with_injuries=False):
+        from football_model.cli import run_pipeline
+        from tests.test_cli import BASE_CONFIG, FakeClient
+        trained = datetime(2025, 1, 1, tzinfo=timezone.utc)
+        at = trained + timedelta(hours=38 if horizon == "EARLY" else 47.5)
+        with patch("football_model.integration.datetime") as integration_clock:
+            integration_clock.now.return_value = trained
+            code, original = run_pipeline(BASE_CONFIG, self.runtime, "train", now=trained,
+                client=FakeClient(), clock=lambda: trained)
+            self.assertEqual(code, 0, original)
+            row = json.loads((self.runtime / "predictions" / original["run_id"] / "epl.json").read_text())[0]
+            integration_clock.now.return_value = at
+            write(self.runtime / "fundamentals/fixtures/2000/current.json", {
+                "fixture_response": {"endpoint": "/fixtures", "params": {"id": 2000}, "fetched_at": iso(at),
+                    "response": [{"fixture": {"id": 2000, "date": row["kickoff"], "status": {"short": "NS"}},
+                                  "teams": {"home": {"id": row["home_id"]}, "away": {"id": row["away_id"]}}}]}})
+            current = {**row, "status": "NS"}
+            if horizon == "LINEUP":
+                raw = [{"team": {"id": tid}, "startXI": [{"player": {"id": tid * 100 + i}}
+                    for i in range(11)], "substitutes": [], "formation": "4-3-3"}
+                    for tid in (row["home_id"], row["away_id"])]
+                save_snapshot(self.runtime / "fundamentals/snapshots", make_snapshot("lineups", {
+                    "endpoint": "/fixtures/lineups", "params": {"fixture": row["match_id"]},
+                    "response": raw, "fetched_at": iso(at)}, current, context_observed_at=at))
+            if with_injuries:
+                save_snapshot(self.runtime / "fundamentals/snapshots", make_snapshot("injuries", {
+                    "endpoint": "/injuries", "params": {"fixture": row["match_id"]},
+                    "response": [], "fetched_at": iso(at)}, current, context_observed_at=at))
+            if with_candidate:
+                if allclub:
+                    schedule, _ = self.allclub_sources()
+                    copied = json.loads(schedule.read_text())
+                    copied["league"] = "epl"
+                    write(self.runtime / "feature_models/schedules/epl/latest.json", copied)
+                    card = json.loads((self.runtime / "feature_models/models/serie_a/latest.json").read_text())
+                else:
+                    _, card = self.candidate_model()
+                card.update(league="epl", protocol_hash=_digest(V2_PROTOCOL))
+                write(self.runtime / "feature_models/models/epl" / _digest(V2_PROTOCOL) / "latest.json", card)
+            _, report = capture_run(self.runtime, "epl", source_commit=SHA, protocol=V2_PROTOCOL,
+                                    config=BASE_CONFIG, clock=lambda: at)
+        item = next(item for item in report["queue"] if item["horizon"] == horizon)
+        self.assertEqual(item["evidence_status"], "captured", report)
+        receipt = json.loads((self.runtime / item["receipt_ref"]["path"]).read_text())
+        return verify_capture(self.runtime, receipt), receipt
+
+    def resave_payload(self, payload, receipt):
+        payload["snapshot_id"] = _digest({k: v for k, v in payload.items() if k != "snapshot_id"})
+        path = self.runtime / receipt["payload_ref"]["path"]
+        write(path, payload)
+        receipt["payload_ref"]["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+
+    def test_protocol_top_level_windows_are_used_and_conflicts_rejected(self):
+        self.assertEqual(_windows(V2_PROTOCOL)["lineup_minutes_max"], 75)
+        p = {**V2_PROTOCOL, "early_min_hours": 8.5, "early_max_hours": 12}
+        self.assertEqual(_windows(p)["early_hours_min"], 8.5)
+        self.assertEqual(_windows(p)["early_hours_max"], 12)
+        with self.assertRaisesRegex(SnapshotError, "conflicting_capture_windows"):
+            _windows({**p, "capture_windows": {"early_hours_min": 9}})
+        with self.assertRaisesRegex(SnapshotError, "invalid_capture_windows"):
+            _windows({**p, "lineup_max_minutes": True})
+
+    def test_v2_protocol_cannot_disable_source_validation(self):
+        p = deepcopy(V2_PROTOCOL)
+        p.pop("snapshot_source_validation")
+        with self.assertRaisesRegex(SnapshotError, "snapshot_source_validation_required"):
+            self.pure(protocol=p)
+
+    def test_v2_actual_parent_and_features_replay_after_latest_files_are_removed(self):
+        payload, receipt = self.real_v2_capture(allclub=True)
+        self.assertEqual(payload["baseline_parent_row"]["prediction"], payload["baseline"]["prediction"])
+        for ref in payload["source_refs"]:
+            original = self.runtime / ref["origin_runtime_path"]
+            if original.exists():
+                original.unlink()
+        self.assertTrue(verify_capture(self.runtime, receipt))
+
+    def test_v2_fabricated_features_are_rejected_even_with_consistent_candidate_arithmetic(self):
+        from football_model.feature_correction import predict_correction
+        payload, receipt = self.real_v2_capture()
+        ref = next(r for r in payload["source_refs"] if r["kind"] == "candidate_model")
+        model = json.loads((self.runtime / ref["runtime_relative_path"]).read_text())["correction_model"]
+        candidate = payload["candidate"]
+        candidate["feature_values"]["home"]["matches_last14d"] += 1
+        candidate["prediction"] = predict_correction(model, candidate["prediction"]["baseline_prediction"],
+            candidate["feature_values"]["home"], candidate["feature_values"]["away"])
+        self.resave_payload(payload, receipt)
+        self.assertTrue(verify_baseline_capture(self.runtime, receipt))
+        with self.assertRaisesRegex(SnapshotError, "candidate_features_not_rebuilt_from_frozen_sources"):
+            verify_capture(self.runtime, receipt)
+
+    def test_v2_candidate_baseline_must_be_the_same_production_parent(self):
+        from football_model.feature_correction import predict_correction
+        payload, receipt = self.real_v2_capture()
+        ref = next(r for r in payload["source_refs"] if r["kind"] == "candidate_model")
+        model = json.loads((self.runtime / ref["runtime_relative_path"]).read_text())["correction_model"]
+        candidate = payload["candidate"]
+        fake = deepcopy(candidate["prediction"]["baseline_prediction"])
+        fake["match_id"] += 1
+        candidate["prediction"] = predict_correction(model, fake,
+            candidate["feature_values"]["home"], candidate["feature_values"]["away"])
+        self.resave_payload(payload, receipt)
+        self.assertTrue(verify_baseline_capture(self.runtime, receipt))
+        with self.assertRaisesRegex(SnapshotError, "candidate_baseline_not_same_frozen_parent"):
+            verify_capture(self.runtime, receipt)
+
+    def test_v2_full_parent_row_identity_and_original_function_are_verified(self):
+        payload, receipt = self.real_v2_capture()
+        payload["baseline_parent_row"]["home_name"] = "invented same ID team name"
+        self.resave_payload(payload, receipt)
+        with self.assertRaisesRegex(SnapshotError, "baseline_parent_full_row_mismatch"):
+            verify_baseline_capture(self.runtime, receipt)
+
+    def test_v2_rehashing_an_altered_model_does_not_bypass_original_function_replay(self):
+        payload, receipt = self.real_v2_capture()
+        ref = next(r for r in payload["source_refs"] if r["kind"] == "baseline_model")
+        path = self.runtime / ref["runtime_relative_path"]
+        bundle = json.loads(path.read_text())
+        bundle["model"]["intercept"] += 0.1
+        write(path, bundle)
+        ref["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+        payload["baseline"]["provenance"]["model_file_sha256"] = ref["sha256"]
+        self.resave_payload(payload, receipt)
+        with self.assertRaisesRegex(SnapshotError, "baseline_original_function_mismatch"):
+            verify_baseline_capture(self.runtime, receipt)
+
+    def test_v2_broken_candidate_source_preserves_a_verified_baseline(self):
+        payload, receipt = self.real_v2_capture()
+        ref = next(r for r in payload["source_refs"] if r["kind"] == "candidate_schedule_history")
+        (self.runtime / ref["runtime_relative_path"]).unlink()
+        self.assertTrue(verify_baseline_capture(self.runtime, receipt))
+        with self.assertRaisesRegex(SnapshotError, "source_file_hash_mismatch"):
+            verify_capture(self.runtime, receipt)
+
+    def test_v2_first_source_capture_without_candidate_retains_real_baseline(self):
+        payload, receipt = self.real_v2_capture(with_candidate=False)
+        self.assertEqual(payload["candidate_status"], "model_unavailable")
+        self.assertEqual(receipt["status"], "captured")
+        self.assertTrue(verify_baseline_capture(self.runtime, receipt))
+        root = self.runtime / "feature_snapshots" / _digest(V2_PROTOCOL) / "captures/epl/2000/EARLY"
+        self.assertTrue((root / "first.json").exists())
+        self.assertFalse((root / "first_candidate.json").exists())
+
+    def test_v2_fundamental_payload_claims_are_rebuilt_from_preserved_sources(self):
+        payload, receipt = self.real_v2_capture()
+        payload["features"]["teams"]["1"]["lineups"] = {"complete_starting_eleven": True,
+                                                                 "starters": []}
+        self.resave_payload(payload, receipt)
+        self.assertTrue(verify_baseline_capture(self.runtime, receipt))
+        with self.assertRaisesRegex(SnapshotError, "fundamental_features_not_rebuilt_from_frozen_sources"):
+            verify_capture(self.runtime, receipt)
+
+    def test_v2_lineup_parent_breakage_rejects_the_entire_horizon_not_just_candidate(self):
+        payload, receipt = self.real_v2_capture(horizon="LINEUP")
+        self.assertTrue(verify_baseline_capture(self.runtime, receipt))
+        ref = next(ref for ref in payload["source_refs"] if ref.get("kind") == "fundamentals"
+                   and json.loads((self.runtime / ref["runtime_relative_path"]).read_text()).get("kind") == "lineups")
+        (self.runtime / ref["runtime_relative_path"]).write_text("{}")
+        with self.assertRaisesRegex(SnapshotError, "source_file_hash_mismatch"):
+            verify_baseline_capture(self.runtime, receipt)
+        with self.assertRaisesRegex(SnapshotError, "source_file_hash_mismatch"):
+            verify_capture(self.runtime, receipt)
+
+    def test_v2_lineup_horizon_survives_unrelated_injury_or_candidate_source_breakage(self):
+        payload, receipt = self.real_v2_capture(horizon="LINEUP", with_injuries=True)
+        for ref in payload["source_refs"]:
+            if ref.get("kind") == "candidate_model":
+                (self.runtime / ref["runtime_relative_path"]).unlink()
+            elif ref.get("kind") == "fundamentals":
+                path = self.runtime / ref["runtime_relative_path"]
+                if json.loads(path.read_text()).get("kind") == "injuries":
+                    path.write_text("{}")
+        self.assertTrue(verify_baseline_capture(self.runtime, receipt))
+        with self.assertRaisesRegex(SnapshotError, "source_file_hash_mismatch"):
+            verify_capture(self.runtime, receipt)
 
     def test_constructed_object_never_gains_live_or_confirmation_qualification(self):
         payload = self.pure()

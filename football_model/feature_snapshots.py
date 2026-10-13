@@ -91,7 +91,18 @@ def _check_times(value, cutoff):
 
 
 def _windows(protocol):
-    result = {**DEFAULT_WINDOWS, **protocol.get("capture_windows", {})}
+    nested = protocol.get("capture_windows", {})
+    if not isinstance(nested, dict) or set(nested) - set(DEFAULT_WINDOWS):
+        raise SnapshotError("invalid_capture_windows")
+    aliases = {"early_min_hours": "early_hours_min", "early_max_hours": "early_hours_max",
+               "lineup_max_minutes": "lineup_minutes_max"}
+    supplied = dict(nested)
+    for top, key in aliases.items():
+        if top in protocol:
+            if key in supplied and supplied[key] != protocol[top]:
+                raise SnapshotError("conflicting_capture_windows")
+            supplied[key] = protocol[top]
+    result = {**DEFAULT_WINDOWS, **supplied}
     if set(result) != set(DEFAULT_WINDOWS) or any(
             type(v) not in (int, float) or not math.isfinite(v) or v <= 0 for v in result.values()):
         raise SnapshotError("invalid_capture_windows")
@@ -100,6 +111,23 @@ def _windows(protocol):
     if result["lineup_minutes_max"] / 60 >= result["early_hours_min"]:
         raise SnapshotError("horizon_windows_overlap")
     return result
+
+
+def _strict_sources(protocol):
+    schema = protocol.get("schema_version", protocol.get("schema"))
+    if "schema" in protocol and "schema_version" in protocol and protocol["schema"] != protocol["schema_version"]:
+        raise SnapshotError("snapshot_protocol_schema_conflict")
+    flag = protocol.get("snapshot_source_validation")
+    if flag is None:
+        if schema == "feature-model-protocol-v2":
+            raise SnapshotError("snapshot_source_validation_required")
+        return False
+    if (flag != "rebuild_from_frozen_sources_v2"
+            or schema != "feature-model-protocol-v2"
+            or protocol.get("research_design_version") != "feature-research-v2"
+            or protocol.get("future_scoring_denominator") != "all_queue"):
+        raise SnapshotError("snapshot_source_validation_protocol_mismatch")
+    return True
 
 
 def _horizon_state(fixture, horizon, cutoff, protocol):
@@ -231,6 +259,7 @@ def snapshot_from_evidence(fixture, baseline, features, *, horizon, cutoff_at,
     identity, cutoff = _fixture(fixture), _utc(cutoff_at)
     if not isinstance(protocol, dict) or not isinstance(features, dict) or not isinstance(baseline, dict):
         raise SnapshotError("invalid_snapshot_inputs")
+    _strict_sources(protocol)
     state = _horizon_state(identity, horizon, cutoff, protocol)
     if state["status"] != "due":
         raise SnapshotError("horizon_" + state["status"])
@@ -271,17 +300,259 @@ def snapshot_from_evidence(fixture, baseline, features, *, horizon, cutoff_at,
     return result
 
 
-def verify_snapshot(snapshot, *, runtime=None):
-    """Verify the frozen payload and all saved parent bytes, without fitting."""
+def _verify_payload(snapshot):
     if not isinstance(snapshot, dict) or snapshot.get("schema_version") != VERSION:
         raise SnapshotError("invalid_snapshot_schema")
     expected = _digest({k: v for k, v in snapshot.items() if k != "snapshot_id"})
     if snapshot.get("snapshot_id") != expected:
         raise SnapshotError("snapshot_payload_hash_mismatch")
+    protocol = snapshot.get("protocol")
+    if not isinstance(protocol, dict) or snapshot.get("protocol_sha256") != _digest(protocol):
+        raise SnapshotError("snapshot_protocol_hash_mismatch")
+    strict = _strict_sources(protocol)
+    if strict and _horizon_state(snapshot["fixture"], snapshot["horizon"],
+                                 _utc(snapshot["actual_cutoff_at"]), protocol)["status"] != "due":
+        raise SnapshotError("capture_cutoff_outside_horizon")
+    return strict
+
+
+def _one_source(snapshot, kind, runtime):
+    refs = [ref for ref in snapshot["source_refs"] if ref.get("kind") == kind]
+    if len(refs) != 1:
+        raise SnapshotError(kind + "_parent_missing_or_ambiguous")
+    return refs[0], _read(_reference_path(refs[0], runtime))
+
+
+def _prediction_same(actual, expected, reason):
+    from .integration import _same
+    try:
+        _same(actual, expected)
+    except ValueError as exc:
+        raise SnapshotError(reason) from exc
+
+
+def _verify_baseline_sources(snapshot, runtime):
+    """Reproduce M0 from its frozen model and exact production parent row."""
+    cutoff = _utc(snapshot["actual_cutoff_at"])
+    kinds = {"baseline_model", "baseline_forecast", "baseline_report", "integration_index",
+             "current_fixture_context"}
+    _verify_refs([ref for ref in snapshot["source_refs"] if ref.get("kind") in kinds],
+                 cutoff, runtime=runtime)
+    model_ref, bundle = _one_source(snapshot, "baseline_model", runtime)
+    forecast_ref, rows = _one_source(snapshot, "baseline_forecast", runtime)
+    report_ref, report = _one_source(snapshot, "baseline_report", runtime)
+    _, index = _one_source(snapshot, "integration_index", runtime)
+    _, context = _one_source(snapshot, "current_fixture_context", runtime)
+    if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+        raise SnapshotError("baseline_parent_forecast_invalid")
+    ids = [row.get("match_id") for row in rows]
+    if len(ids) != len(set(ids)):
+        raise SnapshotError("baseline_parent_forecast_duplicate_match")
+    parents = [row for row in rows if row.get("match_id") == snapshot["fixture"]["match_id"]]
+    if len(parents) != 1 or snapshot.get("baseline_parent_row") != parents[0]:
+        raise SnapshotError("baseline_parent_full_row_mismatch")
+    row, baseline = parents[0], snapshot["baseline"]
+    provenance, model = baseline["provenance"], bundle["model"]
+    validation = bundle.get("validation", {})
+    if (bundle.get("maturity") != "exploratory_baseline"
+            or model.get("validated_for_production") is not False
+            or model.get("optimizer", {}).get("parameter_at_bound") is not False
+            or validation.get("meets_minimum_supported_test_matches") is not True
+            or validation.get("deployment_approved") is not False
+            or baseline.get("validation") != validation):
+        raise SnapshotError("baseline_frozen_model_qualification_mismatch")
+    entries = [entry for entry in index.get("competitions", [])
+               if isinstance(entry, dict) and entry.get("key") == snapshot.get("league")]
+    if (len(entries) != 1 or entries[0].get("status") != "available"
+            or entries[0].get("current_model_id") != bundle.get("model_id")
+            or entries[0].get("latest_attempt") != baseline.get("latest_league_attempt")
+            or entries[0].get("latest_successful_forecast", {}).get("prediction_file") != provenance.get("prediction_file")
+            or entries[0].get("latest_successful_forecast", {}).get("run_id") != report.get("run_id")):
+        raise SnapshotError("baseline_frozen_index_parent_mismatch")
+    if (row.get("status") != "exploratory_baseline" or row.get("research_replay")
+            or report.get("research_replay") or not _identity_equal(row, snapshot["fixture"])
+            or not _identity_equal(baseline["fixture"], row)
+            or row.get("competition") != snapshot.get("league")
+            or row.get("model_id") != bundle.get("model_id")
+            or provenance.get("model_id") != bundle.get("model_id")
+            or provenance.get("read_and_recomputed") is not True
+            or provenance.get("fit_performed") is not False):
+        raise SnapshotError("baseline_parent_identity_mismatch")
+    envelope = context.get("fixture_response", {})
+    current = envelope.get("response")
+    if (envelope.get("endpoint") != "/fixtures"
+            or envelope.get("params") != {"id": row["match_id"]} or envelope.get("errors")
+            or envelope.get("paging", {}).get("total", 1) != 1
+            or envelope.get("paging", {}).get("current", 1) != 1 or not envelope.get("fetched_at")
+            or not isinstance(current, list) or len(current) != 1
+            or not _identity_equal(current[0], row) or _fixture(current[0])["status"] != "NS"
+            or snapshot["fixture"].get("status") != "NS"):
+        raise SnapshotError("baseline_current_fixture_parent_mismatch")
+    for name, ref in (("model_file", model_ref), ("prediction_file", forecast_ref),
+                      ("report_file", report_ref)):
+        origin = provenance[name]
+        if origin.startswith("runtime/"):
+            origin = origin[len("runtime/"):]
+        if origin != ref.get("origin_runtime_path"):
+            raise SnapshotError("baseline_parent_path_mismatch")
+        if name != "report_file" and provenance.get(name + "_sha256") != ref["sha256"]:
+            raise SnapshotError("baseline_parent_hash_mismatch")
+    training = model["training_cutoff"]
+    if (provenance.get("training_cutoff") != training or row.get("training_cutoff") != training
+            or bundle.get("training_cutoff") != training
+            or provenance.get("training_data_sha256") != model.get("training_data_sha256")):
+        raise SnapshotError("baseline_training_parent_mismatch")
+    # Re-read the actual frozen report; candidate damage is not an M0 failure.
+    from .integration import _attempt, _source_times
+    items = [item for item in report["competitions"] if item.get("key") == row["competition"]]
+    if len(items) != 1:
+        raise SnapshotError("baseline_report_competition_mismatch")
+    attempt = _attempt(report, items[0], Path(provenance["report_file"]))
+    if (attempt.get("model_id") != bundle.get("model_id")
+            or f"runtime/predictions/{report['run_id']}/{row['competition']}.json" != provenance.get("prediction_file")
+            or attempt.get("source_commit") != provenance.get("source_commit")):
+        raise SnapshotError("baseline_report_parent_mismatch")
+    from .cli import TIME_SEMANTICS
+    if row.get("time_semantics") != TIME_SEMANTICS or bundle.get("time_semantics") != TIME_SEMANTICS:
+        raise SnapshotError("baseline_source_time_semantics_missing")
+    if (row.get("data_observed_at") != attempt.get("data_observed_at")
+            or row.get("run_started_at") != attempt.get("run_started_at")
+            or row.get("model_fitted_at") != bundle.get("model_fitted_at")
+            or row.get("model_fitted_at") != attempt.get("model_fitted_at")
+            or row.get("forecast_generated_at") != row.get("generated_at")):
+        raise SnapshotError("baseline_source_clocks_mismatch")
+    times = [_utc(value) for value in (row["run_started_at"], items[0]["metadata_received_at"],
+             row["data_observed_at"], row["generated_at"], attempt["forecast_generated_at"],
+             report["generated_at"], snapshot["actual_cutoff_at"], row["kickoff"])]
+    if any(left > right for left, right in zip(times, times[1:])) or times[-2] >= times[-1]:
+        raise SnapshotError("baseline_source_clock_order_invalid")
+    if not (_utc(model["training_cutoff"]) <= _utc(bundle["model_fitted_at"]) <= times[3]):
+        raise SnapshotError("baseline_fit_clock_order_invalid")
+    _source_times(items[0].get("seasons"), times[2], require_received=True)
+    _source_times(bundle.get("source_seasons"), _utc(bundle["data_observed_at"]), require_received=True)
+    _check_times(baseline, cutoff)
+    _prediction_same(baseline["prediction"], row["prediction"], "baseline_saved_prediction_mismatch")
+    from .model import score_distribution
+    reproduced = score_distribution(model, row["home_id"], row["away_id"], row["kickoff"],
+                                     neutral=row["prediction"]["neutral"])
+    _prediction_same(row["prediction"], reproduced, "baseline_original_function_mismatch")
+
+
+def _rebuild_candidate_sources(snapshot, runtime):
+    from .feature_dataset import FEATURE_NAMES, feature_values
+    candidate = snapshot["candidate"]
+    _, card = _one_source(snapshot, "candidate_model", runtime)
+    if (card.get("protocol_hash") != snapshot["protocol_sha256"]
+            or card.get("league") != snapshot["league"]
+            or card.get("schema_version") != "feature-model-card-v1"
+            or card.get("usage") != "engineering_shadow_only"
+            or card.get("lineup_adjusted") is not False
+            or card.get("feature_names") != list(FEATURE_NAMES)
+            or card.get("feature_scope") != candidate.get("feature_scope")
+            or card.get("candidate_id") != candidate.get("candidate_id")
+            or card.get("training_cutoff") != candidate.get("training_cutoff")
+            or card.get("training_cutoff") != card["correction_model"].get("training_cutoff")
+            or candidate.get("lineup_adjusted") is not False
+            or candidate.get("used_in_probabilities") != list(FEATURE_NAMES)):
+        raise SnapshotError("candidate_frozen_model_identity_mismatch")
+    for source in card.get("source_refs", []):
+        saved = [ref for ref in snapshot["source_refs"] if ref.get("kind") == "candidate_training_source"
+                 and ref.get("origin_runtime_path") == source.get("path")
+                 and ref.get("sha256") == source.get("sha256")]
+        if len(saved) != 1:
+            raise SnapshotError("candidate_frozen_training_source_missing_or_ambiguous")
+    _, history_source = _one_source(snapshot, "candidate_schedule_history", runtime)
+    history, events = history_source["matches"], None
+    scope = card["feature_scope"]
+    if scope == "all_club_competitions_provider_scope":
+        _, schedule = _one_source(snapshot, "all_club_schedule", runtime)
+        from .feature_schedule import VERSION as schedule_version
+        if schedule.get("version") != schedule_version or schedule.get("league") != snapshot["league"]:
+            raise SnapshotError("candidate_frozen_schedule_identity_mismatch")
+        history, coverage = schedule["schedule_matches"], schedule["coverage"]
+        if coverage.get("scope") != scope or coverage.get("provider_queries_complete") is not True:
+            raise SnapshotError("candidate_frozen_schedule_scope_incomplete")
+        events = coverage.get("workload_events", [])
+    elif scope == "same_competition":
+        coverage = {"scope": scope, "all_club_competitions_complete": False}
+    else:
+        raise SnapshotError("candidate_feature_scope_unknown")
+    if candidate.get("schedule_coverage") != coverage:
+        raise SnapshotError("candidate_frozen_schedule_coverage_mismatch")
+    values = feature_values(snapshot["fixture"], history, snapshot["actual_cutoff_at"],
+                            schedule_events=events, scope=scope)
+    if scope == "all_club_competitions_provider_scope":
+        _used_schedule_sources(values, history, events, coverage, runtime,
+                               _utc(snapshot["actual_cutoff_at"]), frozen_refs=snapshot["source_refs"])
+    values["availability_basis"] = "observed_saved_schedule_at_real_capture_with_4h_maturity_rule"
+    values["prospective_qualified"] = False
+    if values != candidate.get("feature_values"):
+        raise SnapshotError("candidate_features_not_rebuilt_from_frozen_sources")
+    baseline = deepcopy(snapshot["baseline"]["prediction"])
+    baseline.update(match_id=snapshot["fixture"]["match_id"], kickoff=snapshot["fixture"]["kickoff"],
+                    cutoff_at=snapshot["actual_cutoff_at"],
+                    training_cutoff=snapshot["baseline"]["provenance"]["training_cutoff"])
+    _prediction_same(candidate["prediction"]["baseline_prediction"], baseline,
+                     "candidate_baseline_not_same_frozen_parent")
+    return card, values, baseline
+
+
+def _rebuild_fundamental_sources(snapshot, runtime):
+    snapshots, history = [], []
+    for ref in snapshot["source_refs"]:
+        if ref.get("kind") != "fundamentals":
+            continue
+        value = _read(_reference_path(ref, runtime))
+        if value.get("schema_version") == "fundamentals-evidence-v1":
+            snapshots.append(value)
+            item = value["fixture"]
+            if item["match_id"] != snapshot["fixture"]["match_id"] and item.get("status") in ("FT", "AET", "PEN"):
+                history.append({**item, "observed_at": value["known_at"]})
+        else:
+            rows = value.get("fixture_response", {}).get("response", [])
+            if not isinstance(rows, list) or len(rows) != 1:
+                raise SnapshotError("frozen_fundamental_fixture_context_invalid")
+            item = _fixture(rows[0])
+            if item["match_id"] != snapshot["fixture"]["match_id"] and item.get("status") in ("FT", "AET", "PEN"):
+                history.append({**item, "observed_at": _iso(max(_times(value)))})
+    expected = build_features(snapshot["fixture"], cutoff=snapshot["actual_cutoff_at"],
+                              snapshots=snapshots, fixture_history=history)
+    if expected != snapshot["features"]:
+        raise SnapshotError("fundamental_features_not_rebuilt_from_frozen_sources")
+    if snapshot["horizon"] == "LINEUP" and not _lineups_known(snapshot["fixture"], expected,
+            {value["snapshot_id"]: value for value in snapshots}, _utc(snapshot["actual_cutoff_at"])):
+        raise SnapshotError("confirmed_lineups_not_observed")
+
+
+def _verify_horizon_sources(snapshot, runtime):
+    """LINEUP eligibility needs the original confirmed XI even for M0 fallback."""
+    if snapshot["horizon"] != "LINEUP":
+        return
+    ids = set()
+    for team in (snapshot["fixture"]["home_id"], snapshot["fixture"]["away_id"]):
+        source_id = snapshot["features"].get("teams", {}).get(str(team), {}).get("lineups", {}).get("snapshot_id")
+        if not isinstance(source_id, str):
+            raise SnapshotError("lineup_horizon_source_not_preserved")
+        ids.add(source_id)
+    refs = [ref for ref in snapshot["source_refs"] if ref.get("snapshot_id") in ids]
+    if any(sum(ref.get("snapshot_id") == source_id for ref in refs) != 1 for source_id in ids):
+        raise SnapshotError("lineup_horizon_source_missing_or_ambiguous")
+    snapshots = _verify_refs(refs, _utc(snapshot["actual_cutoff_at"]), runtime=runtime)
+    if not _lineups_known(snapshot["fixture"], snapshot["features"], snapshots,
+                           _utc(snapshot["actual_cutoff_at"])):
+        raise SnapshotError("lineup_horizon_confirmed_elevens_not_verified")
+
+
+def verify_snapshot(snapshot, *, runtime=None):
+    """Verify frozen parents; v2 rebuilds features and M0 from their sources."""
+    strict = _verify_payload(snapshot)
     cutoff = _utc(snapshot["actual_cutoff_at"])
     _verify_refs(snapshot["source_refs"], cutoff, runtime=runtime)
     if snapshot.get("confirmation_eligible") is not False or snapshot.get("f5_eligibility_inherited") is not False:
         raise SnapshotError("invalid_experiment_eligibility")
+    if strict:
+        _verify_baseline_sources(snapshot, runtime)
+        _rebuild_fundamental_sources(snapshot, runtime)
     if snapshot.get("candidate_status") == "predicted":
         candidate = snapshot["candidate"]
         card_refs = [ref for ref in snapshot["source_refs"] if ref.get("kind") == "candidate_model"]
@@ -291,10 +562,11 @@ def verify_snapshot(snapshot, *, runtime=None):
         if candidate.get("model_hash") != card.get("model_hash") or _digest(card["correction_model"]) != card["model_hash"]:
             raise SnapshotError("candidate_model_hash_mismatch")
         from .feature_correction import predict_correction
-        from .integration import _same
-        expected = predict_correction(card["correction_model"], candidate["prediction"]["baseline_prediction"],
-                                      candidate["feature_values"]["home"], candidate["feature_values"]["away"])
-        _same(candidate["prediction"], expected, "candidate")
+        values, baseline = candidate["feature_values"], candidate["prediction"]["baseline_prediction"]
+        if strict:
+            card, values, baseline = _rebuild_candidate_sources(snapshot, runtime)
+        expected = predict_correction(card["correction_model"], baseline, values["home"], values["away"])
+        _prediction_same(candidate["prediction"], expected, "candidate_prediction_recomputation_mismatch")
     return True
 
 
@@ -420,25 +692,56 @@ def _tick(clock, previous):
     return current
 
 
-def verify_capture(runtime, receipt):
-    """Verify payload bytes, completion time and capture eligibility."""
+def verify_baseline_capture(runtime, receipt):
+    """Verify M0 and its capture independently of damaged candidate parents."""
     runtime = Path(runtime)
     ref = receipt["payload_ref"]
     path = _reference_path({"path": ref["path"], "runtime_relative_path": ref["path"]}, runtime)
     if not path.is_file() or _sha(path) != ref["sha256"]:
         raise SnapshotError("capture_payload_file_hash_mismatch")
     snapshot = _read(path)
-    verify_snapshot(snapshot, runtime=runtime)
+    strict = _verify_payload(snapshot)
+    if strict:
+        _verify_baseline_sources(snapshot, runtime)
+    else:
+        # Legacy captures retain their original baseline evidence checks;
+        # candidate model/history references are independent of M0.
+        candidate_kinds = {"candidate_model", "candidate_schedule_history", "candidate_training_source",
+                           "all_club_schedule", "all_club_used_fixture_response",
+                           "all_club_used_competition_metadata"}
+        refs = [ref for ref in snapshot["source_refs"] if ref.get("kind") not in candidate_kinds]
+        _verify_refs(refs, _utc(snapshot["actual_cutoff_at"]), runtime=runtime)
+        matrix_array(snapshot["baseline"]["prediction"].get("score_matrix"))
+    _verify_horizon_sources(snapshot, runtime)
     cutoff, created = _utc(snapshot["actual_cutoff_at"]), _utc(snapshot["created_at"])
     started, completed = _utc(receipt["capture_started_at"]), _utc(receipt["storage_completed_at"])
     if not started <= cutoff <= created <= completed:
         raise SnapshotError("capture_completion_time_order_invalid")
+    if strict:
+        if (receipt.get("protocol_sha256") != snapshot.get("protocol_sha256")
+                or receipt.get("league") != snapshot.get("league")
+                or receipt.get("match_id") != snapshot["fixture"]["match_id"]
+                or receipt.get("horizon") != snapshot["horizon"]):
+            raise SnapshotError("capture_receipt_identity_mismatch")
+        if _horizon_state(snapshot["fixture"], snapshot["horizon"], cutoff,
+                          snapshot["protocol"])["status"] != "due":
+            raise SnapshotError("capture_cutoff_outside_horizon")
     state = _horizon_state(snapshot["fixture"], snapshot["horizon"], completed, snapshot["protocol"])
     valid = state["status"] == "due"
     if receipt.get("live_capture_verified") is not valid or receipt.get("status") != ("captured" if valid else "late"):
         raise SnapshotError("capture_completion_eligibility_mismatch")
     if receipt.get("confirmation_eligible") is not False:
         raise SnapshotError("invalid_capture_confirmation_eligibility")
+    if (snapshot.get("confirmation_eligible") is not False
+            or snapshot.get("f5_eligibility_inherited") is not False):
+        raise SnapshotError("invalid_experiment_eligibility")
+    return snapshot
+
+
+def verify_capture(runtime, receipt):
+    """Verify complete capture, including candidate sources and predictions."""
+    snapshot = verify_baseline_capture(runtime, receipt)
+    verify_snapshot(snapshot, runtime=runtime)
     return snapshot
 
 
@@ -501,6 +804,7 @@ def capture_run(runtime, league="serie_a", *, source_commit, protocol, state_com
         raise SnapshotError("state_commit_full_sha_required")
     if not isinstance(protocol, dict):
         raise SnapshotError("protocol_object_required")
+    _strict_sources(protocol)
     _windows(protocol)
     if not isinstance(league, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", league):
         raise SnapshotError("unsafe_league_key")
@@ -583,6 +887,8 @@ def capture_run(runtime, league="serie_a", *, source_commit, protocol, state_com
                                 cutoff_at=cutoff, source_refs=refs, protocol=protocol, clock=clock)
                             payload.update(league=league, source_commit=source_commit, state_commit=state_commit,
                                            capture_started_at=_iso(attempt_started), excluded_read_evidence=excluded)
+                            if _strict_sources(protocol):
+                                payload["baseline_parent_row"] = deepcopy(row)
                             # Candidate integration is deliberately separate from baseline.
                             _attach_candidate(payload, runtime, root, cutoff)
                             built_at = _tick(clock, _utc(payload["created_at"]))
@@ -660,6 +966,8 @@ def _attach_candidate(payload, runtime, root, cutoff):
     payload["candidate_status"] = "model_unavailable"
     payload["candidate_missing_reason"] = "correction_model_not_saved"
     model_path = runtime / "feature_models" / "models" / payload["league"] / "latest.json"
+    if payload["protocol"].get("research_artifact_namespace") == "protocol_hash_v2":
+        model_path = model_path.parent / payload["protocol_sha256"] / "latest.json"
     if not model_path.exists():
         return
     try:
@@ -733,7 +1041,7 @@ def _attach_candidate(payload, runtime, root, cutoff):
         payload.update(candidate_status="ineligible", candidate_missing_reason=_safe_reason(exc))
 
 
-def _used_schedule_sources(values, history, events, coverage, runtime, cutoff):
+def _used_schedule_sources(values, history, events, coverage, runtime, cutoff, *, frozen_refs=None):
     """Close actual four-feature inputs against the collector's raw responses.
 
     Only previous/recent fixture IDs contributing to this prediction are used.
@@ -755,7 +1063,15 @@ def _used_schedule_sources(values, history, events, coverage, runtime, cutoff):
     parents, seen = [], set()
 
     def original(ref, kind):
-        path = _reference_path({"path": ref["path"], "runtime_relative_path": ref["path"]}, runtime)
+        if frozen_refs is None:
+            path = _reference_path({"path": ref["path"], "runtime_relative_path": ref["path"]}, runtime)
+        else:
+            choices = [saved for saved in frozen_refs if saved.get("kind") == kind
+                       and saved.get("origin_runtime_path") == ref.get("path")
+                       and saved.get("sha256") == ref.get("sha256")]
+            if len(choices) != 1:
+                raise SnapshotError("used_schedule_frozen_response_ref_missing_or_ambiguous")
+            path = _reference_path(choices[0], runtime)
         if not re.fullmatch(r"[0-9a-f]{64}", ref.get("sha256", "")) or not path.is_file() or _sha(path) != ref["sha256"]:
             raise SnapshotError("used_schedule_source_hash_mismatch")
         value = _read(path)
