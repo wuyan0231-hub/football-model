@@ -1,0 +1,75 @@
+name: Transfer fixed r12 evidence in verified bounded parts
+
+on:
+  push:
+    branches: [codex/s3-unl-diagnosis]
+    paths: ['.github/workflows/r12-evidence-transfer.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  transfer:
+    if: github.event.repository.private == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Download the exact immutable artifact with digest enforcement
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: '11822683611'
+          run-id: '38386824669'
+          repository: wuyan0231-hub/football-model
+          github-token: ${{ github.token }}
+          path: original
+          skip-decompress: true
+          digest-mismatch: error
+      - name: Verify the original ZIP and split unchanged bytes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+          expected='c23b09e5007f03d7c5ec7ed109b62ab30d3f08c7d398d09b5b0ea98f21b165c8'
+          files=[p for p in Path('original').rglob('*') if p.is_file()]
+          assert len(files)==1, 'Expected one original artifact ZIP'
+          original=files[0]
+          assert original.stat().st_size==645265484, 'Original size mismatch'
+          with original.open('rb') as stream:
+              assert hashlib.file_digest(stream,'sha256').hexdigest()==expected, 'Original digest mismatch'
+          target=Path('parts'); target.mkdir()
+          parts=[]
+          with original.open('rb') as stream:
+              while block:=stream.read(320*1024*1024):
+                  name=f'part-{len(parts):02d}.bin'
+                  (target/name).write_bytes(block)
+                  parts.append({'name':name,'bytes':len(block),'sha256':hashlib.sha256(block).hexdigest()})
+          assert len(parts)==2
+          manifest={'schema_version':'lossless-artifact-transfer-v1','source_run_id':38386824669,
+                    'source_artifact_id':11822683611,'original_zip_bytes':645265484,
+                    'original_zip_sha256':expected,'parts':parts,
+                    'method':'Concatenate verified parts in listed order; no extraction or content mutation.'}
+          (target/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+          print(json.dumps(manifest))
+          PY
+      - name: Upload first bounded part
+        uses: actions/upload-artifact@v7
+        with:
+          name: r12-evidence-part-00
+          path: |
+            parts/part-00.bin
+            parts/manifest.json
+          compression-level: 0
+          retention-days: 14
+          if-no-files-found: error
+      - name: Upload second bounded part
+        uses: actions/upload-artifact@v7
+        with:
+          name: r12-evidence-part-01
+          path: |
+            parts/part-01.bin
+            parts/manifest.json
+          compression-level: 0
+          retention-days: 14
+          if-no-files-found: error
