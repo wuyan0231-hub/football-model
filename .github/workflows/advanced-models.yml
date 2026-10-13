@@ -277,7 +277,7 @@ jobs:
           import hashlib,json,tarfile
           from pathlib import Path
           archive=Path('advanced-models-evidence.tar.gz')
-          paths=[Path(p) for p in ['runtime/advanced_models','runtime/advanced_features','runtime/advanced_snapshots','runtime/advanced_scoring','advanced-run-parent.json','advanced-run-receipt.json']]
+          paths=[Path(p) for p in ['runtime/advanced_models','runtime/advanced_features','runtime/advanced_snapshots','runtime/advanced_scoring','runtime/feature_models/schedules','advanced-run-parent.json','advanced-run-receipt.json']]
           count=0
           with tarfile.open(archive,'w:gz',compresslevel=6) as out:
               for root in paths:
