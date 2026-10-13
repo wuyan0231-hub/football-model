@@ -84,18 +84,20 @@ def _cache_contexts(runtime, now):
 
 def _context(client, expected, metadata, contexts, now,refresh=False,offline_reason=None):
     mid = expected["match_id"]
+    fetched_detail=False
     if mid in contexts and not refresh:
         envelope,raw,path,projection = contexts[mid]
     else:
         with _offline_requests(client,offline_reason):
             envelope = client.fetch_fixture(mid,force=refresh,max_age_seconds=7*86400)
+        fetched_detail=True
         path=projection=None
         if envelope.get("endpoint") != "/fixtures" or envelope.get("params") != {"id":mid} or envelope.get("errors") or envelope.get("paging",{}).get("total",1)!=1:
             raise DataError("fixture_context_invalid")
         if not isinstance(envelope.get("response"),list) or len(envelope["response"])!=1:
             raise DataError("fixture_context_not_unique")
         raw = envelope["response"][0]
-    if offline_reason is None and (not all(isinstance(raw.get(k),list) for k in ENDPOINTS) or
+    if not fetched_detail and offline_reason is None and (not all(isinstance(raw.get(k),list) for k in ENDPOINTS) or
             any(raw.get(k)==[] for k in ENDPOINTS) and (now()-_utc(envelope["fetched_at"])).total_seconds()>7*86400):
         # League-season fixture lists lack nested statistics; one approved
         # fixture-detail request yields all embedded feature endpoints together.
@@ -230,7 +232,33 @@ def collect_run(config, runtime, league="all", *, client=None, clock=None, max_s
                     with _offline_requests(client,halted_reason if halted else None):
                         metadata[key]=client.resolve_league(leagues[key][0],force=False)
                     if _utc(metadata[key]["fetched_at"])>now(): raise DataError("metadata_clock_in_future")
-                envelope,raw,coverage,context_path,context_projection=_context(client,expected,metadata[key],contexts,now,refresh,
+                retry_invalid_cache=False
+                if mid in contexts and not refresh:
+                    invalid_kind="context"
+                    try:
+                        # Inspect the retained original without a request. A
+                        # complete, nonempty but invalid historical response
+                        # must not win cache selection forever.
+                        cached=_context(client,expected,metadata[key],contexts,now,
+                            offline_reason="cached_context_validation_only")
+                        for invalid_kind in pending:
+                            if invalid_kind in cached[1]:
+                                if not isinstance(cached[1][invalid_kind],list):
+                                    raise DataError("embedded_field_schema_invalid")
+                                embedded_snapshot(invalid_kind,cached[0],mid)
+                    except (ValueError,KeyError,TypeError,AttributeError):
+                        old_envelope,_,old_path,old_projection=contexts[mid]
+                        old_ref,old_projection=_save_context(runtime,old_envelope,old_path,old_projection,guard)
+                        diagnostic={"schema_version":"advanced-source-failure-v1","kind":invalid_kind,
+                            "match_id":mid,"recorded_at":_iso(now()),"evidence_envelope":None,
+                            "fixture_envelope_ref":old_ref,"fixture_envelope_projection":old_projection,
+                            "embedded_field":None if invalid_kind=="context" else invalid_kind,
+                            "reason":"cached_context_schema_or_identity_invalid","feature_eligible":False}
+                        diagnostic_ref=_save(runtime,Path("advanced_features/failures")/invalid_kind/str(mid),diagnostic,guard=guard)
+                        item["cached_context_retry"]={"reason":"cached_context_schema_or_identity_invalid",
+                            "diagnostic_ref":diagnostic_ref,"force_fixture_request":True}
+                        retry_invalid_cache=True
+                envelope,raw,coverage,context_path,context_projection=_context(client,expected,metadata[key],contexts,now,refresh or retry_invalid_cache,
                     halted_reason if halted else None)
                 context_key=id(envelope)
                 if context_key not in context_refs:
@@ -245,6 +273,8 @@ def collect_run(config, runtime, league="all", *, client=None, clock=None, max_s
                         item["kinds"][kind]={"status":"unsupported","reason":"provider_declares_coverage_false"}; continue
                     source=None
                     try:
+                        if kind in raw and not isinstance(raw[kind],list):
+                            raise DataError("embedded_field_schema_invalid")
                         if isinstance(raw.get(kind),list):
                             snap=embedded_snapshot(kind,envelope,mid)
                             value={"schema_version":"advanced-embedded-source-v1","kind":kind,"match_id":mid,
@@ -279,7 +309,7 @@ def collect_run(config, runtime, league="all", *, client=None, clock=None, max_s
                         # APIClient already redacts credential echoes. Preserve
                         # the actual returned envelope when normalization failed;
                         # it stays quarantined and is never a feature snapshot.
-                        if source is not None or isinstance(raw.get(kind),list):
+                        if source is not None or kind in raw:
                             try:
                                 diagnostic={"schema_version":"advanced-source-failure-v1","kind":kind,
                                     "match_id":mid,"recorded_at":_iso(now()),"evidence_envelope":source,

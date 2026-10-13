@@ -204,6 +204,59 @@ class FakeClient:
 
 
 class AdvancedCollectionTests(unittest.TestCase):
+    def test_invalid_complete_context_retries_only_affected_fixture_once(self):
+        for outcome in ("valid","invalid","invalid_schema","quota"):
+            with self.subTest(outcome=outcome),tempfile.TemporaryDirectory() as directory:
+                root=Path(directory);(root/"data").mkdir();rows=[fixture(1,2),fixture(2,4)]
+                (root/"data/a.json").write_text(json.dumps({"matches":rows}))
+                originals={}
+                for row in rows:
+                    raw=api_fixture(row)
+                    for kind in ("statistics","lineups","players"):raw[kind]=envelope(kind,row)["response"]
+                    if row["match_id"]==2:raw["players"][0]["team"]["id"]=999999
+                    if row["match_id"]==2 and outcome=="invalid_schema":raw["players"]={"invalid":"not_a_list"}
+                    env={"endpoint":"/fixtures","params":{"id":row["match_id"]},"response":[raw],"fetched_at":"2026-02-01T00:00:00Z"}
+                    path=root/"fundamentals/fixtures"/str(row["match_id"])/"original.json"
+                    path.parent.mkdir(parents=True);path.write_text(json.dumps({"fixture_response":env}))
+                    originals[path]=path.read_bytes()
+                class RetryClient(FakeClient):
+                    attempts=[]
+                    def fetch_fixture(self,mid,**kwargs):
+                        self.attempts.append((mid,kwargs.get("force")))
+                        if outcome=="quota":raise RequestBudgetError("budget")
+                        response=super().fetch_fixture(mid,**kwargs)
+                        if outcome=="invalid":response["response"][0]["players"][0]["team"]["id"]=999999
+                        if outcome=="invalid_schema":response["response"][0]["players"]={"invalid":"not_a_list"}
+                        return response
+                client=RetryClient(rows)
+                code,report=collect_run({"competitions":[{"key":"a"}]},root,client=client,
+                    clock=lambda:datetime(2026,2,2,tzinfo=timezone.utc))
+                self.assertEqual(client.attempts,[(2,True)])
+                for path,raw in originals.items():self.assertEqual(path.read_bytes(),raw)
+                first,second=report["matches"]
+                self.assertEqual(second["status"],"collected")
+                retry=first["cached_context_retry"]
+                diagnostic=json.loads((root/retry["diagnostic_ref"]["path"]).read_text())
+                self.assertEqual(diagnostic["reason"],"cached_context_schema_or_identity_invalid")
+                self.assertEqual(diagnostic["embedded_field"],"players")
+                self.assertFalse(diagnostic["feature_eligible"])
+                self.assertEqual((root/diagnostic["fixture_envelope_ref"]["path"]).read_bytes(),originals[root/"fundamentals/fixtures/2/original.json"])
+                if outcome=="valid":
+                    self.assertEqual(code,0);self.assertTrue(report["full_collection_completed"])
+                    self.assertEqual(first["kinds"]["players"]["status"],"collected")
+                    rebuilt=validate_evidence(json.loads((root/first["kinds"]["players"]["source"]["path"]).read_text()),root)
+                    self.assertEqual(rebuilt["fixture"]["match_id"],2)
+                elif outcome in ("invalid","invalid_schema"):
+                    self.assertEqual(code,1);self.assertEqual(report["engineering_failure_count"],1)
+                    self.assertEqual(first["kinds"]["players"]["status"],"failed")
+                    self.assertTrue(first["kinds"]["players"]["diagnostic_ref"])
+                    self.assertFalse(report["full_collection_completed"])
+                else:
+                    self.assertEqual(code,0);self.assertEqual(report["engineering_failure_count"],0)
+                    self.assertEqual(report["deferred_requests"],3)
+                    self.assertEqual(report["execution_status"],"deferred")
+                    self.assertFalse(report["full_collection_completed"])
+
     def test_network_deferral_does_not_skip_later_embedded_cache(self):
         for capacity in (False,True):
             with self.subTest(capacity=capacity),tempfile.TemporaryDirectory() as directory:
