@@ -2,10 +2,10 @@
   "schema_version": "feature-model-card-v1",
   "league": "serie_a",
   "candidate_id": "M1_schedule_offset_l2_v1",
-  "source_commit": "46dce2e55a2229c88dab0dfbe2df1e4f7f25c556",
-  "state_commit": "d3b13fc387f90366e8e9ee0c3be51b121cd4a8b6",
-  "training_cutoff": "2026-10-13T01:26:14.939540Z",
-  "generated_at": "2026-10-13T01:28:24.164528Z",
+  "source_commit": "58e8cd88a0d83b28119fba9a6a971417959eb04d",
+  "state_commit": "b7c500593b37c2c88d8eac3e823ec9fbc63b0e68",
+  "training_cutoff": "2026-10-13T02:17:27.143006Z",
+  "generated_at": "2026-10-13T02:19:37.829810Z",
   "feature_names": [
     "rest_days_capped",
     "matches_last14d",
@@ -22,7 +22,7 @@
     "trained": true,
     "validated_for_production": false,
     "automatic_promotion": false,
-    "training_cutoff": "2026-10-13T01:26:14.939540Z",
+    "training_cutoff": "2026-10-13T02:17:27.143006Z",
     "feature_names": [
       "rest_days_capped",
       "matches_last14d",
@@ -30,30 +30,30 @@
       "opponent_matches_last14d"
     ],
     "coefficients": {
-      "rest_days_capped": -0.018706626302358757,
-      "matches_last14d": -0.02755640648685735,
-      "opponent_rest_days_capped": 0.01086776607702144,
-      "opponent_matches_last14d": 0.032934994622519136
+      "rest_days_capped": -0.01630760203938098,
+      "matches_last14d": -0.028131257556936063,
+      "opponent_rest_days_capped": 0.01375068934588107,
+      "opponent_matches_last14d": 0.03222702837024412
     },
     "feature_scaling": {
       "rest_days_capped": {
-        "mean": 6.957195296144802,
-        "scale": 3.0212397416566787,
+        "mean": 7.024655746470626,
+        "scale": 3.0839936325149138,
         "constant_in_training": false
       },
       "matches_last14d": {
-        "mean": 1.7231600235137263,
-        "scale": 0.9191473557066318,
+        "mean": 1.7066545039007728,
+        "scale": 0.9300047018635295,
         "constant_in_training": false
       },
       "opponent_rest_days_capped": {
-        "mean": 6.957195296144802,
-        "scale": 3.021239741656679,
+        "mean": 7.024655746470624,
+        "scale": 3.0839936325149133,
         "constant_in_training": false
       },
       "opponent_matches_last14d": {
-        "mean": 1.7231600235137263,
-        "scale": 0.9191473557066318,
+        "mean": 1.7066545039007728,
+        "scale": 0.9300047018635296,
         "constant_in_training": false
       }
     },
@@ -69,11 +69,11 @@
       "origin": "kickoff",
       "reference": "correction_training_cutoff",
       "normalization": "mean_one",
-      "raw_weight_sum": 413.0779493444689,
-      "normalized_weight_sum": 1230.0
+      "raw_weight_sum": 417.01583382704473,
+      "normalized_weight_sum": 1234.0
     },
-    "n_rows": 1230,
-    "n_matches": 615,
+    "n_rows": 1234,
+    "n_matches": 617,
     "min_rows": 120,
     "training_match_ids": [
       1223676,
@@ -683,6 +683,7 @@
       1550134,
       1550135,
       1550136,
+      1550137,
       1550138,
       1550139,
       1550140,
@@ -690,18 +691,19 @@
       1550142,
       1550143,
       1550144,
-      1550145
+      1550145,
+      1550146
     ],
-    "training_data_sha256": "238f6b70047314b04427f413852e09c418378d2f308dc32573ee2f9e99ec3353",
-    "last_result_available_at": "2026-10-11T22:45:00Z",
-    "effective_side_sample_size": 851.1907471392623,
-    "effective_match_sample_size": 425.59537356963114,
+    "training_data_sha256": "065a34914a41081d66bf73d9d08564de51861edceb3d9235ffcbed72af0e47b5",
+    "last_result_available_at": "2026-10-12T22:45:00Z",
+    "effective_side_sample_size": 850.8004679998205,
+    "effective_match_sample_size": 425.40023399991026,
     "independent_evaluation_unit": "match_id, never a side row or repeated forecast version",
     "optimizer": {
       "method": "statsmodels_GLM_fit_regularized_bfgs",
-      "gradient_norm": 9.816823242851734e-06,
+      "gradient_norm": 3.941778218111216e-06,
       "gradient_norm_tolerance": 2e-05,
-      "objective": 1.377112431521991
+      "objective": 1.3764261022003017
     },
     "numeric_environment": {
       "numpy": "2.3.5",
@@ -714,48 +716,48 @@
       "Target regulation-time final-status verification belongs to the replay builder.",
       "Recorded historical availability assumptions are not observed live publication times."
     ],
-    "correction_model_sha256": "4ab00aef4734080c64edc320dc04839398ecbcc77cd85e879c18293c6c70195b"
+    "correction_model_sha256": "66445e352544c4e381eb315ee22a56b5d0747787ef7af8b2924dd795cf8352a4"
   },
-  "model_hash": "3cdb77e14124f60f8c878b7fe8ce8781cac96d642d0989c69c4af463cc0fcf8c",
+  "model_hash": "461aacbf87a8c137980ade387106b1d0618338244da3f6edeb9dc4fc9fdf7cb0",
   "protocol_hash": "27e1b150629eecb13774330948813eaba0022165a2801c409c9b0fc8ef105f0c",
   "usage": "engineering_shadow_only",
   "lineup_adjusted": false,
   "source_refs": [
     {
-      "path": "feature_models/inputs/8548f22ddae48dbd8915e287f8f5cabe19452eff6ef0a7fcfda9532c4179e2b0.json",
-      "sha256": "8548f22ddae48dbd8915e287f8f5cabe19452eff6ef0a7fcfda9532c4179e2b0",
+      "path": "feature_models/inputs/8642e7c02625b69e6c3ed18189b689289b7b991c63a8e4538d6c77774be38ebe.json",
+      "sha256": "8642e7c02625b69e6c3ed18189b689289b7b991c63a8e4538d6c77774be38ebe",
       "original_path": "data/serie_a.json"
     },
     {
-      "path": "feature_models/inputs/8d02610c2e3fed97b788290fbc5f5ce8090384a7b0c104dfa962401408bcc4c3.json",
-      "sha256": "8d02610c2e3fed97b788290fbc5f5ce8090384a7b0c104dfa962401408bcc4c3",
+      "path": "feature_models/inputs/a5a8d75c452df6c837b222a70dc557464b08fb13fae56aca7eb279a8a52cc231.json",
+      "sha256": "a5a8d75c452df6c837b222a70dc557464b08fb13fae56aca7eb279a8a52cc231",
       "original_path": "feature_models/schedules/serie_a/latest.json"
     },
     {
-      "path": "feature_models/training_inputs/5b9c2daca87cea01f804b4084e97947676081dfd57aec97870d8b10515e71dc2.json",
-      "sha256": "19b2347cf54d8346a99d79845c651be402715ef05879f4b0b797ba7343521e3f",
+      "path": "feature_models/training_inputs/2958e598ff019a16e7e9e1dd49a53eb217c8cdd34d23d267c1a5da61af5fc46c.json",
+      "sha256": "9e5fea661d7aad8c413261023a7a585c7be421748acd840cb9e0c54990b117d0",
       "kind": "training_bundle"
     }
   ],
-  "data_observed_at": "2026-10-12T01:37:38.962446Z",
+  "data_observed_at": "2026-10-13T01:39:38.437008Z",
   "selection": {
     "status": "past_only_inner_time_validation",
-    "inner_cutoff": "2026-04-11T03:00:00Z",
-    "validation_matches": 123,
+    "inner_cutoff": "2026-04-11T06:00:00Z",
+    "validation_matches": 124,
     "trials": [
       {
         "alpha": 0.01,
-        "score": 1.380142257316516,
+        "score": 1.3806398117713865,
         "status": "scored"
       },
       {
         "alpha": 0.1,
-        "score": 1.3801125481839964,
+        "score": 1.380605214554859,
         "status": "scored"
       },
       {
         "alpha": 1.0,
-        "score": 1.3802847288856834,
+        "score": 1.3807411603845983,
         "status": "scored"
       }
     ],
