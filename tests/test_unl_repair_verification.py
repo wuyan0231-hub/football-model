@@ -2,6 +2,7 @@
 import importlib.util
 import json
 from pathlib import Path
+import tempfile
 import unittest
 from unittest.mock import Mock
 
@@ -62,6 +63,45 @@ class UnlRepairHarnessTests(unittest.TestCase):
         self.assertFalse(receipt['target_repair_verified'])
         self.assertEqual(receipt['diagnostic_capture_errors'][0]['stage'], 'score_success_capture')
         self.assertEqual(receipt['diagnostic_capture_errors'][0]['class'], 'ValueError')
+
+    def test_report_export_checks_disk_before_writing_and_preserves_bytes(self):
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
+            runtime = Path(temporary) / 'runtime'
+            runtime.mkdir()
+            path = runtime / 'report.json'
+            encoded = b'{"value": 1}\n'
+            path.write_bytes(encoded)
+            reference = {'path': 'report.json', 'sha256': HARNESS.hashlib.sha256(encoded).hexdigest()}
+            output = Path(temporary) / 'output'
+            from unittest.mock import patch
+            from types import SimpleNamespace
+            with patch.object(HARNESS.shutil, 'disk_usage', return_value=SimpleNamespace(free=0)):
+                with self.assertRaisesRegex(ValueError, 'disk reserve'):
+                    HARNESS.export_report_closure(runtime, output, reference)
+            self.assertFalse((output / 'report.json').exists())
+            HARNESS.export_report_closure(runtime, output, reference)
+            self.assertEqual((output / 'report.json').read_bytes(), encoded)
+            manifest = json.loads((output / 'manifest.json').read_text())
+            self.assertEqual(manifest['logical_budget_bytes'], 512 * 1024 * 1024)
+
+    def test_report_export_existing_symlink_cannot_write_outside_diagnostics(self):
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
+            root = Path(temporary)
+            runtime, output, outside = root / 'runtime', root / 'output', root / 'outside'
+            (runtime / 'reports').mkdir(parents=True)
+            output.mkdir()
+            outside.mkdir()
+            encoded = b'{"source": "actual"}\n'
+            (runtime / 'reports/report.json').write_bytes(encoded)
+            victim = outside / 'report.json'
+            victim.write_bytes(b'untouched')
+            (output / 'reports').symlink_to(outside.resolve(), target_is_directory=True)
+            reference = {'path': 'reports/report.json', 'sha256': HARNESS.hashlib.sha256(encoded).hexdigest()}
+            with self.assertRaisesRegex(ValueError, 'destination escapes'):
+                HARNESS.export_report_closure(runtime, output, reference)
+            self.assertEqual(victim.read_bytes(), b'untouched')
+            self.assertEqual((runtime / 'reports/report.json').read_bytes(), encoded)
+            self.assertFalse((output / 'manifest.json').exists())
 
 
 if __name__ == '__main__':

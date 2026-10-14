@@ -93,13 +93,52 @@ class GoalmodelRoundoffTests(unittest.TestCase):
         score_forecast(forecast, {"home_goals": 1, "away_goals": 0})
 
     def test_invalid_cells_shapes_and_material_mass_error_are_not_repaired(self):
-        for matrix in ([[0, 1.00000000000001], [0, 0]], [[0, 0.99999999999999], [0, 0]],
+        for matrix in ([[0, 1.00000000000001], [0, 0]], [[0, 0.999999], [0, 0]],
                        [[0, 1], [-1e-30, 0]], [[0, float("nan")], [0, 0]],
                        [[0, float("inf")], [0, 0]], [[1e308, 1e308], [0, 0]],
                        [[0, 0], [0, 0]], [[1]], [], [1, 0], [[0, 1], [0]],
                        np.zeros((129, 2))):
             with self.subTest(matrix=str(matrix)[:80]), self.assertRaises(ModelDataError):
                 goalmodel_probabilities(matrix)
+
+    def test_observed_legal_native_mass_residual_does_not_reject_entire_batch(self):
+        # Engineering reproduction of the measured 1.5543122344752192e-15
+        # residual, not a claim these perturbed cells are original R bytes.
+        fixtures = sample_fixtures() + [{**sample_fixtures()[0], "match_id": 1000}]
+        native = output_for(fixtures)
+        first = native["forecasts"][0]
+        matrix = np.asarray(first["score_matrix"])
+        matrix[0, 0] += 7 * np.finfo(float).eps
+        self.assertGreater(abs(math.fsum(matrix.ravel()) - 1), 1e-15)
+        self.assertLess(abs(float(matrix.sum()) - 1), 1e-10)
+        first["score_matrix"] = matrix.tolist()
+        first["probabilities_1x2"] = {"home": float(np.tril(matrix, -1).sum()),
+                                      "draw": float(np.trace(matrix)),
+                                      "away": float(np.triu(matrix, 1).sum())}
+        real_native = json.loads((FIXTURE.parent / "unl-native-r-target-1545612.json").read_text())
+        # Reuse actual native matrix/rates/aggregates; mock fixture identity is
+        # explicit because this is an adapter batch protocol test, not R fitting.
+        native["forecasts"][1] = {**real_native["native_forecast"], **fixtures[1]}
+        original = copy.deepcopy(native)
+
+        def fake_r(command, **kwargs):
+            Path(command[-1]).write_text(json.dumps(native), encoding="utf-8")
+            return subprocess.CompletedProcess(command, 0, "", "")
+
+        with patch("football_model.goalmodel_adapter.shutil.which", return_value="Rscript"), \
+                patch("football_model.goalmodel_adapter.subprocess.run", side_effect=fake_r):
+            result = fit_predict_goalmodel(sample_matches(), fixtures, cutoff="2024-05-01T00:00:00Z")
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(len(result["forecasts"]), 2)
+        for forecast, untouched in zip(result["forecasts"], original["forecasts"]):
+            self.assertEqual(forecast["score_matrix"], untouched["score_matrix"])
+            self.assertEqual(forecast["probabilities_1x2"], untouched["probabilities_1x2"])
+            expected = {key: value for key, value in zip(("home_win", "draw", "away_win"),
+                (np.tril(np.asarray(untouched["score_matrix"]), -1).sum(),
+                 np.trace(np.asarray(untouched["score_matrix"])),
+                 np.triu(np.asarray(untouched["score_matrix"]), 1).sum()))}
+            self.assertEqual(forecast["probabilities"], expected)
+            score_forecast(forecast, {"home_goals": 0, "away_goals": 2})
 
     def test_existing_scoring_probability_range_and_consistency_remain_strict(self):
         case = real_case()

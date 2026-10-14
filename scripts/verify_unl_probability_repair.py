@@ -16,12 +16,15 @@ import math
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
 import traceback
 
 TARGET_ERROR = 'invalid 1X2 probability values'
+REPORT_CLOSURE_MAX_BYTES = 512 * 1024 * 1024
+REPORT_CLOSURE_DISK_RESERVE_BYTES = 512 * 1024 * 1024
 
 
 def now():
@@ -62,7 +65,7 @@ def is_repaired_target(prediction, match, local, source_line):
     # Loop locals retain the previous candidate while M0 is scored. Bind the
     # actual prediction implementation and callsite, not that stale variable.
     return (prediction.get('model_scope') == 'independent_goalmodel_research_only'
-            and prediction.get('model_version') == 'pinned_goalmodel_saved_fit_prediction_v2'
+            and prediction.get('model_version') == 'pinned_goalmodel_saved_fit_prediction_v3'
             and (match.get('match_id'), local.get('candidate'), local.get('horizon'), local.get('block_id'))
                 == (1545612, 'G1', 'LINEUP', 52)
             and source_line.strip() == 'row["scores"][candidate] = score_forecast(prediction, f, extended_diagnostics=True)')
@@ -79,6 +82,9 @@ def preserve_scored_output(scored, capture, receipt):
 
 def export_report_closure(runtime, output, reference):
     runtime = runtime.resolve()
+    output = output.resolve()
+    if output == runtime or output.is_relative_to(runtime):
+        raise ValueError('Diagnostic report output must remain outside fixed runtime.')
     visited, entries, total = set(), [], 0
 
     def copy_reference(ref):
@@ -94,11 +100,15 @@ def export_report_closure(runtime, output, reference):
             raise ValueError('Report closure reference SHA-256 mismatch.')
         if path in visited:
             return
-        if len(encoded) > 60 * 1024 * 1024 or total + len(encoded) > 128 * 1024 * 1024:
+        if len(encoded) > 60 * 1024 * 1024 or total + len(encoded) > REPORT_CLOSURE_MAX_BYTES:
             raise ValueError('Diagnostic report closure exceeds bounded artifact budget.')
+        if shutil.disk_usage(output.parent).free < len(encoded) + REPORT_CLOSURE_DISK_RESERVE_BYTES:
+            raise ValueError('Diagnostic report closure disk reserve exceeded before write.')
         visited.add(path)
         total += len(encoded)
-        destination = output / ref['path']
+        destination = (output / ref['path']).resolve()
+        if not destination.is_relative_to(output):
+            raise ValueError('Report closure destination escapes diagnostic output.')
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(encoded)
         entries.append({'path': ref['path'], 'sha256': ref['sha256'], 'bytes': len(encoded)})
@@ -121,6 +131,8 @@ def export_report_closure(runtime, output, reference):
     copy_reference(reference)
     write(output / 'manifest.json', {'schema_version': 'unl-study-report-closure-v1',
         'root_ref': reference, 'total_bytes': total, 'entries': entries,
+        'logical_budget_bytes': REPORT_CLOSURE_MAX_BYTES,
+        'disk_reserve_bytes': REPORT_CLOSURE_DISK_RESERVE_BYTES,
         'scope': 'exact compact report serialization closure; provenance input refs remain bound to fixed full state'})
 
 

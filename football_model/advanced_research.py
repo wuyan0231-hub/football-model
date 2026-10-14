@@ -277,7 +277,7 @@ def predict_saved_goalmodel(card, fixture, features, as_of):
         "probabilities": goalmodel_probabilities(matrix),
         "tail_mass_before_normalization": max(0.0, 1 - mass), "tail_tolerance": TAIL_TOLERANCE,
         "training_cutoff": card["training_cutoff"], "model_scope": "independent_goalmodel_research_only",
-        "model_version": "pinned_goalmodel_saved_fit_prediction_v2", "log_feature_contributions": contributions,
+        "model_version": "pinned_goalmodel_saved_fit_prediction_v3", "log_feature_contributions": contributions,
         "validated_for_production": False, "automatic_promotion": False}
 
 
