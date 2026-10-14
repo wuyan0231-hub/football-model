@@ -1,0 +1,107 @@
+name: 英冠第20／21轮：独立历史原件补采
+
+# A single release trigger for this exact workflow file. No polling/schedule.
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/fixture-recovery.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: football-model-state
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  recover:
+    if: ${{ github.event.repository.private == true && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    # API work has a 300-second soft deadline; leave time for complete saving.
+    timeout-minutes: 30
+    env:
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: python -m pip install -r requirements.txt
+      - name: 恢复完整固定父状态
+        id: restore
+        run: python scripts/cloud_state.py load --runtime runtime
+      - name: 登记本轮真实父状态
+        run: |
+          python - <<'PY'
+          import json,os,subprocess
+          from pathlib import Path
+          directory=Path(subprocess.check_output(['git','rev-parse','--absolute-git-dir'],text=True).strip())
+          marker=json.loads((directory/'football-cloud-state.json').read_text())
+          with Path(os.environ['GITHUB_ENV']).open('a') as out:
+              out.write('RECOVERY_PARENT_STATE='+str(marker.get('state_oid') or '')+'\n')
+          Path('fixture-recovery-parent.json').write_text(json.dumps({k:marker.get(k) for k in ['source_sha','state_oid','loaded_at']},indent=2))
+          PY
+      - name: 补取八场当前历史原件并保留真实首失败
+        id: collect
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: >-
+          python -m football_model.fixture_recovery --runtime runtime --config config.json
+          --request .github/recovery-requests/championship-rounds-20-21.json
+          --source-commit "$GITHUB_SHA" --state-commit "$RECOVERY_PARENT_STATE"
+      - name: 核验完整状态与容量
+        id: check
+        if: ${{ always() && steps.restore.outcome == 'success' && steps.collect.outcome != 'skipped' }}
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python scripts/cloud_state.py check --runtime runtime
+      - name: 保存历史原件及本轮失败
+        id: persist
+        if: ${{ always() && steps.check.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python scripts/cloud_state.py save --runtime runtime
+      - name: 本轮步骤与保存回执
+        if: always()
+        env:
+          RESTORE_OUTCOME: ${{ steps.restore.outcome }}
+          COLLECT_OUTCOME: ${{ steps.collect.outcome }}
+          CHECK_OUTCOME: ${{ steps.check.outcome }}
+          PERSIST_OUTCOME: ${{ steps.persist.outcome }}
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          receipt={key:os.environ.get(key) for key in ['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','RECOVERY_PARENT_STATE','RESTORE_OUTCOME','COLLECT_OUTCOME','CHECK_OUTCOME','PERSIST_OUTCOME']}
+          receipt.update(scope='retrospective_historical_fixture_details',prematch_eligible=False,confirmation_eligible=False,original_failure_superseded=False,production_promoted=False)
+          path=Path('fixture-recovery-receipt.json')
+          if path.is_file():
+              receipt['collector']=json.loads(path.read_text())
+          Path('fixture-recovery-step-receipt.json').write_text(json.dumps(receipt,indent=2))
+          with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a') as out:
+              out.write('# 英冠历史补采\n\n```json\n'+json.dumps(receipt,indent=2)+'\n```\n\n赛后资料只作历史原件；原第20／21轮失败与原赛前资格不回写。\n')
+          PY
+      - uses: actions/upload-artifact@v7
+        if: ${{ always() && steps.check.outcome == 'success' }}
+        with:
+          name: fixture-recovery-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            runtime/fundamentals/recovery/championship-rounds-20-21/
+            fixture-recovery-parent.json
+            fixture-recovery-receipt.json
+            fixture-recovery-step-receipt.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: 未完整采集或保存保持失败
+        if: ${{ always() && (steps.restore.outcome != 'success' || steps.collect.outcome != 'success' || steps.check.outcome != 'success' || steps.persist.outcome != 'success') }}
+        run: exit 1

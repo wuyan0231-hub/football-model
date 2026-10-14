@@ -26,7 +26,8 @@ from .model import (RESULT_AVAILABILITY_DELAY, fit_model, score_distribution,
 from .prospective import (_append as _ledger_append, _digest, _identity, _json_bytes, _name, _now,
                           _objects, _path, _read, _same_identity, current_results)
 from .settlement import matrix_array
-from .state_storage import MAX_FILE_BYTES, MAX_LOGICAL_BYTES, estimate_runtime, storage_cost
+from .state_storage import (MAX_FILE_BYTES, MAX_LOGICAL_BYTES, estimate_runtime,
+                            storage_cost, storage_write_delta)
 from .storage_policy import (MAX_PHYSICAL_BYTES, SHADOW_WRITE_LIMIT_BYTES,
                              DIAGNOSTIC_RESERVE_BYTES)
 
@@ -103,12 +104,10 @@ def _write_cost(path, raw):
         raise ShadowCapacityError({**budget, "capacity_constraint": "file_limit"})
     previous = path.read_bytes() if path.exists() else None
     relative = path.relative_to(budget["_runtime"]).as_posix()
-    persisted = storage_cost(relative, raw, budget["_retained_inline"])
-    old_cost = storage_cost(relative, previous, budget["_retained_inline"]) if previous is not None else 0
     raw_delta = len(raw) - (len(previous) if previous is not None else 0)
     # A smaller replacement never grants space for extra immutable captures in
     # this run; the estimate remains conservative until the next full scan.
-    persisted_delta = max(0, persisted - old_cost)
+    persisted_delta = storage_write_delta(relative, raw, previous, budget["_retained_inline"])
     if budget["estimated_persisted_bytes"] + persisted_delta > budget["limit_bytes"]:
         raise ShadowCapacityError({**budget, "capacity_constraint": "estimated_persisted_limit"})
     if budget["logical_bytes"] + raw_delta > budget["logical_capture_limit_bytes"]:
@@ -701,7 +700,7 @@ def _capacity_report_locked(runtime, operation, error, started, clock, source_co
         value["numeric_replay_probability_abs_tol"] = NUMERIC_REPLAY_PROBABILITY_ABS_TOL
     latest_path = _path(root, "reports", "latest.json" if operation == "capture" else "score-latest.json")
     previous = latest_path.read_bytes() if latest_path.exists() else None
-    previous_cost = storage_cost(latest_path.relative_to(runtime).as_posix(), previous) if previous is not None else 0
+    latest_relative = latest_path.relative_to(runtime).as_posix()
     value.update(immutable_event_saved=True, diagnostic_evidence="immutable_capacity_event_and_current_latest")
     event_raw = _json_bytes(value)
     event_path = _path(root, "capacity_events", _digest(value) + ".json")
@@ -709,12 +708,12 @@ def _capacity_report_locked(runtime, operation, error, started, clock, source_co
     event_raw_size = 0 if event_path.exists() else len(event_raw)
     candidate = {**value, "capacity_event_id": _digest(value)}
     latest_raw = (json.dumps(candidate, ensure_ascii=False, indent=2, allow_nan=False) + "\n").encode()
-    latest_cost = storage_cost(latest_path.relative_to(runtime).as_posix(), latest_raw)
+    latest_delta = storage_write_delta(latest_relative, latest_raw, previous)
     persisted = error.budget["estimated_persisted_bytes"]
     logical = error.budget["logical_bytes"]
     # Only bounded diagnostics may use the small reserved headroom. Capacity is
     # measured in the same archive units as normal objects, not raw/gzip mixed.
-    if (persisted + event_cost + max(0, latest_cost - previous_cost) < min(MAX_PHYSICAL_BYTES, STORAGE_LIMIT_BYTES + CAPACITY_REPORT_RESERVE_BYTES)
+    if (persisted + event_cost + latest_delta < min(MAX_PHYSICAL_BYTES, STORAGE_LIMIT_BYTES + CAPACITY_REPORT_RESERVE_BYTES)
             and logical + event_raw_size + len(latest_raw) - (len(previous) if previous is not None else 0) <= MAX_LOGICAL_BYTES):
         value["capacity_event_id"] = _ledger_append(root, "capacity_events", value)
         persisted += event_cost
@@ -728,7 +727,7 @@ def _capacity_report_locked(runtime, operation, error, started, clock, source_co
         raise ValueError("shadow_capacity_diagnostic_too_large")
     if logical + len(raw) - (len(previous) if previous is not None else 0) > MAX_LOGICAL_BYTES:
         raise ValueError("shadow_capacity_diagnostic_exceeds_logical_limit")
-    if persisted + max(0, storage_cost(latest_path.relative_to(runtime).as_posix(), raw) - previous_cost) >= MAX_PHYSICAL_BYTES:
+    if persisted + storage_write_delta(latest_relative, raw, previous) >= MAX_PHYSICAL_BYTES:
         raise ValueError("shadow_capacity_diagnostic_exceeds_physical_limit")
     atomic_json(latest_path, value)
     return 1, value

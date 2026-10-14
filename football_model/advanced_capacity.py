@@ -13,7 +13,7 @@ from pathlib import Path
 
 from .data import RequestBudgetError
 from .state_storage import (MAX_FILE_BYTES, MAX_LOGICAL_BYTES, MAX_PHYSICAL_BYTES,
-                            estimate_runtime, storage_cost, _relative, _scan_secret)
+                            estimate_runtime, storage_write_delta, _relative, _scan_secret)
 
 MIB = 1024 * 1024
 
@@ -74,10 +74,8 @@ class CapacityGuard:
             raise CapacityDeferred({**self.summary(), "reason": "single_file_limit", "path": relative, "proposed_file_bytes": len(raw)})
         _scan_secret(raw)
         old = path.read_bytes() if path.exists() else None
-        old_cost = storage_cost(relative, old, self.retained) if old is not None else 0
-        new_cost = storage_cost(relative, raw, self.retained)
         logical_delta = len(raw) - (len(old) if old is not None else 0)
-        physical_delta = new_cost-old_cost
+        physical_delta = storage_write_delta(relative, raw, old, self.retained)
         self._check(logical_delta, physical_delta, final=final)
         return {"path": relative, "old_sha256": hashlib.sha256(old).hexdigest() if old is not None else None,
                 "new_sha256": hashlib.sha256(raw).hexdigest(), "logical_delta": logical_delta,

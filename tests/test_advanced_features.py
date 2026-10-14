@@ -272,7 +272,7 @@ class AdvancedCollectionTests(unittest.TestCase):
         self.assertEqual(_failure_details(APIError("private"))["failure_category"],"provider_request_failure")
         self.assertEqual(_failure_details(OSError("private"))["failure_category"],"storage_failure")
 
-    def test_relative_runtime_collects_cached_and_new_evidence_with_exact_capacity(self):
+    def test_relative_runtime_collects_cached_and_new_evidence_with_safe_capacity(self):
         with tempfile.TemporaryDirectory(dir=Path.cwd()) as directory:
             root=Path(directory);(root/"data").mkdir();rows=[fixture(1,2),fixture(2,4)]
             (root/"data/a.json").write_text(json.dumps({"matches":rows}))
@@ -299,7 +299,8 @@ class AdvancedCollectionTests(unittest.TestCase):
                 self.assertEqual(json.loads((root/pointer).read_text()),report)
             measured=estimate_runtime(root)
             self.assertEqual(guard.logical,measured["logical_bytes"])
-            self.assertEqual(guard.physical,measured["persisted_bytes"])
+            self.assertGreaterEqual(guard.physical,measured["persisted_bytes"])
+            self.assertLessEqual(guard.physical,guard.max_physical)
             self.assertFalse((root/root.name).exists())
 
     def test_relative_runtime_capacity_deferral_preserves_report(self):
@@ -318,7 +319,8 @@ class AdvancedCollectionTests(unittest.TestCase):
             self.assertEqual(json.loads((root/"advanced_features/collection/by_selection/a/latest.json").read_text()),report)
             measured=estimate_runtime(root)
             self.assertEqual(guard.logical,measured["logical_bytes"])
-            self.assertEqual(guard.physical,measured["persisted_bytes"])
+            self.assertGreaterEqual(guard.physical,measured["persisted_bytes"])
+            self.assertLessEqual(guard.physical,guard.max_physical)
 
     def test_invalid_complete_context_retries_only_affected_fixture_once(self):
         for outcome in ("valid","invalid","invalid_schema","quota"):

@@ -30,7 +30,10 @@ class AdvancedStorageTests(unittest.TestCase):
             self.assertEqual(load_report(old,ref(old,before)),original)
             self.assertEqual(load_report(new,ref(new,after)),original)
             self.assertLess(new_stats["file_count"],old_stats["file_count"]//10)
-            self.assertLess(new_stats["persisted_bytes"],old_stats["persisted_bytes"]*.7)
+            # Compare the actual transport payload; the shared fixed metadata
+            # reserve is not changed by the tiny-object representation.
+            self.assertLess(new_stats["persisted_bytes"] - new_stats["metadata_reserve_bytes"],
+                            (old_stats["persisted_bytes"] - old_stats["metadata_reserve_bytes"]) * .7)
             self.assertLess(new_stats["logical_bytes"],old_stats["logical_bytes"]*1.5)
             transport=base/"transport";transport.mkdir()
             pack_runtime(new,transport)
