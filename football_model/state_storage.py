@@ -225,21 +225,76 @@ def storage_cost(relative_path: str, raw_bytes: bytes, retained_inline=frozenset
     return len(raw_bytes)
 
 
+def storage_write_delta(relative_path: str, raw_bytes: bytes, previous_bytes=None,
+                        retained_inline=frozenset()) -> int:
+    """Conservative growth after a deduplicated baseline, without deletion credit.
+
+    Replacing one archived path does not remove its previous shared blob. Charge
+    the complete new blob and manifest allowance even for a same-size update;
+    exact deduplication is applied only by the next complete runtime scan.
+    """
+    if previous_bytes == raw_bytes:
+        return 0
+    if should_archive(relative_path, retained_inline):
+        return storage_cost(relative_path, raw_bytes, retained_inline)
+    return max(0, len(raw_bytes) - (len(previous_bytes) if previous_bytes is not None else 0))
+
+
+def _manifest_bytes(entries):
+    document = {"schema_version": SCHEMA_VERSION, "codec": "gzip-single-member",
+                "logical_limit_bytes": MAX_LOGICAL_BYTES, "physical_limit_bytes": MAX_PHYSICAL_BYTES,
+                "entries": entries}
+    return (json.dumps(document, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+
+
+def _archive_entry(name, content, blob):
+    return {"path": name, "raw_sha256": _sha(content), "raw_bytes": len(content),
+            "blob_sha256": _sha(blob), "compressed_bytes": len(blob)}
+
+
 def estimate_runtime(runtime: Path) -> dict:
+    """Measure the same lossless transport as pack_runtime, plus metadata reserve.
+
+    Account for each actual compressed blob once and for every manifest entry.
+    Avoid retaining all compressed bytes or all manifest entries in memory.
+    Subsequent optional writes still use conservative storage_write_delta.
+    """
     runtime = Path(runtime)
     retained = retained_inline_paths(runtime)
-    raw = persisted = count = archived = expanded = 0
+    raw = inline = archive_bytes = count = archived = expanded = 0
+    manifest_bytes = len(_manifest_bytes([]))
+    blobs = {}
     for name, path in _files(runtime):
         content = path.read_bytes()
         raw += len(content)
-        persisted += storage_cost(name, content, retained)
         count += 1
-        archived += should_archive(name, retained)
+        if should_archive(name, retained):
+            _json(content)
+            blob = gzip.compress(content, compresslevel=6, mtime=0)
+            entry = _archive_entry(name, content, blob)
+            digest = entry["blob_sha256"]
+            if digest in blobs:
+                if blobs[digest] != len(blob):
+                    raise StorageError("状态压缩内容地址冲突，已停止。")
+            else:
+                blobs[digest] = len(blob)
+                archive_bytes += len(blob)
+            # Empty-list bytes already include the brackets. Each actual entry
+            # replaces the empty interior, separated by exactly one comma.
+            manifest_bytes += len(json.dumps(entry, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) + bool(archived)
+            archived += 1
+        else:
+            inline += len(content)
         if re.fullmatch(r"replay/bundles/[0-9a-f]{64}\.json\.gz", name):
             expanded += len(_expand(content, MAX_FILE_BYTES))
-    return {"raw_bytes": raw, "persisted_bytes": persisted + METADATA_RESERVE_BYTES,
+    persisted = inline + archive_bytes + manifest_bytes + METADATA_RESERVE_BYTES
+    return {"raw_bytes": raw, "persisted_bytes": persisted,
             "logical_bytes": raw + expanded, "expanded_replay_bytes": expanded,
-            "file_count": count, "archived_file_count": archived, "retained_inline": sorted(retained)}
+            "file_count": count, "archived_file_count": archived, "archive_blob_count": len(blobs),
+            "inline_bytes": inline, "unique_archive_bytes": archive_bytes,
+            "manifest_bytes": manifest_bytes, "metadata_reserve_bytes": METADATA_RESERVE_BYTES,
+            "estimation_method": "exact_lossless_transport_with_metadata_reserve",
+            "retained_inline": sorted(retained)}
 
 
 def pack_runtime(runtime: Path, tree: Path, *, max_file_bytes=MAX_FILE_BYTES,
@@ -265,16 +320,12 @@ def pack_runtime(runtime: Path, tree: Path, *, max_file_bytes=MAX_FILE_BYTES,
                 raise StorageError("状态压缩内容地址冲突，已停止。")
             if not target.exists():
                 target.write_bytes(blob)
-            entries.append({"path": name, "raw_sha256": _sha(content), "raw_bytes": len(content),
-                            "blob_sha256": digest, "compressed_bytes": len(blob)})
+            entries.append(_archive_entry(name, content, blob))
         else:
             target = tree / "runtime" / name
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(content)
-    manifest = {"schema_version": SCHEMA_VERSION, "codec": "gzip-single-member",
-                "logical_limit_bytes": MAX_LOGICAL_BYTES, "physical_limit_bytes": MAX_PHYSICAL_BYTES,
-                "entries": entries}
-    (tree / MANIFEST_NAME).write_text(json.dumps(manifest, ensure_ascii=False, separators=(",", ":")) + "\n")
+    (tree / MANIFEST_NAME).write_bytes(_manifest_bytes(entries))
     return {**stats, "archived_file_count": len(entries), "archive_blob_count": len({e['blob_sha256'] for e in entries})}
 
 

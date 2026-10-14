@@ -47,15 +47,20 @@ class AdvancedCapacityTests(unittest.TestCase):
         guard.commit_write(ticket)
         return ticket
 
-    def test_exact_incremental_create_replace_and_noop_match_full_estimate(self):
+    def test_incremental_create_replace_and_noop_bound_full_estimate(self):
         guard=self.guard()
         self.write(guard,"advanced_features/evidence/"+"a"*64+".json",{"value":"long"*100})
         self.write(guard,"advanced_features/collection/latest.json",{"status":"many"*100})
+        before_shrink=guard.physical
         self.write(guard,"advanced_features/collection/latest.json",{"status":"small"})
+        self.assertEqual(guard.physical,before_shrink)
+        before_noop=(guard.logical,guard.physical)
         self.write(guard,"advanced_features/collection/latest.json",{"status":"small"})
+        self.assertEqual((guard.logical,guard.physical),before_noop)
         actual=estimate_runtime(self.runtime)
         self.assertEqual(guard.logical,actual["logical_bytes"])
-        self.assertEqual(guard.physical,actual["persisted_bytes"])
+        self.assertGreaterEqual(guard.physical,actual["persisted_bytes"])
+        self.assertLessEqual(guard.physical+guard.reserve_physical,guard.max_physical)
 
     def test_response_reservation_stops_before_network_and_no_cache_written(self):
         guard=self.guard(max_logical=5000,reserve_logical=2000,max_file=2000)
@@ -85,13 +90,18 @@ class AdvancedCapacityTests(unittest.TestCase):
         with guarded_cache_writes(client,guard):
             first=client._cached_request("/fixtures",{"id":1},force=False,max_age_seconds=60)
         guard.max_logical=guard.logical+guard.reserve_logical
+        before_hit=(guard.logical,guard.physical)
         with guarded_cache_writes(client,guard):
             second=client._cached_request("/fixtures",{"id":1},force=False,max_age_seconds=60)
         self.assertFalse(first["from_cache"])
         self.assertTrue(second["from_cache"])
         self.assertEqual(client.calls,1)
         self.assertEqual(guard.writes,1)
-        self.assertEqual(guard.physical,estimate_runtime(self.runtime)["persisted_bytes"])
+        self.assertEqual((guard.logical,guard.physical),before_hit)
+        measured=estimate_runtime(self.runtime)
+        self.assertEqual(guard.logical,measured["logical_bytes"])
+        self.assertGreaterEqual(guard.physical,measured["persisted_bytes"])
+        self.assertLessEqual(guard.physical+guard.reserve_physical,guard.max_physical)
 
     def test_report_can_use_reserve_but_cannot_exceed_hard_limit(self):
         guard=self.guard(max_logical=100,reserve_logical=80)

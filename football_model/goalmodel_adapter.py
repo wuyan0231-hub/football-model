@@ -28,7 +28,8 @@ from .model import (ModelDataError, RESULT_AVAILABILITY_DELAY, TAIL_TOLERANCE,
 
 GOALMODEL_SOURCE_COMMIT = "84ecd6c2bbad3ccb967abf88ef49e5bcd074e545"
 GOALMODEL_UPSTREAM_VERSION = "0.6.4"
-GOALMODEL_ADAPTER_VERSION = "goalmodel_independent_research_v1"
+GOALMODEL_ADAPTER_VERSION = "goalmodel_independent_research_v3"
+GOALMODEL_PROBABILITY_ROUNDOFF_ATOL = 1e-15
 RSCRIPT_TIMEOUT_SECONDS = 180
 _SOURCE_HASHES = {
     "goalmodel_fit.R": "40114bcd92e26069a41b315878db7ddf7e460393e79a2806849ec019d66cfdd2",
@@ -43,6 +44,50 @@ def _finite(value, label):
     if not math.isfinite(value):
         raise ModelDataError(f"{label} 必须是有限数值")
     return value
+
+
+def goalmodel_probabilities(matrix):
+    """Preserve bounded 1X2 aggregates; repair only boundary roundoff.
+
+    Use the existing 1e-10 matrix mass contract. A serialized native R grid
+    can exceed 1e-15 total mass error while every outcome remains legal; its
+    NumPy compatibility values must pass through exactly as before. Only an
+    otherwise valid outcome outside [0,1] by at most 1e-15 needs a bounded
+    aggregate view. Rates, matrix cells and native R fields are never changed.
+    """
+    try:
+        matrix = np.asarray(matrix, dtype=float)
+    except (TypeError, ValueError) as exc:
+        raise ModelDataError("invalid goalmodel probability matrix") from exc
+    if (matrix.ndim != 2 or min(matrix.shape) < 2 or max(matrix.shape) > 128
+            or not np.isfinite(matrix).all() or (matrix < 0).any()):
+        raise ModelDataError("invalid goalmodel probability matrix")
+    with np.errstate(over="ignore", invalid="ignore"):
+        matrix_mass = float(matrix.sum())
+    if not math.isfinite(matrix_mass) or abs(matrix_mass - 1) > 1e-10:
+        raise ModelDataError("goalmodel probability matrix normalization failed")
+    original = (float(np.tril(matrix, -1).sum()), float(np.trace(matrix)),
+                float(np.triu(matrix, 1).sum()))
+    fields = ("home_win", "draw", "away_win")
+    if all(0 <= value <= 1 for value in original):
+        return dict(zip(fields, original))
+    if any(value < -GOALMODEL_PROBABILITY_ROUNDOFF_ATOL
+            or value > 1 + GOALMODEL_PROBABILITY_ROUNDOFF_ATOL for value in original):
+        raise ModelDataError("invalid goalmodel outcome probabilities")
+    home, away = np.indices(matrix.shape)
+    try:
+        masses = [math.fsum(matrix[mask]) for mask in (home > away, home == away, home < away)]
+        mass = math.fsum(masses)
+    except OverflowError as exc:
+        raise ModelDataError("goalmodel probability matrix mass overflow") from exc
+    values = [value / mass for value in masses]
+    if any(not math.isfinite(value) or not 0 <= value <= 1 for value in values):
+        raise ModelDataError("invalid goalmodel outcome probabilities")
+    # Preserve the existing strict downstream matrix-consistency allowance.
+    if any(abs(value - raw) > GOALMODEL_PROBABILITY_ROUNDOFF_ATOL
+            for value, raw in zip(values, original)):
+        raise ModelDataError("goalmodel outcome probabilities disagree with matrix")
+    return dict(zip(fields, values))
 
 
 def _features(records, names, features, label):
@@ -301,17 +346,16 @@ def fit_predict_goalmodel(training_matches, fixtures, *, cutoff,
         # produce an internally inconsistent compatibility payload. This does
         # not rebuild/renormalize the matrix, alter rates or discard DC.
         matrix = np.asarray(forecast["score_matrix"], dtype=float)
-        forecast["probabilities"] = {
-            "home_win": float(np.tril(matrix, -1).sum()),
-            "draw": float(np.trace(matrix)),
-            "away_win": float(np.triu(matrix, 1).sum())}
+        forecast["probabilities"] = goalmodel_probabilities(matrix)
         forecast["upstream_probability_roundoff_max"] = max(
             abs(forecast["probabilities"][canonical] - forecast["probabilities_1x2"][upstream])
             for canonical, upstream in (("home_win", "home"), ("draw", "draw"),
                                         ("away_win", "away")))
         forecast["probability_derivation"] = (
-            "probabilities derived by NumPy tril/trace/triu from the unchanged "
-            "validated score_matrix; native R aggregates preserved as probabilities_1x2")
+            "probabilities derived from the unchanged validated score_matrix; bounded NumPy "
+            "aggregates preserved, boundary roundoff repaired by math.fsum partitions "
+            "with at most 1e-15 absolute aggregate change; native R aggregates "
+            "preserved as probabilities_1x2")
         forecast["tail_tolerance"] = TAIL_TOLERANCE
         forecast["matrix_renormalized"] = True
         forecast["model_version"] = GOALMODEL_ADAPTER_VERSION

@@ -712,7 +712,7 @@ def _score(runtime, *, source_commit=None, clock=None):
 def _capacity_locked(runtime, operation, error, clock):
     """Bound diagnostics by hard transport limits, outside the write budget."""
     from .cli import atomic_json
-    from .state_storage import storage_cost
+    from .state_storage import storage_cost, storage_write_delta
     runtime = Path(runtime)
     context = getattr(error, "run_context", None)
     started, source_commit = context if context is not None else (_now(clock), None)
@@ -731,7 +731,6 @@ def _capacity_locked(runtime, operation, error, clock):
     latest = _path(root, "reports", "latest.json" if operation == "capture" else "score-latest.json")
     previous = latest.read_bytes() if latest.exists() else None
     relative = latest.relative_to(runtime).as_posix()
-    old_cost = storage_cost(relative, previous) if previous is not None else 0
     value.update(immutable_event_saved=True, diagnostic_evidence="immutable_capacity_event_and_current_latest")
     raw = _json_bytes(value)
     event = _path(root, "capacity_events", _digest(value) + ".json")
@@ -740,7 +739,7 @@ def _capacity_locked(runtime, operation, error, clock):
     candidate = {**value, "capacity_event_id": _digest(value)}
     latest_raw = (json.dumps(candidate, ensure_ascii=False, indent=2, allow_nan=False) + "\n").encode()
     persisted, logical = error.budget["estimated_persisted_bytes"], error.budget["logical_bytes"]
-    latest_delta = max(0, storage_cost(relative, latest_raw) - old_cost)
+    latest_delta = storage_write_delta(relative, latest_raw, previous)
     if (persisted + event_cost + latest_delta < min(sm.MAX_PHYSICAL_BYTES, sm.STORAGE_LIMIT_BYTES + sm.CAPACITY_REPORT_RESERVE_BYTES)
             and logical + event_bytes + len(latest_raw) - (len(previous) if previous else 0) <= sm.MAX_LOGICAL_BYTES):
         value["capacity_event_id"] = _unbudgeted_append(root, "capacity_events", value)
@@ -751,7 +750,7 @@ def _capacity_locked(runtime, operation, error, clock):
                      diagnostic_evidence="bounded_current_latest_only")
     latest_raw = (json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + "\n").encode()
     if (logical + len(latest_raw) - (len(previous) if previous else 0) > sm.MAX_LOGICAL_BYTES
-            or persisted + max(0, storage_cost(relative, latest_raw)-old_cost) >= sm.MAX_PHYSICAL_BYTES):
+            or persisted + storage_write_delta(relative, latest_raw, previous) >= sm.MAX_PHYSICAL_BYTES):
         raise ValueError("total_shrink_capacity_diagnostic_exceeds_shared_limits")
     atomic_json(latest, value)
     return 1, value

@@ -23,6 +23,7 @@ from .feature_research import (choose_alpha, digest, save_immutable, score_forec
                                paired_summary, _request_summary)
 from .model import ModelDataError, RESULT_AVAILABILITY_DELAY, TAIL_TOLERANCE, _iso, _timestamp
 from .advanced_storage import save_artifact, load_artifact, load_report
+from .goalmodel_adapter import goalmodel_probabilities
 
 
 FEATURE_GROUPS = {
@@ -273,11 +274,10 @@ def predict_saved_goalmodel(card, fixture, features, as_of):
     return {**copy.deepcopy(fixture), "cutoff_at": _iso(cutoff), "expected_goals": rates,
         "score_matrix": matrix.tolist(),
         "score_matrix_axes": {"rows": "home_goals_from_0", "columns": "away_goals_from_0"},
-        "probabilities": {"home_win": float(np.tril(matrix, -1).sum()), "draw": float(np.trace(matrix)),
-                          "away_win": float(np.triu(matrix, 1).sum())},
+        "probabilities": goalmodel_probabilities(matrix),
         "tail_mass_before_normalization": max(0.0, 1 - mass), "tail_tolerance": TAIL_TOLERANCE,
         "training_cutoff": card["training_cutoff"], "model_scope": "independent_goalmodel_research_only",
-        "model_version": "pinned_goalmodel_saved_fit_prediction_v1", "log_feature_contributions": contributions,
+        "model_version": "pinned_goalmodel_saved_fit_prediction_v3", "log_feature_contributions": contributions,
         "validated_for_production": False, "automatic_promotion": False}
 
 
