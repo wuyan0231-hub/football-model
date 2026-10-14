@@ -58,6 +58,25 @@ def git(source, *args):
     return subprocess.check_output(['git', '-C', str(source), *args], text=True).strip()
 
 
+def is_repaired_target(prediction, match, local, source_line):
+    # Loop locals retain the previous candidate while M0 is scored. Bind the
+    # actual prediction implementation and callsite, not that stale variable.
+    return (prediction.get('model_scope') == 'independent_goalmodel_research_only'
+            and prediction.get('model_version') == 'pinned_goalmodel_saved_fit_prediction_v2'
+            and (match.get('match_id'), local.get('candidate'), local.get('horizon'), local.get('block_id'))
+                == (1545612, 'G1', 'LINEUP', 52)
+            and source_line.strip() == 'row["scores"][candidate] = score_forecast(prediction, f, extended_diagnostics=True)')
+
+
+def preserve_scored_output(scored, capture, receipt):
+    try:
+        capture()
+    except Exception as exc:
+        receipt['diagnostic_capture_errors'].append({'stage': 'score_success_capture',
+            'class': type(exc).__name__, 'detail': str(exc), 'traceback': traceback.format_exc()})
+    return scored
+
+
 def export_report_closure(runtime, output, reference):
     runtime = runtime.resolve()
     visited, entries, total = set(), [], 0
@@ -127,8 +146,10 @@ def main():
                'workflow_run_attempt': os.environ.get('GITHUB_RUN_ATTEMPT'),
                'purpose': 'isolated fixed-input repaired-source historical verification; no prospective or production qualification',
                'api_collection_called': False, 'model_state_save_called': False,
-               'target_error_captures': [], 'target_success_captures': [], 'target_repair_verified': False, 'successful_real_r_calls': 0, 'diagnostic_capture_errors': [], 'r_calls': 0, 'score_calls': 0}
-    original_score = original_fit = original_study = None
+               'target_error_captures': [], 'target_success_captures': [], 'target_repair_verified': False,
+               'successful_real_r_calls': 0, 'r_native_matrix_summaries': [], 'native_target_captures': [],
+               'r_adapter_failures': [], 'diagnostic_capture_errors': [], 'r_calls': 0, 'score_calls': 0}
+    original_score = original_fit = original_study = original_validate = None
     ar = adapter = None
     exit_code = 1
     try:
@@ -167,11 +188,37 @@ def main():
         receipt['environment'] = {'python': sys.version, 'numpy': np.__version__,
                                   'scipy': scipy.__version__, 'statsmodels': statsmodels.__version__}
         original_score, original_fit, original_study = ar.score_forecast, adapter.fit_predict_goalmodel, ar.study
+        original_validate = adapter._validate_output
         source_lines = Path(ar.__file__).read_text().splitlines()
         r_records, forecast_to_record = [], {}
+        current_r_calls = []
 
         with tempfile.TemporaryDirectory(prefix='unl-r-context-', dir=output.parent) as temp:
             spool = Path(temp)
+
+            def validate_wrapper(native, fixtures, dc):
+                validated = original_validate(native, fixtures, dc)
+                try:
+                    call = current_r_calls[-1]
+                    summaries = []
+                    for forecast in validated['forecasts']:
+                        matrix = np.asarray(forecast['score_matrix'], dtype=float)
+                        mass = math.fsum(matrix.ravel())
+                        summaries.append({'match_id': forecast['match_id'], 'shape': list(matrix.shape),
+                            'numpy_mass': float(matrix.sum()), 'fsum_mass': mass,
+                            'absolute_mass_error': abs(mass - 1)})
+                        if (call.get('candidate'), call.get('block'), forecast['match_id']) == ('G1', 52, 1545612):
+                            ref = write(output / 'native-R-G1-EARLY-1545612.json', {
+                                'schema_version': 'unl-actual-native-r-target-v1', 'captured_at': now(),
+                                'caller': call, 'forecast': forecast,
+                                'result_without_forecasts': {key: value for key, value in validated.items() if key != 'forecasts'},
+                                'purpose': 'original validated native R output before compatibility aggregation; no mutation'})
+                            receipt['native_target_captures'].append(ref)
+                    receipt['r_native_matrix_summaries'].append({'caller': call, 'forecasts': summaries})
+                except Exception as exc:
+                    receipt['diagnostic_capture_errors'].append({'stage': 'native_r_matrix_capture',
+                        'class': type(exc).__name__, 'detail': str(exc), 'traceback': traceback.format_exc()})
+                return validated
 
             def fit_wrapper(*fit_args, **fit_kwargs):
                 frame = inspect.currentframe().f_back
@@ -179,8 +226,15 @@ def main():
                 call_context = {'candidate': local.get('candidate'), 'horizon': local.get('horizon'),
                                 'block': local.get('block_id'), 'caller_line': frame.f_lineno}
                 del frame, local
-                # No catch or retry around the real R adapter.
-                result = original_fit(*fit_args, **fit_kwargs)
+                current_r_calls.append(call_context)
+                try:
+                    result = original_fit(*fit_args, **fit_kwargs)
+                except Exception as exc:
+                    receipt['r_adapter_failures'].append({'caller': call_context, 'class': type(exc).__name__,
+                        'detail': str(exc), 'traceback': traceback.format_exc()})
+                    raise
+                finally:
+                    current_r_calls.pop()
                 receipt['r_calls'] += 1
                 if result.get('status') == 'ok' and result.get('r_version'):
                     receipt['successful_real_r_calls'] += 1
@@ -211,7 +265,8 @@ def main():
             def capture_target_success(prediction, match, scored, options, frame):
                 try:
                     local = frame.f_locals
-                    if (match.get('match_id'), local.get('candidate'), local.get('horizon'), local.get('block_id')) != (1545612, 'G1', 'LINEUP', 52):
+                    source_line = source_lines[frame.f_lineno - 1] if 0 < frame.f_lineno <= len(source_lines) else ''
+                    if not is_repaired_target(prediction, match, local, source_line):
                         return
                     saved_card = local.get('historical_goal_cards', {}).get(1545612, {}).get('G1')
                     if not saved_card:
@@ -256,8 +311,12 @@ def main():
                 receipt['score_calls'] += 1
                 try:
                     scored = original_score(prediction, match, **kwargs)
-                    capture_target_success(prediction, match, scored, kwargs, inspect.currentframe().f_back)
-                    return scored
+                    frame = inspect.currentframe().f_back
+                    try:
+                        return preserve_scored_output(scored,
+                            lambda: capture_target_success(prediction, match, scored, kwargs, frame), receipt)
+                    finally:
+                        del frame
                 except Exception as exc:
                     if str(exc) == TARGET_ERROR:
                         frame = inspect.currentframe().f_back
@@ -334,6 +393,7 @@ def main():
                     raise
 
             adapter.fit_predict_goalmodel = fit_wrapper
+            adapter._validate_output = validate_wrapper
             ar.score_forecast = score_wrapper
             if args.study_start:
                 fixed_start = datetime.fromisoformat(args.study_start.replace('Z', '+00:00'))
@@ -363,6 +423,23 @@ def main():
                 raise ValueError('Current study-run summary is not bound to this fixed source/league.')
             write(output / 'study-run-summary.json', summary)
             report_directory = runtime / 'advanced_models/unl' / ar.digest(ar.validate_protocol(json.loads(protocol_path.read_text()))) / 'reports'
+            if exit_code != 0 or summary.get('research_full_completed') is not True:
+                receipt['first_study_failure'] = next((result for result in summary['results']
+                    if result.get('status') != 'completed_development'), None)
+                attempt_path = report_directory / 'latest_attempt.json'
+                if attempt_path.exists():
+                    attempt = json.loads(attempt_path.read_text())
+                    if attempt.get('source_commit') == args.source_commit:
+                        write(output / 'first-study-attempt.json', attempt)
+                        ref = attempt.get('failure_ref')
+                        if ref:
+                            failure_path = (runtime / ref['path']).resolve()
+                            if (not failure_path.is_relative_to(runtime)
+                                    or hashlib.sha256(failure_path.read_bytes()).hexdigest() != ref['sha256']):
+                                raise ValueError('Actual first study failure reference mismatch.')
+                            write(output / 'first-study-failure.json', json.loads(failure_path.read_bytes()))
+                exit_code = 1
+                return exit_code
             report_summary = json.loads((report_directory / 'latest.json').read_text())
             write(output / 'study-report-summary.json', report_summary)
             report_ref = report_summary['full_report_ref']
@@ -397,6 +474,8 @@ def main():
             ar.study = original_study
         if adapter is not None and original_fit is not None:
             adapter.fit_predict_goalmodel = original_fit
+        if adapter is not None and original_validate is not None:
+            adapter._validate_output = original_validate
         receipt['actual_finished_at'] = now()
         receipt['target_error_reproduced'] = bool(receipt['target_error_captures'])
         receipt['diagnostic_exit_code'] = exit_code
