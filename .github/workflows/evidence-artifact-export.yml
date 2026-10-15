@@ -1,0 +1,57 @@
+name: S3证据包：只读分片导出
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/evidence-artifact-export.yml'
+      - 'scripts/export_artifact_shards.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  export:
+    if: github.event.repository.private == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: 下载已结束任务的原始ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method GET "repos/$GITHUB_REPOSITORY/actions/artifacts/11986210719/zip" > original-artifact.zip
+      - name: 核原包SHA并按原字节分片
+        run: python scripts/export_artifact_shards.py --source original-artifact.zip --output exported --artifact-id 11986210719 --sha256 69d74cec502bbfa40a7ef9f7c5dacf89af02068888702241504da9937ae50340
+      - uses: actions/upload-artifact@v7
+        with:
+          name: s3-short-evidence-11986210719-manifest
+          path: exported/manifest.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - uses: actions/upload-artifact@v7
+        with:
+          name: s3-short-evidence-11986210719-part000
+          path: exported/artifact.zip.part000
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - uses: actions/upload-artifact@v7
+        with:
+          name: s3-short-evidence-11986210719-part001
+          path: exported/artifact.zip.part001
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - uses: actions/upload-artifact@v7
+        with:
+          name: s3-short-evidence-11986210719-part002
+          path: exported/artifact.zip.part002
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
