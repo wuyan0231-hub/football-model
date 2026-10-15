@@ -2,17 +2,17 @@
   "schema_version": "feature-model-card-v1",
   "league": "serie_a",
   "candidate_id": "M1_schedule_offset_l2_v2",
-  "source_commit": "9603500cfc322fdcb76af65ef78e25dafd8f77e4",
-  "state_commit": "a020be1c6f02f85217c3144b611a202d75542057",
-  "training_cutoff": "2026-10-13T11:13:21.921628Z",
-  "generated_at": "2026-10-13T11:14:45.856263Z",
+  "source_commit": "924ac95729ba8bb8cb49bd9276f80604deebae64",
+  "state_commit": "cd7eb64f553093120399223322b22152d543b33e",
+  "training_cutoff": "2026-10-15T15:43:41.547594Z",
+  "generated_at": "2026-10-15T15:46:11.207497Z",
   "feature_names": [
     "rest_days_capped",
     "matches_last14d",
     "opponent_rest_days_capped",
     "opponent_matches_last14d"
   ],
-  "feature_scope": "same_competition",
+  "feature_scope": "all_club_competitions_provider_scope",
   "correction_model": {
     "model_version": "poisson_fixed_log_offset_l2_shared_v1",
     "model_scope": "fixed_baseline_log_offset_feature_correction",
@@ -22,7 +22,7 @@
     "trained": true,
     "validated_for_production": false,
     "automatic_promotion": false,
-    "training_cutoff": "2026-10-13T11:13:21.921628Z",
+    "training_cutoff": "2026-10-15T15:43:41.547594Z",
     "feature_names": [
       "rest_days_capped",
       "matches_last14d",
@@ -30,37 +30,37 @@
       "opponent_matches_last14d"
     ],
     "coefficients": {
-      "rest_days_capped": -0.002579267915506409,
-      "matches_last14d": -0.002572930337475571,
-      "opponent_rest_days_capped": -0.005481403235566767,
-      "opponent_matches_last14d": -0.0038940969445411494
+      "rest_days_capped": -0.016307602039380923,
+      "matches_last14d": -0.028131257556935983,
+      "opponent_rest_days_capped": 0.013750689345881039,
+      "opponent_matches_last14d": 0.0322270283702441
     },
     "feature_scaling": {
       "rest_days_capped": {
-        "mean": 7.792624740386571,
-        "scale": 3.0106238924331437,
+        "mean": 7.024655746470626,
+        "scale": 3.0839936325149133,
         "constant_in_training": false
       },
       "matches_last14d": {
-        "mean": 1.3737455020345362,
-        "scale": 0.76385670101015,
+        "mean": 1.7066545039007723,
+        "scale": 0.9300047018635296,
         "constant_in_training": false
       },
       "opponent_rest_days_capped": {
-        "mean": 7.7926247403865725,
-        "scale": 3.0106238924331437,
+        "mean": 7.024655746470624,
+        "scale": 3.0839936325149133,
         "constant_in_training": false
       },
       "opponent_matches_last14d": {
-        "mean": 1.3737455020345362,
-        "scale": 0.76385670101015,
+        "mean": 1.7066545039007723,
+        "scale": 0.9300047018635296,
         "constant_in_training": false
       }
     },
     "intercept_added": false,
     "shared_home_away_coefficients": true,
     "offset_definition": "log(out_of_sample_baseline_lambda), coefficient fixed to 1",
-    "alpha": 1.0,
+    "alpha": 0.1,
     "L1_wt": 0.0,
     "refit": false,
     "loss_definition": "mean(mean_one_time_weight * poisson_nll) + 0.5 * alpha * sum(beta**2)",
@@ -69,8 +69,8 @@
       "origin": "kickoff",
       "reference": "correction_training_cutoff",
       "normalization": "mean_one",
-      "raw_weight_sum": 416.41862513488513,
-      "normalized_weight_sum": 1234.0000000000002
+      "raw_weight_sum": 412.9252262451998,
+      "normalized_weight_sum": 1234.0
     },
     "n_rows": 1234,
     "n_matches": 617,
@@ -694,16 +694,16 @@
       1550145,
       1550146
     ],
-    "training_data_sha256": "96bb9d55b3dea5897a99f774bfc333a8ae2da9bf8edce370feb5d522e853251a",
+    "training_data_sha256": "065a34914a41081d66bf73d9d08564de51861edceb3d9235ffcbed72af0e47b5",
     "last_result_available_at": "2026-10-12T22:45:00Z",
     "effective_side_sample_size": 850.8004679998207,
     "effective_match_sample_size": 425.40023399991037,
     "independent_evaluation_unit": "match_id, never a side row or repeated forecast version",
     "optimizer": {
       "method": "statsmodels_GLM_fit_regularized_bfgs",
-      "gradient_norm": 5.269632995400815e-06,
+      "gradient_norm": 3.941778218139356e-06,
       "gradient_norm_tolerance": 2e-05,
-      "objective": 1.3768459188585238
+      "objective": 1.3764261022003015
     },
     "numeric_environment": {
       "numpy": "2.3.5",
@@ -716,9 +716,9 @@
       "Target regulation-time final-status verification belongs to the replay builder.",
       "Recorded historical availability assumptions are not observed live publication times."
     ],
-    "correction_model_sha256": "186a520f1b8438dba67d90c96353ce32c79fd020cead31e0a03df831c12e9239"
+    "correction_model_sha256": "e963608b16cd085ab5d29e21f990ebc8897a9b5fd71de73985d49ad6c804e78d"
   },
-  "model_hash": "b3232c32e75b7842150a23c441d8364d1a39f5b546aa5eefc888e92174c18716",
+  "model_hash": "2728ba91888a33489ed4c01bea9b3cce3d61f88e98cbf628ec0820d5d62c1691",
   "protocol_hash": "490123d4e2e900e2bdc48e5e6dcaa3bdb878e240dfda8b8c9609151d31dcd83d",
   "usage": "engineering_shadow_only",
   "lineup_adjusted": false,
@@ -729,8 +729,13 @@
       "original_path": "data/serie_a.json"
     },
     {
-      "path": "feature_models/training_inputs/6ae393f71d00e75824fdb92cd6e877a00cf784fb4ab355ae7736ac6ecaf8da48.json",
-      "sha256": "e225c10f8d02af756dbb6dae4a39339a423ed8678c2fc3c8d4d09afa969367be",
+      "path": "feature_models/inputs/e256be7b6965c6e709bd83f6ce41bdeb8a47e4feabcda019ac92cf8ab70f89db.json",
+      "sha256": "e256be7b6965c6e709bd83f6ce41bdeb8a47e4feabcda019ac92cf8ab70f89db",
+      "original_path": "feature_models/schedules/serie_a/latest.json"
+    },
+    {
+      "path": "feature_models/training_inputs/10e7498f1b5db4f04b09ddfe6858878396aee82c8dfd88c737f96b495800bf50.json",
+      "sha256": "6239990a9587e17a0a852629bad2db2768ae49e8b75714e8d774cf5b55f3464b",
       "kind": "training_bundle"
     }
   ],
@@ -742,21 +747,21 @@
     "trials": [
       {
         "alpha": 0.01,
-        "score": 1.3823808423889905,
+        "score": 1.3806398117713865,
         "status": "scored"
       },
       {
         "alpha": 0.1,
-        "score": 1.3820904883818788,
+        "score": 1.380605214554859,
         "status": "scored"
       },
       {
         "alpha": 1.0,
-        "score": 1.3814575760991283,
+        "score": 1.3807411603845983,
         "status": "scored"
       }
     ],
-    "selected_alpha": 1.0
+    "selected_alpha": 0.1
   },
   "predictive_improvement_verified": false,
   "automatic_promotion": false
