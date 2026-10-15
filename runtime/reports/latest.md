@@ -1,6 +1,6 @@
 # 足球模型运行报告
 
-生成时间：2026-10-13T18:25:29.832536Z（UTC）
+生成时间：2026-10-15T12:37:49.610647Z（UTC）
 程序版本：0.1.0；运行模式：train。
 
 本程序生成探索性历史比分基线。没有球员/伤停、xG、战术、赛程特征，也没有经过验证的收益优势。
@@ -8,26 +8,26 @@
 
 |赛事|运行状态|预测可用性|可用/不支持/未来场次|可用90分钟赛果|训练参数变化|说明|
 |---|---|---|---|---:|---|---|
-|欧洲国家联赛|探索性基线|no_upcoming|0/0/0|434|数据未变，沿用参数|未含阵容伤停、xG与赛程；未证实预测或收益优势。 场地筛选：454场常规赛果中纳入434场、排除20场；未来7天可用预测0场，不支持0场。|
+|阿根廷甲级联赛|探索性基线|available|15/0/15|1323|完成新拟合|未含阵容伤停、xG与赛程；未证实预测或收益优势。|
 
 预测可用性：available=全部已保存可用；partial=部分可用；unavailable=有赛程但全部不支持；no_upcoming=窗口内无待预测比赛；failed=处理失败。以上不表示准确性或收益验收。
 
-本次接口网络尝试次数：2（含状态查询与重试，不等于当日计费已用量）。
+本次接口网络尝试次数：3（含状态查询与重试，不等于当日计费已用量）。
 
 ## API额度与限速
 
 |项目|本次记录|
 |---|---|
 |配置的每日上限|7460|
-|供应商日上限／当日已用（最近观测）|7500／5002|
-|供应商最近回报余额|2498|
-|当前有效日余额（保守估计）|2458|
+|供应商日上限／当日已用（最近观测）|7500／11|
+|供应商最近回报余额|7489|
+|当前有效日余额（保守估计）|7449|
 |日额证据状态|known|
 |每轮网络次数上限|不设额外次数上限|
-|供应商分钟上限／最近剩余|300／298|
+|供应商分钟上限／最近剩余|300／297|
 |当前请求最小间隔（秒）|0.21000000000000002|
-|网络请求软截止／已运行（秒）|3600／3.902409819000013|
-|额度最近观测时间／来源|2026-10-13T18:25:26.327462Z／response_headers|
+|网络请求软截止／已运行（秒）|3600／3.5540448429999287|
+|额度最近观测时间／来源|2026-10-15T12:37:46.761851Z／response_headers|
 
 每轮不设额外次数上限时，仍遵守已核实的当日额度、后续下载预留、分钟限速及软截止；不把每日上限当作每轮可重新使用的余额。未知额度不填零，也不以配置值冒充已核实余额。
 
@@ -44,11 +44,11 @@
 - 新队或与训练队伍缺少连接的队伍不出数值；陈旧模型不自动发布新预测。
 - 单项失败会保留旧模型文件，但本次不会把旧文件伪装为新训练，也不会用失败的数据生成预测。
 
-## 欧洲国家联赛
+## 阿根廷甲级联赛
 
-- 2026：返回156场，抓取时间2026-10-13T18:25:26.336114Z；接口返回成功；完整性尚需核验。
-- 2024：返回188场，抓取时间2026-10-13T07:09:01.974793Z；接口返回成功；完整性尚需核验。
-- 2022：返回168场，抓取时间2026-10-13T07:09:02.333026Z；接口返回成功；完整性尚需核验。
+- 2026：返回495场，抓取时间2026-10-15T12:37:46.812637Z；接口返回成功；完整性尚需核验。
+- 2025：返回510场，抓取时间2026-10-12T01:38:05.330194Z；接口返回成功；完整性尚需核验。
+- 2024：返回378场，抓取时间2026-10-12T01:38:05.566930Z；接口返回成功；完整性尚需核验。
 
 验证结果（完整字段见同名JSON）：
 
@@ -59,51 +59,54 @@
   "is_rolling_backtest": false,
   "minimum_test_matches": 40,
   "meets_minimum_supported_test_matches": true,
-  "evaluation_data_cutoff": "2026-10-07T01:32:56.771491Z",
+  "evaluation_data_cutoff": "2026-10-15T12:37:46.041190Z",
   "split": {
     "method": "chronological_fixed_model_holdout",
     "grouped_by": "kickoff_utc_calendar_date",
-    "train_cutoff": "2026-03-31T00:00:00Z",
-    "train_last_kickoff": "2026-03-26T17:00:00Z",
-    "test_start": "2026-03-31T16:00:00Z",
-    "test_end": "2026-10-06T18:45:00Z",
-    "training_count": 347,
-    "testing_count": 87,
+    "train_cutoff": "2026-04-03T00:00:00Z",
+    "train_last_kickoff": "2026-04-02T18:00:00Z",
+    "test_start": "2026-04-03T18:00:00Z",
+    "test_end": "2026-10-14T22:00:00Z",
+    "training_count": 1055,
+    "testing_count": 266,
     "result_availability_delay_hours": 4,
-    "embargoed_count": 0,
-    "embargoed_match_ids": []
+    "embargoed_count": 2,
+    "embargoed_match_ids": [
+      1492011,
+      1492010
+    ]
   },
   "coverage": {
-    "total": 87,
-    "scored": 87,
+    "total": 266,
+    "scored": 266,
     "excluded": 0,
     "ratio": 1.0,
     "exclusions": []
   },
   "model_metrics": {
-    "n": 87,
-    "log_loss": 1.100940367721053,
-    "brier_score": 0.6680900174095673,
+    "n": 266,
+    "log_loss": 1.0709569987964853,
+    "brier_score": 0.6478697400338993,
     "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
     "log_loss_probability_floor": 1e-15
   },
   "baseline_metrics": {
-    "n": 87,
-    "log_loss": 1.0784304880248146,
-    "brier_score": 0.6538787081391572,
+    "n": 266,
+    "log_loss": 1.079741762868507,
+    "brier_score": 0.6534881270588413,
     "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
     "log_loss_probability_floor": 1e-15
   },
   "baseline": {
     "name": "training_league_home_away_mean_poisson",
-    "home_rate": 1.4719424460431654,
-    "away_rate": 1.1812949640287769,
+    "home_rate": 1.1487446707721458,
+    "away_rate": 0.8389388915206063,
     "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
     "same_scored_matches_as_model": true
   },
   "comparison": {
-    "model_minus_baseline_log_loss": 0.02250987969623841,
-    "model_minus_baseline_brier_score": 0.014211309270410144,
+    "model_minus_baseline_log_loss": -0.008784764072021778,
+    "model_minus_baseline_brier_score": -0.005618387024941995,
     "lower_is_better": true
   },
   "warnings": [

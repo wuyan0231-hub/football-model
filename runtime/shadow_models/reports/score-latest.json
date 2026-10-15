@@ -1,37 +1,65 @@
 {
   "version": "s2-shadow-models-1.0",
-  "status": "capacity_deferred",
-  "operation": "score",
+  "scored_at": "2026-10-15T13:06:58.972445Z",
+  "selection": "first_pair_capture_matching_final_identity_no_extra_match",
   "numerical_environment": {
     "python_version": "3.12.15",
     "numpy_version": "2.3.5",
     "scipy_version": "1.17.0",
     "platform_machine": "x86_64"
   },
-  "run_started_at": "2026-10-13T18:43:44.526501Z",
-  "started_at": "2026-10-13T18:43:44.526501Z",
-  "generated_at": "2026-10-13T18:54:20.285496Z",
-  "completed_at": "2026-10-13T18:54:20.285496Z",
-  "source_commit": null,
-  "reason": "shadow_storage_capacity_deferred",
-  "runtime_bytes": 6978735281,
-  "logical_bytes": 7335517722,
-  "estimated_persisted_bytes": 1700578666,
-  "limit_bytes": 1610612736,
-  "logical_limit_bytes": 8589934592,
-  "file_limit_bytes": 62914560,
-  "logical_capture_limit_bytes": 8589672448,
-  "capacity_measurement": "lossless_archive_conservative_persisted_and_original_logical_bytes",
-  "capacity_constraint": "estimated_persisted_limit",
-  "capacity_report_reserve_bytes": 262144,
-  "partial_objects_preserved": true,
-  "counts_for_partial_capture": null,
-  "production_models_changed": false,
-  "accuracy_improvement_verified": false,
-  "scored_at": "2026-10-13T18:54:20.285496Z",
   "numeric_replay_matrix_abs_tol": 1e-15,
   "numeric_replay_probability_abs_tol": 1e-15,
-  "immutable_event_saved": false,
-  "diagnostic_evidence": "bounded_current_latest_only",
-  "capacity_event_id": null
+  "forecast_versions": 4572,
+  "selected_matches": 382,
+  "incomplete_groups": [],
+  "errors": [],
+  "profit_evaluation": false,
+  "accuracy_improvement_verified": false,
+  "status_counts": {
+    "scored": 418,
+    "pending": 346
+  },
+  "comparisons": [
+    {
+      "comparison": "candidate90_vs_baseline180",
+      "status_counts": {
+        "scored": 209,
+        "pending": 173
+      },
+      "n_scored_matches": 209,
+      "mean_candidate_minus_baseline": {
+        "brier_1x2": -0.003276822448974802,
+        "log_loss_1x2": -0.003568760576050828,
+        "over_2_5_brier": 0.0005713644082843097
+      },
+      "inferential_status": "descriptive_only_no_promotion_or_significance_claim"
+    },
+    {
+      "comparison": "candidate365_vs_baseline180",
+      "status_counts": {
+        "scored": 209,
+        "pending": 173
+      },
+      "n_scored_matches": 209,
+      "mean_candidate_minus_baseline": {
+        "brier_1x2": 0.005986413377850438,
+        "log_loss_1x2": 0.0077877672009516175,
+        "over_2_5_brier": 0.0016528016014471327
+      },
+      "inferential_status": "descriptive_only_no_promotion_or_significance_claim"
+    }
+  ],
+  "storage_budget": {
+    "runtime_bytes": 7148639510,
+    "logical_bytes": 7508868718,
+    "estimated_persisted_bytes": 1429366099,
+    "limit_bytes": 1610612736,
+    "logical_limit_bytes": 8589934592,
+    "file_limit_bytes": 62914560,
+    "logical_capture_limit_bytes": 8589672448,
+    "capacity_measurement": "lossless_archive_conservative_persisted_and_original_logical_bytes",
+    "observation": "before_score_run_and_latest_report_writes"
+  },
+  "report_id": "dffe76f2abf26adffeee2e98569e18036ff2e146e09547522be697717ebae059"
 }
