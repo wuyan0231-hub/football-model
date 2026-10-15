@@ -123,6 +123,20 @@ class ScheduleConsolidationTests(unittest.TestCase):
                 case = case.replace(key, repr(values[key]))
             self.assertEqual(eval(' '.join(case.split()), {'__builtins__': {}}, {}), expected)
 
+    def test_precapture_budget_reserves_time_for_measured_full_state_persistence(self):
+        before = self.advanced.split('  pre_study_capture:\n', 1)[1].split('  advanced:\n', 1)[0]
+        timeout = int(re.search(r'(?m)^    timeout-minutes: (\d+)$', before).group(1)) * 60
+        # 38496501033 attempt2 reached save at 14:33 after starting at 14:14.
+        # 38496500922 attempt2 needed 14:06-14:12 just for the final commit/push;
+        # its full check/save sequence was 13:34-14:12. Preserve 15m headroom.
+        restore_facts_capture_seconds = 14 * 60
+        observed_check_and_save_seconds = 38 * 60
+        self.assertGreaterEqual(timeout, restore_facts_capture_seconds +
+                                observed_check_and_save_seconds + 15 * 60)
+        self.assertLessEqual(timeout, 120 * 60)
+        self.assertIn("if: always() && steps.restore.outcome == 'success'", before)
+        self.assertEqual(before.count('python scripts/cloud_state.py save --runtime runtime'), 1)
+
     def test_legacy_artifacts_preserve_models_snapshots_and_original_parent(self):
         self.assertIn("'runtime/feature_models','runtime/feature_snapshots','feature-run-receipt.json','feature-run-parent.json'", self.main_job)
         self.assertIn("paths=[p for p in paths if p.as_posix()!='runtime/feature_models/schedules']", self.main_job)

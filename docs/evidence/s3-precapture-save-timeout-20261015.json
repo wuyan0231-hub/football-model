@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "observed_at_utc": "2026-10-15T15:32:00Z",
+  "source_sha": "924ac95729ba8bb8cb49bd9276f80604deebae64",
+  "run_id": 38496501033,
+  "attempt": 2,
+  "pre_study_job_id": 116472019493,
+  "job_started_at": "2026-10-15T14:14:01Z",
+  "persist_step_started_at": "2026-10-15T14:27:26Z",
+  "check_finished_at": "2026-10-15T14:33:27.011118Z",
+  "shutdown_signal_at": "2026-10-15T14:44:04.540272Z",
+  "exit_code": 143,
+  "conclusion": "cancelled",
+  "advanced_job_conclusion": "skipped",
+  "configured_timeout_minutes": 25,
+  "saved_commit_log_marker_present": false,
+  "remote_state_unchanged_after_interruption": "c9c5bfa02ef9e2f08ee74d4ed0f13838df97606a",
+  "diagnosis": {
+    "established": "Runner received shutdown signal during save; no saved commit marker; long study skipped.",
+    "inference": "25-minute job limit plus cancellation grace is consistent with observed ~30-minute lifetime. It leaves insufficient time for the measured full-state persistence path.",
+    "limitation": "Check-run annotations unavailable through the connector; external cancellation cannot be categorically excluded."
+  },
+  "reference_timing": {
+    "run_id": 38496500922,
+    "attempt": 2,
+    "check_and_save_started": "2026-10-15T13:34:17Z",
+    "saved_commit_log_at": "2026-10-15T14:12:09.711610Z",
+    "saved_commit": "c9c5bfa02ef9e2f08ee74d4ed0f13838df97606a"
+  },
+  "repair": {
+    "pre_study_timeout_minutes": 90,
+    "persistence_gate_preserved": true,
+    "concurrency_lock_preserved": true,
+    "automatic_main_push_launch": true,
+    "duplicate_old_run_retry": false,
+    "production_math_changed": false,
+    "frozen_protocols_changed": false
+  },
+  "acceptance": {
+    "local_schedule_tests": 11,
+    "passed": 11,
+    "remote_ci": "pending",
+    "real_resumed_long_study": "pending",
+    "state_readback": "pending"
+  }
+}
