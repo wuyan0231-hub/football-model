@@ -203,7 +203,7 @@ class DurabilityTests(unittest.TestCase):
         objects, anchor, _ = closure_objects(source_name=reference["path"], source_raw=raw,
             source_hash=reference["sha256"], source_extra=reference)
         result = prove_objects(objects, anchor)
-        self.assertEqual(result["schema_version"], "advanced-durability-v3")
+        self.assertEqual(result["schema_version"], "advanced-durability-v4")
         self.assertEqual(result["raw_sha256"][reference["path"]], durability._sha(raw))
         self.assertEqual(result["reference_hash_semantics"][reference["path"]],
             ["production_replay_canonical_payload_sha256"])

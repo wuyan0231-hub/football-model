@@ -183,6 +183,84 @@ def _rebind_capture_refs(value, refs):
     return walk(value)
 
 
+def _freeze_baseline_packet(runtime, root, packet, cutoff, guard):
+    """Freeze the packet's declared evidence, including diagnostic summaries.
+
+    M0's fitted parents are frozen separately.  Its read-only comparison packet
+    also contains hash-bound originals: a ``reports/latest.json`` there must
+    never silently become a reference to the next producer run.  Preserve exact
+    bytes without changing comparison IDs or their original reference metadata.
+    The base payload explicitly registers these origin/hash routes for its own
+    closure; the durability reader resolves edges in that scope only.
+    """
+    from .advanced_durability import verify_reference_bytes
+    from .state_storage import _relative, StorageError
+    runtime = Path(runtime).resolve()
+    pending, frozen, seen = list(_refs_in(packet)), {}, set()
+    while pending:
+        reference = pending.pop()
+        relative = reference.get("runtime_relative_path", reference["path"])
+        if isinstance(relative, str) and Path(relative).is_absolute():
+            path = Path(relative)
+            if not path.resolve().is_relative_to(runtime):
+                raise SnapshotError("baseline_packet_input_escapes_runtime")
+            # The original packet is retained. An absolute edge without a
+            # runtime_relative_path would remain tied to this runner after
+            # restore, so reject it rather than create an unprovable capture.
+            raise SnapshotError("baseline_packet_input_requires_runtime_relative_path")
+        # The packet retains its original edge spelling. Validate that exact
+        # string before Path can silently normalize './' or repeated slashes;
+        # the restored durability reader applies this same path contract.
+        try:
+            name = _relative(relative)
+        except StorageError as exc:
+            raise SnapshotError("baseline_packet_input_path_invalid") from exc
+        if any(ord(character) < 32 for character in name):
+            raise SnapshotError("baseline_packet_input_path_invalid")
+        source = _path(runtime, name)
+        raw = history_read_bytes(source, runtime=runtime)
+        checked = verify_reference_bytes(name, reference, raw)
+        # Verify every edge, including repeated replay references with different
+        # producer metadata. A cached raw digest alone cannot validate those.
+        key = (name, reference["sha256"])
+        if key in seen:
+            continue
+        if len(seen) >= 10000:
+            raise SnapshotError("baseline_packet_reference_limit")
+        value = checked["value"]
+        latest = _check_times(value, cutoff)
+        if checked["reference_hash_semantics"] == "production_replay_canonical_payload_sha256" or re.fullmatch(
+                r"replay/bundles/[0-9a-f]{64}\.json\.gz", name):
+            # The producer already froze this gzip under its canonical payload
+            # identity. Keep that immutable route and its typed contract. A
+            # second raw-byte edge binds the actual compressed representation;
+            # renaming it to sources/*.bin would lose the replay decoder.
+            saved = {"path": str(source), "runtime_relative_path": name,
+                "origin_runtime_path": name, "sha256": checked["raw_sha256"],
+                "kind": "baseline_packet_input", "available_at": _iso(latest or cutoff)}
+        else:
+            # Parse JSON with the same duplicate/nonfinite checks as other
+            # capture sources, while retaining its original bytes unchanged.
+            if source.suffix != ".json":
+                raise SnapshotError("baseline_packet_input_encoding_unsupported")
+            json.loads(raw, object_pairs_hook=_pairs,
+                parse_constant=lambda _: (_ for _ in ()).throw(SnapshotError("nonfinite_json")))
+            destination = root / "sources" / (checked["raw_sha256"] + ".json")
+            ticket = guard.check_write(destination, raw)
+            _write_bytes(destination, raw)
+            guard.commit_write(ticket)
+            saved = {"path": str(destination),
+                "runtime_relative_path": str(destination.relative_to(runtime)),
+                "origin_runtime_path": name, "sha256": checked["raw_sha256"],
+                "kind": "baseline_packet_input", "available_at": _iso(latest or cutoff)}
+            if isinstance(value, dict) and value.get("schema_version") == "fundamentals-evidence-v1":
+                saved["snapshot_id"] = value["snapshot_id"]
+        seen.add(key)
+        frozen[(name, checked["raw_sha256"])] = saved
+        pending.extend(_refs_in(value))
+    return deepcopy(packet), list(frozen.values())
+
+
 @contextmanager
 def frozen_runtime(runtime, refs, cutoff):
     runtime = Path(runtime).resolve()
@@ -407,6 +485,8 @@ def _baseline(runtime, root, league, row, protocol, state_commit, started, clock
         parents.append((path, kind))
     refs = [_guarded_freeze(p, runtime, root, cutoff, k, guard) for p, k in parents]
     refs.extend(_guarded_freeze(p, runtime, root, cutoff, "fundamentals", guard) for p in paths)
+    packet, packet_refs = _freeze_baseline_packet(runtime, root, packet, cutoff, guard)
+    refs.extend(packet_refs)
     return context, cutoff, packet, features, refs, excluded
 
 
@@ -466,7 +546,8 @@ def _capture_run_locked(runtime, league="serie_a", *, source_commit, protocol, s
                         base = snapshot_from_evidence(fixture, packet, fundamentals, horizon=horizon, cutoff_at=cutoff,
                             source_refs=refs, protocol=baseline_protocol(protocol), clock=clock)
                         base.update(league=league, source_commit=source_commit, state_commit=state_commit,
-                            baseline_parent_row=deepcopy(row), excluded_read_evidence=excluded)
+                            baseline_parent_row=deepcopy(row), excluded_read_evidence=excluded,
+                            baseline_packet_reference_closure="frozen_raw_inputs_v1")
                         fixture = base["fixture"]
                         base.pop("snapshot_id", None); base["snapshot_id"] = _digest(base)
                         base_path = _guarded_save(root, "baseline_payloads", base, guard)

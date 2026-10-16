@@ -1,6 +1,7 @@
 """Verify an immutable capture closure in an actually restored Git state commit."""
 from __future__ import annotations
 import argparse
+from collections import OrderedDict
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -11,7 +12,7 @@ import subprocess
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen, build_opener, HTTPRedirectHandler
-from .state_storage import _expand, _manifest_json, MAX_FILE_BYTES, StorageError
+from .state_storage import _expand, _manifest_json, _relative, MAX_FILE_BYTES, StorageError
 
 
 def _git(repo, *args):
@@ -28,8 +29,9 @@ def _time(value):
 
 
 MAX_LOG_BYTES = 32 * 1024 * 1024
-METHOD = "git_tree_typed_reference_closure_and_fixed_attempt_job_log_exact_saved_commit_v3"
+METHOD = "git_tree_scoped_frozen_and_declared_ancestor_closure_exact_saved_commit_v4"
 _VERIFIED_REMOTE_CACHE = {}
+_ANCESTRY_CACHE = {}
 
 
 class DurabilityReferenceError(ValueError):
@@ -293,7 +295,159 @@ def _same_bound_evidence(left, right):
         k:v for k,v in right.items() if k not in changing_envelope}
 
 
-def prove(repo, runtime, state_commit, receipt_ref, *, _completion_cache=None, _read_file=None):
+def _safe_name(name):
+    try:
+        if any(ord(c) < 32 for c in name):
+            raise ValueError("unsafe_durable_ref")
+        return _relative(name)
+    except (TypeError, StorageError) as exc:
+        raise ValueError("unsafe_durable_ref") from exc
+
+
+def _baseline_scope(name, value, raw_sha256, read_file):
+    match = re.fullmatch(r"(advanced_snapshots/[^/]+)/baseline_payloads/[0-9a-f]{64}\.json", name)
+    if not match or not isinstance(value, dict) or value.get("schema_version") != "feature-snapshots-1.0":
+        return None
+    marker = value.get("baseline_packet_reference_closure")
+    scope = {"path": name, "sha256": raw_sha256, "routes": {}, "declared_state": value.get("state_commit"),
+             "frozen": marker == "frozen_raw_inputs_v1"}
+    if marker is not None and not scope["frozen"]:
+        raise ValueError("unsupported_baseline_packet_reference_closure")
+    if not scope["frozen"]:
+        return scope
+    if not isinstance(value.get("source_refs"), list):
+        raise ValueError("invalid_baseline_packet_source_refs")
+    for ref in value["source_refs"]:
+        if not isinstance(ref, dict) or ref.get("kind") != "baseline_packet_input":
+            continue
+        origin = _safe_name(ref.get("origin_runtime_path"))
+        target = _safe_name(ref.get("runtime_relative_path"))
+        digest = ref.get("sha256")
+        if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise ValueError("invalid_baseline_packet_route_hash")
+        ordinary = target == match.group(1) + "/sources/" + digest + ".json"
+        replay = target == origin and re.fullmatch(r"replay/bundles/[0-9a-f]{64}\.json\.gz", target)
+        if not (ordinary or replay):
+            raise ValueError("unsafe_baseline_packet_route_target")
+        # Register only independently verified raw bytes from this current
+        # fixed tree. Producer-typed replay edges keep their logical digest.
+        verify_reference_bytes(target, {"sha256": digest}, read_file(target))
+        pair = (origin, digest)
+        if pair in scope["routes"] and scope["routes"][pair] != target:
+            raise ValueError("ambiguous_baseline_packet_route")
+        scope["routes"][pair] = target
+    return scope
+
+
+def _declared_ancestor(repo, source, current):
+    """Prove only the explicitly declared source, never search for a hash."""
+    if not re.fullmatch(r"[0-9a-f]{40}", str(source)):
+        raise ValueError("invalid_declared_baseline_state")
+    repository = os.environ.get("GITHUB_REPOSITORY", "")
+    key = (str(Path(repo).resolve()), repository, source, current)
+    if key in _ANCESTRY_CACHE:
+        return _ANCESTRY_CACHE[key]
+    result = None
+    try:
+        _git(repo, "merge-base", "--is-ancestor", source, current)
+        result = {"method": "local_git_is_ancestor", "source_commit": source, "current_commit": current}
+    except ValueError:
+        parents = _git(repo, "show", "-s", "--format=%P", current)
+        if source in parents.decode().strip().split():
+            result = {"method": "local_git_direct_parent", "source_commit": source,
+                      "current_commit": current, "parent_header_sha256": _sha(parents)}
+    if result is None:
+        token = os.environ.get("GITHUB_TOKEN", "")
+        if not token or not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
+            raise ValueError("declared_baseline_ancestry_unverified")
+        url = "https://api.github.com/repos/" + repository + "/compare/" + source + "..." + current
+        # Files are only returned on compare page one. Page two retains the
+        # whole-comparison ancestry metadata without a potentially huge diff.
+        body, first_sha = _api_json(url + "?per_page=1&page=2", token)
+        def valid(value):
+            return (isinstance(value, dict) and value.get("status") == "ahead"
+                and value.get("base_commit", {}).get("sha") == source
+                and value.get("merge_base_commit", {}).get("sha") == source
+                and value.get("behind_by") == 0 and type(value.get("total_commits")) is int
+                and 0 < value["total_commits"] <= 100000 and value.get("ahead_by") == value["total_commits"])
+        if not valid(body):
+            raise ValueError("declared_baseline_ancestry_unverified")
+        head_url = "https://api.github.com/repos/" + repository + "/git/commits/" + current
+        head_body, head_sha = _api_json(head_url, token)
+        if not isinstance(head_body, dict) or head_body.get("sha") != current:
+            raise ValueError("declared_baseline_compare_head_unverified")
+        result = {"method": "github_exact_compare_base_head_mergebase", "source_commit": source,
+            "current_commit": current, "source_url": url, "ahead_by": body["ahead_by"],
+            "compare_metadata_page": 2, "compare_response_sha256": first_sha,
+            "head_commit_url": head_url, "head_commit_response_sha256": head_sha}
+    _ANCESTRY_CACHE[key] = result
+    return result
+
+
+class _LegacyResolver:
+    """Small shared cache of exact declared historical summary originals."""
+    def __init__(self, repo, state_commit):
+        self.repo, self.state_commit = Path(repo), state_commit
+        self.readers, self.resolved = OrderedDict(), {}
+
+    def resolve(self, scope, name, ref):
+        # Only mutable comparison summaries/indexes have this compatibility
+        # route. Corruption of immutable models, sources, or replay objects is
+        # never repaired by looking at an older state.
+        if scope["frozen"] or not (re.fullmatch(r"(?:[^/]+/)*reports/(?:latest|score-latest)\.json", name)
+                or name in {"integration/index.json", "integration/f5c-index.json"}):
+            raise ValueError("no_registered_declared_state_route")
+        source = scope["declared_state"]
+        ancestry = _declared_ancestor(self.repo, source, self.state_commit)
+        key = (source, name, ref["sha256"])
+        if key not in self.resolved:
+            from . import history_archive as history
+            if source not in self.readers:
+                if len(self.readers) >= 2:
+                    _, expired = self.readers.popitem(last=False)
+                    expired.close()
+                self.readers[source] = history.FixedStateReader(self.repo, source)
+            reader = self.readers[source]
+            self.readers.move_to_end(source)
+            manifest = reader.validate_manifest()
+            raw = reader.read(name)
+            checked = verify_reference_bytes(name, ref, raw)
+            _, entries = history._manifest_index(self.repo, source)
+            entry = entries.get(name)
+            transport = "state_archives/" + entry["blob_sha256"] + ".json.gz" if entry else "runtime/" + name
+            blob = reader.root_bytes(transport)
+            if entry and (len(blob) != entry["compressed_bytes"] or _sha(blob) != entry["blob_sha256"]):
+                raise ValueError("declared_baseline_transport_hash_mismatch")
+            git_blob = _git(self.repo, "rev-parse", source + ":" + transport).decode().strip()
+            if git_blob != hashlib.sha1(b"blob " + str(len(blob)).encode() + b"\0" + blob).hexdigest():
+                raise ValueError("declared_baseline_git_blob_mismatch")
+            self.resolved[key] = (raw, {"source_commit": source, "source_path": name,
+                "transport_path": transport, "transport_git_blob": git_blob,
+                "source_manifest_sha256": manifest["sha256"], "transport_sha256": _sha(blob),
+                "transport_bytes": len(blob), "raw_sha256": checked["raw_sha256"], "raw_bytes": len(raw),
+                "ancestry": ancestry})
+        return self.resolved[key]
+
+    def close(self):
+        for reader in self.readers.values():
+            reader.close()
+        self.readers.clear()
+
+
+def _stable_reference_bindings(bindings):
+    # Verification method, HTTP envelopes, and clocks are observations. The
+    # exact ancestry endpoints and every source/byte/path binding are identity.
+    stable = json.loads(json.dumps(bindings))
+    for binding in stable:
+        historical = binding.get("historical_source")
+        if historical is not None:
+            ancestry = historical["ancestry"]
+            historical["ancestry"] = {k: ancestry[k] for k in ("source_commit", "current_commit")}
+    return stable
+
+
+def prove(repo, runtime, state_commit, receipt_ref, *, _completion_cache=None, _read_file=None,
+          _legacy_resolver=None):
     """Read receipt and every hash-referenced parent from the fixed Git tree."""
     if not re.fullmatch(r"[0-9a-f]{40}",state_commit): raise ValueError("invalid_state_commit")
     if _read_file is None:
@@ -301,8 +455,16 @@ def prove(repo, runtime, state_commit, receipt_ref, *, _completion_cache=None, _
         with FixedStateReader(repo, state_commit) as reader:
             reader.validate_manifest()
             return prove(repo, runtime, state_commit, receipt_ref,
-                _completion_cache=_completion_cache, _read_file=reader.read)
+                _completion_cache=_completion_cache, _read_file=reader.read,
+                _legacy_resolver=_legacy_resolver)
     repo, runtime=Path(repo),Path(runtime)
+    if _legacy_resolver is None:
+        resolver = _LegacyResolver(repo, state_commit)
+        try:
+            return prove(repo, runtime, state_commit, receipt_ref,
+                _completion_cache=_completion_cache, _read_file=_read_file, _legacy_resolver=resolver)
+        finally:
+            resolver.close()
     try:
         _git(repo,"cat-file","-e",state_commit+"^{commit}")
     except ValueError:
@@ -334,65 +496,111 @@ def prove(repo, runtime, state_commit, receipt_ref, *, _completion_cache=None, _
         completion = previous["remote_run_completion"]
     if completion is None and previous is not None:
         completion = _stored_service_evidence(repo, runtime, proof_path, previous, metadata, state_commit)
-    visited={}; values={}; raw_hashes={}
-    def read(ref, chain=()):
-        name=ref.get("runtime_relative_path", ref.get("path"))
-        if not isinstance(name, str) or not re.fullmatch(r"[0-9a-f]{64}", str(ref.get("sha256", ""))):
+    visited, raw_hashes, data_cache, checked_cache = {}, {}, {}, {}
+    walked, bindings = set(), []
+    def read(ref, chain=(), scope=None):
+        if not isinstance(ref, dict) or not re.fullmatch(r"[0-9a-f]{64}", str(ref.get("sha256", ""))):
             raise ValueError("invalid_durable_ref")
-        if Path(name).is_absolute() or ".." in Path(name).parts: raise ValueError("unsafe_durable_ref")
-        if name in visited:
-            value = values[name]
-            if _recorded_replay_ref(name, ref):
-                _replay_reference_metadata(ref, value)
-                semantics = "production_replay_canonical_payload_sha256"
-                actual = value["sha256"]
-            else:
-                semantics, actual = "raw_bytes_sha256", raw_hashes[name]
-        else:
-            data = _read_file(name)
-            value, semantics, actual = _reference_value(name, ref, data)
+        name = _safe_name(ref.get("runtime_relative_path", ref.get("path")))
+        target = scope["routes"].get((name, ref["sha256"]), name) if scope else name
+        identity, historical = target, None
+        if target not in data_cache:
+            data_cache[target] = _read_file(target)
+        data = data_cache[target]
+        check_key = (identity, ref["sha256"], _recorded_replay_ref(name, ref))
+        if check_key not in checked_cache:
+            checked_cache[check_key] = _reference_value(name, ref, data)
+        value, semantics, actual = checked_cache[check_key]
+        if actual != ref["sha256"] and scope is not None and not scope["frozen"]:
+            try:
+                data, historical = _legacy_resolver.resolve(scope, name, ref)
+                value, semantics, actual = _reference_value(name, ref, data)
+                identity = "git:" + historical["source_commit"] + ":" + name
+            except (ValueError, StorageError, OSError) as exc:
+                rejected = DurabilityReferenceError("durable_source_hash_mismatch",
+                    state_commit=state_commit, path=name, expected_sha256=ref["sha256"],
+                    actual_sha256=actual, reference_chain=list(chain))
+                rejected.details["declared_state_resolution_error"] = str(exc)
+                rejected.details["declared_state_commit"] = scope["declared_state"]
+                raise rejected from exc
         if actual != ref["sha256"]:
             raise DurabilityReferenceError("durable_source_hash_mismatch",
                 state_commit=state_commit, path=name, expected_sha256=ref["sha256"],
                 actual_sha256=actual, reference_chain=list(chain))
-        if name in visited:
-            visited[name][semantics] = ref["sha256"]
+        if _recorded_replay_ref(name, ref):
+            _replay_reference_metadata(ref, value)
+        raw_digest = _sha(data)
+        visited.setdefault(identity, {})[semantics] = ref["sha256"]
+        raw_hashes[identity] = raw_digest
+        if scope and (target != name or historical is not None):
+            binding = {"baseline_payload_path": scope["path"], "baseline_payload_sha256": scope["sha256"],
+                "reference_chain": list(chain), "origin_runtime_path": name,
+                "expected_sha256": ref["sha256"], "resolved_path": target,
+                "resolved_state_commit": state_commit, "raw_sha256": raw_digest}
+            if historical is not None:
+                binding.update({"resolution": "declared_ancestor_original", "resolved_path": name,
+                    "resolved_state_commit": historical["source_commit"], "historical_source": historical})
+            else:
+                binding["resolution"] = "scoped_frozen_raw_input"
+            bindings.append(binding)
+        child_scope = _baseline_scope(target, value, raw_digest, _read_file) or scope
+        scope_id = (child_scope["path"], child_scope["sha256"]) if child_scope else None
+        context = (identity, scope_id)
+        if context in walked:
             return value
-        visited[name] = {semantics: ref["sha256"]}
-        raw_hashes[name] = _sha(data)
-        values[name]=value
+        walked.add(context)
+        if len(walked) > 100000:
+            raise ValueError("durable_reference_closure_too_large")
         def children(x, pointer=""):
-            if isinstance(x,dict):
-                if isinstance(x.get("runtime_relative_path", x.get("path")),str) and re.fullmatch(r"[0-9a-f]{64}",str(x.get("sha256",""))):
-                    edge = {"source_path": name, "json_pointer": pointer,
+            if isinstance(x, dict):
+                if isinstance(x.get("runtime_relative_path", x.get("path")), str) and re.fullmatch(r"[0-9a-f]{64}", str(x.get("sha256", ""))):
+                    edge = {"source_path": target, "json_pointer": pointer,
                         "path": x.get("runtime_relative_path", x.get("path")),
                         "expected_sha256": x["sha256"]}
-                    read(x, (*chain, edge))
+                    read(x, (*chain, edge), child_scope)
                 for key, v in x.items():
                     escaped = str(key).replace("~", "~0").replace("/", "~1")
                     children(v, pointer + "/" + escaped)
-            elif isinstance(x,list):
-                for index, v in enumerate(x):children(v, pointer + "/" + str(index))
+            elif isinstance(x, list):
+                for index, v in enumerate(x):
+                    children(v, pointer + "/" + str(index))
         children(value)
         return value
-    receipt=read(receipt_ref)
-    if isinstance(receipt,dict) and "storage_completed_at" not in receipt and "path" in receipt:
-        receipt=read(receipt)
+    receipt = read(receipt_ref)
+    if isinstance(receipt, dict) and "storage_completed_at" not in receipt and "path" in receipt:
+        receipt = read(receipt)
     if _time(receipt["storage_completed_at"])>_time(commit_at):raise ValueError("state_commit_precedes_capture")
     saved_at=completion["observed_completion_upper_bound"] if completion else None
     if saved_at and _time(commit_at)>_time(saved_at):raise ValueError("state_commit_after_remote_run_completion")
     hash_semantics = {name: sorted(identities) for name, identities in visited.items()}
+    # HTTP observation envelopes and verification clocks are evidence, not
+    # the identity of an original. Rechecking the same fixed bytes keeps the
+    # substantive closure stable even when GitHub returns a changed envelope.
+    stable_bindings = _stable_reference_bindings(bindings)
     closure=hashlib.sha256(_canonical({"references": visited, "raw_sha256": raw_hashes,
-        "reference_hash_semantics": hash_semantics})).hexdigest()
+        "reference_hash_semantics": hash_semantics, "resolved_reference_bindings": stable_bindings})).hexdigest()
+    # The independent checks above establish these same immutable facts again.
+    # Retain a matching prior observation envelope so an API->local ancestry
+    # route, or a changed HTTP envelope, cannot break exact proof recomputation.
+    try:
+        if (previous and previous.get("verified") is True and previous.get("closure_verified") is True
+                and previous.get("method") == METHOD and previous.get("state_commit") == state_commit
+                and previous.get("receipt_ref") == receipt_ref and previous.get("closure_sha256") == closure
+                and _stable_reference_bindings(previous["resolved_reference_bindings"]) == stable_bindings):
+            bindings = previous["resolved_reference_bindings"]
+    except (KeyError, TypeError, ValueError):
+        pass
     verified_at = datetime.now(timezone.utc).isoformat() if completion else None
     if previous and completion and previous.get("remote_run_completion") == completion:
         verified_at = previous.get("service_evidence_verified_at") or verified_at
     typed_names = {name for name, identities in hash_semantics.items()
         if any(kind != "raw_bytes_sha256" for kind in identities)}
-    return {"schema_version":"advanced-durability-v3","receipt_ref":receipt_ref,"state_commit":state_commit,
+    return {"schema_version":"advanced-durability-v4","receipt_ref":receipt_ref,"state_commit":state_commit,
         "durable_saved_at":saved_at,"commit_clock_at":commit_at,"remote_run_completion":completion,
         "service_evidence_verified_at": verified_at,
         "closure_sha256":closure,"verified_file_count":len(visited),"closure_verified":True,
+        "resolved_reference_bindings": bindings,
+        "historical_resolution_count": sum(b["resolution"] == "declared_ancestor_original" for b in bindings),
         # Ordinary references already bind raw SHA in the closure. Only the
         # producer-specific exceptions need both readable fingerprints here.
         "reference_hash_semantics":{name:hash_semantics[name] for name in sorted(typed_names)},
@@ -400,34 +608,100 @@ def prove(repo, runtime, state_commit, receipt_ref, *, _completion_cache=None, _
         "verified":bool(completion),"method":METHOD}
 
 
+def _retained_saved_proof(repo, runtime, state_commit, receipt_ref, path, read_file):
+    """Keep an authentic earlier proof's service clock, never a local assertion.
+
+    The already-restored fixed tree authenticates the complete earlier v4
+    proof. Its exact saved-job evidence must still pass the stored-evidence
+    checks, and its source must be an actual ancestor of this current state.
+    This reuses a previously verified closure; it does not claim a new proof
+    at the old capture time or accept an unsaved local proof.
+    """
+    try:
+        if not path.is_file():
+            return None
+        raw = path.read_bytes()
+        proof = json.loads(raw)
+        if (proof.get("schema_version") != "advanced-durability-v4" or proof.get("method") != METHOD
+                or proof.get("verified") is not True or proof.get("closure_verified") is not True
+                or proof.get("receipt_ref") != receipt_ref
+                or not re.fullmatch(r"[0-9a-f]{64}", str(proof.get("closure_sha256", "")))
+                or not re.fullmatch(r"[0-9a-f]{40}", str(proof.get("state_commit", "")))
+                or read_file(path.relative_to(runtime).as_posix()) != raw):
+            return None
+        first_name = _safe_name(receipt_ref["path"])
+        first_raw = read_file(first_name)
+        if _sha(first_raw) != receipt_ref["sha256"] or (runtime / first_name).read_bytes() != first_raw:
+            return None
+        source = proof["state_commit"]
+        _declared_ancestor(repo, source, state_commit)
+        from .history_archive import FixedStateReader
+        with FixedStateReader(repo, source) as reader:
+            metadata = json.loads(reader.root_bytes("state_metadata.json"))
+        evidence = _stored_service_evidence(repo, runtime, path, proof, metadata, source)
+        if evidence is None or proof.get("durable_saved_at") != evidence["observed_completion_upper_bound"]:
+            return None
+        _time(proof["durable_saved_at"])
+        _time(proof["commit_clock_at"])
+        if _time(proof["commit_clock_at"]) > _time(proof["durable_saved_at"]):
+            return None
+        return {**proof, "verification_status": "retained_fixed_tree_service_verified_proof"}
+    except (ValueError, StorageError, OSError, KeyError, TypeError):
+        return None
+
+
 def stamp(repo, runtime, state_commit):
+    """Recheck every immutable first independently; preserve rejected attempts."""
     from .history_archive import FixedStateReader
-    repo,runtime=Path(repo),Path(runtime)
-    reports=[]
-    completion_cache={}
-    pending = []
-    for p in sorted((runtime/"advanced_snapshots").glob("*/captures/*/*/*/first.json")):
-        ref={"path":p.relative_to(runtime).as_posix(),"sha256":hashlib.sha256(p.read_bytes()).hexdigest()}
-        out=p.parents[4]/"durability"/(ref["sha256"]+".json")
-        if out.exists():
-            existing = json.loads(out.read_text())
-            if existing.get("verified") is True and existing.get("method") == METHOD:continue
-        pending.append((ref, out))
+    repo, runtime = Path(repo), Path(runtime)
+    reports, completion_cache, pending = [], {}, []
+    for p in sorted((runtime / "advanced_snapshots").glob("*/captures/*/*/*/first.json")):
+        ref = {"path": p.relative_to(runtime).as_posix(), "sha256": _sha(p.read_bytes())}
+        pending.append((ref, _proof_path(runtime, ref)))
     if not pending:
         return reports
-    with FixedStateReader(repo, state_commit) as reader:
-        reader.validate_manifest()
-        for ref, out in pending:
-            proof=prove(repo,runtime,state_commit,ref,_completion_cache=completion_cache, _read_file=reader.read)
-            out.parent.mkdir(parents=True,exist_ok=True)
-            if out.exists():
-                old_raw = out.read_bytes()
-                previous=out.with_name(out.stem+"-previous-"+_sha(old_raw)+".json")
-                if not previous.exists():previous.write_bytes(old_raw)
-            out.write_text(json.dumps(proof,sort_keys=True,indent=2))
-            reports.append(proof)
+    resolver = _LegacyResolver(repo, state_commit)
+    try:
+        with FixedStateReader(repo, state_commit) as reader:
+            reader.validate_manifest()
+            for ref, out in pending:
+                try:
+                    retained = _retained_saved_proof(repo, runtime, state_commit, ref, out, reader.read)
+                    if retained is not None:
+                        reports.append(retained)
+                        continue
+                    proof = prove(repo, runtime, state_commit, ref, _completion_cache=completion_cache,
+                        _read_file=reader.read, _legacy_resolver=resolver)
+                except (ValueError, StorageError, OSError, KeyError, TypeError) as exc:
+                    failure = {"schema_version": "advanced-durability-v4", "method": METHOD,
+                        "status": "failed_verification_attempt", "verified": False, "closure_verified": False,
+                        "receipt_ref": ref, "state_commit": state_commit, "error": str(exc),
+                        "attempted_at": datetime.now(timezone.utc).isoformat()}
+                    if isinstance(exc, DurabilityReferenceError):
+                        failure["failure"] = exc.details
+                    raw = json.dumps(failure, sort_keys=True, indent=2).encode()
+                    failures = out.parent / "failures"
+                    failures.mkdir(parents=True, exist_ok=True)
+                    path = failures / (ref["sha256"] + "-" + _sha(raw) + ".json")
+                    # Each rejected attempt is append-only. A valid prior proof
+                    # and the immutable capture are never overwritten by it.
+                    with path.open("xb") as handle:
+                        handle.write(raw)
+                    failure["failure_report_path"] = path.relative_to(runtime).as_posix()
+                    reports.append(failure)
+                    continue
+                out.parent.mkdir(parents=True, exist_ok=True)
+                raw = json.dumps(proof, sort_keys=True, indent=2).encode()
+                if out.exists() and out.read_bytes() != raw:
+                    old_raw = out.read_bytes()
+                    previous = out.with_name(out.stem + "-previous-" + _sha(old_raw) + ".json")
+                    if not previous.exists():
+                        previous.write_bytes(old_raw)
+                out.write_bytes(raw)
+                reports.append(proof)
+    finally:
+        resolver.close()
     return reports
-
 
 def main():
     p=argparse.ArgumentParser();p.add_argument("--runtime",default="runtime");p.add_argument("--repo",default=".")
@@ -438,8 +712,14 @@ def main():
         print(json.dumps({"status": "failed_verification_attempt", "error": str(exc),
             "failure": exc.details}, sort_keys=True))
         return 1
-    print(json.dumps({"status":"completed_verification_attempt", "new_durable_closures":len(proofs),
-        "verified":sum(p["verified"] for p in proofs), "unverified":sum(not p["verified"] for p in proofs)}))
-    return 0
+    failed = sum(p.get("closure_verified") is False for p in proofs)
+    verified = sum(p.get("verified") is True for p in proofs)
+    closures = sum(p.get("closure_verified") is True for p in proofs)
+    retained = sum(p.get("verification_status") == "retained_fixed_tree_service_verified_proof" for p in proofs)
+    print(json.dumps({"status": "partial_verification_attempt" if failed else "completed_verification_attempt",
+        "new_durable_closures": verified - retained, "retained_saved_closures": retained,
+        "verified_reference_closures": closures, "verified": verified,
+        "unverified": closures - verified, "failed": failed, "attempted": len(proofs)}))
+    return 1 if failed else 0
 
 if __name__=="__main__":raise SystemExit(main())

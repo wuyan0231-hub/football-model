@@ -228,10 +228,12 @@ def _cumulative(value):
     statuses = value.get("match_statuses")
     if not isinstance(statuses, list):
         result.update(mature_scored_matches_by_protocol=None, pending_matches_by_protocol=None,
-                      unique_matches_across_protocols=None)
+                      unique_matches_across_protocols=None,
+                      unscorable_schedule_revision_matches_by_protocol=None,
+                      unscorable_schedule_revision_unique_matches_across_protocols=None)
     else:
-        identities, protocol_identities, mature_identities = set(), set(), set()
-        scored = pending = 0
+        identities, protocol_identities, mature_identities, revised_identities = set(), set(), set(), set()
+        scored = pending = revised = 0
         for row in statuses:
             key, mid = row.get("competition"), row.get("match_id")
             pid = row.get("protocol_id")
@@ -241,16 +243,21 @@ def _cumulative(value):
                 raise ValueError("duplicate_cumulative_identity")
             protocol_identities.add((pid, key, mid))
             identities.add((key, mid))
-            if row.get("status") not in ("scored", "pending", "result_identity_conflict"):
+            if row.get("status") not in ("scored", "pending", "result_identity_conflict", "unscorable_schedule_revision"):
                 raise ValueError("unknown_cumulative_status")
             if row.get("status") == "scored":
                 mature_identities.add((key, mid))
             scored += row.get("status") == "scored"
             pending += row.get("status") == "pending"
+            if row.get("status") == "unscorable_schedule_revision":
+                revised += 1
+                revised_identities.add((key, mid))
         if result["unique_primary_matches_by_protocol"] is not None and len(protocol_identities) != result["unique_primary_matches_by_protocol"]:
             raise ValueError("cumulative_count_mismatch")
         result.update(mature_scored_matches_by_protocol=scored, pending_matches_by_protocol=pending,
-                      unique_matches_across_protocols=len(identities), mature_unique_matches_across_protocols=len(mature_identities))
+                      unique_matches_across_protocols=len(identities), mature_unique_matches_across_protocols=len(mature_identities),
+                      unscorable_schedule_revision_matches_by_protocol=revised,
+                      unscorable_schedule_revision_unique_matches_across_protocols=len(revised_identities))
     return {"status": "associated_current_cumulative_view", **result,
             "counts_are_accuracy_or_profit_acceptance": False}
 
