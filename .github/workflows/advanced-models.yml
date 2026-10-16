@@ -19,6 +19,12 @@ on:
       - 'tests/test_advanced*.py'
       - '.github/workflows/advanced-models.yml'
   workflow_dispatch:
+    inputs:
+      research_only:
+        description: '只续跑已保存资料的研究；跳过赛前捕获与采集评分'
+        required: false
+        type: boolean
+        default: false
   schedule:
     - cron: '10,40 * * * *'
     - cron: '7 2 * * *'
@@ -30,7 +36,7 @@ permissions:
 jobs:
   verify:
     if: >-
-      github.event.repository.private == true &&
+      github.repository == 'wuyan0231-hub/football-model' &&
       (github.event_name != 'schedule' || vars.ENABLE_SCHEDULE == 'true') &&
       (github.event_name != 'schedule' || github.event.schedule == '7 2 * * *')
     runs-on: ubuntu-latest
@@ -58,7 +64,8 @@ jobs:
       cancel-in-progress: false
       queue: max
     if: >-
-      github.event.repository.private == true && github.ref == 'refs/heads/main' &&
+      github.repository == 'wuyan0231-hub/football-model' && github.ref == 'refs/heads/main' &&
+      !(github.event_name == 'workflow_dispatch' && inputs.research_only == true) &&
       (github.event_name != 'schedule' || vars.ENABLE_SCHEDULE == 'true') &&
       (github.event_name != 'schedule' || github.event.schedule == '7 2 * * *')
     runs-on: ubuntu-latest
@@ -142,11 +149,12 @@ jobs:
       queue: max
     needs: [pre_study_capture, verify]
     if: >-
-      !cancelled() && (needs.verify.result == 'success' || needs.verify.result == 'skipped') &&
+      !cancelled() && (needs.verify.result == 'success' ||
+      (needs.verify.result == 'skipped' && !(github.event_name == 'workflow_dispatch' && inputs.research_only == true))) &&
       (needs.pre_study_capture.result == 'skipped' ||
       (needs.pre_study_capture.outputs.restore_outcome == 'success' &&
       needs.pre_study_capture.outputs.persist_outcome == 'success')) &&
-      github.event.repository.private == true &&
+      github.repository == 'wuyan0231-hub/football-model' &&
       (github.event_name != 'schedule' || vars.ENABLE_SCHEDULE == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: ${{ (github.event_name != 'schedule' || github.event.schedule == '7 2 * * *') && 180 || 110 }}
@@ -160,6 +168,7 @@ jobs:
       IS_RELEASE: ${{ github.ref == 'refs/heads/main' }}
       STUDY_RUN: ${{ github.event_name != 'schedule' || github.event.schedule == '7 2 * * *' }}
       LEGACY_SHORT_RUN: ${{ github.event_name == 'schedule' && github.event.schedule != '7 2 * * *' }}
+      RESEARCH_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.research_only == true }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -193,28 +202,28 @@ jobs:
         run: python -m football_model.advanced_durability --runtime runtime --state-commit "$ADVANCED_PARENT_STATE"
       - name: 全部国内联赛跨赛事赛程公平续采
         id: club_schedule_collection
-        if: env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true'
+        if: env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true' && env.RESEARCH_ONLY != 'true'
         continue-on-error: true
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
         run: python -m football_model.feature_schedule --runtime runtime --config config.json --league all --source-commit "$GITHUB_SHA" --max-run-seconds 600 --reserve-requests 1500 --current-cache-seconds 21600
       - name: 优先补齐意甲机会和球员历史
         id: pilot_collection
-        if: env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true'
+        if: env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true' && env.RESEARCH_ONLY != 'true'
         continue-on-error: true
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
         run: python -m football_model.advanced_collection --runtime runtime --league serie_a --max-seconds 1200 --reserve-requests 700
       - name: 跨联赛断点续采与覆盖登记
         id: collection
-        if: env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true'
+        if: env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true' && env.RESEARCH_ONLY != 'true'
         continue-on-error: true
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
         run: python -m football_model.advanced_collection --runtime runtime --league all --max-seconds 600 --reserve-requests 500
       - name: 限定欧国联个人出场负荷断点续采
         id: player_load_collection
-        if: env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true'
+        if: env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true' && env.RESEARCH_ONLY != 'true'
         continue-on-error: true
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
@@ -232,21 +241,21 @@ jobs:
         run: python scripts/advanced_study_window.py --selection all -- python -m football_model.advanced_research study --runtime runtime --league all --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE" --run-goalmodel
       - name: 同步全部联赛未来11小时的真实信息
         id: facts
-        if: env.IS_RELEASE == 'true'
+        if: env.IS_RELEASE == 'true' && env.RESEARCH_ONLY != 'true'
         continue-on-error: true
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
         run: python -m football_model.collect_fundamentals --runtime runtime --config config.json --league all --horizon-hours 11 --recent-matches 5
       - name: 检查独立确认准入与到期评估
         id: confirmation
-        if: env.IS_RELEASE == 'true'
+        if: env.IS_RELEASE == 'true' && env.RESEARCH_ONLY != 'true'
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python -m football_model.advanced_confirmation --runtime runtime --league all --advanced-protocol advanced-models-v1.json --protocol advanced-confirmation-v1.json --auto-activate
       - name: 捕获真实双时点全部候选
         id: capture
-        if: env.IS_RELEASE == 'true'
+        if: env.IS_RELEASE == 'true' && env.RESEARCH_ONLY != 'true'
         continue-on-error: true
         run: python -m football_model.advanced_snapshots capture --runtime runtime --league all --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE"
       # Reuse the all-league facts above and the same loaded parent state. The
@@ -263,7 +272,7 @@ jobs:
         run: python -m football_model.feature_snapshots capture --runtime runtime --config config.json --league serie_a --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE" --protocol feature-models-v2.json
       - name: 独立结果与完整请求评分
         id: scoring
-        if: env.IS_RELEASE == 'true'
+        if: env.IS_RELEASE == 'true' && env.RESEARCH_ONLY != 'true'
         continue-on-error: true
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
@@ -328,7 +337,7 @@ jobs:
           python - <<'PY'
           import json,os
           from pathlib import Path
-          keys=['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','ADVANCED_PARENT_STATE','IS_RELEASE','STUDY_RUN','LEGACY_SHORT_RUN','RESTORE','DURABLE','PRE_STUDY_CAPTURE','PRE_RESTORE','PRE_PERSIST','PRE_DURABLE','PRE_FACTS','PRE_CONFIRMATION','PRE_CAPTURE','CLUB_SCHEDULE_COLLECTION','PILOT_COLLECTION','COLLECTION','PLAYER_LOAD_COLLECTION','RESEARCH','FACTS','CONFIRMATION','CAPTURE','SCORING','LEGACY_CAPTURE_V1','LEGACY_CAPTURE_V2','LEGACY_SCORING_V1','LEGACY_SCORING_V2','CHECK','PERSIST']
+          keys=['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','ADVANCED_PARENT_STATE','IS_RELEASE','STUDY_RUN','LEGACY_SHORT_RUN','RESEARCH_ONLY','RESTORE','DURABLE','PRE_STUDY_CAPTURE','PRE_RESTORE','PRE_PERSIST','PRE_DURABLE','PRE_FACTS','PRE_CONFIRMATION','PRE_CAPTURE','CLUB_SCHEDULE_COLLECTION','PILOT_COLLECTION','COLLECTION','PLAYER_LOAD_COLLECTION','RESEARCH','FACTS','CONFIRMATION','CAPTURE','SCORING','LEGACY_CAPTURE_V1','LEGACY_CAPTURE_V2','LEGACY_SCORING_V1','LEGACY_SCORING_V2','CHECK','PERSIST']
           receipt={k:os.environ.get(k) for k in keys}
           if receipt['IS_RELEASE']=='true' and receipt['LEGACY_SHORT_RUN']=='true':
               legacy={k:receipt[k] for k in ['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','IS_RELEASE','STUDY_RUN']}
@@ -438,11 +447,11 @@ jobs:
           !cancelled() && (steps.restore.outcome != 'success' || steps.durable.outcome != 'success' ||
           steps.check.outcome != 'success' ||
           (env.STUDY_RUN == 'true' && env.IS_RELEASE != 'true' && steps.research.outcome != 'success') ||
-          (env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true' &&
+          (env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true' && env.RESEARCH_ONLY != 'true' &&
           (steps.club_schedule_collection.outcome != 'success' || steps.pilot_collection.outcome != 'success' || steps.collection.outcome != 'success' || steps.player_load_collection.outcome != 'success')) ||
           (env.IS_RELEASE == 'true' && (steps.persist.outcome != 'success' ||
-          steps.facts.outcome != 'success' || steps.confirmation.outcome != 'success' ||
-          steps.capture.outcome != 'success' || steps.scoring.outcome != 'success')))
+          (env.RESEARCH_ONLY != 'true' && (steps.facts.outcome != 'success' || steps.confirmation.outcome != 'success' ||
+          steps.capture.outcome != 'success' || steps.scoring.outcome != 'success')))))
           || (!cancelled() && env.IS_RELEASE == 'true' && env.LEGACY_SHORT_RUN == 'true' &&
           (steps.legacy_capture_v1.outcome != 'success' || steps.legacy_capture_v2.outcome != 'success' ||
           steps.legacy_scoring_v1.outcome != 'success' || steps.legacy_scoring_v2.outcome != 'success'))

@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   verify:
-    if: github.event.repository.private == true
+    if: github.repository == 'wuyan0231-hub/football-model'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:

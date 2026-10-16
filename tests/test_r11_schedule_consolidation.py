@@ -105,9 +105,10 @@ class ScheduleConsolidationTests(unittest.TestCase):
     def test_research_admission_requires_a_successfully_persisted_pre_state(self):
         expression = self.main_job.split('    if: >-\n', 1)[1].split('    runs-on:', 1)[0].strip()
         expression = expression.replace('!cancelled()', 'True').replace('&&', ' and ').replace('||', ' or ')
+        expression = re.sub(r'!(?!=)', ' not ', expression)
         expression = re.sub(r'\btrue\b', 'True', expression)
-        fixed = {'needs.verify.result': 'success', 'github.event.repository.private': True, 'github.event_name': 'push',
-                 'vars.ENABLE_SCHEDULE': 'true'}
+        fixed = {'needs.verify.result': 'success', 'github.repository': 'wuyan0231-hub/football-model',
+                 'github.event_name': 'push', 'inputs.research_only': False, 'vars.ENABLE_SCHEDULE': 'true'}
         for result, restored, saved, expected in (
             ('failure', 'success', 'success', True),
             ('failure', 'failure', 'success', False),

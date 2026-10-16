@@ -36,7 +36,7 @@ concurrency:
 
 jobs:
   total-shrink-shadow:
-    if: ${{ github.event.repository.private == true }}
+    if: ${{ github.repository == 'wuyan0231-hub/football-model' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:

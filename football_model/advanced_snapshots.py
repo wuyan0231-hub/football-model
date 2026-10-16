@@ -27,7 +27,8 @@ from .feature_snapshots import (HORIZONS, SnapshotError, _bytes, _check_times,
     _path_ref, _prediction_same, _read, _reference_path, _save, _sha, _tick,
     _write_bytes, snapshot_from_evidence, verify_baseline_capture)
 from .feature_scoring import _path, _read_ref, _pointer, _reference, _raw as _pointer_bytes
-from .history_archive import read_bytes as history_read_bytes, exists as history_exists
+from .history_archive import (read_bytes as history_read_bytes, exists as history_exists,
+    _catalog as _history_catalog, _safe_path as _history_safe_path)
 
 VERSION = "advanced-snapshots-v1"
 
@@ -741,38 +742,112 @@ def _verify_candidate_only(runtime,payload,receipt,*,candidates=True):
     return result
 
 
+class _VerifiedQueueIndex:
+    """One invocation's verified queue, invalidated by any source change.
+
+    Each lookup still enumerates the queue and checks file identities plus the
+    fully verified cold catalog. Only unchanged parsed observations and their
+    raw-byte references are reused; capture/result verification is never cached.
+    """
+    def __init__(self, runtime, protocol):
+        self.runtime = Path(runtime).resolve()
+        self.protocol_sha256 = _digest(protocol)
+        self.directory = _root(self.runtime, protocol) / "queue/history"
+        self._snapshot = None
+        self._catalog = None
+        self._values = []
+        self._leagues = {}
+
+    def _signature(self):
+        _history_safe_path(self.directory)
+        catalog = _history_catalog(self.runtime)
+        files = sorted(self.directory.glob("*.json"))
+        signatures = []
+        for path in files:
+            stat = path.lstat()
+            signatures.append((path, stat.st_dev, stat.st_ino, stat.st_mode,
+                stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns))
+        return catalog, tuple(signatures)
+
+    def _refresh(self):
+        for _ in range(3):
+            catalog, snapshot = self._signature()
+            if (catalog is self._catalog or not catalog and not self._catalog) and snapshot == self._snapshot:
+                return
+            values = []
+            for path, *_ in snapshot:
+                raw = history_read_bytes(path, runtime=self.runtime)
+                value = json.loads(raw.decode("utf-8"), object_pairs_hook=_pairs,
+                    parse_constant=lambda _: (_ for _ in ()).throw(SnapshotError("nonfinite_json")))
+                values.append((value, {"path": path.relative_to(self.runtime).as_posix(),
+                    "sha256": hashlib.sha256(raw).hexdigest()}))
+            after_catalog, after_snapshot = self._signature()
+            if (after_catalog is not catalog and (after_catalog or catalog)) or after_snapshot != snapshot:
+                continue
+            self._catalog, self._snapshot, self._values = catalog, snapshot, values
+            self._leagues.clear()
+            return
+        raise SnapshotError("advanced_queue_changed_during_verification")
+
+    def _members(self, league, now):
+        self._refresh()
+        cached = self._leagues.get(league)
+        if cached is not None:
+            previous, next_observed, members = cached
+            if now >= previous and (next_observed is None or now < next_observed):
+                return members
+        members, next_observed = {}, None
+        for value, reference in self._values:
+            if value.get("league") != league:
+                continue
+            if value.get("protocol_sha256") != self.protocol_sha256 or value.get("horizon") not in HORIZONS:
+                raise SnapshotError("advanced_queue_protocol_or_horizon_mismatch")
+            observed = _utc(value["queue_observed_at"])
+            if observed > now:
+                next_observed = observed if next_observed is None else min(next_observed, observed)
+                continue
+            key = (value["match_id"], value["horizon"])
+            member = members.setdefault(key, {"match_id": key[0], "horizon": key[1], "kickoff": value["kickoff"], "observations": []})
+            if value["kickoff"] != member["kickoff"]:
+                member["identity_conflict"] = True
+            member["observations"].append((observed, value, reference))
+        for member in members.values():
+            member["observations"].sort(key=lambda x: (x[0], x[2]["sha256"]))
+            member["first_observed_at"] = _iso(member["observations"][0][0])
+            member["latest_status"] = member["observations"][-1][1]["status"]
+            member["first_failures"] = [ref for _, v, ref in member["observations"] if v["status"] in ("ineligible", "unsupported", "late", "failed", "capacity_deferred")]
+        self._leagues[league] = (now, next_observed, members)
+        return members
+
+    def members(self, runtime, league, protocol, now):
+        self._check_identity(runtime, protocol)
+        return deepcopy(list(self._members(league, _utc(now)).values()))
+
+    def member(self, runtime, league, fixture_id, horizon, protocol, now):
+        self._check_identity(runtime, protocol)
+        member = self._members(league, _utc(now)).get((fixture_id, horizon))
+        return [] if member is None else [deepcopy(member)]
+
+    def _check_identity(self, runtime, protocol):
+        if Path(runtime).resolve() != self.runtime or _digest(protocol) != self.protocol_sha256:
+            raise SnapshotError("advanced_queue_index_identity_mismatch")
+
+
 def queue_members(runtime, league, protocol, now=None):
-    runtime = Path(runtime).resolve(); now = _utc(now or datetime.now(timezone.utc)); members = {}
-    for p in sorted((_root(runtime, protocol) / "queue/history").glob("*.json")):
-        value = _read(p)
-        if value.get("league") != league:
-            continue
-        if value.get("protocol_sha256") != _digest(protocol) or value.get("horizon") not in HORIZONS:
-            raise SnapshotError("advanced_queue_protocol_or_horizon_mismatch")
-        observed = _utc(value["queue_observed_at"])
-        if observed > now:
-            continue
-        key = (value["match_id"], value["horizon"])
-        member = members.setdefault(key, {"match_id": key[0], "horizon": key[1], "kickoff": value["kickoff"], "observations": []})
-        if value["kickoff"] != member["kickoff"]:
-            member["identity_conflict"] = True
-        member["observations"].append((observed, value, _reference(runtime, p)))
-    for member in members.values():
-        member["observations"].sort(key=lambda x: (x[0], x[2]["sha256"]))
-        member["first_observed_at"] = _iso(member["observations"][0][0])
-        member["latest_status"] = member["observations"][-1][1]["status"]
-        member["first_failures"] = [ref for _, v, ref in member["observations"] if v["status"] in ("ineligible", "unsupported", "late", "failed", "capacity_deferred")]
-    return list(members.values())
+    now = _utc(now or datetime.now(timezone.utc))
+    return _VerifiedQueueIndex(runtime, protocol).members(runtime, league, protocol, now)
 
 
-def load_verified_comparison(runtime, league, fixture_id, horizon, protocol=None, *, row=None, now=None):
+def load_verified_comparison(runtime, league, fixture_id, horizon, protocol=None, *, row=None, now=None, _queue_index=None):
     runtime = Path(runtime).resolve(); now = _utc(now or datetime.now(timezone.utc))
     protocol = protocol or _read(Path(__file__).resolve().parents[1] / "advanced-models-v1.json")
     anchor = _root(runtime, protocol) / "captures" / league / str(fixture_id) / horizon / "first.json"
     output = {"status": "unavailable", "match_id": fixture_id, "horizon": horizon, "research_only": True,
         "candidates": {}, "evidence": [], "protocol_sha256": _digest(protocol)}
     try:
-        members = [v for v in queue_members(runtime, league, protocol, now) if v["match_id"] == fixture_id and v["horizon"] == horizon]
+        members = (_queue_index.member(runtime, league, fixture_id, horizon, protocol, now)
+            if _queue_index is not None else
+            [v for v in queue_members(runtime, league, protocol, now) if v["match_id"] == fixture_id and v["horizon"] == horizon])
         if len(members) != 1 or members[0].get("identity_conflict"):
             raise SnapshotError("advanced_queue_missing_or_identity_conflict")
         if not anchor.exists():

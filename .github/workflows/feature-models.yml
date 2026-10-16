@@ -29,7 +29,7 @@ concurrency:
 jobs:
   features:
     if: >-
-      github.event.repository.private == true &&
+      github.repository == 'wuyan0231-hub/football-model' &&
       (github.event_name != 'schedule' || vars.ENABLE_SCHEDULE == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 90
