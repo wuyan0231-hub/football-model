@@ -43,7 +43,10 @@ class SegmentedWorkflowTests(unittest.TestCase):
 
     def test_matrix_keeps_all_leagues_and_separate_data_failures(self):
         body = job("study_leagues")
-        leagues = re.search(r"        league: \[([^]]+)\]", body).group(1).split(", ")
+        # Default all-league selection is the final JSON branch. A separate
+        # manual continuation choice may omit already saved EPL/Championship.
+        matrix_line = re.search(r"(?m)^        league: (.+)$", body).group(1)
+        leagues = json.loads(re.findall(r"'(\[[^']+\])'", matrix_line)[-1])
         configured = [c["key"] for c in json.loads((ROOT / "config.json").read_text())["competitions"]
                       if c.get("mode") != "audit_only"]
         self.assertEqual(leagues, configured)

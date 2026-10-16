@@ -11,7 +11,7 @@
       "title": "19联赛当前研究与持久保存",
       "status": "running",
       "depends_on": [],
-      "progress": "英超1/19成功，英冠等待状态锁；其余17未完成。",
+      "progress": "英超已完成；英冠1233目标×2时距、17候选11fitted/6failed已真实计算，远端接受32c1baae但180秒push回执超时使旧轮报failure并停止后继；精确回读与独立存储恢复修补进行中，剩余17不得重复已算两项。",
       "acceptance": "19赛事逐项核真实计算、checkpoint、完整保存与固定原件，不把旧报告算当前。"
     },
     {
@@ -21,7 +21,7 @@
       "depends_on": [
         "R01"
       ],
-      "progress": "英超评分投影、开发门、冷启动已核；完整对象闭包恢复中。",
+      "progress": "英超4315份compact对象及1693份直接引用hash已验；4797预测和8579策略评分重构、13增量与46同池训练身份通过。未把保存参数重构称全部重新拟合或完整raw→features重建。",
       "acceptance": "逐赛事核原字节和父链，重算同池子减父、子减M0、覆盖与回退；明确重建及重拟范围。"
     },
     {
@@ -31,7 +31,7 @@
       "depends_on": [
         "R02"
       ],
-      "progress": "独立v2零修正/保持M0实验已开工；现有指纹和380家族保留。",
+      "progress": "首个独立v2零修正实验已完成：820请求/608评分、null211；NLL不改善，本版不采用。其余赛事待R01/R02诊断。",
       "acceptance": "新协议、过去嵌套选参、全部结果；无增量则拒绝/保留基线，也可完成开发决策。"
     },
     {
@@ -41,8 +41,8 @@
       "depends_on": [
         "R01"
       ],
-      "progress": "38896992700捕获/评分/完整检查已成功，保存进行中；全研究后仍须再验。",
-      "acceptance": "真实short_only任务成功、远端保存原件、后继回读与未改变生产模型的交接。"
+      "progress": "两次short_only完成捕获/评分/check/persist；整体均failure，同一供应商历史首发player.id=null已独立重放。最新state8d834fc006d416d665d1838dd2a817217b5aeb94；全研究后仍需后继验收。",
+      "acceptance": "完成真实后继short_only执行、全部失败/回退与远端原件回读；工程错误修复，供应商原始身份缺失有据保留，不篡改门禁制造全绿；全研究后完成生产交接。"
     },
     {
       "id": "R05",
@@ -57,10 +57,10 @@
     {
       "id": "R06",
       "title": "真实单场完整决定闭环",
-      "status": "running",
+      "status": "concluded_current_reference_acceptance",
       "depends_on": [],
-      "progress": "已实际调用Everton–Chelsea基线；F5-C父链核验中。AH方向未认证，旧参考价不证明当前开放。",
-      "acceptance": "真实事实、同父候选、三市场合格报价、费用状态、主替代与反证、四态决定、完整回读；缺件明确暂缓。"
+      "progress": "用户明确授权后，完整1814114B审计包公开存于固定2a5c21a9；37片全新远端回读并核sha，恢复180文件/原生verify/原实际cutoff重放全通过，14计算及259不可用保留。完成普通当前QUOTE_REF工程闭环；S05价值/完整人员/历史盲性/未来效果不冒称通过。",
+      "acceptance": "本轮普通当前参考单场工程闭环已验收；未知费用/报价变盘/开放与未完成价值等状态均保留，对应后续适用范围分别移交R05/R09/R11。"
     },
     {
       "id": "R07",
@@ -105,11 +105,11 @@
     {
       "id": "R11",
       "title": "完整球员能力及预计首发模型",
-      "status": "blocked_by_data",
+      "status": "running_with_data_limits",
       "depends_on": [
         "R10"
       ],
-      "progress": "轻量代理已实现；完整能力、替代质量及校准首发概率未完成。",
+      "progress": "受限历史首发概率真实6次拟合：118训练/44选参/43校准/88最终开发留出；4650行测试。主NLL较频率对照恶化+0.0367289588，不采用；完整人员链/合法名单/联合XI未完成。",
       "acceptance": "按合法资料实现时间一致训练、可得性/替代/预计XI、校准与不确定性；无法取得资料则交付精确阻断而非伪造。"
     },
     {
@@ -119,7 +119,7 @@
       "depends_on": [
         "R05"
       ],
-      "progress": "当前英超13场/26输出已原函数重算一致，旧意甲8场也通过工程重算。",
+      "progress": "完成16次严格留队父重拟、224τ情景，53唯一样本，其中25唯一外层嵌套比赛；过去选择τ0、主NLL差0，不采用非零混合。已知参数误差及真实未知队未来迁移/校准仍待。",
       "acceptance": "保留未知标签和已知对手参数；补先验/参数不确定性校准、真实未来捕获到成熟单侧评分及采用决定。"
     },
     {
@@ -179,7 +179,7 @@
     ]
   ],
   "notes": [
-    "13是本轮管理验收包数，不是原始代码TODO数。全部13包尚未全部关闭，子步骤已有完成；不能据此计算完成百分比。",
+    "原13管理验收包，R10合同核查与R06普通当前参考工程闭环均有界结案；10确定包继续推进，R08为1个条件项。子实验不冒充完整人员或未来效果完成。",
     "研究实际耗时受状态锁、归档核验与保存支配，不从单英超62分钟推算全项目完成时间。",
     "后继轮滚动核当前状态；新保存不会覆盖此快照。",
     "Panna按现行范围继续暂缓，不计未完成。",
@@ -262,15 +262,53 @@
         "total_not_closed_including_conditional": 12,
         "full_goal_completed": false
       }
+    },
+    {
+      "recorded_at": "2026-10-16T14:48:05.484694+00:00",
+      "R06_remote_archive": "blocked_by_automatic_approval_review_specific_public_payload_authorization_required",
+      "R11_restricted_probability": "completed_development_not_adopted_primary_NLL_worse",
+      "R12_past_masking": "completed_development_tau0_no_nonzero_adoption",
+      "interruption_recovery": "oversized_inline_base64_stopped;bounded_requests_succeeded_then_separate_policy_rejection;original_files_preserved",
+      "new_local_test_run": {
+        "tests": 55,
+        "seconds": 4.56,
+        "result": "OK"
+      },
+      "count_unchanged": {
+        "initial_packages": 13,
+        "concluded_bounded_audit": 1,
+        "remaining_required_packages": 11,
+        "conditional_confirmation_package": 1,
+        "total_not_closed_including_conditional": 12,
+        "full_goal_completed": false
+      }
+    },
+    {
+      "recorded_at": "2026-10-16T15:48:34.623149+00:00",
+      "R06": "concluded_current_reference_acceptance_after_explicit_authorization_and_fresh_remote_replay",
+      "public_archive_commit": "2a5c21a9bbd9f3c06b085bd25a249fdf53ab837c",
+      "acceptance_receipt": "docs/evidence/current-observation-public-readback-20261016.json",
+      "counts": {
+        "initial_packages": 13,
+        "concluded_bounded_audit": 1,
+        "concluded_current_reference_acceptance": 1,
+        "concluded_packages": 2,
+        "remaining_required_packages": 10,
+        "conditional_confirmation_package": 1,
+        "total_not_closed_including_conditional": 11,
+        "full_goal_completed": false
+      }
     }
   ],
-  "updated_at": "2026-10-16T13:56:00Z",
+  "updated_at": "2026-10-16T15:48:34.623149+00:00",
   "current_count": {
     "initial_packages": 13,
     "concluded_bounded_audit": 1,
-    "remaining_required_packages": 11,
+    "concluded_current_reference_acceptance": 1,
+    "concluded_packages": 2,
+    "remaining_required_packages": 10,
     "conditional_confirmation_package": 1,
-    "total_not_closed_including_conditional": 12,
+    "total_not_closed_including_conditional": 11,
     "full_goal_completed": false
   },
   "status_history": [
@@ -292,5 +330,6 @@
         "R13": "pending"
       }
     }
-  ]
+  ],
+  "current_source_commit": "de48e71483d824abec90160bf21f0d56d8fc1c16"
 }

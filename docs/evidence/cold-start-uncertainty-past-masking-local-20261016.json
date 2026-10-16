@@ -1,0 +1,232 @@
+{
+  "actual_parameter_trials": 224,
+  "actual_parent_refits_in_original_run": 16,
+  "additional_fits_in_this_audit": 0,
+  "adoption": "nonzero_uncertainty_not_adopted;retain_existing_point_research_prior",
+  "all_scored_strategy_tau_counts": {
+    "0.0": 56
+  },
+  "audit_status": "passed_with_declared_research_limits",
+  "audited_at": "2026-10-16T14:45:52.733625+00:00",
+  "calculator": {
+    "bytes": 19664,
+    "path": "football-model/scripts/cold_start_uncertainty.py",
+    "sha256": "be871899135e39e21f95e2e888db30ed91b89a0772780674ca95bec8bad8f805"
+  },
+  "calibration_verified": false,
+  "cloud_validation": "not_yet_run_for_these_new_files",
+  "completeness_supplement_ref": {
+    "bytes": 432,
+    "path": "execution/resume-trials-independent-audit-20261016/completeness-supplement.json",
+    "sha256": "c31409a63a2c11b6031b44378a6ce95a37ab28ff3819b7affc94c10b1e8fad61"
+  },
+  "final_tau": 0.0,
+  "final_tau_grid_losses": [
+    {
+      "scoreline_nll": 2.9468941070441694,
+      "tau": 0.0
+    },
+    {
+      "scoreline_nll": 2.94874759917503,
+      "tau": 0.5
+    },
+    {
+      "scoreline_nll": 2.9561588953936133,
+      "tau": 1.0
+    },
+    {
+      "scoreline_nll": 3.0027950914763624,
+      "tau": 2.0
+    }
+  ],
+  "historical_PIT_confirmed": false,
+  "independent_source_and_denominator_completeness": {
+    "api_requests": 0,
+    "cold_actual_past_matches": 380,
+    "cold_actual_retained_graphs_connected": 16,
+    "cold_all_held_team_ID_selection_time_only_exact": true,
+    "cold_complete_requested_scenario_ledger": 124,
+    "cold_source_to_past_input_exact": true,
+    "fits_performed": 0,
+    "restricted_all_opportunity_phase_and_eligibility_reconstructed": 820,
+    "restricted_candidate_label_key_completeness": 14622,
+    "status": "passed"
+  },
+  "known_parameter_uncertainty_included": false,
+  "limitations": [
+    "4h_result_availability_is_a_historical_assumption",
+    "53_unique_matches_not_224_independent_samples",
+    "29_warmup_scenarios_not_nested_selection_validation",
+    "full_unknown_team_population_transfer_not_verified",
+    "known_parameter_uncertainty_not_covered"
+  ],
+  "local_verification": {
+    "command": "PYTHONPATH=tests .venv/bin/python -m unittest tests.test_restricted_start_development tests.test_cold_start_past_masking",
+    "exit_code": 0,
+    "independent_audit_exit_code": 0,
+    "independent_audit_script": "execution/resume_trials_independent_audit.py",
+    "independent_audit_script_sha256": "ab9ea0ae119ca3c34ab6de1d09445649bde7bd759be6d6c0ff7a1e816a121edf",
+    "reported_seconds": 0.112,
+    "result": "OK",
+    "tests": 21
+  },
+  "max_absolute_goal_metric_reproduction_error": 0.0,
+  "max_absolute_matrix_reproduction_error": 0.0,
+  "max_absolute_parent_variance_reconstruction_error": 0.0,
+  "native_50_file_count": 50,
+  "native_50_files_unchanged": true,
+  "native_50_fingerprint_sha256": "1e311689b3405f64c6ad9636732d2defb7ad67e26b4bc7e04b01a5b1b2b2d6ac",
+  "nested_selected_scenarios": 27,
+  "nested_selected_unique_matches": 25,
+  "original_outputs": [
+    {
+      "bytes": 19664,
+      "path": "execution/cold-start-uncertainty-development/5583e6d3774debb46816b9f85089631f8d6fc6fb10c8ef2b3a857a27667b9bce/calculator.py",
+      "sha256": "be871899135e39e21f95e2e888db30ed91b89a0772780674ca95bec8bad8f805"
+    },
+    {
+      "bytes": 191762,
+      "path": "execution/cold-start-uncertainty-development/5583e6d3774debb46816b9f85089631f8d6fc6fb10c8ef2b3a857a27667b9bce/canonical-source.json",
+      "sha256": "4ced8a81bd2d8780396f43bf4808202791727c2db380664dd3813ba67b7e8425"
+    },
+    {
+      "bytes": 5727,
+      "path": "execution/cold-start-uncertainty-development/5583e6d3774debb46816b9f85089631f8d6fc6fb10c8ef2b3a857a27667b9bce/identity.json",
+      "sha256": "1e57c3d163f43b089ada954c58cbfb8bf58e7a67ead693d788d7917570cbf04d"
+    },
+    {
+      "bytes": 72588,
+      "path": "execution/cold-start-uncertainty-development/5583e6d3774debb46816b9f85089631f8d6fc6fb10c8ef2b3a857a27667b9bce/inventory.json",
+      "sha256": "f00b43cebbba02e769d76ee67d1b50a50a30371802ad28ed9edd53a13523d6be"
+    },
+    {
+      "bytes": 89550,
+      "path": "execution/cold-start-uncertainty-development/5583e6d3774debb46816b9f85089631f8d6fc6fb10c8ef2b3a857a27667b9bce/past-inputs.json",
+      "sha256": "5c3af47e26a7a7c9ed3dbbb9812d53f69ad350e464ca9330d7424d7fa2d17b9e"
+    },
+    {
+      "bytes": 3495,
+      "path": "execution/cold-start-uncertainty-development/5583e6d3774debb46816b9f85089631f8d6fc6fb10c8ef2b3a857a27667b9bce/protocol.json",
+      "sha256": "7a0afbd3bc0f0a0292abbbb93e0d2e20ad9d6e26fbee1cf2423ceb419e4489cf"
+    },
+    {
+      "bytes": 7481,
+      "path": "execution/cold-start-uncertainty-development/5583e6d3774debb46816b9f85089631f8d6fc6fb10c8ef2b3a857a27667b9bce/receipt.json",
+      "sha256": "04cbc8643f9a1031dd8d01e9054c9cda26755cfa1470cf64dbe73e5c1a3047d6"
+    },
+    {
+      "bytes": 8986294,
+      "path": "execution/cold-start-uncertainty-development/5583e6d3774debb46816b9f85089631f8d6fc6fb10c8ef2b3a857a27667b9bce/result.json",
+      "sha256": "3ca29eb35b5d14c49bbc57b1afe3f7ee96c9b1582c13eacab3f7a7d5be6ae4d2"
+    },
+    {
+      "bytes": 26882,
+      "path": "execution/cold-start-uncertainty-development/5583e6d3774debb46816b9f85089631f8d6fc6fb10c8ef2b3a857a27667b9bce/runner.py",
+      "sha256": "404f0e8c38d30648faa1d07355436289f6b2ce04f602042900a07ee23e500d6b"
+    },
+    {
+      "bytes": 4568,
+      "path": "execution/cold-start-uncertainty-development/5583e6d3774debb46816b9f85089631f8d6fc6fb10c8ef2b3a857a27667b9bce/summary.json",
+      "sha256": "fdf59e4bdbedf888e83b355a853cf3757b564f0dca54e3dbfde0c81de28ea1fd"
+    }
+  ],
+  "paid_api_requests": 0,
+  "past_input_matches": 380,
+  "point_scoreline_nll": 2.9468941070441694,
+  "pre_fit_rejected_parent_records": 16,
+  "prior_run_preserved_and_core_outputs_exactly_equal": {
+    "fits": true,
+    "outer_selections": true,
+    "rows": true
+  },
+  "production_changed": false,
+  "proposed_git_file_allowlist": [
+    "scripts/current_observation_decision.py",
+    "scripts/finalize_current_observation_decision.py",
+    "scripts/restricted_start_development.py",
+    "scripts/cold_start_past_masking.py",
+    "tests/test_current_observation_decision.py",
+    "tests/test_current_observation_finalize.py",
+    "tests/test_restricted_start_development.py",
+    "tests/test_cold_start_past_masking.py",
+    "tests/fixtures/restricted-start-synthetic-protocol-v1.json",
+    "tests/fixtures/cold-start-masking-synthetic-protocol-v1.json",
+    "docs/offline-research-tools.md"
+  ],
+  "protocol": {
+    "bytes": 3495,
+    "path": "football-model/cold-start-uncertainty-development-v1.json",
+    "sha256": "7a0afbd3bc0f0a0292abbbb93e0d2e20ad9d6e26fbee1cf2423ceb419e4489cf"
+  },
+  "publication_scope": {
+    "real_frozen_protocol_and_outputs_unchanged": true,
+    "reason": "automatic_approval_review_rejected_real_case_source_metadata;publication_reduced_to_generic_source_synthetic_tests_and_generic_documentation",
+    "status": "private_case_protocol_and_detailed_evidence_withheld_from_public_tree",
+    "synthetic_fixture": "tests/fixtures/cold-start-masking-synthetic-protocol-v1.json",
+    "synthetic_fixture_is_not_real_experiment_protocol": true
+  },
+  "real_future_unknown_transfer_verified": false,
+  "requested_mask_scenarios": 124,
+  "requested_unique_matches": 115,
+  "run_identity": "5583e6d3774debb46816b9f85089631f8d6fc6fb10c8ef2b3a857a27667b9bce",
+  "runner": {
+    "bytes": 26882,
+    "path": "football-model/scripts/cold_start_past_masking.py",
+    "sha256": "404f0e8c38d30648faa1d07355436289f6b2ce04f602042900a07ee23e500d6b"
+  },
+  "schema_version": "s3-independent-development-audit-receipt-v1",
+  "scored_mask_scenarios": 56,
+  "scored_unique_matches": 53,
+  "source_and_test_files": [
+    {
+      "bytes": 3495,
+      "path": "cold-start-uncertainty-development-v1.json",
+      "sha256": "7a0afbd3bc0f0a0292abbbb93e0d2e20ad9d6e26fbee1cf2423ceb419e4489cf"
+    },
+    {
+      "bytes": 26882,
+      "path": "scripts/cold_start_past_masking.py",
+      "sha256": "404f0e8c38d30648faa1d07355436289f6b2ce04f602042900a07ee23e500d6b"
+    },
+    {
+      "bytes": 7905,
+      "path": "tests/test_cold_start_past_masking.py",
+      "sha256": "c3dde4935f3618c758d83ac7a8bb776690efa8b69732bdf6fbd13a8d595d2a02"
+    },
+    {
+      "bytes": 4396,
+      "path": "docs/cold-start-uncertainty-past-masking-development-v1.md",
+      "sha256": "a0ac334e5d269a1090c535f0b032acf9b3007c644b3c6e907e58a013d119a457"
+    }
+  ],
+  "source_state_commit": "7a9d1813ca902fe6bdaf304ca9cfe282e17b84ec",
+  "strategy_minus_point_nll": 0.0,
+  "strategy_scoreline_nll": 2.9468941070441694,
+  "synthetic_fixture_regression": {
+    "actual_test_logs": [
+      {
+        "bytes": 110,
+        "path": "execution/resume-trials-synthetic-tests-20261016/cold-masking.log",
+        "sha256": "285548ee2c5894b533d61549ebb7b09239f29358db6fae5224ef4b70ba619da0"
+      },
+      {
+        "bytes": 154,
+        "path": "execution/resume-trials-synthetic-tests-20261016/four-new-modules.log",
+        "sha256": "f703555c33e36e903658f91e34f9717609044c14ae4eff8212c00d71e4485442"
+      }
+    ],
+    "additional_research_fits": 0,
+    "cold_masking_seconds": 0.043,
+    "cold_masking_tests": 11,
+    "exit_codes": [
+      0,
+      0
+    ],
+    "four_new_module_seconds": 5.544,
+    "four_new_module_tests": 55,
+    "paid_API_requests": 0
+  },
+  "this_audit_additional_training_fits": 0,
+  "unattempted_tau_trials_from_parent_failure": 272,
+  "warmup_scored_scenarios": 29
+}

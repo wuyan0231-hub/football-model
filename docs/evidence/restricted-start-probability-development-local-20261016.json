@@ -1,0 +1,270 @@
+{
+  "actual_probability_fits_in_original_run": 6,
+  "additional_fits_in_this_audit": 0,
+  "adoption": "not_adopted_primary_bernoulli_nll_worse;retain_same_partition_calibrated_frequency_baseline",
+  "all_opportunities": 820,
+  "audit_status": "passed_with_declared_research_limits",
+  "audited_at": "2026-10-16T14:45:49.286863+00:00",
+  "before_fit_freeze": {
+    "bytes": 524,
+    "path": "execution/restricted-start-development/before-fit-freeze.json",
+    "sha256": "4a38e2f9ef5d0078faf68b0b168d90b852ef41c62d5b3cb5741720b796892bf4"
+  },
+  "calibrated_logistic_minus_calibrated_frequency": {
+    "equal_fixture_macro_bernoulli_nll": 0.03672895882084681,
+    "equal_fixture_macro_brier": -0.014635322081566482,
+    "micro_ece": 0.03709443016696279,
+    "player_micro_bernoulli_nll": 0.023028151568856015,
+    "player_micro_brier": -0.017504981495022026
+  },
+  "cloud_validation": "not_yet_run_for_these_new_files",
+  "completeness_supplement_ref": {
+    "bytes": 432,
+    "path": "execution/resume-trials-independent-audit-20261016/completeness-supplement.json",
+    "sha256": "c31409a63a2c11b6031b44378a6ce95a37ab28ff3819b7affc94c10b1e8fad61"
+  },
+  "eligible_before_embargo": 294,
+  "embargo_exclusions": [
+    {
+      "cutoff_at": "2026-03-21T10:00:00Z",
+      "eligible_paired": true,
+      "included_after_embargo": false,
+      "kickoff": "2026-03-21T20:00:00Z",
+      "legal_xi_teams": 2,
+      "match_id": 1379274,
+      "outside_pool_starters": 0,
+      "phase": "calibrate",
+      "reason": "earlier_phase_labels_not_mature_at_prediction_cutoff"
+    }
+  ],
+  "full_personnel_model_completed": false,
+  "historical_pit_confirmed": false,
+  "independent_source_and_denominator_completeness": {
+    "api_requests": 0,
+    "cold_actual_past_matches": 380,
+    "cold_actual_retained_graphs_connected": 16,
+    "cold_all_held_team_ID_selection_time_only_exact": true,
+    "cold_complete_requested_scenario_ledger": 124,
+    "cold_source_to_past_input_exact": true,
+    "fits_performed": 0,
+    "restricted_all_opportunity_phase_and_eligibility_reconstructed": 820,
+    "restricted_candidate_label_key_completeness": 14622,
+    "status": "passed"
+  },
+  "joint_XI_distribution": false,
+  "local_verification": {
+    "command": "PYTHONPATH=tests .venv/bin/python -m unittest tests.test_restricted_start_development tests.test_cold_start_past_masking",
+    "exit_code": 0,
+    "independent_audit_exit_code": 0,
+    "independent_audit_script": "execution/resume_trials_independent_audit.py",
+    "independent_audit_script_sha256": "ab9ea0ae119ca3c34ab6de1d09445649bde7bd759be6d6c0ff7a1e816a121edf",
+    "reported_seconds": 0.112,
+    "result": "OK",
+    "tests": 21
+  },
+  "max_absolute_feature_reconstruction_error": 0.0,
+  "max_absolute_preprocessing_error": 0.0,
+  "max_absolute_saved_probability_reproduction_error": 0.0,
+  "max_absolute_summary_metric_error": 1.6653345369377348e-16,
+  "native_50_file_count": 50,
+  "native_50_files_unchanged": true,
+  "native_50_fingerprint_sha256": "1e311689b3405f64c6ad9636732d2defb7ad67e26b4bc7e04b01a5b1b2b2d6ac",
+  "original_inventory": {
+    "bytes": 23386593,
+    "path": "execution/personnel-label-inventory/final_20261016_v2/inventory.json",
+    "sha256": "61ce1dd1922aca61999d785870ef9b6e214b73655c9ed46789df9df0eb97ad6f"
+  },
+  "original_outputs": [
+    {
+      "bytes": 253112,
+      "path": "execution/restricted-start-development/final_20261016/all-opportunities.json",
+      "sha256": "d606d22d254d8ecbdf00caaf02a59cea7dfe1d6959c9efdda33cb34b2e0ab0bf"
+    },
+    {
+      "bytes": 800,
+      "path": "execution/restricted-start-development/final_20261016/artifacts.json",
+      "sha256": "32af544512c698afc2e01b9767064065c008322e858373c1e84ee78de0e3318b"
+    },
+    {
+      "bytes": 535,
+      "path": "execution/restricted-start-development/final_20261016/before-fit-validation.json",
+      "sha256": "4694170790ac4c1cb64bce7e938a3b6791e319eacf047fa8e6ea15dfe880e7ae"
+    },
+    {
+      "bytes": 8206,
+      "path": "execution/restricted-start-development/final_20261016/models.json",
+      "sha256": "04c3e14678c3238ccef50be70563b153ee5d7364f0a66c6cea31ee64b3c100c4"
+    },
+    {
+      "bytes": 6667542,
+      "path": "execution/restricted-start-development/final_20261016/player-labels.jsonl",
+      "sha256": "b61cdb9909e1e60f5fb8caf3878520e964590c8e67e99766c8112369d2e1b428"
+    },
+    {
+      "bytes": 49679,
+      "path": "execution/restricted-start-development/final_20261016/report.json",
+      "sha256": "22ff63766feecb7699dfa6c7498cabe7f5eedc9222201fdfaef9b3418f4c1638"
+    },
+    {
+      "bytes": 1373279,
+      "path": "execution/restricted-start-development/final_20261016/test-predictions.jsonl",
+      "sha256": "4a155e11f918ee4b058679a95b90a81db4924093b40afde0be3329bd76ef0e38"
+    }
+  ],
+  "paid_api_requests": 0,
+  "phase_coverage": {
+    "calibrate": {
+      "all_opportunities": 44,
+      "eligible_before_embargo": 44,
+      "included_after_embargo": 43,
+      "outside_pool_starters_included_matches": 5,
+      "player_labels": 2050,
+      "within_pool_positive_labels": 941
+    },
+    "select": {
+      "all_opportunities": 45,
+      "eligible_before_embargo": 44,
+      "included_after_embargo": 44,
+      "outside_pool_starters_included_matches": 4,
+      "player_labels": 2137,
+      "within_pool_positive_labels": 964
+    },
+    "test": {
+      "all_opportunities": 91,
+      "eligible_before_embargo": 88,
+      "included_after_embargo": 88,
+      "outside_pool_starters_included_matches": 45,
+      "player_labels": 4650,
+      "within_pool_positive_labels": 1891
+    },
+    "train": {
+      "all_opportunities": 640,
+      "eligible_before_embargo": 118,
+      "included_after_embargo": 118,
+      "outside_pool_starters_included_matches": 44,
+      "player_labels": 5738,
+      "within_pool_positive_labels": 2552
+    }
+  },
+  "production_changed": false,
+  "proposed_git_file_allowlist": [
+    "scripts/current_observation_decision.py",
+    "scripts/finalize_current_observation_decision.py",
+    "scripts/restricted_start_development.py",
+    "scripts/cold_start_past_masking.py",
+    "tests/test_current_observation_decision.py",
+    "tests/test_current_observation_finalize.py",
+    "tests/test_restricted_start_development.py",
+    "tests/test_cold_start_past_masking.py",
+    "tests/fixtures/restricted-start-synthetic-protocol-v1.json",
+    "tests/fixtures/cold-start-masking-synthetic-protocol-v1.json",
+    "docs/offline-research-tools.md"
+  ],
+  "protocol": {
+    "bytes": 4002,
+    "path": "football-model/restricted-start-probability-development-v1.json",
+    "sha256": "5f663ee8069304f57d3209c3a69bb21efb1e6a85e4842b39168917665ff53cf9"
+  },
+  "publication_scope": {
+    "real_frozen_protocol_and_outputs_unchanged": true,
+    "reason": "automatic_approval_review_rejected_real_case_source_metadata;publication_reduced_to_generic_source_synthetic_tests_and_generic_documentation",
+    "status": "private_case_protocol_and_detailed_evidence_withheld_from_public_tree",
+    "synthetic_fixture": "tests/fixtures/restricted-start-synthetic-protocol-v1.json",
+    "synthetic_fixture_is_not_real_experiment_protocol": true
+  },
+  "remaining_scope": [
+    "true_historical_or_future_availability",
+    "player_ability_and_replacement_quality",
+    "joint_XI_and_minutes_uncertainty",
+    "independent_future_validation"
+  ],
+  "retained_after_embargo": 293,
+  "runner": {
+    "bytes": 19340,
+    "path": "football-model/scripts/restricted_start_development.py",
+    "sha256": "3d116f0d4c91c1a9cdf5a33f1a7a1c2aa6a2c1e9763004c25095d145426ca380"
+  },
+  "schema_version": "s3-independent-development-audit-receipt-v1",
+  "selected_alpha": 0.01,
+  "source_and_test_files": [
+    {
+      "bytes": 4002,
+      "path": "restricted-start-probability-development-v1.json",
+      "sha256": "5f663ee8069304f57d3209c3a69bb21efb1e6a85e4842b39168917665ff53cf9"
+    },
+    {
+      "bytes": 19340,
+      "path": "scripts/restricted_start_development.py",
+      "sha256": "3d116f0d4c91c1a9cdf5a33f1a7a1c2aa6a2c1e9763004c25095d145426ca380"
+    },
+    {
+      "bytes": 6898,
+      "path": "tests/test_restricted_start_development.py",
+      "sha256": "092d650f52f62b17ac46c7c7eb7521cdc0ac92aa2b0e442359d8887ae4cf37d6"
+    },
+    {
+      "bytes": 3902,
+      "path": "docs/restricted-start-probability-development-v1.md",
+      "sha256": "86a7f519543929418aef9775d0c741034d7064df9e519143ded68aff5e491046"
+    }
+  ],
+  "source_state_commit": "7a9d1813ca902fe6bdaf304ca9cfe282e17b84ec",
+  "synthetic_fixture_regression": {
+    "actual_test_logs": [
+      {
+        "bytes": 110,
+        "path": "execution/resume-trials-synthetic-tests-20261016/cold-masking.log",
+        "sha256": "285548ee2c5894b533d61549ebb7b09239f29358db6fae5224ef4b70ba619da0"
+      },
+      {
+        "bytes": 154,
+        "path": "execution/resume-trials-synthetic-tests-20261016/four-new-modules.log",
+        "sha256": "f703555c33e36e903658f91e34f9717609044c14ae4eff8212c00d71e4485442"
+      }
+    ],
+    "additional_research_fits": 0,
+    "cold_masking_seconds": 0.043,
+    "cold_masking_tests": 11,
+    "exit_codes": [
+      0,
+      0
+    ],
+    "four_new_module_seconds": 5.544,
+    "four_new_module_tests": 55,
+    "paid_API_requests": 0
+  },
+  "test_fixture_count": 88,
+  "test_metrics_independent": {
+    "frequency_calibrated": {
+      "equal_fixture_macro_bernoulli_nll": 0.491883462859634,
+      "equal_fixture_macro_brier": 0.16066802878157216,
+      "micro_ece": 0.026897258262572846,
+      "player_micro_bernoulli_nll": 0.4869827983146971,
+      "player_micro_brier": 0.1586697923051876
+    },
+    "frequency_raw": {
+      "equal_fixture_macro_bernoulli_nll": 0.4967108333793234,
+      "equal_fixture_macro_brier": 0.16211808549957726,
+      "micro_ece": 0.03344086021505378,
+      "player_micro_bernoulli_nll": 0.49079107835587926,
+      "player_micro_brier": 0.15986200716845878
+    },
+    "logistic_calibrated": {
+      "equal_fixture_macro_bernoulli_nll": 0.5286124216804808,
+      "equal_fixture_macro_brier": 0.14603270670000568,
+      "micro_ece": 0.06399168842953563,
+      "player_micro_bernoulli_nll": 0.5100109498835531,
+      "player_micro_brier": 0.14116481081016558
+    },
+    "logistic_raw": {
+      "equal_fixture_macro_bernoulli_nll": 0.5582511328737311,
+      "equal_fixture_macro_brier": 0.14714340519897007,
+      "micro_ece": 0.05688194637361794,
+      "player_micro_bernoulli_nll": 0.5368332139274815,
+      "player_micro_brier": 0.14213002002927813
+    }
+  },
+  "test_player_labels": 4650,
+  "this_audit_additional_training_fits": 0,
+  "time_gate": "all_past_candidates_and_labels_mature_by_prediction_cutoff_under_explicit_4h_assumption;phase_embargo_passed"
+}

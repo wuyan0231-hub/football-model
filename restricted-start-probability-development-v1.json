@@ -1,0 +1,109 @@
+{
+  "calibration": {
+    "method": "regularized_Platt_on_separate_later_calibration_partition",
+    "objective": "mean_player_bernoulli_nll_plus_0.001_times((slope-1)^2+intercept^2)",
+    "refit_on_test": false,
+    "reliability_bins": [
+      0,
+      0.1,
+      0.2,
+      0.3,
+      0.4,
+      0.5,
+      0.6,
+      0.7,
+      0.8,
+      0.9,
+      1
+    ],
+    "slope_min": 0,
+    "variants": [
+      "frequency_baseline",
+      "ridge_logistic"
+    ]
+  },
+  "candidate_window_matches": 5,
+  "embargo": "phase prediction cutoff must be at or after latest earlier fitting/tuning/calibration label kickoff plus 4h; retain excluded opportunity with reason",
+  "evaluation": {
+    "all_four_variants_reported": true,
+    "development_test_is_not_independent_future_confirmation": true,
+    "metrics": [
+      "equal_fixture_macro_bernoulli_nll",
+      "equal_fixture_macro_brier",
+      "player_micro_bernoulli_nll",
+      "player_micro_brier",
+      "ten_bin_reliability",
+      "micro_ece",
+      "per_team_probability_sum_without_normalization",
+      "out_of_pool_starting_labels",
+      "all_820_opportunity_coverage"
+    ],
+    "observed_difference_only_no_formal_effect_claim": true,
+    "primary_comparison": "calibrated_logistic_vs_same_partition_calibrated_frequency_baseline",
+    "probability_clip_epsilon": 1e-06
+  },
+  "expected_total_opportunities": 820,
+  "features": [
+    "smoothed_prior_start_frequency",
+    "immediately_previous_start",
+    "observed_membership_match_count",
+    "known_prior_xi_count",
+    "days_since_last_observed_membership"
+  ],
+  "fixed_state_sha": "7a9d1813ca902fe6bdaf304ca9cfe282e17b84ec",
+  "frequency_baseline": {
+    "definition": "(prior_known_xi_starts+0.5)/(prior_known_xi_matches+1);no_previous_xi_gives_fixed_0.5_prior_not_verified_availability",
+    "failure_prior": 0.5,
+    "success_prior": 0.5
+  },
+  "frozen_at": "2026-10-16T14:25:50.824253+00:00",
+  "guardrails": {
+    "all_failed_missing_embargo_and_pool_outside_retained": true,
+    "do_not_call_individual_marginals_joint_xi_distribution": true,
+    "do_not_convert_pool_outside_to_unavailable_or_healthy": true,
+    "do_not_normalize_probability_sum_to_eleven": true,
+    "formal_protocol_changed": false,
+    "full_personnel_model_completed": false,
+    "historical_reconstruction_not_historical_pit_confirmed": true,
+    "old_50_dependency_fingerprint_changes": false,
+    "paid_api_calls": 0,
+    "production_changes": false,
+    "target_xi_only_for_labels_not_features": true
+  },
+  "horizon_hours": 10,
+  "inventory_sha256": "61ce1dd1922aca61999d785870ef9b6e214b73655c9ed46789df9df0eb97ad6f",
+  "minimum_paired_fixtures": {
+    "calibrate": 30,
+    "select": 30,
+    "test": 60,
+    "train": 100
+  },
+  "missing_preprocessing": "training_only_median_imputation_with_explicit_missing_indicators;scale_from_training_only;never_change_raw_minutes_or_eligibility",
+  "model": {
+    "alpha_grid": [
+      0.01,
+      0.1,
+      1.0
+    ],
+    "family": "ridge_logistic",
+    "ftol": 1e-12,
+    "gtol": 1e-08,
+    "maxiter": 1000,
+    "objective": "mean_player_bernoulli_nll_plus_0.5_alpha_nonintercept_beta_l2",
+    "refit": "train_plus_select_only_before_calibration;no_test_refit",
+    "solver": "scipy.optimize.L-BFGS-B",
+    "tie_break": "stronger_alpha",
+    "tuning_primary": "equal_fixture_macro_bernoulli_nll"
+  },
+  "population": "both_teams_legal_target_xi_and_nonempty_predefined_past_seen_candidate_pool",
+  "protocol_id": "r11-past-seen-start-probability-development-20261016-v1",
+  "purpose": "independent_restricted_historical_development_only",
+  "result_availability_delay_hours": 4,
+  "schema_version": "restricted-start-probability-development-v1",
+  "split_design": "chronological_40_15_15_30_percent_of_eligible_fixtures_preserve_equal_kickoff_groups;boundaries_chosen_from_availability_and_time_only_before_any_fit",
+  "splits": {
+    "calibrate_end": "2026-05-04T19:00:00Z",
+    "select_end": "2026-03-21T17:30:00Z",
+    "train_end": "2026-02-12T20:00:00Z"
+  }
+}
