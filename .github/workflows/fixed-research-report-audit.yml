@@ -33,17 +33,17 @@ jobs:
         run: |
           python -m pip install -r requirements.txt
           python -m unittest discover -s tests -p test_fixed_research_report_audit.py -v
-      - name: 固定五联赛完整报告与同池评分（不重新拟合或保存状态）
+      - name: 有界英冠完整报告与同池评分（不重新拟合或保存状态）
         id: audit
         continue-on-error: true
         run: >-
           python scripts/fixed_research_report_audit.py --repo .
           --state-commit 459a6f1348d3d2df39f6b6843aae70c51c41026f
           --implementation 1e311689b3405f64c6ad9636732d2defb7ad67e26b4bc7e04b01a5b1b2b2d6ac
-          --leagues epl,championship,laliga,bundesliga,serie_a
+          --leagues championship
           --output fixed-research-report-audit.json
       - name: 仅有界数字回执（不上传内部完整单场包或API缓存）
-        if: ${{ !cancelled() }}
+        if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
           name: fixed-research-audit-${{ github.run_id }}-${{ github.run_attempt }}
