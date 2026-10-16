@@ -17,7 +17,9 @@ import os
 from pathlib import Path
 import re
 import shutil
+import signal
 import subprocess
+import sys
 import threading
 
 from .state_storage import (MAX_FILE_BYTES, StorageError, _expand, _manifest_json,
@@ -43,13 +45,13 @@ _READER_SCOPE = ContextVar("fixed_history_reader", default=None)
 
 # A depth-1 fetch has no blob filter: a missing source may require the whole
 # immutable transport snapshot, not merely the selected logical original.
-# Budget one maximum snapshot for its final Git payload and another for
-# receiving/indexing workspace, plus bounded index/tree metadata. Keep a
-# separate complete save envelope (new transport + new Git payload + the
-# existing 512 MiB safety margin) after that acquisition. These are deliberately
-# conservative admission budgets, not claims about an unmeasured remote pack.
+# index-pack --stdin writes the incoming pack once; its temporary file is
+# renamed, not copied into a second complete pack. Keep index/metadata space and
+# a separate full save envelope. Thin-pack repair can append out-of-tree bases,
+# so a child-process file limit, not the assumed snapshot size, enforces the
+# actual maximum receiving pack. Disable fetch maintenance/repacking explicitly.
 COLD_FETCH_SNAPSHOT_BYTES = MAX_PHYSICAL_BYTES
-COLD_FETCH_WORKSPACE_BYTES = MAX_PHYSICAL_BYTES + 256 * 1024 * 1024
+COLD_FETCH_WORKSPACE_BYTES = 512 * 1024 * 1024
 COLD_FETCH_SAVE_RESERVE_BYTES = 2 * MAX_PHYSICAL_BYTES + 512 * 1024 * 1024
 COLD_FETCH_REQUIRED_FREE_BYTES = (COLD_FETCH_SNAPSHOT_BYTES + COLD_FETCH_WORKSPACE_BYTES
                                   + COLD_FETCH_SAVE_RESERVE_BYTES)
@@ -456,10 +458,52 @@ def _ensure_cold_fetch_disk(repo):
         available = shutil.disk_usage(_safe_path(repo)).free
     except OSError as exc:
         raise StorageError("无法核实历史冷源获取前的磁盘余量；未发起网络请求。") from exc
+    if type(available) is not int or available < 0:
+        raise StorageError("无法核实历史冷源获取前的磁盘余量；未发起网络请求。")
     if available < COLD_FETCH_REQUIRED_FREE_BYTES:
         raise StorageError("历史冷源获取前磁盘余量不足（可用 " + str(available)
                            + " 字节，保守要求 " + str(COLD_FETCH_REQUIRED_FREE_BYTES)
                            + " 字节）；未发起网络请求，未缓存来源提交。")
+    return available - COLD_FETCH_SAVE_RESERVE_BYTES - COLD_FETCH_WORKSPACE_BYTES
+
+
+def _file_limited_command(arguments, file_limit):
+    """Set the inherited POSIX file bound in a fresh interpreter before exec.
+
+    A separate launcher avoids preexec_fn in a process that also uses reader
+    timeout threads. The receiving Git/index-pack process and its children
+    inherit this hard limit, including bytes appended while repairing thin
+    packs. No partial clone or refetch is needed to retain normal negotiation.
+    """
+    if os.name != "posix" or type(file_limit) is not int or file_limit <= 0:
+        raise StorageError("无法启用历史冷源接收文件硬限；未发起网络请求。")
+    launcher = ("import os,resource,sys\n"
+                "limit=int(sys.argv[1])\n"
+                "resource.setrlimit(resource.RLIMIT_FSIZE,(limit,limit))\n"
+                "os.execvp(sys.argv[2],sys.argv[2:])\n")
+    return [sys.executable, "-c", launcher, str(file_limit), *arguments]
+
+
+def _fetch_cold_commit(repo, commit, pack_file_limit):
+    arguments = ["git", "-C", str(_safe_path(repo)), "fetch", "--quiet", "--no-tags",
+                 "--depth=1", "--keep", "--no-auto-maintenance", "--no-write-commit-graph",
+                 "--no-recurse-submodules", "origin", commit]
+    command = _file_limited_command(arguments, pack_file_limit)
+    process = None
+    try:
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            env={**os.environ, "GIT_TERMINAL_PROMPT": "0"}, start_new_session=True)
+        process.communicate(timeout=180)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        if process is not None:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            process.communicate()
+        raise StorageError("历史冷源获取超时或不可用；未缓存来源提交。") from exc
+    if process.returncode:
+        raise StorageError("历史冷源获取失败（接收文件硬限、网络或权限）；未缓存来源提交。")
 
 
 def _ensure_commit(repo, commit):
@@ -469,9 +513,9 @@ def _ensure_commit(repo, commit):
     if key in _VERIFIED_COMMITS:
         return
     if _git(repo, ["cat-file", "-e", commit + "^{commit}"], allowed_missing=True) is None:
-        _ensure_cold_fetch_disk(repo)
+        pack_file_limit = _ensure_cold_fetch_disk(repo)
         # Exact immutable SHA only; credentials remain in the existing origin.
-        _git(repo, ["fetch", "--quiet", "--no-tags", "--depth=1", "origin", commit])
+        _fetch_cold_commit(repo, commit, pack_file_limit)
         _git(repo, ["cat-file", "-e", commit + "^{commit}"])
     _VERIFIED_COMMITS.add(key)
 
