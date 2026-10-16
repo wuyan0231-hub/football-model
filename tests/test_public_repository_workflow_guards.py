@@ -10,7 +10,7 @@ ROOT = Path(__file__).parents[1]
 WORKFLOWS = ROOT / ".github/workflows"
 OWNER_REPOSITORY = "wuyan0231-hub/football-model"
 GUARDED = {
-    "advanced-models.yml": ("verify", "pre_study_capture", "advanced"),
+    "advanced-models.yml": ("validate_dispatch", "verify", "pre_study_capture", "advanced", "study_leagues", "study_finalize"),
     "evidence-artifact-export.yml": ("export",),
     "feature-models.yml": ("features",),
     "fixture-recovery.yml": ("recover",),

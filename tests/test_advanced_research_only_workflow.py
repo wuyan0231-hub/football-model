@@ -74,14 +74,14 @@ def evaluate(expression, context):
                                            "hashFiles": lambda _: ""}))
 
 
-def context(event="workflow_dispatch", *, research_only=False, main=True,
+def context(event="workflow_dispatch", *, research_only=False, short_only=False, main=True,
             schedule="", private=True, repository="wuyan0231-hub/football-model"):
     value = {
         "github": {"event_name": event, "repository": repository,
                    "ref": "refs/heads/" + ("main" if main else "review"),
                    "event": {"repository": {"private": private}, "schedule": schedule}},
-        "inputs": {"research_only": research_only}, "vars": {"ENABLE_SCHEDULE": "true"},
-        "needs": {"verify": {"result": "success"},
+        "inputs": {"research_only": research_only, "short_only": short_only}, "vars": {"ENABLE_SCHEDULE": "true"},
+        "needs": {"verify": {"result": "success"}, "validate_dispatch": {"result": "success"},
                   "pre_study_capture": {"result": "success", "outputs": {
                       "restore_outcome": "success", "persist_outcome": "success"}},
                   "advanced": {"outputs": {"restore_outcome": "success", "persist_outcome": "success"}},
@@ -91,7 +91,7 @@ def context(event="workflow_dispatch", *, research_only=False, main=True,
     }
     env = job("advanced").split("    env:\n", 1)[1].split("    steps:\n", 1)[0]
     value["env"] = {}
-    for key in ("IS_RELEASE", "STUDY_RUN", "LEGACY_SHORT_RUN", "RESEARCH_ONLY"):
+    for key in ("IS_RELEASE", "STUDY_RUN", "LEGACY_SHORT_RUN", "RESEARCH_ONLY", "SHORT_ONLY"):
         expression = re.search(r"(?m)^      " + key + r": (.+)$", env).group(1)
         value["env"][key] = str(evaluate(expression, value)).lower()
     return value

@@ -27,9 +27,9 @@ class ScheduleConsolidationTests(unittest.TestCase):
     def test_one_short_scheduler_keeps_both_daily_research_routes(self):
         self.assertEqual(re.findall(r"cron: '([^']+)'", self.feature), ['47 1 * * *'])
         self.assertEqual(re.findall(r"cron: '([^']+)'", self.advanced), ['10,40 * * * *', '7 2 * * *'])
-        self.assertIn("LEGACY_SHORT_RUN: ${{ github.event_name == 'schedule' && github.event.schedule != '7 2 * * *' }}", self.main_job)
+        self.assertIn("LEGACY_SHORT_RUN: ${{ (github.event_name == 'schedule' && github.event.schedule != '7 2 * * *') || (github.event_name == 'workflow_dispatch' && inputs.short_only == true) }}", self.main_job)
         self.assertIn("STUDY_RUN: ${{ github.event_name != 'schedule' || github.event.schedule == '47 1 * * *' }}", self.feature)
-        self.assertIn("timeout-minutes: ${{ (github.event_name != 'schedule' || github.event.schedule == '7 2 * * *') && 180 || 110 }}", self.main_job)
+        self.assertIn("timeout-minutes: ${{ ((github.event_name != 'schedule' || github.event.schedule == '7 2 * * *') && !(github.event_name == 'workflow_dispatch' && inputs.short_only == true)) && 180 || 110 }}", self.main_job)
         self.assertIn('  workflow_dispatch:', self.feature)
         self.assertIn('branches: [main, codex/feature-models-20261013, codex/s3-paired-research-20261013]', self.feature)
         for workflow in (self.advanced, self.feature):
@@ -107,8 +107,10 @@ class ScheduleConsolidationTests(unittest.TestCase):
         expression = expression.replace('!cancelled()', 'True').replace('&&', ' and ').replace('||', ' or ')
         expression = re.sub(r'!(?!=)', ' not ', expression)
         expression = re.sub(r'\btrue\b', 'True', expression)
-        fixed = {'needs.verify.result': 'success', 'github.repository': 'wuyan0231-hub/football-model',
-                 'github.event_name': 'push', 'inputs.research_only': False, 'vars.ENABLE_SCHEDULE': 'true'}
+        fixed = {'needs.verify.result': 'success', 'needs.validate_dispatch.result': 'skipped',
+                 'github.repository': 'wuyan0231-hub/football-model', 'github.ref': 'refs/heads/main',
+                 'github.event_name': 'push', 'inputs.research_only': False, 'inputs.short_only': False,
+                 'vars.ENABLE_SCHEDULE': 'true'}
         for result, restored, saved, expected in (
             ('failure', 'success', 'success', True),
             ('failure', 'failure', 'success', False),
