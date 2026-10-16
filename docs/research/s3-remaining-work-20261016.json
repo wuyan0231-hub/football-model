@@ -76,11 +76,11 @@
     {
       "id": "R08",
       "title": "新未来概率效果确认",
-      "status": "blocked_by_gate",
+      "status": "conditional_not_activated",
       "depends_on": [
         "R07"
       ],
-      "progress": "未激活，现有结果不追认为确认样本。",
+      "progress": "英超当前20项全部不激活；其余18赛事待R01/R02。只有实际合格的候选才形成未来试验，不为失败候选无限等待。",
       "acceptance": "仅合格候选另立真实未来起点，按冻结停止/缺失规则结案；允许效果失败。"
     },
     {
@@ -91,16 +91,16 @@
         "R06",
         "R07"
       ],
-      "progress": "独立概率和政策效果不可混同；没有用户实际成交就没有真实成交ROI。",
-      "acceptance": "冻结政策、真实独立首输出、价格/成本/失败/弃权及成熟赛果；假设参考结算与实际成交分别报告。"
+      "progress": "研究模拟仍需独立真实首输出、合格报价/成本及赛果；用户未请求真实下注。",
+      "acceptance": "完成独立冻结政策的研究模拟或有据失败/缺件结案；实际成交ROI标no_trade_requested，不作为代码优化或R13的无条件前置。"
     },
     {
       "id": "R10",
       "title": "完整人员资料合同核实",
-      "status": "running",
+      "status": "concluded_with_data_limits",
       "depends_on": [],
-      "progress": "官方接口合同已审；独立最多8次请求的探测脚本与手动任务审查中。",
-      "acceptance": "真实套餐/字段/空值/可见时点/阵容候选覆盖的原响应与合同结论，明确可自建和仍缺的输入。"
+      "progress": "两次真实观察与官方合同核实已结案：4/8次总请求，取得4名subject的15条期间记录和43个重复名单问题；抽样字段可用，完整历史名单/公布时点不成立。不是资料质量全部通过。",
+      "acceptance": "本轮有界合同核查及可用/不可用结论已完成；字段和覆盖限制移交R11。不得把4人抽样推广为所有人员资料充分。"
     },
     {
       "id": "R11",
@@ -134,14 +134,21 @@
         "R05",
         "R06",
         "R07",
-        "R08",
         "R09",
         "R10",
         "R11",
         "R12"
       ],
       "progress": "尚未具备全部关闭条件。",
-      "acceptance": "逐包结案为采用/拒绝/保留基线/资料阻断，保存证据；仅完成适用条件才称全部完成。"
+      "acceptance": "逐包结案为采用/拒绝/保留基线/资料阻断，保存证据；仅完成适用条件才称全部完成。",
+      "conditional_dependencies": [
+        {
+          "id": "R08",
+          "when": "a_candidate_has_passed_development_and_a_new_prospective_trial_is_actually_activated",
+          "otherwise": "record_not_applicable_not_activated_without_claiming_future_validation_complete"
+        }
+      ],
+      "actual_trade_prerequisite": false
     }
   ],
   "execution_groups": [
@@ -215,6 +222,50 @@
       },
       "whole_packages_closed": 0,
       "meaning": "R03首项及其他子步骤已完成；13个整包仍有后继适用条件，不用子步骤成功冒充整包关闭。"
+    },
+    {
+      "recorded_at": "2026-10-16T13:56:00Z",
+      "R10": "concluded_bounded_contract_audit_with_recorded_data_limits",
+      "R08": "conditional_not_activated;EPL20 rejected;other18 pending",
+      "R09_actual_trade": "no_trade_requested_not_a_prerequisite",
+      "reason": "开发拒绝可结案；不适用的确认和未请求下注不能成为无限前置。",
+      "counts": {
+        "initial_packages": 13,
+        "concluded_bounded_audit": 1,
+        "remaining_required_packages": 11,
+        "conditional_confirmation_package": 1,
+        "total_not_closed_including_conditional": 12,
+        "full_goal_completed": false
+      }
+    }
+  ],
+  "updated_at": "2026-10-16T13:56:00Z",
+  "current_count": {
+    "initial_packages": 13,
+    "concluded_bounded_audit": 1,
+    "remaining_required_packages": 11,
+    "conditional_confirmation_package": 1,
+    "total_not_closed_including_conditional": 12,
+    "full_goal_completed": false
+  },
+  "status_history": [
+    {
+      "recorded_at": "2026-10-16T13:31:36.223161+00:00",
+      "statuses": {
+        "R01": "running",
+        "R02": "running",
+        "R03": "running",
+        "R04": "running",
+        "R05": "future",
+        "R06": "running",
+        "R07": "running",
+        "R08": "blocked_by_gate",
+        "R09": "future",
+        "R10": "running",
+        "R11": "blocked_by_data",
+        "R12": "partial",
+        "R13": "pending"
+      }
     }
   ]
 }

@@ -1,0 +1,136 @@
+{
+  "actual_command": "python scripts/personnel_label_inventory.py --source-report ../execution/current-epl-audit/report-latest.json --source-runtime ../execution/current-epl-audit/runtime --state-sha 7a9d1813ca902fe6bdaf304ca9cfe282e17b84ec --output ../execution/personnel-label-inventory/final_20261016_v2",
+  "artifacts": {
+    "inventory.json": {
+      "bytes": 23386593,
+      "sha256": "61ce1dd1922aca61999d785870ef9b6e214b73655c9ed46789df9df0eb97ad6f"
+    },
+    "personnel_label_inventory.py": {
+      "bytes": 25057,
+      "sha256": "ceef80c0832ec549a48a58f913f435607b18d0f5d0429b4a0a8c7cb265d7a609"
+    },
+    "source-manifest.json": {
+      "bytes": 765894,
+      "sha256": "e6b927cabf11cbbcaf17fa5ec5eaa359b4f8115e14e73117368a5769c6f820c5"
+    },
+    "summary.json": {
+      "bytes": 8439,
+      "sha256": "96e04efbfe43e277ef343ff181354a65bc8848c1c4e88b476ee7c6b53a276d10"
+    },
+    "test_personnel_label_inventory.py": {
+      "bytes": 11610,
+      "sha256": "d54eccbd75a1d8f04f52b136e26af1afb0c386112d78a752baedf4f29aa84913"
+    }
+  },
+  "configuration": {
+    "candidate_scope": "same_competition_past_fixed_window_xi_bench_or_positive_reported_minutes",
+    "complete_registered_roster_claim": false,
+    "historical_inputs_are_reconstruction": true,
+    "horizon_hours": 10,
+    "label_time_separate_from_input_time": true,
+    "missing_retained_observation_is_not_a_supplier_unavailability_claim": true,
+    "native_complete_minutes_is_not_verified_event_or_roster_completeness": true,
+    "null_minutes_filled_with_zero": false,
+    "past_result_availability_delay_hours": 4.0,
+    "probabilities_trained": false,
+    "transfer_status_inferred": false,
+    "window_matches": 5
+  },
+  "executed_at": "2026-10-16T13:53:05.075622Z",
+  "fixed_state_sha": "7a9d1813ca902fe6bdaf304ca9cfe282e17b84ec",
+  "limits": {
+    "actual_cutoff_zero_not_a_claim_no_historical_pit_exists_anywhere": true,
+    "complete_registered_roster_proven": false,
+    "effect_improvement_claimed": false,
+    "fit_performed": false,
+    "historical_candidate_labels_require_development_availability_assumption": true,
+    "inventory_of_fixed_referenced_sources_only": true,
+    "missing_retained_source_not_supplier_global_unavailability": true,
+    "paid_api_requests": 0,
+    "probabilities_trained": false,
+    "production_changed": false,
+    "target_postmatch_xi_used_only_as_label": true,
+    "transfer_status_inferred": false
+  },
+  "missing_local_relevant_sources": 0,
+  "native_dependency_count": 50,
+  "native_dependency_fingerprint_unchanged": true,
+  "research_fingerprint_sha256": "1e311689b3405f64c6ad9636732d2defb7ad67e26b4bc7e04b01a5b1b2b2d6ac",
+  "schema_version": "personnel-label-inventory-receipt-v1",
+  "source_commit": "8132e9a9961c002d6968763630adb23ee24d051c",
+  "source_hash_mismatch_count": 0,
+  "source_refs_count": 1693,
+  "source_report": {
+    "bytes": 796222,
+    "git_blob_sha1": "3451919895e6e16fe1e377e67b6220b6ea2c9fe2",
+    "path": "runtime/advanced_models/epl/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/latest.json",
+    "request_started_at": "2026-10-16T13:16:29.303013+00:00",
+    "retrieved_at": "2026-10-16T13:16:32.964241+00:00",
+    "route": "fixed_public_raw_https",
+    "sha256": "f5eee8bda17b1a7f5ecc537fe4e9b53f2904c689571d075b7017504fdc1db2a4",
+    "state": "7a9d1813ca902fe6bdaf304ca9cfe282e17b84ec",
+    "status": 200,
+    "url": "https://raw.githubusercontent.com/wuyan0231-hub/football-model/7a9d1813ca902fe6bdaf304ca9cfe282e17b84ec/runtime/advanced_models/epl/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/latest.json"
+  },
+  "source_restoration": {
+    "errors": 0,
+    "manifest_sha256": "9eb4aaeebfbdd719cdc5a6353c2175da58a4810bca2be62199fd77cdd101f191",
+    "requested_sources": 1693,
+    "verified_sources": 1693
+  },
+  "summary": {
+    "denominator_preserved": true,
+    "historical_candidate_player_labels": 14733,
+    "historical_pool_covers_all_11_team_matches": 513,
+    "historical_pool_negative_labels": 8313,
+    "historical_pool_positive_labels": 6420,
+    "legal_xi_team_matches_with_outside_pool_starters": 103,
+    "matches_both_actual_cutoff_labels_available": 0,
+    "matches_both_historical_labels_available": 294,
+    "matches_both_legal_xi": 308,
+    "missing_observation_reasons": {
+      "no_valid_retained_lineups_observation": 512,
+      "no_valid_retained_players_observation": 523
+    },
+    "native_source_issue_count": 0,
+    "outside_pool_starting_labels": 356,
+    "reported_null_minutes_rows": 2888,
+    "reported_zero_minutes_rows": 18,
+    "requested_matches": 820,
+    "retained_matches": 820,
+    "target_player_statistics_complete_minutes_team_matches": 4,
+    "target_player_statistics_team_matches": 594,
+    "team_match_opportunities": 1640,
+    "team_matches_legal_xi": 616,
+    "unique_legal_xi_player_ids": 535
+  },
+  "targeted_tests": {
+    "command": "python -m unittest tests.test_personnel_label_inventory -v",
+    "errors": 0,
+    "failures": 0,
+    "skips": 0,
+    "tests": 12
+  },
+  "task_id": "R11",
+  "verification": {
+    "actual_cutoff_team_label_rows_available": 0,
+    "all_used_source_hashes_checked": 913,
+    "fit_performed": false,
+    "historical_team_label_rows_available": 593,
+    "legal_xi_team_rows_with_empty_candidate_pool": 23,
+    "lineage_and_partition_checked": true,
+    "matches_checked": 820,
+    "native_50_dependency_fingerprint_unchanged": true,
+    "native_dependency_count": 50,
+    "native_fingerprint_sha256": "1e311689b3405f64c6ad9636732d2defb7ad67e26b4bc7e04b01a5b1b2b2d6ac",
+    "paid_api_requests": 0,
+    "status": "passed",
+    "target_membership_conflict_ids_count": 0,
+    "team_matches_checked": 1640
+  },
+  "verification_artifact": {
+    "bytes": 4262,
+    "sha256": "fba9c3445fa5fa3e5b6956deae76c3e0983d5925005ae5850b2ca55f05ccfeab"
+  },
+  "verified_materialized_relevant_sources": 1232
+}

@@ -1,0 +1,131 @@
+{
+  "schema_version": "confirmation-feasibility-epl-receipt-v1",
+  "source_summary_sha256": "a7789c1fd037705f5f5954bfd47f8de946d1b409c2550c81461f73b6f7555adb",
+  "source_summary_bytes": 97830,
+  "source_summary_scope": "20 current EPL hypotheses; exact native gate reproduction; no activation or trial change",
+  "full_summary_artifact": "execution/confirmation-feasibility/summary.json",
+  "all_current_EPL_development_gates_blocked": true,
+  "initial_family_size": 380,
+  "metrics_per_hypothesis": 5,
+  "confirmed_effect": false,
+  "historical_cadence_extrapolation_is_not_a_future_date_promise": true,
+  "M_schedule_queue_time_years": 7.43,
+  "zero_native_60_pair_plans_are_not_actionable": true,
+  "code_changed": false,
+  "api_requests": 0,
+  "workflow_dispatches": 0,
+  "sources": [
+    {
+      "path": "/workspace/scratch/60512f4bf8b4/execution/current-epl-audit/native-development-gates.json",
+      "sha256": "dc0a1bd20eb7ef5e896b24d962a310925f478c09f68132c6884153408388c206",
+      "bytes": 61385
+    },
+    {
+      "path": "/workspace/scratch/60512f4bf8b4/football-model/advanced-confirmation-v1.json",
+      "sha256": "a6fa0c1b8266631266e28ae9de6567403d6a6d628e80b676263edfd48d0da007",
+      "bytes": 2324
+    },
+    {
+      "path": "/workspace/scratch/60512f4bf8b4/football-model/advanced-models-v1.json",
+      "sha256": "4139069bbe6f13c27020b32655dedfa8620475ff80287955a43ee96b00501364",
+      "bytes": 4574
+    },
+    {
+      "path": "/workspace/scratch/60512f4bf8b4/execution/current-epl-audit/report-latest.json",
+      "sha256": "f5eee8bda17b1a7f5ecc537fe4e9b53f2904c689571d075b7017504fdc1db2a4",
+      "bytes": 796222
+    },
+    {
+      "path": "/workspace/scratch/60512f4bf8b4/football-model/football_model/advanced_confirmation.py",
+      "sha256": "06cba5cae3cc92fa96619b31e77e2a46a4d5fe77fa87d807465b47ec392a1e9e",
+      "bytes": 46604
+    },
+    {
+      "path": "/workspace/scratch/60512f4bf8b4/execution/confirmation-feasibility/audit_feasibility.py",
+      "sha256": "7d4052431f16ff892d51f24f54035083f0d4c1493fde2c576194ca74d5e6db5c",
+      "bytes": 20235
+    }
+  ],
+  "generated_at": "2026-10-16T13:54:02.906437+00:00",
+  "source_state_commit": "7a9d1813ca902fe6bdaf304ca9cfe282e17b84ec",
+  "source_report_ref": {
+    "path": "advanced_models/epl/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/history/984b60750e7424d69dc9f6d9242325d47f510509a13b350a34095384e3e5d6ea.json",
+    "sha256": "984b60750e7424d69dc9f6d9242325d47f510509a13b350a34095384e3e5d6ea"
+  },
+  "source_scope": "same_fixed_EPL_score_projection;not_full_prediction_or_parent_evidence_closure",
+  "native_development_gate_recalculation_exact_match": true,
+  "historical_cadence": {
+    "all_requested": {
+      "count": 820,
+      "first_kickoff": "2024-08-16T19:00:00+00:00",
+      "last_kickoff": "2026-10-12T19:00:00+00:00",
+      "elapsed_days": 787.0,
+      "inclusive_calendar_dates": 788,
+      "opportunities_per_elapsed_day": 1.0419313850063532,
+      "opportunities_per_365_25_days": 380.5654383735705,
+      "method": "observed_count_divided_by_actual_first_to_last_elapsed_days;historical_extrapolation_only"
+    },
+    "readiness_opportunities": {
+      "count": 621,
+      "first_kickoff": "2025-01-14T19:30:00+00:00",
+      "last_kickoff": "2026-10-12T19:00:00+00:00",
+      "elapsed_days": 635.9791666666666,
+      "inclusive_calendar_dates": 637,
+      "opportunities_per_elapsed_day": 0.976447079634422,
+      "opportunities_per_365_25_days": 356.64729583647267,
+      "method": "observed_count_divided_by_actual_first_to_last_elapsed_days;historical_extrapolation_only"
+    },
+    "M0_scored_pairs_same_readiness_window": {
+      "count": 608,
+      "first_kickoff": "2025-01-14T19:30:00+00:00",
+      "last_kickoff": "2026-10-12T19:00:00+00:00",
+      "elapsed_days": 635.9791666666666,
+      "inclusive_calendar_dates": 637,
+      "opportunities_per_elapsed_day": 0.9560061584826548,
+      "opportunities_per_365_25_days": 349.18124938578967,
+      "method": "observed_count_divided_by_actual_first_to_last_elapsed_days;historical_extrapolation_only"
+    }
+  },
+  "unchanged_design": {
+    "registered_leagues": 19,
+    "candidate_horizons_per_league": 20,
+    "family_size": 380,
+    "metrics_per_hypothesis": 5,
+    "metric_test_count": 1900,
+    "per_test_alpha": 2.631578947368421e-05,
+    "minimum_primary_effect_nll": 0.01,
+    "noninferiority_margins": {
+      "one_x_two_brier": 0.01,
+      "total_goal_nll": 0.01,
+      "home_tail_brier": 0.005,
+      "away_tail_brier": 0.005
+    },
+    "min_native_candidate_coverage": 0.8,
+    "min_pair_coverage": 0.9,
+    "start_delay_hours": 24,
+    "earliest_kickoff_after_future_start_hours": 11,
+    "max_calendar_days_from_future_start_to_last_kickoff": 730,
+    "result_maturity_hours_after_last_enrolled_kickoff": 168,
+    "latest_terminal_threshold_elapsed_days_from_activation": 738.0,
+    "current_absolute_activation_or_deadline_observed": false,
+    "power_qualification": "approximate_individual_metric_normal_planning_only; primary tests zero improvement assuming true gain equals minimum_effect_nll; terminal also requires observed mean gain at least minimum_effect_nll, so joint terminal power is not guaranteed to be 0.8 and at that boundary its primary pass probability is at most approximately 0.5 under the planning normal model"
+  },
+  "counts": {
+    "examined_EPL_candidate_horizons": 20,
+    "blocked_development_gates": 20,
+    "native_zero_degenerate_floor_plans": 6,
+    "nonzero_variance_plans": 14,
+    "nonzero_variance_plans_cadence_within_window": 3,
+    "nonzero_variance_plans_cadence_exceeds_window": 11
+  },
+  "decision": "Do not activate current blocked EPL candidates; retain M0 and preserve family/effect/coverage/calendar rules.",
+  "reasons_no_completion_date": [
+    "All 20 current EPL development gates are blocked; no lawful activation start follows from this audit.",
+    "No activation artifact was consumed or created, so no actual future_start/last_kickoff/terminal date is assigned.",
+    "Historical requested-game cadence is not a forecast of future fixtures, legal captures, data coverage, failures, or result timing.",
+    "Native-zero fallback-only pilots have no candidate variation; the raw 60-pair floor is not a usable native-candidate sample plan.",
+    "Fixing data coverage or changing a candidate requires new development checks and may change variance and required sample sizes.",
+    "The frozen normal approximation does not guarantee power, independence, or all-metric terminal success."
+  ],
+  "implementation_sha256": "1e311689b3405f64c6ad9636732d2defb7ad67e26b4bc7e04b01a5b1b2b2d6ac"
+}
