@@ -1,0 +1,56 @@
+name: 固定状态单场资料只读诊断
+
+on:
+  push:
+    branches: [codex/s3-fixed-fixture-audit-20261017]
+    paths:
+      - '.github/workflows/fixed-fixture-validation-audit.yml'
+      - 'scripts/fixed_fixture_validation_audit.py'
+      - 'tests/test_fixed_fixture_validation_audit.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  fixed_fixture_audit:
+    if: github.repository == 'wuyan0231-hub/football-model'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONUNBUFFERED: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+      FOOTBALL_API_KEY: ''
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+          persist-credentials: true
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: 安装原Python依赖并运行独立安全回归
+        run: |
+          python -m pip install -r requirements.txt
+          python -m unittest discover -s tests -p test_fixed_fixture_validation_audit.py -v
+      - name: 固定旧状态恢复及原函数重放（零足球API、零拟合、零push）
+        id: audit
+        continue-on-error: true
+        run: >-
+          python scripts/fixed_fixture_validation_audit.py --repo .
+          --state-commit a19e8db504276f5dfd93555bfffbec63e5aa328a
+          --expected-source 4ae6764f2502c8892bb892c3a08bf0a34d604b1a
+          --match-id 1550994 --output fixed-fixture-validation-audit.json
+      - name: 只上传有界诊断回执（不上传原API缓存或内部单场归档）
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: fixed-fixture-audit-${{ github.run_id }}-${{ github.run_attempt }}
+          path: fixed-fixture-validation-audit.json
+          retention-days: 14
+          if-no-files-found: warn
+      - name: 保留原始诊断失败状态
+        if: ${{ !cancelled() && steps.audit.outcome != 'success' }}
+        run: exit 1
