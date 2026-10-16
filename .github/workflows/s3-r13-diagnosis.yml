@@ -1,0 +1,33 @@
+name: S3 r13 fixed-state read-only durability diagnosis
+on:
+  push:
+    branches: [codex/s3-r13-diagnosis-20261016]
+    paths: [.github/workflows/s3-r13-diagnosis.yml]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Fetch only the fixed saved Git objects
+        run: git fetch --no-tags --depth=1 origin eaef60f12b25ee68885c8bd2f71ca7e655e85c8d
+      - name: Reproduce original dependency traversal without restoring runtime
+        env:
+          PYTHONPATH: .
+        run: python scripts/diagnose_durability_r13.py --repo . --state-commit eaef60f12b25ee68885c8bd2f71ca7e655e85c8d --output durability-diagnostic
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: s3-r13-durability-diagnostic-${{ github.run_id }}
+          path: durability-diagnostic
+          retention-days: 14
+          compression-level: 6
+          if-no-files-found: error
