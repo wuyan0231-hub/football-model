@@ -1,0 +1,67 @@
+name: R13 只读资源与原件验收
+
+on:
+  push:
+    branches: [codex/s3-r13-resource-check-20261016]
+    paths:
+      - '.github/workflows/r13-resource-check.yml'
+      - 'scripts/resource_probe_r13.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  readonly_resource_probe:
+    if: github.event.repository.private == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONUNBUFFERED: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+      FOOTBALL_API_KEY: ''
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+          persist-credentials: true
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: 安装原 Python 依赖（不安装 R、不训练）
+        timeout-minutes: 4
+        run: python -m pip install -r requirements.txt
+      - name: 原生恢复、资源实测、冷原件、单场及持久证明
+        id: probe
+        timeout-minutes: 25
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/resource_probe_r13.py --phase run --repo . --output r13-resource-evidence --budget-seconds 1440
+      - name: 上传有界只读验收证据
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: r13-readonly-resources-${{ github.run_id }}-${{ github.run_attempt }}
+          path: r13-resource-evidence/
+          compression-level: 6
+          retention-days: 14
+          if-no-files-found: error
+      - name: 汇总实际结果并保持失败
+        if: ${{ !cancelled() }}
+        env:
+          PROBE_OUTCOME: ${{ steps.probe.outcome }}
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          path=Path('r13-resource-evidence/summary.json')
+          summary=json.loads(path.read_text()) if path.is_file() else {'status':'no_summary'}
+          with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a') as out:
+              out.write('只读资源验收：未保存状态、未拟合、未调用足球API。\n\n```json\n'+json.dumps(summary,ensure_ascii=False,indent=2)+'\n```\n')
+          raise SystemExit(0 if os.environ.get('PROBE_OUTCOME')=='success' and summary.get('all_executed_phases_passed') is True else 1)
+          PY
