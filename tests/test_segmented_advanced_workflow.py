@@ -69,6 +69,22 @@ class SegmentedWorkflowTests(unittest.TestCase):
         self.assertEqual(WORKFLOW.count("always()"), 1)  # the small factual receipt only
         self.assertIn("continue-on-error: true", job("advanced").split("id: durable", 1)[1].split("      - ", 1)[0])
 
+    def test_save_reuses_its_own_preflight_without_removing_actual_main_check(self):
+        for name in ('pre_study_capture', 'study_leagues', 'study_finalize'):
+            body = job(name)
+            persist = body.split('        id: persist\n', 1)[1].split('      - ', 1)[0]
+            self.assertEqual(persist.count('scripts/cloud_state_save_once.py'), 1)
+            self.assertNotIn('scripts/cloud_state.py check', persist)
+            self.assertNotIn('scripts/cloud_state.py preflight', persist)
+        body = job('advanced')
+        self.assertIn('id: check', body)
+        self.assertEqual(body.count('python scripts/cloud_state.py check --runtime runtime'), 1)
+        self.assertIn("steps.check.outcome == 'success'", body.split('        id: persist\n', 1)[1])
+        self.assertIn('python scripts/cloud_state_save_once.py --runtime runtime', body)
+        before_fit = job('study_leagues').split('        id: preflight\n', 1)[1].split('      - ', 1)[0]
+        self.assertIn('scripts/cloud_state.py prepare', before_fit)
+        self.assertIn('scripts/cloud_state.py preflight', before_fit)
+
     def test_embedded_python_compiles(self):
         scripts = re.findall(r"          python - <<'PY'\n(.*?)          PY", WORKFLOW, re.S)
         self.assertGreater(len(scripts), 5)

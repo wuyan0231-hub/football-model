@@ -128,9 +128,7 @@ jobs:
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
         run: |
-          python scripts/cloud_state.py check --runtime runtime
-          python scripts/cloud_state.py preflight --runtime runtime > advanced-preflight.json
-          python scripts/cloud_state.py save --runtime runtime
+          python scripts/cloud_state_save_once.py --runtime runtime --preflight-report advanced-preflight.json --receipt advanced-pre-study-save-run-receipt.json
       - name: 捕获与保存错误保持失败
         if: >-
           !cancelled() && (steps.restore.outcome != 'success' || steps.durable.outcome != 'success' ||
@@ -298,8 +296,7 @@ jobs:
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
         run: |
-          python scripts/cloud_state.py preflight --runtime runtime > advanced-preflight.json
-          python scripts/cloud_state.py save --runtime runtime
+          python scripts/cloud_state_save_once.py --runtime runtime --preflight-report advanced-preflight.json --receipt advanced-main-save-run-receipt.json
       - name: 保存逐步骤事实回执
         if: always()
         env:
@@ -549,9 +546,7 @@ jobs:
         if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
         continue-on-error: true
         run: |
-          python scripts/cloud_state.py check --runtime runtime
-          python scripts/cloud_state.py preflight --runtime runtime > advanced-preflight-after-study.json
-          python scripts/cloud_state.py save --runtime runtime
+          python scripts/cloud_state_save_once.py --runtime runtime --preflight-report advanced-preflight-after-study.json --receipt advanced-league-save-run-receipt.json
       - name: 记录实际计算、已存状态及后续停止条件
         if: ${{ !cancelled() }}
         env:
@@ -675,9 +670,7 @@ jobs:
         if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
         continue-on-error: true
         run: |
-          python scripts/cloud_state.py check --runtime runtime
-          python scripts/cloud_state.py preflight --runtime runtime > advanced-preflight-final.json
-          python scripts/cloud_state.py save --runtime runtime
+          python scripts/cloud_state_save_once.py --runtime runtime --preflight-report advanced-preflight-final.json --receipt advanced-final-save-run-receipt.json
       - name: 保存最终回执与有界清单
         id: export
         if: ${{ !cancelled() && steps.restore.outcome == 'success' }}

@@ -40,7 +40,7 @@ class ScheduleConsolidationTests(unittest.TestCase):
 
     def test_shared_short_job_loads_and_saves_once(self):
         self.assertEqual(self.main_job.count('python scripts/cloud_state.py load --runtime runtime'), 1)
-        self.assertEqual(self.main_job.count('python scripts/cloud_state.py save --runtime runtime'), 1)
+        self.assertEqual(self.main_job.count('python scripts/cloud_state_save_once.py --runtime runtime'), 1)
         facts = self.step('facts')
         self.assertIn('--league all --horizon-hours 11 --recent-matches 5', facts)
         self.assertEqual(self.main_job.count('python -m football_model.collect_fundamentals'), 1)
@@ -135,7 +135,7 @@ class ScheduleConsolidationTests(unittest.TestCase):
                                 observed_check_and_save_seconds + 15 * 60)
         self.assertLessEqual(timeout, 120 * 60)
         self.assertIn("if: ${{ !cancelled() && steps.restore.outcome == 'success' }}", before)
-        self.assertEqual(before.count('python scripts/cloud_state.py save --runtime runtime'), 1)
+        self.assertEqual(before.count('python scripts/cloud_state_save_once.py --runtime runtime'), 1)
 
     def test_legacy_artifacts_preserve_models_snapshots_and_original_parent(self):
         self.assertIn('python scripts/export_advanced_evidence.py --runtime runtime --repo .', self.main_job)
