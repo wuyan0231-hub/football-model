@@ -151,10 +151,15 @@ class ScheduleConsolidationTests(unittest.TestCase):
             root = Path(directory)
             parent = b'{"source_sha":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","state_oid":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","loaded_at":"2026-10-13T10:00:00Z"}\n'
             (root / 'advanced-run-parent.json').write_bytes(parent)
+            old_study = root / 'runtime/advanced_models/study_runs/latest.json'
+            old_study.parent.mkdir(parents=True)
+            old_study.write_text(json.dumps({'research_full_completed': True, 'source_commit': 'a' * 40,
+                                            'configured_leagues': ['epl'], 'generated_at': '2026-10-13T10:00:00Z'}))
             env = dict(os.environ, GITHUB_STEP_SUMMARY=str(root / 'summary.md'), GITHUB_SHA='a' * 40,
                        GITHUB_RUN_ID='123', GITHUB_RUN_ATTEMPT='1', ADVANCED_PARENT_STATE='b' * 40,
                        IS_RELEASE='true', STUDY_RUN='false' if short else 'true',
-                       LEGACY_SHORT_RUN='true' if short else 'false')
+                       LEGACY_SHORT_RUN='true' if short else 'false', RESEARCH='skipped')
+            env['PYTHONPATH'] = str(self.root) + os.pathsep + env.get('PYTHONPATH', '')
             for key in ('RESTORE', 'DURABLE', 'FACTS', 'CONFIRMATION', 'CAPTURE', 'SCORING', 'CHECK', 'PERSIST',
                         'LEGACY_CAPTURE_V1', 'LEGACY_CAPTURE_V2', 'LEGACY_SCORING_V1', 'LEGACY_SCORING_V2'):
                 env[key] = 'success'
@@ -163,6 +168,9 @@ class ScheduleConsolidationTests(unittest.TestCase):
                                     capture_output=True, text=True, timeout=20)
             self.assertEqual(result.returncode, 0, result.stderr)
             advanced = json.loads((root / 'advanced-run-receipt.json').read_text())
+            self.assertEqual(advanced['research_report_binding']['status'], 'not_executed_in_this_step')
+            self.assertNotIn('research_report', advanced)
+            self.assertFalse(advanced['research_full_completed'])
             if not short:
                 self.assertFalse((root / 'feature-run-receipt.json').exists())
                 self.assertFalse((root / 'feature-run-parent.json').exists())
