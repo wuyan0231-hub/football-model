@@ -1,0 +1,31 @@
+{
+  "schema_version": "restricted-start-probability-development-v1",
+  "protocol_id": "synthetic-restricted-start-unit-tests-v1",
+  "purpose": "synthetic_unit_test_only_not_actual_experiment_protocol",
+  "fixed_state_sha": "0000000000000000000000000000000000000000",
+  "inventory_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "horizon_hours": 10,
+  "candidate_window_matches": 5,
+  "result_availability_delay_hours": 4,
+  "expected_total_opportunities": 3,
+  "splits": {
+    "train_end": "2026-01-08T12:00:00Z",
+    "select_end": "2026-01-15T12:00:00Z",
+    "calibrate_end": "2026-01-22T12:00:00Z"
+  },
+  "minimum_paired_fixtures": {
+    "train": 100,
+    "select": 30,
+    "calibrate": 30,
+    "test": 60
+  },
+  "model": {
+    "alpha_grid": [0.01, 0.1, 1.0],
+    "maxiter": 1000,
+    "gtol": 1e-8,
+    "ftol": 1e-12
+  },
+  "evaluation": {
+    "probability_clip_epsilon": 1e-6
+  }
+}

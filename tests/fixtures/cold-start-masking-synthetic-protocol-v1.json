@@ -1,0 +1,45 @@
+{
+  "schema_version": "cold-start-uncertainty-past-masking-protocol-v1",
+  "protocol_id": "synthetic-cold-start-masking-unit-tests-v1",
+  "purpose": "synthetic_unit_test_only_not_actual_experiment_protocol",
+  "source_state_commit": "0000000000000000000000000000000000000000",
+  "source_ref": {
+    "original_path": "data/epl.json",
+    "path": "tests/fixtures/synthetic-cold-start-source.json",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "learning_end": "2025-08-11T09:00:00Z",
+  "horizon": "EARLY",
+  "horizon_hours": 10,
+  "block_days": 30,
+  "baseline_min_train": 180,
+  "baseline_half_life_days": 180,
+  "baseline_ridge": 3.0,
+  "held_teams_per_block": 4,
+  "held_team_min_past_matches": 5,
+  "reference_min_fitted_teams": 8,
+  "tau_grid": [0.0, 0.5, 1.0, 2.0],
+  "inner_min_blocks": 2,
+  "inner_min_unique_matches": 20,
+  "selection_tie_tolerance": 1e-12,
+  "calibration_diagnostics": {
+    "interval_levels": [0.8, 0.95]
+  },
+  "attack_defence_correlation": 0.0,
+  "cross_team_correlation": 0.0,
+  "known_parameter_uncertainty": false,
+  "numerical_settings": {
+    "node_orders": [12, 20, 32, 48, 64, 96, 128],
+    "quadrature_l1_tolerance": 1e-10,
+    "tail_tolerance": 1e-8,
+    "max_goal": 512,
+    "max_log_rate_variance": 1.0
+  },
+  "execution_bounds": {
+    "maximum_refit_attempts": 140,
+    "maximum_parameter_scenarios": 6000
+  },
+  "exposed_current_match_ids": [90000001, 90000002, 90000003, 90000004, 90000005, 90000006, 90000007, 90000008, 90000009, 90000010, 90000011, 90000012, 90000013],
+  "confirmation_active": false,
+  "production_promotion": false
+}
