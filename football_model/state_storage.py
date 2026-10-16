@@ -1,7 +1,8 @@
 """Lossless transport storage; application runtime paths and bytes stay unchanged.
 
-Only selected cold JSON is compressed in the temporary model-state worktree.
-The next load validates the complete tree before restoring original bytes.
+Selected cold JSON is compressed in the temporary model-state worktree.
+Large immutable research originals may remain pinned to ancestor state commits;
+the current active tree carries their strict, hash-checked history catalog.
 """
 from __future__ import annotations
 
@@ -252,12 +253,16 @@ def _archive_entry(name, content, blob):
             "blob_sha256": _sha(blob), "compressed_bytes": len(blob)}
 
 
-def estimate_runtime(runtime: Path) -> dict:
+def estimate_runtime(runtime: Path, *, transport_observer=None) -> dict:
     """Measure the same lossless transport as pack_runtime, plus metadata reserve.
 
     Account for each actual compressed blob once and for every manifest entry.
     Avoid retaining all compressed bytes or all manifest entries in memory.
     Subsequent optional writes still use conservative storage_write_delta.
+    An optional observer receives each distinct transport payload's path and
+    bytes. It does not receive the manifest or reserved metadata. This permits
+    save-resource accounting to recognize Git objects already in the parent
+    without retaining a second copy of the transport in memory or on disk.
     """
     runtime = Path(runtime)
     retained = retained_inline_paths(runtime)
@@ -279,20 +284,29 @@ def estimate_runtime(runtime: Path) -> dict:
             else:
                 blobs[digest] = len(blob)
                 archive_bytes += len(blob)
+                if transport_observer is not None:
+                    transport_observer(f"{ARCHIVE_DIR}/{digest}.json.gz", blob)
             # Empty-list bytes already include the brackets. Each actual entry
             # replaces the empty interior, separated by exactly one comma.
             manifest_bytes += len(json.dumps(entry, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) + bool(archived)
             archived += 1
         else:
             inline += len(content)
+            if transport_observer is not None:
+                transport_observer(f"runtime/{name}", content)
         if re.fullmatch(r"replay/bundles/[0-9a-f]{64}\.json\.gz", name):
             expanded += len(_expand(content, MAX_FILE_BYTES))
     persisted = inline + archive_bytes + manifest_bytes + METADATA_RESERVE_BYTES
+    from .history_archive import catalog_stats
+    history = catalog_stats(runtime)
     return {"raw_bytes": raw, "persisted_bytes": persisted,
             "logical_bytes": raw + expanded, "expanded_replay_bytes": expanded,
+            "active_logical_bytes": raw + expanded, **history,
+            "total_original_logical_bytes": raw + expanded + history["historical_only_raw_bytes"],
             "file_count": count, "archived_file_count": archived, "archive_blob_count": len(blobs),
             "inline_bytes": inline, "unique_archive_bytes": archive_bytes,
             "manifest_bytes": manifest_bytes, "metadata_reserve_bytes": METADATA_RESERVE_BYTES,
+            "transport_payload_count": count - archived + len(blobs),
             "estimation_method": "exact_lossless_transport_with_metadata_reserve",
             "retained_inline": sorted(retained)}
 
@@ -418,20 +432,38 @@ def validate_storage_tree(tree: Path, *, max_file_bytes=MAX_FILE_BYTES,
     return {**stats, "logical_bytes": logical, "physical_bytes": physical, "entries": document["entries"]}
 
 
-def restore_runtime(tree: Path, runtime: Path, **limits) -> dict:
+def restore_runtime(tree: Path, runtime: Path, *, cold_state_commit=None, cold_repo=None, **limits) -> dict:
     stats = validate_storage_tree(tree, **limits)
     runtime = Path(runtime)
     if runtime.is_symlink() or (runtime.exists() and (not runtime.is_dir() or any(runtime.iterdir()))):
         raise StorageError("runtime 已有内容，拒绝覆盖恢复。")
-    shutil.copytree(Path(tree) / "runtime", runtime, dirs_exist_ok=True)
+    cold = set()
+    if cold_state_commit is not None:
+        if cold_repo is None:
+            raise StorageError("历史原件恢复缺少固定来源仓库，已停止。")
+        from .history_archive import is_catalog_member, restore_history_catalog
+        cold = restore_history_catalog(runtime, tree, cold_state_commit, cold_repo, stats["entries"])
+        runtime.mkdir(parents=True, exist_ok=True)
+        # The catalog just written includes newly cold source originals; do not
+        # overwrite it with the older catalog from the transport copy.
+        for name, source in _files(Path(tree) / "runtime"):
+            if name in cold or is_catalog_member(name):
+                continue
+            target = runtime / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, target)
+    else:
+        shutil.copytree(Path(tree) / "runtime", runtime, dirs_exist_ok=True)
     for entry in stats["entries"]:
+        if entry["path"] in cold:
+            continue
         target = runtime / entry["path"]
         target.parent.mkdir(parents=True, exist_ok=True)
         if target.exists() or target.is_symlink():
             raise StorageError("状态恢复目的路径已存在，拒绝覆盖。")
         blob = (Path(tree) / ARCHIVE_DIR / (entry["blob_sha256"] + ".json.gz")).read_bytes()
         target.write_bytes(_expand(blob, entry["raw_bytes"]))
-    return stats
+    return {**stats, "cold_file_count": len(cold), "cold_restore_enabled": cold_state_commit is not None}
 
 
 def read_archive_bytes(transport_dir: Path, logical_relative_path: str) -> bytes:

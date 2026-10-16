@@ -1,0 +1,778 @@
+{
+  "schema_version": "s3-goal-and-model-audit-v1",
+  "created_at": "2026-10-16T00:53:50.271839+00:00",
+  "source_commit": "9f5ec2a767b0b9873f4078fad981926b71bfc69b",
+  "state_commit": "eaef60f12b25ee68885c8bd2f71ca7e655e85c8d",
+  "protocol_hash": "18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448",
+  "evidence_scope": "19 actual confirmation latest responses and 18 old domestic research latest summaries, Git blob verified; full historical report graphs not restored",
+  "counts": {
+    "leagues": 19,
+    "offset_candidates": 14,
+    "goalmodel_candidates": 3,
+    "hypotheses_per_league": 20,
+    "family_size": 380,
+    "metric_tests": 5,
+    "total_metric_tests": 1900,
+    "per_metric_alpha": 2.6315789473684212e-05,
+    "active_confirmations": 0,
+    "formal_sample_plans_available": 0
+  },
+  "goals": [
+    {
+      "goal_id": "ORIGINAL-1",
+      "scope": "统一计算及完整推荐记录",
+      "code_status": "implemented_in_feature_decisions_and_integration",
+      "acceptance": "真实单场三市场整行报价、原截图与回图证据、原生决定记录、同父分布与五态/费用/EV重算、远端闭包回读",
+      "remaining_class": [
+        "real_match_end_to_end_acceptance",
+        "human_decision_evidence"
+      ],
+      "closure_rule": "calculator ranking alone never closes independent recommendation or trading outcome"
+    },
+    {
+      "goal_id": "ORIGINAL-2",
+      "scope": "逐赛事验收覆盖并训练statsmodels修正候选",
+      "code_status": "implemented_with_lightweight_proxy_scope",
+      "remaining_class": [
+        "current_fingerprint_research",
+        "data_coverage",
+        "durable_save_readback",
+        "unproven_effect"
+      ],
+      "acceptance": "19联赛按特征/时距逐项登记可用、缺失、错误、延期；真实拟合参数及训练来源可重建；不可用分支保留失败与基线回退"
+    },
+    {
+      "goal_id": "ORIGINAL-3",
+      "scope": "只用过去训练产生历史样本外基线与独立goalmodel对照",
+      "code_status": "implemented_real_R_and_same_pool_comparisons",
+      "remaining_class": [
+        "current_fingerprint_research",
+        "durable_save_readback",
+        "statistical_validation"
+      ],
+      "acceptance": "冻结每个训练块的OOF父链、G0_full/G0/G1训练ID与时间边界、真实R输入输出及确定性复算；历史下载假设保留"
+    },
+    {
+      "goal_id": "ORIGINAL-4",
+      "scope": "EARLY与LINEUP真实快照与影子执行",
+      "code_status": "implemented",
+      "remaining_class": [
+        "current_candidate_readiness",
+        "source_coverage",
+        "future_windows",
+        "durability_acceptance"
+      ],
+      "acceptance": "真实9至11小时和合法已取得XI窗口，首失败/首合法捕获/全部机会保留；服务端持久时间与闭包校验"
+    },
+    {
+      "goal_id": "ORIGINAL-5",
+      "scope": "概率、选票及收益分层验证",
+      "code_status": "probability_and_quote_calculation_implemented; independent_policy_outputs_not_implied",
+      "remaining_class": [
+        "future_sample_results",
+        "independent_decision_outputs",
+        "real_quotes_costs_and_execution",
+        "unproven_effect"
+      ],
+      "acceptance": "共同概率样本与含回退全队列分别评分；真实独立选票方可比较框架；概率改善不等于收益改善"
+    },
+    {
+      "goal_id": "ORIGINAL-6",
+      "scope": "冻结方案后连续未来确认",
+      "code_status": "prepared_not_active",
+      "remaining_class": [
+        "fresh_development_gate",
+        "sample_plan_feasibility",
+        "future_only_confirmation"
+      ],
+      "acceptance": "当前指纹开发门、实际方差样本计划、日历机会可行性、不可变激活及真实未来起点；首N队列+730天+168小时成熟规则"
+    },
+    {
+      "goal_id": "PERSONNEL-FULL",
+      "scope": "完整球员能力、伤病严重程度、替代质量与可靠预计首发概率",
+      "code_status": "not_implemented_as_full_player_value_model",
+      "remaining_class": [
+        "code_missing_for_full_scope",
+        "data_contract_missing",
+        "future_research_unproven"
+      ],
+      "current_partial_delivery": "历史XI延续、分钟留存、历史评分代理、已报告缺阵分钟/XI份额、限定欧国联负荷",
+      "acceptance": "能力估计与替换质量只用过去资料，预计XI概率有校准和覆盖；同队/时间混杂控制及完整缺失回退，独立验证对目标预测有用",
+      "closure_rule": "可独立验收轻量第一版，但原全面目标保持未完成；不得静默降级范围"
+    },
+    {
+      "goal_id": "COLD-START",
+      "scope": "新球队覆盖与冷启动研究",
+      "code_status": "independent_zero_centre_prior_candidate_implemented",
+      "remaining_class": [
+        "single_side_scoring",
+        "uncertainty_and_calibration_unproven"
+      ],
+      "acceptance": "保留生产unsupported，未知ID/零场训练/先验与不可配对边界明确；不伪称真实球队强度或确认改善"
+    },
+    {
+      "goal_id": "PANNA",
+      "scope": "panna",
+      "code_status": "deferred_by_user",
+      "remaining_class": [
+        "explicitly_deferred_not_current_execution_scope"
+      ]
+    }
+  ],
+  "league_summary": [
+    {
+      "league": "epl",
+      "registered_hypotheses": 20,
+      "active_confirmations": 0,
+      "current_blockers": {
+        "implementation_changed_requires_fresh_development_study": 20
+      },
+      "old_report_available": true,
+      "old_report_generated_at": "2026-10-13T12:31:13.572084Z",
+      "old_independent_branch_fit_counts": {
+        "failed": 8,
+        "fitted": 9
+      },
+      "old_model_cards": 9,
+      "old_requested_unique_matches": 820
+    },
+    {
+      "league": "championship",
+      "registered_hypotheses": 20,
+      "active_confirmations": 0,
+      "current_blockers": {
+        "implementation_changed_requires_fresh_development_study": 20
+      },
+      "old_report_available": true,
+      "old_report_generated_at": "2026-10-13T12:37:30.572173Z",
+      "old_independent_branch_fit_counts": {
+        "failed": 8,
+        "fitted": 9
+      },
+      "old_model_cards": 9,
+      "old_requested_unique_matches": 1221
+    },
+    {
+      "league": "laliga",
+      "registered_hypotheses": 20,
+      "active_confirmations": 0,
+      "current_blockers": {
+        "implementation_changed_requires_fresh_development_study": 20
+      },
+      "old_report_available": true,
+      "old_report_generated_at": "2026-10-13T12:42:46.903993Z",
+      "old_independent_branch_fit_counts": {
+        "failed": 8,
+        "fitted": 9
+      },
+      "old_model_cards": 9,
+      "old_requested_unique_matches": 838
+    },
+    {
+      "league": "bundesliga",
+      "registered_hypotheses": 20,
+      "active_confirmations": 0,
+      "current_blockers": {
+        "implementation_changed_requires_fresh_development_study": 20
+      },
+      "old_report_available": true,
+      "old_report_generated_at": "2026-10-13T12:47:05.466802Z",
+      "old_independent_branch_fit_counts": {
+        "failed": 8,
+        "fitted": 9
+      },
+      "old_model_cards": 9,
+      "old_requested_unique_matches": 661
+    },
+    {
+      "league": "serie_a",
+      "registered_hypotheses": 20,
+      "active_confirmations": 0,
+      "current_blockers": {
+        "implementation_changed_requires_fresh_development_study": 20
+      },
+      "old_report_available": true,
+      "old_report_generated_at": "2026-10-13T12:55:44.554065Z",
+      "old_independent_branch_fit_counts": {
+        "fitted": 12,
+        "failed": 5
+      },
+      "old_model_cards": 12,
+      "old_requested_unique_matches": 820
+    },
+    {
+      "league": "ligue_1",
+      "registered_hypotheses": 20,
+      "active_confirmations": 0,
+      "current_blockers": {
+        "implementation_changed_requires_fresh_development_study": 20
+      },
+      "old_report_available": true,
+      "old_report_generated_at": "2026-10-13T13:00:55.339106Z",
+      "old_independent_branch_fit_counts": {
+        "failed": 8,
+        "fitted": 9
+      },
+      "old_model_cards": 9,
+      "old_requested_unique_matches": 669
+    },
+    {
+      "league": "bundesliga_2",
+      "registered_hypotheses": 20,
+      "active_confirmations": 0,
+      "current_blockers": {
+        "implementation_changed_requires_fresh_development_study": 20
+      },
+      "old_report_available": true,
+      "old_report_generated_at": "2026-10-13T13:05:13.955784Z",
+      "old_independent_branch_fit_counts": {
+        "failed": 8,
+        "fitted": 9
+      },
+      "old_model_cards": 9,
+      "old_requested_unique_matches": 679
+    },
+    {
+      "league": "ligue_2",
+      "registered_hypotheses": 20,
+      "active_confirmations": 0,
+      "current_blockers": {
+        "implementation_changed_requires_fresh_development_study": 20
+      },
+      "old_report_available": true,
+      "old_report_generated_at": "2026-10-13T13:08:53.274432Z",
+      "old_independent_branch_fit_counts": {
+        "failed": 11,
+        "fitted": 6
+      },
+      "old_model_cards": 6,
+      "old_requested_unique_matches": 691
+    },
+    {
+      "league": "allsvenskan",
+      "registered_hypotheses": 20,
+      "active_confirmations": 0,
+      "current_blockers": {
+        "implementation_changed_requires_fresh_development_study": 20
+      },
+      "old_report_available": true,
+      "old_report_generated_at": "2026-10-13T13:13:04.282646Z",
+      "old_independent_branch_fit_counts": {
+        "failed": 8,
+        "fitted": 9
+      },
+      "old_model_cards": 9,
+      "old_requested_unique_matches": 668
+    },
+    {
+      "league": "eredivisie",
+      "registered_hypotheses": 20,
+      "active_confirmations": 0,
+      "current_blockers": {
+        "implementation_changed_requires_fresh_development_study": 20
+      },
+      "old_report_available": true,
+      "old_report_generated_at": "2026-10-13T13:17:24.931067Z",
+      "old_independent_branch_fit_counts": {
+        "failed": 8,
+        "fitted": 9
+      },
+      "old_model_cards": 9,
+      "old_requested_unique_matches": 702
+    },
+    {
+      "league": "primeira",
+      "registered_hypotheses": 20,
+      "active_confirmations": 0,
+      "current_blockers": {
+        "implementation_changed_requires_fresh_development_study": 20
+      },
+      "old_report_available": true,
+      "old_report_generated_at": "2026-10-13T13:21:44.922289Z",
+      "old_independent_branch_fit_counts": {
+        "failed": 8,
+        "fitted": 9
+      },
+      "old_model_cards": 9,
+      "old_requested_unique_matches": 687
+    },
+    {
+      "league": "brazil_a",
+      "registered_hypotheses": 20,
+      "active_confirmations": 0,
+      "current_blockers": {
+        "implementation_changed_requires_fresh_development_study": 20
+      },
+      "old_report_available": true,
+      "old_report_generated_at": "2026-10-13T13:27:23.591312Z",
+      "old_independent_branch_fit_counts": {
+        "failed": 8,
+        "fitted": 9
+      },
+      "old_model_cards": 9,
+      "old_requested_unique_matches": 1057
+    },
+    {
+      "league": "j1",
+      "registered_hypotheses": 20,
+      "active_confirmations": 0,
+      "current_blockers": {
+        "implementation_changed_requires_fresh_development_study": 20
+      },
+      "old_report_available": true,
+      "old_report_generated_at": "2026-10-13T13:31:55.300103Z",
+      "old_independent_branch_fit_counts": {
+        "failed": 8,
+        "fitted": 9
+      },
+      "old_model_cards": 9,
+      "old_requested_unique_matches": 670
+    },
+    {
+      "league": "k1",
+      "registered_hypotheses": 20,
+      "active_confirmations": 0,
+      "current_blockers": {
+        "implementation_changed_requires_fresh_development_study": 20
+      },
+      "old_report_available": true,
+      "old_report_generated_at": "2026-10-13T13:35:01.896369Z",
+      "old_independent_branch_fit_counts": {
+        "failed": 13,
+        "fitted": 4
+      },
+      "old_model_cards": 4,
+      "old_requested_unique_matches": 650
+    },
+    {
+      "league": "mls",
+      "registered_hypotheses": 20,
+      "active_confirmations": 0,
+      "current_blockers": {
+        "implementation_changed_requires_fresh_development_study": 20
+      },
+      "old_report_available": true,
+      "old_report_generated_at": "2026-10-13T13:41:59.845290Z",
+      "old_independent_branch_fit_counts": {
+        "failed": 8,
+        "fitted": 9
+      },
+      "old_model_cards": 9,
+      "old_requested_unique_matches": 1482
+    },
+    {
+      "league": "unl",
+      "registered_hypotheses": 20,
+      "active_confirmations": 0,
+      "current_blockers": {
+        "development_report_unavailable": 20
+      },
+      "old_report_available": false,
+      "old_report_generated_at": null,
+      "old_independent_branch_fit_counts": null,
+      "old_model_cards": null,
+      "old_requested_unique_matches": null
+    },
+    {
+      "league": "liga_mx",
+      "registered_hypotheses": 20,
+      "active_confirmations": 0,
+      "current_blockers": {
+        "implementation_changed_requires_fresh_development_study": 20
+      },
+      "old_report_available": true,
+      "old_report_generated_at": "2026-10-13T13:50:09.395068Z",
+      "old_independent_branch_fit_counts": {
+        "failed": 8,
+        "fitted": 9
+      },
+      "old_model_cards": 9,
+      "old_requested_unique_matches": 774
+    },
+    {
+      "league": "segunda",
+      "registered_hypotheses": 20,
+      "active_confirmations": 0,
+      "current_blockers": {
+        "implementation_changed_requires_fresh_development_study": 20
+      },
+      "old_report_available": true,
+      "old_report_generated_at": "2026-10-13T13:55:33.646363Z",
+      "old_independent_branch_fit_counts": {
+        "failed": 8,
+        "fitted": 9
+      },
+      "old_model_cards": 9,
+      "old_requested_unique_matches": 1035
+    },
+    {
+      "league": "argentina_a",
+      "registered_hypotheses": 20,
+      "active_confirmations": 0,
+      "current_blockers": {
+        "implementation_changed_requires_fresh_development_study": 20
+      },
+      "old_report_available": true,
+      "old_report_generated_at": "2026-10-13T14:02:19.982814Z",
+      "old_independent_branch_fit_counts": {
+        "failed": 8,
+        "fitted": 9
+      },
+      "old_model_cards": 9,
+      "old_requested_unique_matches": 1322
+    }
+  ],
+  "sample_plan_feasibility": {
+    "status": "blocked_pending_current_fingerprint_development",
+    "cannot_claim_current_plans_infeasible": true,
+    "gate_counts": {
+      "implementation_changed_requires_fresh_development_study": 360,
+      "development_report_unavailable": 20
+    }
+  },
+  "new_development_design": {
+    "status": "development_design_proposal_not_activated_not_implemented",
+    "preserve_old_protocols": true,
+    "old_trial_sample_transfer": false,
+    "reason": "current 380-family plans unavailable until fresh development; breadth does not imply feasibility",
+    "steps": [
+      "恢复当前实现的逐联赛开发报告、完整训练/预测来源与持久状态，不移除指纹依赖维持旧资格",
+      "逐项运行原development_gate和sample_plan，输出失败原因、实际差分方差上界、各指标需求、最大需求和队列需求",
+      "以供应商已公布赛程构成确定下界，历史同季节吞吐只作计划估计，未知未来赛程上界保持未知",
+      "新开发版本采用过去嵌套时间块和同池消融，先比较单特征，再组合；所有尝试登记；保留独立留出期",
+      "仅在开发材料中选择少量候选/时距，冻结另立新确认协议身份、家族和主指标；不能在看到正式终局后缩家族",
+      "新协议预先明确同队/时间依赖的分块推断与设计效应、样本/日历/覆盖可行性，再从全新未来起点激活",
+      "门未过或样本计划不可行则保持基线并给有界研究结论，不能用放宽门槛、无限延长或历史回填关闭目标"
+    ],
+    "completion_levels": [
+      "engineering_accepted",
+      "data_supported_or_explicitly_blocked",
+      "development_qualified",
+      "confirmation_activated",
+      "confirmation_terminal",
+      "production_adoption_recorded"
+    ],
+    "no_accuracy_or_roi_promise": true
+  },
+  "framework_version": "football-analysis-v1.7-r13",
+  "status": "local_implementation_pending_cloud_acceptance",
+  "status_note": "本快照记录固定源码9f5ec2a及状态eaef60f的只读核查，不将批次十三尚未发生的发布、研究或保存预填成功；原全面人员目标继续未完成。根执行者随后用新运行回执追加状态。",
+  "old_implementation_diagnostics": {
+    "hypothesis_horizons": 360,
+    "all_policy_primary_gain_below_0_01": 360,
+    "native_coverage_below_0_8": 296,
+    "max_policy_primary_gain": 0.0027905386623374717,
+    "scope": "historical_development_of_previous_implementation_only_not_current_gate_or_prospective_effect"
+  },
+  "source_response_evidence": [
+    {
+      "retrieval_record": "conf-allsvenskan-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/allsvenskan/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/confirmation/latest.json",
+      "bytes": 10803,
+      "sha256": "fb2a0866d9b45136e58ca3cbbff9a795101fc3c34afa334a98389673a25ae4ee",
+      "git_blob_sha": "e5faa10b0a804b71ead84f5080287fda2b6b8261",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "conf-argentina_a-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/argentina_a/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/confirmation/latest.json",
+      "bytes": 10803,
+      "sha256": "03511c31606a653d1997dd82f71f11e1fc55342cf5eb0b916eb11a5890bc21a6",
+      "git_blob_sha": "87f5ae3bc882f3bc09dda92447b513c6b3b15e0b",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "conf-brazil_a-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/brazil_a/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/confirmation/latest.json",
+      "bytes": 10797,
+      "sha256": "f9bad32041040aa4f0193815d7ccefaf3e866b7ee575efa887389fb8ad08ae4d",
+      "git_blob_sha": "a5844ec07baecd8d919a58114a7bf40d41e1a051",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "conf-bundesliga-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/bundesliga/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/confirmation/latest.json",
+      "bytes": 10801,
+      "sha256": "031b74f48f7b7c28d9a004f59f4ed74d5e30d6c77c2ae1bc9a6cfdbcb3dd77fc",
+      "git_blob_sha": "31fc7b5bea74dec9e96b5336db34a349af0b912c",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "conf-bundesliga_2-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/bundesliga_2/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/confirmation/latest.json",
+      "bytes": 10805,
+      "sha256": "b14286a6c8e9246a8437c13cbba837c3791058b656daaf63ac512bc69e204958",
+      "git_blob_sha": "a14e2f7ef921737c4fc6402b3f0cff0e0ab6d22b",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "conf-championship-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/championship/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/confirmation/latest.json",
+      "bytes": 10805,
+      "sha256": "cfdaa75f2a5882c8c617c9cf916dea87054c782e9bbf4608273ec1e0e6e4b9a0",
+      "git_blob_sha": "840f9050aebbfedecf5d58d36f506ccea3755de7",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "conf-epl-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/epl/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/confirmation/latest.json",
+      "bytes": 10787,
+      "sha256": "f8f910ab4a83292e4e2f7ff677d55d268bd2ff1f6506d19d7415ae3f31fe4eff",
+      "git_blob_sha": "4d0dab1de9e87062b7457f8e9fe8d45ed25d7000",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "conf-eredivisie-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/eredivisie/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/confirmation/latest.json",
+      "bytes": 10801,
+      "sha256": "df4507cd557b337a749ef914b031d0cf835864dee861f4673aaec6fbe6383cad",
+      "git_blob_sha": "d9b3c422603857670816c059f371eed631fa3d88",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "conf-j1-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/j1/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/confirmation/latest.json",
+      "bytes": 10785,
+      "sha256": "5f7c2aedf8f36948c11c7476bc9ef1bf5ca95beb419d1977aee685b4fd5d8bf7",
+      "git_blob_sha": "1667ec2f1d75d703ba1193eab476d77f953301de",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "conf-k1-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/k1/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/confirmation/latest.json",
+      "bytes": 10785,
+      "sha256": "4cd48784b600e4dfe2926dfca67f4217a2c62f720dba570206dc45dd26da614e",
+      "git_blob_sha": "f00f6e5219e7fd3b554195a447618033bbce221c",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "conf-laliga-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/laliga/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/confirmation/latest.json",
+      "bytes": 10793,
+      "sha256": "d96ea953bf78bdb2cfcd19a61a2822264ba1d61a84f317a42a880b2be299ef01",
+      "git_blob_sha": "bcc01faa9978889635dcd75d105dfeb784b2f667",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "conf-liga_mx-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/liga_mx/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/confirmation/latest.json",
+      "bytes": 10795,
+      "sha256": "553b3f7410d37d0c7c30279667d04f97ef77a2cc37f460b444b3c64592171507",
+      "git_blob_sha": "1785ea1c71d5293c335299d352052bb230493c6e",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "conf-ligue_1-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/ligue_1/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/confirmation/latest.json",
+      "bytes": 10795,
+      "sha256": "cb531b8d2a31963a6e721f0535d27a2578d9a5a7939cc6191fedf4869af2b836",
+      "git_blob_sha": "104e459277d5173eae04372248f361ea4f3bef0a",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "conf-ligue_2-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/ligue_2/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/confirmation/latest.json",
+      "bytes": 10795,
+      "sha256": "e596072a845ae02e3ba55ae085baf0b0f226e657fa9cda42c0e06f0e9b6f4e2c",
+      "git_blob_sha": "d1916191738b90e21019e6afda58b42126059c72",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "conf-mls-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/mls/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/confirmation/latest.json",
+      "bytes": 10787,
+      "sha256": "0e243c4d483ecd4fc348de5b89cae2d9ef97cf2d4a3389b0316fd16369c0c2d9",
+      "git_blob_sha": "041a5bc866c39dc2ae16194e0818a1c504ec64b5",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "conf-primeira-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/primeira/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/confirmation/latest.json",
+      "bytes": 10797,
+      "sha256": "4609dbff395c02b142deba2861c146e5a5ea788b7fa92b82a9156b68b1e05bca",
+      "git_blob_sha": "6d6eb7ea9b318d668e2625abe42534c88506a7c7",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "conf-segunda-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/segunda/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/confirmation/latest.json",
+      "bytes": 10795,
+      "sha256": "d5f6703821fd9cd095e6c28203aba8ea0f7113d993c8c413adbc0ac6a2182771",
+      "git_blob_sha": "68f273e3fe49aa585a01ad88f847b7b8137db3cb",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "conf-serie_a-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/serie_a/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/confirmation/latest.json",
+      "bytes": 10795,
+      "sha256": "8e3e334528c96cb3d482e237d32a735b77820193adce1edd181cd59545210fba",
+      "git_blob_sha": "c92252aa7aab240593e961e515f78424258f7c3e",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "conf-unl-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/unl/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/confirmation/latest.json",
+      "bytes": 6347,
+      "sha256": "fc50909af2b659d5b95f1d78360e8400f6e0b18c1103776af2589525b61e8ed3",
+      "git_blob_sha": "c1f28fe2d4adeed1de3d0183dacb22685ae36e80",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "report-allsvenskan-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/allsvenskan/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/latest.json",
+      "bytes": 579803,
+      "sha256": "c62555f874f5a31e2b51d291d0c2fc08be3bce50e1b84a12c5cee31d3452110e",
+      "git_blob_sha": "555d6521064f567a6f47c09ebbfb3490a9e3069a",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "report-argentina_a-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/argentina_a/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/latest.json",
+      "bytes": 671883,
+      "sha256": "c2d23689ca1fc13fea3e0d1a76e72b2d4be853eed9b41b4d4d85c0cacac431fb",
+      "git_blob_sha": "6512eb89f5f6c41c5296df4b546d8f11e23c124b",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "report-brazil_a-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/brazil_a/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/latest.json",
+      "bytes": 639822,
+      "sha256": "5855d854215ba0aa90a76ac80b07aa7863c77f47e215845a5fed682c9ce0de00",
+      "git_blob_sha": "cc640d4509030295be875d649719b9d57976a0c1",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "report-bundesliga-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/bundesliga/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/latest.json",
+      "bytes": 579159,
+      "sha256": "74704b6d1b1101055bf7f2c32e53872927233b663fbd43a24300ffdc62535e30",
+      "git_blob_sha": "64782dd361bd9f86e794da5becebc079dd81c08d",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "report-bundesliga_2-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/bundesliga_2/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/latest.json",
+      "bytes": 576401,
+      "sha256": "93ad25f8e0aa7181c2574919220bbe07ee42d8476ac69565079eb5f417d91a76",
+      "git_blob_sha": "653a22071be1552d2f761e9b0fcf1df28104670e",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "report-championship-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/championship/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/latest.json",
+      "bytes": 663170,
+      "sha256": "8e6e38fee512f5112a0df78c5e4554df2716ad47141e65ee6613d8db99da596b",
+      "git_blob_sha": "e78da80fa7611f22a90bf5b54486fa949f951a9a",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "report-epl-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/epl/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/latest.json",
+      "bytes": 602246,
+      "sha256": "d2101a68ce29612b47d7f8df554a6349a40feea84712157cd37c852477b393b0",
+      "git_blob_sha": "91137f65d55e5a1bbd5b6f3c3fb7aba2b1d15fa4",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "report-eredivisie-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/eredivisie/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/latest.json",
+      "bytes": 582404,
+      "sha256": "db6bbe9274618e94cf6139904e41613daa9d498e1aef7e134d385f4dd32a7b41",
+      "git_blob_sha": "0483e241d3f9a7a02bb1c6dad1809d8944dc203b",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "report-j1-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/j1/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/latest.json",
+      "bytes": 560739,
+      "sha256": "bfa41999bae01ecb7817888548ef800110fdc7b1aa48d82c7e650e11e79d6d5f",
+      "git_blob_sha": "2aea95d9cfea579c258e49336ffe55c8cc51d862",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "report-k1-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/k1/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/latest.json",
+      "bytes": 554617,
+      "sha256": "ac699c83d3c029b7ddeedf6e46000ed3e38629517e170d548f938a9b07c51b04",
+      "git_blob_sha": "dc3b0219269b774e7f9431140b0434d8859a1528",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "report-laliga-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/laliga/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/latest.json",
+      "bytes": 603208,
+      "sha256": "581d96a121209d07377c13b99c401fd35c6ea6e048c119b275284974992e8545",
+      "git_blob_sha": "fdb6a699989387f44bfb8d1bac8647796318c5f1",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "report-liga_mx-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/liga_mx/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/latest.json",
+      "bytes": 589878,
+      "sha256": "d68979ce7fd7f46eb78549fbab8be2f36070b555627076d8cbb52d0bb57bcd08",
+      "git_blob_sha": "f562629b569499d5957d6a50a28d7fa3f87abfe3",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "report-ligue_1-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/ligue_1/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/latest.json",
+      "bytes": 579735,
+      "sha256": "d855838ac76876d58e1842780584775a037c1439d20adeb4a1bc539f0dfd8cc9",
+      "git_blob_sha": "95ba548f18c8981e05ab83f372636716bf4d6fea",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "report-ligue_2-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/ligue_2/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/latest.json",
+      "bytes": 565888,
+      "sha256": "1d84fe8fe7f0305c2b3d73abe7277c86c86f94aeafe55e84a9e0aaae158c1e5a",
+      "git_blob_sha": "5fe114838e1f5c99a78a5b68f97e5aa20b324938",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "report-mls-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/mls/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/latest.json",
+      "bytes": 701550,
+      "sha256": "4d861ec27098f5cc0f822c76accd7d9aa6f07c93f1565456fc55fe6c29256e02",
+      "git_blob_sha": "8fa858888c10acfdf941b20e545db432c6d73a0b",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "report-primeira-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/primeira/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/latest.json",
+      "bytes": 576117,
+      "sha256": "03db3a652c6ad7acac5f74af275adbbdf735b77d80ace3d3e541dd3ebc96dbab",
+      "git_blob_sha": "1b4aaa1ef1804a5fbb5788a347fce325d0143558",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "report-segunda-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/segunda/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/latest.json",
+      "bytes": 624537,
+      "sha256": "51e7b28f0252edebed458eadffb354f6faa5783cb5e780b3f9295d2f17307e37",
+      "git_blob_sha": "e3cc6741f15814880da6541bd7fadabe29fc4d1c",
+      "git_blob_verified": true
+    },
+    {
+      "retrieval_record": "report-serie_a-response.json",
+      "fixed_url": "https://github.com/wuyan0231-hub/football-model/blob/eaef60f12b25ee68885c8bd2f71ca7e655e85c8d/runtime/advanced_models/serie_a/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/latest.json",
+      "bytes": 1385891,
+      "sha256": "e6e10e4315d951f878eda768f21361d9ce80c1afe5ed7c292e9aa86143b7ca4a",
+      "git_blob_sha": "6c1009ecaa2ecf1a7317157e68b88de07a8d8f8b",
+      "git_blob_verified": true
+    }
+  ],
+  "source_response_raw_storage": "本次独立审计原响应保存在audit/model_remedy/raw；仓库记录真实固定URL与原字节指纹，不复制11MB摘要正文。完整研究原件仍需按状态清单恢复。",
+  "new_cloud_execution": {
+    "status": "not_yet_accepted",
+    "source_commit": null,
+    "run_ids": [],
+    "state_commit": null,
+    "restore": null,
+    "research_19_leagues": null,
+    "successor_short_cycle": null,
+    "readback": null,
+    "numerical_effect_claim": false,
+    "roi_claim": false
+  }
+}

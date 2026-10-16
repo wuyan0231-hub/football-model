@@ -74,7 +74,7 @@ jobs:
 
       - name: 仅从生产180天预测派生F5-C并评分
         id: total_shrink_shadow
-        if: ${{ always() && steps.restore.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
         continue-on-error: true
         # Intentionally no API key and no model/collector/replay invocation.
         run: |
@@ -106,7 +106,7 @@ jobs:
 
       - name: 检查完整状态可安全保存
         id: check
-        if: ${{ always() && steps.restore.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
         continue-on-error: true
         env:
           # Only detect accidental credentials in files, never print or call API.
@@ -115,7 +115,7 @@ jobs:
 
       - name: 保存完整状态和影子证据
         id: persist
-        if: ${{ always() && steps.check.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.check.outcome == 'success' }}
         continue-on-error: true
         env:
           # Only used by the output credential scan.
@@ -124,7 +124,7 @@ jobs:
 
       - name: 显示实际分层结果
         id: summary
-        if: ${{ always() }}
+        if: ${{ !cancelled() }}
         env:
           RESTORE_OUTCOME: ${{ steps.restore.outcome }}
           CHECK_OUTCOME: ${{ steps.check.outcome }}
@@ -138,7 +138,7 @@ jobs:
           --summary "$GITHUB_STEP_SUMMARY"
 
       - name: 上传F5-C证据便捷副本
-        if: ${{ always() && steps.check.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.check.outcome == 'success' }}
         uses: actions/upload-artifact@v7
         with:
           name: football-total-shrink-${{ github.run_id }}-${{ github.run_attempt }}
@@ -148,7 +148,7 @@ jobs:
           include-hidden-files: false
 
       - name: 上传分层摘要
-        if: ${{ always() && steps.summary.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.summary.outcome == 'success' }}
         uses: actions/upload-artifact@v7
         with:
           name: football-total-shrink-summary-${{ github.run_id }}-${{ github.run_attempt }}
@@ -158,7 +158,7 @@ jobs:
           include-hidden-files: false
 
       - name: 将实际失败标记为失败
-        if: ${{ always() && (steps.restore.outcome != 'success' || steps.total_shrink_shadow.outcome != 'success' || steps.check.outcome != 'success' || steps.persist.outcome != 'success' || steps.summary.outcome != 'success') }}
+        if: ${{ !cancelled() && (steps.restore.outcome != 'success' || steps.total_shrink_shadow.outcome != 'success' || steps.check.outcome != 'success' || steps.persist.outcome != 'success' || steps.summary.outcome != 'success') }}
         run: |
           echo 'F5-C恢复、派生/评分、输出检查、保存或摘要步骤未完成；不能视为全部成功。'
           exit 1

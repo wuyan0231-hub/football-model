@@ -11,7 +11,7 @@ import subprocess
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen, build_opener, HTTPRedirectHandler
-from .state_storage import _expand, MAX_FILE_BYTES
+from .state_storage import _expand, _manifest_json, MAX_FILE_BYTES, StorageError
 
 
 def _git(repo, *args):
@@ -28,8 +28,85 @@ def _time(value):
 
 
 MAX_LOG_BYTES = 32 * 1024 * 1024
-METHOD = "git_tree_closure_and_fixed_attempt_job_log_exact_saved_commit_v2"
+METHOD = "git_tree_typed_reference_closure_and_fixed_attempt_job_log_exact_saved_commit_v3"
 _VERIFIED_REMOTE_CACHE = {}
+
+
+class DurabilityReferenceError(ValueError):
+    """A rejected closure reference, with safe fixed-tree failure coordinates."""
+
+    def __init__(self, reason, *, state_commit, path, expected_sha256,
+                 actual_sha256, reference_chain):
+        super().__init__(reason)
+        self.details = {"state_commit": state_commit, "path": path,
+            "expected_sha256": expected_sha256, "actual_sha256": actual_sha256,
+            "reference_chain": reference_chain}
+
+
+def _recorded_replay_ref(name, ref):
+    replay = re.fullmatch(r"replay/bundles/([0-9a-f]{64})\.json\.gz", name)
+    return bool(replay and ref.get("status") == "recorded" and ref.get("sha256") == replay.group(1))
+
+
+def _replay_reference_metadata(ref, value):
+    payload = value["payload"]
+    if (not isinstance(payload.get("events"), list) or not isinstance(payload.get("initial_state"), dict)
+            or type(ref.get("events")) is not int or ref["events"] != len(payload["events"])
+            or type(ref.get("initial_state_files")) is not int
+            or ref["initial_state_files"] != len(payload["initial_state"])):
+        raise ValueError("durable_replay_reference_metadata_mismatch")
+
+
+def _reference_value(name, ref, data):
+    """Respect the producer's replay payload digest; bind raw bytes separately.
+
+    Production replay's Recorder.save returns the canonical *payload* digest,
+    not the gzip file digest.  This is the only registered non-byte reference.
+    A filename alone never exempts an arbitrary file from byte-hash checking.
+    """
+    from .production_replay import SCHEMA, _canonical as replay_canonical
+    raw_digest = _sha(data)
+    replay = re.fullmatch(r"replay/bundles/([0-9a-f]{64})\.json\.gz", name)
+    typed = _recorded_replay_ref(name, ref)
+    if not typed and raw_digest != ref["sha256"]:
+        return None, "raw_bytes_sha256", raw_digest
+    if replay is None:
+        return json.loads(data), "raw_bytes_sha256", raw_digest
+    # Decode even a raw-byte reference to a replay path only under the exact
+    # producer contract.  One member, bounded expansion, no trailing data.
+    try:
+        value = _manifest_json(_expand(data, MAX_FILE_BYTES))
+    except StorageError as exc:
+        raise ValueError("durable_replay_encoding_invalid") from exc
+    payload = value.get("payload") if isinstance(value, dict) else None
+    if (not isinstance(value, dict) or set(value) != {"sha256", "payload"}
+            or not isinstance(payload, dict) or payload.get("schema") != SCHEMA):
+        raise ValueError("durable_replay_schema_mismatch")
+    digest = _sha(replay_canonical(payload))
+    if value["sha256"] != digest or replay.group(1) != digest:
+        raise ValueError("durable_replay_payload_hash_mismatch")
+    if typed:
+        _replay_reference_metadata(ref, value)
+        return value, "production_replay_canonical_payload_sha256", digest
+    return value, "raw_bytes_sha256", raw_digest
+
+
+def verify_reference_bytes(name, ref, data):
+    """Validate fixed-original bytes under the exact producing reference contract.
+
+    Callers still establish which fixed Git tree supplied ``data``. Returning
+    both fingerprints never upgrades local bytes to a remote durability proof.
+    """
+    if (not isinstance(name, str) or Path(name).is_absolute() or ".." in Path(name).parts
+            or not isinstance(ref, dict) or not re.fullmatch(r"[0-9a-f]{64}", str(ref.get("sha256", "")))):
+        raise ValueError("invalid_durable_ref")
+    if not isinstance(data, bytes) or len(data) > MAX_FILE_BYTES:
+        raise ValueError("durable_blob_too_large_or_invalid")
+    value, semantics, actual = _reference_value(name, ref, data)
+    if actual != ref["sha256"]:
+        raise ValueError("durable_source_hash_mismatch")
+    return {"value": value, "reference_sha256": actual,
+        "reference_hash_semantics": semantics, "raw_sha256": _sha(data)}
 
 
 def _sha(raw):
@@ -150,7 +227,17 @@ def _tree_file(repo, commit, name, archive=None):
         if len(data)!=entry["raw_bytes"] or _sha(data)!=entry["raw_sha256"]:
             raise ValueError("archive_raw_mismatch")
     else:
-        data=_git(repo,"show",commit+":runtime/"+name)
+        try:
+            data=_git(repo,"show",commit+":runtime/"+name)
+        except ValueError as missing_direct:
+            # A cold catalog changes location, never the referenced original.
+            # Do not reinterpret archive corruption as an absent direct file.
+            try:
+                _git(repo, "show", commit + ":runtime/history_archive/catalog.json")
+            except ValueError:
+                raise missing_direct
+            from .history_archive import read_state_bytes
+            data = read_state_bytes(repo, commit, name)
     if len(data)>MAX_FILE_BYTES:
         raise ValueError("durable_blob_too_large")
     return data
@@ -206,9 +293,15 @@ def _same_bound_evidence(left, right):
         k:v for k,v in right.items() if k not in changing_envelope}
 
 
-def prove(repo, runtime, state_commit, receipt_ref, *, _completion_cache=None):
+def prove(repo, runtime, state_commit, receipt_ref, *, _completion_cache=None, _read_file=None):
     """Read receipt and every hash-referenced parent from the fixed Git tree."""
     if not re.fullmatch(r"[0-9a-f]{40}",state_commit): raise ValueError("invalid_state_commit")
+    if _read_file is None:
+        from .history_archive import FixedStateReader
+        with FixedStateReader(repo, state_commit) as reader:
+            reader.validate_manifest()
+            return prove(repo, runtime, state_commit, receipt_ref,
+                _completion_cache=_completion_cache, _read_file=reader.read)
     repo, runtime=Path(repo),Path(runtime)
     try:
         _git(repo,"cat-file","-e",state_commit+"^{commit}")
@@ -241,29 +334,45 @@ def prove(repo, runtime, state_commit, receipt_ref, *, _completion_cache=None):
         completion = previous["remote_run_completion"]
     if completion is None and previous is not None:
         completion = _stored_service_evidence(repo, runtime, proof_path, previous, metadata, state_commit)
-    manifest=json.loads(_git(repo,"show",state_commit+":state_storage.json"))
-    entries=manifest.get("entries",[])
-    archive={e["path"]:e for e in entries}
-    if manifest.get("schema_version")!=1 or len(archive)!=len(entries):raise ValueError("durable_manifest_invalid")
-    visited={}; values={}
-    def read(ref):
+    visited={}; values={}; raw_hashes={}
+    def read(ref, chain=()):
         name=ref.get("runtime_relative_path", ref.get("path"))
         if not isinstance(name, str) or not re.fullmatch(r"[0-9a-f]{64}", str(ref.get("sha256", ""))):
             raise ValueError("invalid_durable_ref")
         if Path(name).is_absolute() or ".." in Path(name).parts: raise ValueError("unsafe_durable_ref")
         if name in visited:
-            if visited[name]!=ref["sha256"]: raise ValueError("conflicting_durable_ref")
-            return values[name]
-        data = _tree_file(repo, state_commit, name, archive)
-        if hashlib.sha256(data).hexdigest()!=ref["sha256"]: raise ValueError("durable_source_hash_mismatch")
-        visited[name]=ref["sha256"]
-        value=json.loads(data);values[name]=value
-        def children(x):
+            value = values[name]
+            if _recorded_replay_ref(name, ref):
+                _replay_reference_metadata(ref, value)
+                semantics = "production_replay_canonical_payload_sha256"
+                actual = value["sha256"]
+            else:
+                semantics, actual = "raw_bytes_sha256", raw_hashes[name]
+        else:
+            data = _read_file(name)
+            value, semantics, actual = _reference_value(name, ref, data)
+        if actual != ref["sha256"]:
+            raise DurabilityReferenceError("durable_source_hash_mismatch",
+                state_commit=state_commit, path=name, expected_sha256=ref["sha256"],
+                actual_sha256=actual, reference_chain=list(chain))
+        if name in visited:
+            visited[name][semantics] = ref["sha256"]
+            return value
+        visited[name] = {semantics: ref["sha256"]}
+        raw_hashes[name] = _sha(data)
+        values[name]=value
+        def children(x, pointer=""):
             if isinstance(x,dict):
-                if isinstance(x.get("runtime_relative_path", x.get("path")),str) and re.fullmatch(r"[0-9a-f]{64}",str(x.get("sha256",""))): read(x)
-                for v in x.values():children(v)
+                if isinstance(x.get("runtime_relative_path", x.get("path")),str) and re.fullmatch(r"[0-9a-f]{64}",str(x.get("sha256",""))):
+                    edge = {"source_path": name, "json_pointer": pointer,
+                        "path": x.get("runtime_relative_path", x.get("path")),
+                        "expected_sha256": x["sha256"]}
+                    read(x, (*chain, edge))
+                for key, v in x.items():
+                    escaped = str(key).replace("~", "~0").replace("/", "~1")
+                    children(v, pointer + "/" + escaped)
             elif isinstance(x,list):
-                for v in x:children(v)
+                for index, v in enumerate(x):children(v, pointer + "/" + str(index))
         children(value)
         return value
     receipt=read(receipt_ref)
@@ -272,39 +381,63 @@ def prove(repo, runtime, state_commit, receipt_ref, *, _completion_cache=None):
     if _time(receipt["storage_completed_at"])>_time(commit_at):raise ValueError("state_commit_precedes_capture")
     saved_at=completion["observed_completion_upper_bound"] if completion else None
     if saved_at and _time(commit_at)>_time(saved_at):raise ValueError("state_commit_after_remote_run_completion")
-    closure=hashlib.sha256(json.dumps(visited,sort_keys=True,separators=(",",":")).encode()).hexdigest()
+    hash_semantics = {name: sorted(identities) for name, identities in visited.items()}
+    closure=hashlib.sha256(_canonical({"references": visited, "raw_sha256": raw_hashes,
+        "reference_hash_semantics": hash_semantics})).hexdigest()
     verified_at = datetime.now(timezone.utc).isoformat() if completion else None
     if previous and completion and previous.get("remote_run_completion") == completion:
         verified_at = previous.get("service_evidence_verified_at") or verified_at
-    return {"schema_version":"advanced-durability-v2","receipt_ref":receipt_ref,"state_commit":state_commit,
+    typed_names = {name for name, identities in hash_semantics.items()
+        if any(kind != "raw_bytes_sha256" for kind in identities)}
+    return {"schema_version":"advanced-durability-v3","receipt_ref":receipt_ref,"state_commit":state_commit,
         "durable_saved_at":saved_at,"commit_clock_at":commit_at,"remote_run_completion":completion,
         "service_evidence_verified_at": verified_at,
         "closure_sha256":closure,"verified_file_count":len(visited),"closure_verified":True,
+        # Ordinary references already bind raw SHA in the closure. Only the
+        # producer-specific exceptions need both readable fingerprints here.
+        "reference_hash_semantics":{name:hash_semantics[name] for name in sorted(typed_names)},
+        "raw_sha256":{name:raw_hashes[name] for name in sorted(typed_names)},
         "verified":bool(completion),"method":METHOD}
 
 
 def stamp(repo, runtime, state_commit):
+    from .history_archive import FixedStateReader
     repo,runtime=Path(repo),Path(runtime)
     reports=[]
     completion_cache={}
+    pending = []
     for p in sorted((runtime/"advanced_snapshots").glob("*/captures/*/*/*/first.json")):
         ref={"path":p.relative_to(runtime).as_posix(),"sha256":hashlib.sha256(p.read_bytes()).hexdigest()}
         out=p.parents[4]/"durability"/(ref["sha256"]+".json")
-        if out.exists() and json.loads(out.read_text()).get("verified") is True:continue
-        proof=prove(repo,runtime,state_commit,ref,_completion_cache=completion_cache)
-        out.parent.mkdir(parents=True,exist_ok=True)
         if out.exists():
-            previous=out.with_name(out.stem+"-unverified.json")
-            if not previous.exists():previous.write_bytes(out.read_bytes())
-        out.write_text(json.dumps(proof,sort_keys=True,indent=2))
-        reports.append(proof)
+            existing = json.loads(out.read_text())
+            if existing.get("verified") is True and existing.get("method") == METHOD:continue
+        pending.append((ref, out))
+    if not pending:
+        return reports
+    with FixedStateReader(repo, state_commit) as reader:
+        reader.validate_manifest()
+        for ref, out in pending:
+            proof=prove(repo,runtime,state_commit,ref,_completion_cache=completion_cache, _read_file=reader.read)
+            out.parent.mkdir(parents=True,exist_ok=True)
+            if out.exists():
+                old_raw = out.read_bytes()
+                previous=out.with_name(out.stem+"-previous-"+_sha(old_raw)+".json")
+                if not previous.exists():previous.write_bytes(old_raw)
+            out.write_text(json.dumps(proof,sort_keys=True,indent=2))
+            reports.append(proof)
     return reports
 
 
 def main():
     p=argparse.ArgumentParser();p.add_argument("--runtime",default="runtime");p.add_argument("--repo",default=".")
     p.add_argument("--state-commit",required=True);a=p.parse_args()
-    proofs=stamp(a.repo,a.runtime,a.state_commit)
+    try:
+        proofs=stamp(a.repo,a.runtime,a.state_commit)
+    except DurabilityReferenceError as exc:
+        print(json.dumps({"status": "failed_verification_attempt", "error": str(exc),
+            "failure": exc.details}, sort_keys=True))
+        return 1
     print(json.dumps({"status":"completed_verification_attempt", "new_durable_closures":len(proofs),
         "verified":sum(p["verified"] for p in proofs), "unverified":sum(not p["verified"] for p in proofs)}))
     return 0

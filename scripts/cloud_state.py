@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import gzip
+import hashlib
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import json
@@ -197,24 +198,32 @@ def _remote_oid(repo: Path) -> str | None:
 
 
 @contextmanager
-def _worktree(repo: Path, oid: str) -> Iterator[Path]:
+def _worktree(repo: Path, oid: str, *, checkout: bool = True) -> Iterator[Path]:
     # This directory is independent of the source checkout. Cleanup is scoped
     # to this exact temporary directory; no glob or source reset is used.
     # Same filesystem as the checked-out repository, so resource checks cover
     # both the temporary transport and newly written Git objects.
     with tempfile.TemporaryDirectory(prefix="football-state-", dir=repo) as temp:
         path = Path(temp) / "checkout"
-        _git(repo, "worktree", "add", "--detach", str(path), oid)
+        command = ["worktree", "add", "--detach"]
+        if not checkout:
+            command.append("--no-checkout")
+        _git(repo, *command, str(path), oid)
         try:
+            if not checkout:
+                # Keep HEAD as the real parent but start with a completely
+                # empty isolated index. No old transport files are checked out
+                # merely to be removed again. Source index is never touched.
+                _git(path, "read-tree", "--empty")
             yield path
         finally:
             _git(repo, "worktree", "remove", "--force", str(path), check=False)
 
 
-def _validate_runtime(runtime: Path) -> dict:
+def _validate_runtime(runtime: Path, *, transport_observer=None) -> dict:
     state_storage.validate_runtime(runtime, max_file_bytes=_MAX_FILE_BYTES,
                                    max_logical_bytes=_MAX_LOGICAL_BYTES)
-    estimate = state_storage.estimate_runtime(runtime)
+    estimate = state_storage.estimate_runtime(runtime, transport_observer=transport_observer)
     if estimate["persisted_bytes"] > _MAX_TOTAL_BYTES:
         raise StateError("状态预计超过安全物理保存大小，请检查缓存体积；未覆盖远端。")
     return estimate
@@ -230,6 +239,166 @@ def _write_json(path: Path, content: dict) -> None:
     temporary = path.with_name(path.name + ".tmp")
     temporary.write_text(json.dumps(content, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     temporary.replace(path)
+
+
+def _loaded_baseline(repo: Path, marker: Path) -> dict:
+    if not marker.is_file():
+        raise StateError("尚未成功 load；拒绝保存，以免覆盖已有状态。")
+    baseline = json.loads(marker.read_text(encoding="utf-8"))
+    oid = baseline.get("state_oid")
+    if baseline.get("schema_version") != 1 or (
+        oid is not None and not re.fullmatch(r"[0-9a-f]{40,64}", str(oid))
+    ):
+        raise StateError("本地状态基线损坏，拒绝保存。")
+    if baseline.get("source_sha") != _git(repo, "rev-parse", "HEAD").stdout.strip():
+        raise StateError("程序版本在运行中改变，拒绝混用版本保存。")
+    return baseline
+
+
+def preflight_state(repo: Path, runtime: Path = Path("runtime")) -> dict:
+    """Measure the save peak without creating a checkout, commit or pack.
+
+    The loaded parent already supplies most Git blobs. Reserve disk for the
+    complete new temporary transport, only genuinely new Git payload objects,
+    conservatively bounded tree/metadata objects, and the existing safety
+    margin. Filesystem block rounding is included. The final pack probe and
+    ordinary compare-and-swap push remain independent mandatory checks.
+    """
+    repo, runtime, marker = _paths(repo, runtime)
+    baseline = _loaded_baseline(repo, marker)
+    oid = baseline.get("state_oid")
+    object_format = _git(repo, "rev-parse", "--show-object-format").stdout.strip()
+    if object_format not in {"sha1", "sha256"}:
+        raise StateError("无法核实 Git 对象格式，已停止。")
+    old_blobs = set(_git(repo, "ls-tree", "-r", "--format=%(objectname)", oid).stdout.split()) if oid else set()
+    try:
+        filesystem = os.statvfs(repo)
+        block = max(512, int(filesystem.f_frsize or filesystem.f_bsize))
+    except (AttributeError, OSError, ValueError):
+        block = 4096
+    def allocated(size):
+        return ((size + block - 1) // block) * block if size else 0
+    def git_object_bound(size):
+        # zlib's stored-block bound plus a generous Git blob/tree header.
+        size += 64
+        return allocated(size + (size // 16383 + 1) * 5 + 16)
+    seen_objects, reused_objects, tree_edges, directories = set(), set(), set(), {""}
+    transport_disk = new_git_disk = 0
+    def tree_path(name):
+        parts = name.split("/")
+        parent = ""
+        for part in parts:
+            tree_edges.add((parent, part))
+            parent = parent + "/" + part if parent else part
+        directories.update("/".join(parts[:i]) for i in range(1, len(parts)))
+    def observe(name, content):
+        nonlocal transport_disk, new_git_disk
+        transport_disk += allocated(len(content))
+        tree_path(name)
+        hasher = hashlib.new(object_format)
+        hasher.update(f"blob {len(content)}\0".encode("ascii"))
+        hasher.update(content)
+        identity = hasher.hexdigest()
+        if identity in old_blobs:
+            reused_objects.add(identity)
+        elif identity not in seen_objects:
+            new_git_disk += git_object_bound(len(content))
+        seen_objects.add(identity)
+    estimate = _validate_runtime(runtime, transport_observer=observe)
+    # Manifest and run metadata change on every save; do not grant them reuse
+    # credit. The reserve includes state_metadata.json, README and an empty
+    # runtime sentinel when needed.
+    manifest = estimate["manifest_bytes"]
+    metadata = state_storage.METADATA_RESERVE_BYTES
+    transport_disk += allocated(manifest) + metadata
+    new_git_disk += git_object_bound(manifest) + metadata
+    for name in (state_storage.MANIFEST_NAME, "state_metadata.json", "README.md", "runtime/state_manifest.json"):
+        tree_path(name)
+    tree_sizes = {}
+    object_id_size = 20 if object_format == "sha1" else 32
+    for parent, name in tree_edges:
+        tree_sizes[parent] = tree_sizes.get(parent, 0) + len(name.encode("utf-8")) + object_id_size + 10
+    new_git_disk += sum(git_object_bound(size) for size in tree_sizes.values()) + block
+    transport_disk += len(directories) * block
+    additional = transport_disk + new_git_disk
+    try:
+        available = shutil.disk_usage(repo).free
+    except OSError as exc:
+        raise StateError("无法核实状态磁盘余量，已停止。") from exc
+    return {"schema_version": 1, "state_oid": oid,
+        "runtime_logical_bytes": estimate["logical_bytes"], "runtime_raw_bytes": estimate["raw_bytes"],
+        "historical_raw_bytes": estimate["historical_raw_bytes"],
+        "historical_file_count": estimate["historical_file_count"],
+        "total_original_logical_bytes": estimate["total_original_logical_bytes"],
+        "transport_bytes": estimate["persisted_bytes"], "temporary_transport_disk_bytes": transport_disk,
+        "new_git_object_bytes": new_git_disk, "reused_git_blob_count": len(reused_objects),
+        "transport_payload_count": estimate["transport_payload_count"],
+        "additional_bytes": additional, "disk_reserve_bytes": _DISK_RESERVE_BYTES,
+        "required_free_bytes": additional + _DISK_RESERVE_BYTES, "available_disk_bytes": available,
+        "can_save": available >= additional + _DISK_RESERVE_BYTES,
+        "estimation_method": "new_transport_plus_parent_deduplicated_git_objects_with_block_rounding"}
+
+
+def prepare_state(repo: Path, runtime: Path = Path("runtime")) -> dict:
+    """Compact only immutable originals already verified in the saved parent.
+
+    This is a local, reversible working-set operation. No commit is created and
+    no remote state is changed. New unsaved research output remains hot until a
+    successful checkpoint gives it a real fixed ancestor to reference.
+    """
+    repo, runtime, marker = _paths(repo, runtime)
+    baseline = _loaded_baseline(repo, marker)
+    from football_model.history_archive import catalog_stats, compact_existing_history
+    if baseline.get("state_oid") is None:
+        return {**catalog_stats(runtime), "compacted_file_count": 0,
+                "compacted_active_bytes": 0, "base_state_commit": None}
+    return compact_existing_history(runtime, baseline["state_oid"], repo)
+
+
+def _restore_disk_budget(tree: Path, stats: dict) -> dict:
+    """Bound only the active files to be restored, plus the new cold catalog.
+
+    Cold originals were already validated in the source transport. They stay
+    there instead of being expanded into runtime, so reserving their complete
+    raw total would incorrectly reject a viable tiered restore.
+    """
+    from football_model.history_archive import _catalog, is_catalog_member, select_cold_path
+    cold = set(_catalog(tree / "runtime"))
+    block = 4096
+    try:
+        filesystem = os.statvfs(tree)
+        block = max(512, int(filesystem.f_frsize or filesystem.f_bsize))
+    except (AttributeError, OSError, ValueError):
+        pass
+    def allocated(size):
+        return ((size + block - 1) // block) * block if size else 0
+    active_bytes = allocated_bytes = files = 0
+    directories = {""}
+    def active(name, size):
+        nonlocal active_bytes, allocated_bytes, files
+        active_bytes += size
+        allocated_bytes += allocated(size)
+        files += 1
+        parts = name.split("/")
+        directories.update("/".join(parts[:i]) for i in range(1, len(parts)))
+    for name, path in state_storage._files(tree / "runtime"):
+        if select_cold_path(name):
+            cold.add(name)
+        elif not is_catalog_member(name):
+            active(name, path.stat().st_size)
+    for entry in stats["entries"]:
+        if select_cold_path(entry["path"]):
+            cold.add(entry["path"])
+        else:
+            active(entry["path"], entry["raw_bytes"])
+    # Every catalog record has bounded hashes/OIDs/lengths and at most two
+    # copies of the logical path. This intentionally generous allowance also
+    # covers chunk indexes and one atomic chunk-write temporary file.
+    catalog_budget = (sum(2048 + 3 * len(name.encode("utf-8")) for name in cold)
+                      + 8 * 1024 * 1024) if cold else 0
+    return {"active_restore_raw_bytes": active_bytes, "active_restore_file_count": files,
+            "cold_restore_file_count": len(cold), "catalog_disk_budget_bytes": catalog_budget,
+            "additional_bytes": allocated_bytes + len(directories) * block + catalog_budget}
 
 
 def load_state(repo: Path, runtime: Path = Path("runtime")) -> str | None:
@@ -248,15 +417,17 @@ def load_state(repo: Path, runtime: Path = Path("runtime")) -> str | None:
         oid = _git(repo, "rev-parse", "FETCH_HEAD").stdout.strip()
         with _worktree(repo, oid) as tree:
             stats = _validate_tree(tree)
-            restored_bytes = stats["raw_bytes"] + sum(e["raw_bytes"] for e in stats["entries"])
-            _ensure_disk_space(repo, restored_bytes)
+            restore_resources = _restore_disk_budget(tree, stats)
+            print("MODEL_STATE_RESTORE_PREFLIGHT=" + json.dumps(restore_resources, ensure_ascii=False, sort_keys=True))
+            _ensure_disk_space(repo, restore_resources["additional_bytes"])
             # Validation precedes all destination writes. A partial local copy
             # still has no marker and therefore cannot be pushed by save.
             # Copy the whole tree: restoring only models/reports would lose
             # venue evidence and the immutable snapshot used by old forecasts.
             state_storage.restore_runtime(tree, runtime, max_file_bytes=_MAX_FILE_BYTES,
                                           max_physical_bytes=_MAX_TOTAL_BYTES,
-                                          max_logical_bytes=_MAX_LOGICAL_BYTES)
+                                          max_logical_bytes=_MAX_LOGICAL_BYTES,
+                                          cold_state_commit=oid, cold_repo=repo)
     else:
         runtime.mkdir(exist_ok=True)
     source_sha = _git(repo, "rev-parse", "HEAD").stdout.strip()
@@ -272,22 +443,15 @@ def load_state(repo: Path, runtime: Path = Path("runtime")) -> str | None:
 
 def save_state(repo: Path, runtime: Path = Path("runtime")) -> str:
     repo, runtime, marker = _paths(repo, runtime)
-    if not marker.is_file():
-        raise StateError("尚未成功 load；拒绝保存，以免覆盖已有状态。")
-    baseline = json.loads(marker.read_text(encoding="utf-8"))
+    baseline = _loaded_baseline(repo, marker)
     oid = baseline.get("state_oid")
-    if baseline.get("schema_version") != 1 or (
-        oid is not None and not re.fullmatch(r"[0-9a-f]{40,64}", str(oid))
-    ):
-        raise StateError("本地状态基线损坏，拒绝保存。")
-    if baseline.get("source_sha") != _git(repo, "rev-parse", "HEAD").stdout.strip():
-        raise StateError("程序版本在运行中改变，拒绝混用版本保存。")
     _ensure_memory()
-    estimate = _validate_runtime(runtime)
-    # The temporary transport replaces its old content before packing; reserve
-    # one bounded old checkout plus the new transport's Git objects, not another
-    # full uncompressed runtime. Runtime bytes are never rewritten here.
-    _ensure_disk_space(repo, max(_MAX_TOTAL_BYTES, estimate["persisted_bytes"]) + estimate["persisted_bytes"])
+    compacted = prepare_state(repo, runtime)
+    if compacted["compacted_file_count"]:
+        print("MODEL_STATE_HISTORY_COMPACTED=" + json.dumps(compacted, ensure_ascii=False, sort_keys=True))
+    resources = preflight_state(repo, runtime)
+    print("MODEL_STATE_SAVE_PREFLIGHT=" + json.dumps(resources, ensure_ascii=False, sort_keys=True))
+    _ensure_disk_space(repo, resources["additional_bytes"])
     if _remote_oid(repo) != oid:
         raise StateError("远端 model-state 已变化；本次结果未覆盖它。请从最新状态重新运行。")
     if oid is None:
@@ -297,12 +461,7 @@ def save_state(repo: Path, runtime: Path = Path("runtime")) -> str:
         base = _git(repo, "commit-tree", empty_tree, "-m", "Initialize isolated model state", identity=True).stdout.strip()
     else:
         base = oid
-    with _worktree(repo, base) as tree:
-        if oid is not None:
-            _validate_tree(tree)
-            shutil.rmtree(tree / "runtime")
-            shutil.rmtree(tree / state_storage.ARCHIVE_DIR, ignore_errors=True)
-            (tree / state_storage.MANIFEST_NAME).unlink(missing_ok=True)
+    with _worktree(repo, base, checkout=False) as tree:
         # Registries, digest-named venue snapshots and audits are runtime state
         # too. Do not replace this with the shorter Actions artifact path list.
         storage_stats = state_storage.pack_runtime(runtime, tree, max_file_bytes=_MAX_FILE_BYTES,
@@ -320,7 +479,9 @@ def save_state(repo: Path, runtime: Path = Path("runtime")) -> str:
             "state_storage": {"schema_version": state_storage.SCHEMA_VERSION,
                               "physical_limit_bytes": _MAX_TOTAL_BYTES,
                               "logical_limit_bytes": _MAX_LOGICAL_BYTES,
+                              "logical_limit_scope": "active_expanded_runtime",
                               "raw_bytes": storage_stats["raw_bytes"],
+                              **{k: resources[k] for k in ("historical_raw_bytes", "historical_file_count", "total_original_logical_bytes")},
                               "archived_file_count": storage_stats["archived_file_count"],
                               "archive_blob_count": storage_stats["archive_blob_count"]},
             "model_note": "运行记录不表示模型已通过预测质量验证；以 reports 中的具体状态为准。",
@@ -353,7 +514,7 @@ def save_state(repo: Path, runtime: Path = Path("runtime")) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="安全恢复/保存 model-state 分支")
-    parser.add_argument("operation", choices=("load", "save", "check"))
+    parser.add_argument("operation", choices=("load", "save", "check", "preflight", "prepare"))
     parser.add_argument("--repo", type=Path, default=Path.cwd())
     parser.add_argument("--runtime", type=Path, default=Path("runtime"))
     args = parser.parse_args(argv)
@@ -364,6 +525,12 @@ def main(argv: list[str] | None = None) -> int:
         elif args.operation == "save":
             print("MODEL_STATE_SAVED_COMMIT=" + save_state(args.repo, args.runtime))
             print("已保存到独立 model-state 分支，程序分支未改动。")
+        elif args.operation == "prepare":
+            print(json.dumps(prepare_state(args.repo, args.runtime), ensure_ascii=False, sort_keys=True))
+        elif args.operation == "preflight":
+            report = preflight_state(args.repo, args.runtime)
+            print(json.dumps(report, ensure_ascii=False, sort_keys=True))
+            return int(not report["can_save"])
         else:
             _, runtime, _ = _paths(args.repo, args.runtime)
             _validate_runtime(runtime)

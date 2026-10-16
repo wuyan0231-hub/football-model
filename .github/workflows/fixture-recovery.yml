@@ -59,20 +59,20 @@ jobs:
           --source-commit "$GITHUB_SHA" --state-commit "$RECOVERY_PARENT_STATE"
       - name: 核验完整状态与容量
         id: check
-        if: ${{ always() && steps.restore.outcome == 'success' && steps.collect.outcome != 'skipped' }}
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' && steps.collect.outcome != 'skipped' }}
         continue-on-error: true
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
         run: python scripts/cloud_state.py check --runtime runtime
       - name: 保存历史原件及本轮失败
         id: persist
-        if: ${{ always() && steps.check.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.check.outcome == 'success' }}
         continue-on-error: true
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
         run: python scripts/cloud_state.py save --runtime runtime
       - name: 本轮步骤与保存回执
-        if: always()
+        if: ${{ !cancelled() }}
         env:
           RESTORE_OUTCOME: ${{ steps.restore.outcome }}
           COLLECT_OUTCOME: ${{ steps.collect.outcome }}
@@ -92,7 +92,7 @@ jobs:
               out.write('# 英冠历史补采\n\n```json\n'+json.dumps(receipt,indent=2)+'\n```\n\n赛后资料只作历史原件；原第20／21轮失败与原赛前资格不回写。\n')
           PY
       - uses: actions/upload-artifact@v7
-        if: ${{ always() && steps.check.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.check.outcome == 'success' }}
         with:
           name: fixture-recovery-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -103,5 +103,5 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: 未完整采集或保存保持失败
-        if: ${{ always() && (steps.restore.outcome != 'success' || steps.collect.outcome != 'success' || steps.check.outcome != 'success' || steps.persist.outcome != 'success') }}
+        if: ${{ !cancelled() && (steps.restore.outcome != 'success' || steps.collect.outcome != 'success' || steps.check.outcome != 'success' || steps.persist.outcome != 'success') }}
         run: exit 1

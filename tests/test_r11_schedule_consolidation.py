@@ -16,7 +16,7 @@ class ScheduleConsolidationTests(unittest.TestCase):
         cls.root = Path(__file__).parents[1]
         cls.advanced = (cls.root / '.github/workflows/advanced-models.yml').read_text()
         cls.feature = (cls.root / '.github/workflows/feature-models.yml').read_text()
-        cls.main_job = cls.advanced.split('  advanced:\n', 1)[1]
+        cls.main_job = cls.advanced.split('  advanced:\n', 1)[1].split('  study_leagues:\n', 1)[0]
 
     def step(self, step_id):
         for block in re.split(r'(?m)^      - ', self.main_job):
@@ -76,7 +76,7 @@ class ScheduleConsolidationTests(unittest.TestCase):
             self.assertIn(f"steps.{stage}.outcome != 'success'", self.main_job)
             self.assertIn('${{ steps.' + stage + '.outcome }}', self.main_job)
         self.assertNotIn('.conclusion', self.main_job)
-        self.assertIn("if: always() && env.IS_RELEASE == 'true' && steps.check.outcome == 'success'", self.step('persist'))
+        self.assertIn("if: ${{ !cancelled() && env.IS_RELEASE == 'true' && steps.check.outcome == 'success' }}", self.step('persist'))
 
     def test_daily_club_schedule_batch_precedes_optional_history_and_research(self):
         step = self.step('club_schedule_collection')
@@ -104,9 +104,9 @@ class ScheduleConsolidationTests(unittest.TestCase):
 
     def test_research_admission_requires_a_successfully_persisted_pre_state(self):
         expression = self.main_job.split('    if: >-\n', 1)[1].split('    runs-on:', 1)[0].strip()
-        expression = expression.replace('always()', 'True').replace('&&', ' and ').replace('||', ' or ')
+        expression = expression.replace('!cancelled()', 'True').replace('&&', ' and ').replace('||', ' or ')
         expression = re.sub(r'\btrue\b', 'True', expression)
-        fixed = {'github.event.repository.private': True, 'github.event_name': 'push',
+        fixed = {'needs.verify.result': 'success', 'github.event.repository.private': True, 'github.event_name': 'push',
                  'vars.ENABLE_SCHEDULE': 'true'}
         for result, restored, saved, expected in (
             ('failure', 'success', 'success', True),
@@ -134,12 +134,12 @@ class ScheduleConsolidationTests(unittest.TestCase):
         self.assertGreaterEqual(timeout, restore_facts_capture_seconds +
                                 observed_check_and_save_seconds + 15 * 60)
         self.assertLessEqual(timeout, 120 * 60)
-        self.assertIn("if: always() && steps.restore.outcome == 'success'", before)
+        self.assertIn("if: ${{ !cancelled() && steps.restore.outcome == 'success' }}", before)
         self.assertEqual(before.count('python scripts/cloud_state.py save --runtime runtime'), 1)
 
     def test_legacy_artifacts_preserve_models_snapshots_and_original_parent(self):
-        self.assertIn("'runtime/feature_models','runtime/feature_snapshots','feature-run-receipt.json','feature-run-parent.json'", self.main_job)
-        self.assertIn("paths=[p for p in paths if p.as_posix()!='runtime/feature_models/schedules']", self.main_job)
+        self.assertIn('python scripts/export_advanced_evidence.py --runtime runtime --repo .', self.main_job)
+        self.assertNotIn("rglob('*')", self.main_job)
         self.assertIn("Path('feature-run-parent.json').write_bytes(Path('advanced-run-parent.json').read_bytes())", self.main_job)
 
     def receipt_script(self):
@@ -151,10 +151,15 @@ class ScheduleConsolidationTests(unittest.TestCase):
             root = Path(directory)
             parent = b'{"source_sha":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","state_oid":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","loaded_at":"2026-10-13T10:00:00Z"}\n'
             (root / 'advanced-run-parent.json').write_bytes(parent)
+            old_study = root / 'runtime/advanced_models/study_runs/latest.json'
+            old_study.parent.mkdir(parents=True)
+            old_study.write_text(json.dumps({'research_full_completed': True, 'source_commit': 'a' * 40,
+                                            'configured_leagues': ['epl'], 'generated_at': '2026-10-13T10:00:00Z'}))
             env = dict(os.environ, GITHUB_STEP_SUMMARY=str(root / 'summary.md'), GITHUB_SHA='a' * 40,
                        GITHUB_RUN_ID='123', GITHUB_RUN_ATTEMPT='1', ADVANCED_PARENT_STATE='b' * 40,
                        IS_RELEASE='true', STUDY_RUN='false' if short else 'true',
-                       LEGACY_SHORT_RUN='true' if short else 'false')
+                       LEGACY_SHORT_RUN='true' if short else 'false', RESEARCH='skipped')
+            env['PYTHONPATH'] = str(self.root) + os.pathsep + env.get('PYTHONPATH', '')
             for key in ('RESTORE', 'DURABLE', 'FACTS', 'CONFIRMATION', 'CAPTURE', 'SCORING', 'CHECK', 'PERSIST',
                         'LEGACY_CAPTURE_V1', 'LEGACY_CAPTURE_V2', 'LEGACY_SCORING_V1', 'LEGACY_SCORING_V2'):
                 env[key] = 'success'
@@ -163,6 +168,9 @@ class ScheduleConsolidationTests(unittest.TestCase):
                                     capture_output=True, text=True, timeout=20)
             self.assertEqual(result.returncode, 0, result.stderr)
             advanced = json.loads((root / 'advanced-run-receipt.json').read_text())
+            self.assertEqual(advanced['research_report_binding']['status'], 'not_executed_in_this_step')
+            self.assertNotIn('research_report', advanced)
+            self.assertFalse(advanced['research_full_completed'])
             if not short:
                 self.assertFalse((root / 'feature-run-receipt.json').exists())
                 self.assertFalse((root / 'feature-run-parent.json').exists())

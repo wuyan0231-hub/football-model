@@ -18,6 +18,7 @@ import re
 from .data import APIClient, APIError, DataError, _iso, _utc, normalize_fixtures
 from .feature_research import _mean_metrics, score_forecast
 from .feature_snapshots import HORIZONS, SnapshotError, _digest, _read, verify_capture
+from .history_archive import read_bytes as history_read_bytes, exists as history_exists
 
 VERSION = "feature-future-scoring-v1"
 QUEUE_VERSION = "feature-future-scoring-v2"
@@ -27,7 +28,7 @@ RESULT_RECHECK_WINDOW = timedelta(days=7)
 
 
 def _sha(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    return hashlib.sha256(history_read_bytes(path)).hexdigest()
 
 
 def _raw(value):
@@ -55,7 +56,7 @@ def _read_ref(runtime, ref):
     if not isinstance(ref, dict) or not re.fullmatch(r"[0-9a-f]{64}", str(ref.get("sha256", ""))):
         raise SnapshotError("invalid_scoring_hash_reference")
     path = _path(runtime, ref.get("path"))
-    if not path.is_file() or _sha(path) != ref["sha256"]:
+    if not history_exists(path) or _sha(path) != ref["sha256"]:
         raise SnapshotError("scoring_reference_hash_mismatch")
     return _read(path)
 

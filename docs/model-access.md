@@ -1,6 +1,6 @@
 # 模型读取：授权通道、固定版本与本地复算
 
-版本：2026-10-13；配套完整框架 v1.7 修订批次12；有图调用项目唯一现行《赔率截图读取规范》，不绑定其版本。本页只解决真实原件取得与接入，模型和任务资格另按完整框架核验。
+版本：2026-10-16；配套完整框架 v1.7 修订批次13；有图调用项目唯一现行《赔率截图读取规范》，不绑定其版本。本页说明授权取件、固定活动／历史原件、校验落地和实际复算；本轮实现待云端验收，文件落地、历史读取或文档同步不等于调用、发布或效果通过。
 
 ## 为什么网页或 git 失败，连接器仍可能成功
 
@@ -152,8 +152,53 @@ G0_full、G0和G1按独立分支取得真实R输入／输出、训练ID、特征
 
 原件路径可能存储归档，按固定状态真实清单恢复，不能因未直读而断言后台未执行。高级研究可能为`advanced-compact-json-v1`分块与共享对象；须沿全部引用核hash并无损重建，不把外层包装当完整报告。嵌入统计／球员投影必须取其原`/fixtures?id`响应并按声明路径重建，不能当作曾请求`/fixtures/players`的证据。高级协议hash、实际算法文件指纹、同场同父匹配、全部机会台账和首失败各自核验；成功只证明相应实际范围。新增读取／决定入口不自动改变生产采用、正式确认资格或旧F5／v1／v2身份。
 
-高级捕获的远端赛前保存证明另核`advanced-durability-v2`：固定run attempt的已完成job日志必须含精确状态提交，使用服务端job完成时刻作保守保存上界，并复验该状态的完整原件引用闭包。本地commit时间、状态metadata或本地receipt不能单独证明远端赛前保存；证明失败、日志受限与来源损坏各自留原因。
+高级捕获的当前远端赛前保存证明核`advanced-durability-v3`及方法`git_tree_typed_reference_closure_and_fixed_attempt_job_log_exact_saved_commit_v3`：固定run attempt的已完成job日志必须含精确状态提交，使用服务端job完成时刻作保守保存上界，并复验该状态的完整原件引用闭包。只有已登记的生产replay路径及原schema／status／metadata契约按canonical payload摘要核逻辑身份，同时另绑定真实gzip原字节SHA；其他引用保持原字节hash严格匹配。旧v2证明和失败记录保留，不能只改标签升级为v3。本地commit时间、状态metadata或本地receipt不能单独证明远端赛前保存；类型语义误用、真实原件损坏、日志受限和保存失败分别记录，不笼统称数据坏了或排除诊断引用。
 
 ## 2026-10-13：批次十二共用状态与旧清单兼容
 
 半小时高级及旧v1／v2捕获／评分可共享一次恢复与最终保存，但读取时仍按各自协议hash、真实源／状态提交、原件引用和独立回执判定；共同job成功不代替每个子步骤成功。旧4 GiB／1 GiB和2 GiB／500 MiB清单继续按其原声明验读，当前8 GiB逻辑／1792 MiB物理上限不追改旧原件。实际push pack和磁盘检查、GitHub状态提交及原字节回读分别留证；扩容不是长期容量证明。新增安全失败类别只解释拒绝原因，不使错误来源成为可用特征，也不能据一个旧latest称最新流程已通过。
+
+## 2026-10-16：批次十三的固定冷历史与连接器离线读取
+
+本轮按需冷读不把旧原件删掉，也不把固定状态的同一路径替换成后来latest。活动展开工作集8 GiB、传输树1792 MiB、累计冷历史原字节／展开体积和实际pack分别计量。冷层仅包含已在可达固定`model-state`提交中核实保存的内容寻址研究objects／inputs，当前目录保存带精确路由的catalog；模型卡、队列、首失败、当前指针和未远端保存的新文件保持活动状态。具体身份与边界见框架13.3、16.6及`advanced-models.md`，目前为本地实现待云端验收。
+
+选择读取的顺序如下，所有取得动作保留完整真实响应及Git blob：
+
+1. 固定当前源码及状态完整SHA；从该状态读取`runtime/history_archive/catalog.json`。catalog若为`fixed-git-history-catalog-index-v1`，再从同一状态取得其声明的`runtime/history_archive/catalog_chunks/<sha>.json`，核引用hash、计数及全部需要的路由。原`fixed-git-history-catalog-v1`内联清单也可验读，不能自己制作删减清单。
+2. 按目标逻辑路径精确定位条目，读取其`state_commit`、`transport_path`、`manifest_sha256`、`blob_sha256`、`raw_sha256`及大小。这里`state_commit`是原件保存源提交，不替换本次分析的当前状态SHA。向该精确源提交取得原`state_storage.json`和对应`state_archives/<blob_sha256>.json.gz`，或条目明确指定的原始路径；不探测其他聊天文件、不切换到浮动历史分支、不以当前相同路径冒充旧来源。
+3. 使用`materialize_model_access.py`输入`schema_version=2`保存混合来源。当前源码／状态仍分别用`role=source/state`；历史文件单项使用`role=history`，`commit`填写该条目完整40位源提交，`path`是该源Git树中的原路径，不是本地落地路径。原响应`display_url`必须精确绑定`https://github.com/wuyan0231-hub/football-model/blob/<该源commit>/<原path>`，`sha`及字节继续严格核Git blob。旧schema 1只接收source／state，兼容行为不变。
+4. helper将历史项自动落在`history_sources/<commit>/<原path>`，并在`model_access_manifest.json`保存`role=history`、本地`path`、原`source_path`、源`commit`、原字节SHA-256、Git blob与大小。当前source／state不能占用`history_sources/`保留空间。缺祖先清单、gzip、catalog块或来源指纹失配即拒绝对应读取，不从网络或本地Git隐式补件。
+5. 用选择恢复入口沿真实catalog验证源清单、压缩与原始hash并恢复所需逻辑原字节；再沿高级compact全部对象引用取得剩余闭包。只恢复一个顶层对象不等于整份报告、模型或本场闭包齐全。最后仍执行真实`integration match`或对应研究／评分原函数，记录实际命令、结果和使用边界。
+
+以下只说明单个历史传输对象的schema 2结构，占位值必须换成真实响应，完整输入还须包含当前catalog／分块、源清单、源码和所需状态；不构成已执行回执：
+
+```json
+{
+  "schema_version": 2,
+  "repository": "wuyan0231-hub/football-model",
+  "source_commit": "<本次固定源码40位SHA>",
+  "state_commit": "<本次固定当前状态40位SHA>",
+  "files": [
+    {
+      "role": "history",
+      "commit": "<catalog指定的源状态40位SHA>",
+      "path": "state_archives/<实际压缩SHA256>.json.gz",
+      "response": {
+        "content": "<该源提交取得的完整base64原响应>",
+        "encoding": "base64",
+        "sha": "<真实Git blob SHA>",
+        "display_url": "https://github.com/wuyan0231-hub/football-model/blob/<同一源状态40位SHA>/state_archives/<同一实际压缩SHA256>.json.gz"
+      }
+    }
+  ]
+}
+```
+
+```sh
+python scripts/materialize_model_access.py --input selected-responses.json --destination NEW_DIR
+python scripts/materialize_state_archive.py --state-root NEW_DIR --path advanced_models/inputs/ACTUAL_INPUT_SHA256.json --output NEW_DIR/archive-access.json
+```
+
+`NEW_DIR`必须是尚不存在的新目录，`ACTUAL_INPUT_SHA256`及路径必须来自实际引用。下载的大文件若工具返回空`content`但附Git blob，不能当作空原件或后台未执行；可用同一真实blob的受支持读取接口取得完整字节，保留两条真实响应、路由与封套转换记录，再核Git blob，禁止把截断或自填内容伪装原响应。必要源字节仍取不到时如实报告读取受阻，不改hash或制作“精简原件”。
+
+离线连接器路径只消费已经materialize并核验的当前与历史来源，不联网、不读取认证、不训练；Git工作流内的按需读取也只跟随固定catalog源路由。无论走哪条路径，“文件已落地”“所选历史原字节已恢复”“全引用闭包通过”“本场已复算”“远端赛前持久资格通过”均是独立状态。本轮helper存在或本地测试通过，不能代替云端部署和真实保存回读。

@@ -24,6 +24,7 @@ from .feature_research import (choose_alpha, digest, save_immutable, score_forec
 from .model import ModelDataError, RESULT_AVAILABILITY_DELAY, TAIL_TOLERANCE, _iso, _timestamp
 from .advanced_storage import save_artifact, load_artifact, load_report
 from .goalmodel_adapter import goalmodel_probabilities
+from .history_archive import read_bytes, exists
 
 
 FEATURE_GROUPS = {
@@ -62,12 +63,12 @@ def implementation_fingerprint():
         "feature_correction", "feature_dataset", "feature_decisions",
         "feature_research", "feature_schedule", "feature_scoring",
         "feature_snapshots", "fundamentals", "goalmodel_adapter", "integration",
-        "match_locations", "model", "nations", "production_replay", "prospective", "quality",
+        "history_archive", "research_checkpoints", "match_locations", "model", "nations", "production_replay", "prospective", "quality",
         "settlement", "shadow_grading", "shadow_models", "state_storage", "storage_policy",
         "total_shrink_shadow", "venue_registry",
     )
     paths = tuple("football_model/" + name + ".py" for name in modules) + (
-        "requirements.txt", "scripts/goalmodel_bridge.R",
+        "requirements.txt", "scripts/goalmodel_bridge.R", "scripts/cloud_state.py",
         "third_party/goalmodel/R/goalmodel_fit.R", "third_party/goalmodel/R/goalmodel_predict.R")
     files = {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in paths}
     return {"schema_version": "advanced-implementation-fingerprint-v1", "files": files,
@@ -75,7 +76,7 @@ def implementation_fingerprint():
 
 
 def _read(path):
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    return json.loads(read_bytes(path).decode("utf-8"))
 
 
 def _write(path, value, guard=None, *, final=False):
@@ -94,13 +95,13 @@ def _write(path, value, guard=None, *, final=False):
 
 def _ref(root, path):
     return {"path": str(Path(path).resolve().relative_to(Path(root).resolve())),
-            "sha256": hashlib.sha256(Path(path).read_bytes()).hexdigest()}
+            "sha256": hashlib.sha256(read_bytes(path)).hexdigest()}
 
 
 def _resolve(root, ref):
     root = Path(root).resolve()
     path = (root / ref["path"]).resolve()
-    if not path.is_relative_to(root) or hashlib.sha256(path.read_bytes()).hexdigest() != ref["sha256"]:
+    if not path.is_relative_to(root) or hashlib.sha256(read_bytes(path)).hexdigest() != ref["sha256"]:
         raise ModelDataError("advanced source path/fingerprint mismatch")
     return path
 
@@ -108,12 +109,12 @@ def _resolve(root, ref):
 def _freeze(root, path, guard=None):
     root = Path(root).resolve()
     path = Path(path).resolve()
-    raw = Path(path).read_bytes()
+    raw = read_bytes(path)
     key = hashlib.sha256(raw).hexdigest()
     destination = root / "advanced_models" / "inputs" / (key + ".json")
     destination.parent.mkdir(parents=True, exist_ok=True)
-    if destination.exists():
-        if destination.read_bytes() != raw:
+    if exists(destination):
+        if read_bytes(destination) != raw:
             raise ModelDataError("advanced immutable source collision")
     else:
         ticket = guard.check_write(destination, raw) if guard is not None else None
@@ -750,35 +751,153 @@ def main(argv=None):
     parser.add_argument("--source-commit", required=True)
     parser.add_argument("--state-commit")
     parser.add_argument("--run-goalmodel", action="store_true")
+    parser.add_argument("--checkpoint-state", action="store_true",
+                        help="main release only: CAS-save each completed league and resume verified saved closures")
+    parser.add_argument("--resume-only", action="store_true",
+                        help="verify saved development snapshots and current input match; never fit missing/stale leagues")
+    parser.add_argument("--repo", type=Path, default=Path.cwd())
     args = parser.parse_args(argv)
+    if args.resume_only and not args.checkpoint_state:
+        parser.error("--resume-only requires --checkpoint-state")
     runtime = Path(args.runtime).resolve()
     protocol = validate_protocol(_read(args.protocol))
     leagues = [c["key"] for c in _read(args.config)["competitions"] if c.get("mode") != "audit_only"] if args.league == "all" else [args.league]
     results = []
     from .advanced_capacity import CapacityGuard, CapacityDeferred
     guard = CapacityGuard(runtime)
-    def record_attempt(value):
+    checkpoints = None
+    if args.checkpoint_state:
+        from .research_checkpoints import ResearchCheckpoints
+        try:
+            checkpoints = ResearchCheckpoints(runtime, args.repo, args.source_commit, guard=guard)
+        except (OSError, ValueError, RuntimeError, KeyError, TypeError) as exc:
+            print(json.dumps({"status": "checkpoint_setup_failed", "error_code": type(exc).__name__,
+                "research_full_completed": False, "durable_completed_leagues": 0}, ensure_ascii=False), flush=True)
+            return 1
+
+    def record_attempt(value, *, append=True):
         directory = runtime / "advanced_models" / value["league"] / digest(protocol) / "reports"
         path = save_artifact(runtime, directory / "failures", value, guard=guard, final=True)
         _write(directory / "latest_attempt.json", {**value, "failure_ref": _ref(runtime, path)}, guard, final=True)
-        results.append(value)
+        if append:
+            results.append(value)
         print(json.dumps({**value, "capacity_after_report": guard.summary()}, ensure_ascii=False), flush=True)
 
+    def run_summary(*, final=False):
+        completed = [r for r in results if r["status"] == "completed_development"]
+        durable = [r for r in completed if r.get("durable_saved") is True]
+        stored = [r for r in results if r.get("durable_saved") is True and r["status"] in
+            ("completed_development", "verified_saved_development_snapshot")]
+        calculation_full = bool(leagues) and len(completed) == len(leagues)
+        durable_full = calculation_full and len(durable) == len(leagues)
+        summary = {"results": results, "production_changed": False,
+            "research_full_completed": durable_full if checkpoints else calculation_full,
+            "research_calculation_full_completed": calculation_full,
+            "research_durable_full_completed": durable_full,
+            "durability_mode": "per_league_cas_checkpoint" if checkpoints else "not_requested_in_this_command",
+            "configured_leagues": leagues, "completed_leagues": len(completed),
+            "calculation_completed_leagues": len(completed), "durable_completed_leagues": len(durable),
+            "resumed_leagues": sum(r.get("calculation_reused") is True for r in completed),
+            "stored_verified_completed_leagues": len(stored),
+            "stored_research_durable_full_completed": bool(leagues) and len(stored) == len(leagues),
+            "current_inputs_match_leagues": sum(r.get("current_inputs_match") is True for r in stored),
+            "current_refit_required_leagues": sum(r.get("current_refit_required") is True
+                or r["status"] == "checkpoint_resume_deferred" for r in results),
+            "pending_leagues": len(leagues) - (len(durable) if checkpoints else len(completed)),
+            "capacity_deferred_leagues": sum(r["status"] == "capacity_deferred" for r in results),
+            "checkpoint_deferred_leagues": sum(r.get("checkpoint_status") == "resource_deferred" for r in results),
+            "checkpoint_failed_leagues": sum(r.get("checkpoint_status") in
+                ("save_failed", "saved_postprocess_failed") for r in results),
+            "source_commit": args.source_commit, "protocol_hash": digest(protocol),
+            "generated_at": _iso(datetime.now(timezone.utc)), "capacity": guard.summary(),
+            "run_calculation_ended": final,
+            "resume_only": args.resume_only,
+            "summary_file_durability": "requires_final_state_save; league_receipts_verified_separately"}
+        run_root = runtime / "advanced_models" / "study_runs"
+        path = save_artifact(runtime, run_root / "history", summary, guard=guard, final=True)
+        _write(run_root / "latest.json", {**summary, "full_report_ref": _ref(runtime, path)}, guard, final=True)
+        return summary
+
     for index, league in enumerate(leagues):
-        print(json.dumps({"league": league, "status": "research_started", "capacity": guard.summary()}, ensure_ascii=False), flush=True)
         try:
+            # Other writers (notably compact/deduplicated object creation) may
+            # change physical accounting; do not carry a stale estimate forward.
+            guard.refresh()
+            print(json.dumps({"league": league, "status": "research_started", "capacity": guard.summary()}, ensure_ascii=False), flush=True)
+            identity, resume_reason = None, None
+            if checkpoints:
+                identity = checkpoints.identity(league, digest(protocol), implementation_fingerprint(), args.run_goalmodel)
+                resumed, resume_reason = checkpoints.resume(league, digest(protocol), identity,
+                    protocol.get("max_model_age_days", 14),
+                    **({"allow_saved_snapshot": True} if args.resume_only else {}))
+                if resumed is not None:
+                    results.append(resumed)
+                    print(json.dumps({"league": league, "status": "research_resumed_from_saved_checkpoint"
+                        if resumed.get("calculation_reused") else "research_verified_saved_snapshot_current_refit_required",
+                        "durable_state_commit": resumed["durable_state_commit"],
+                        "checkpoint_ref": resumed["checkpoint_ref"]}, ensure_ascii=False), flush=True)
+                    run_summary()
+                    continue
+                if args.resume_only:
+                    record_attempt({"league": league, "status": "checkpoint_resume_deferred",
+                        "reason": resume_reason, "calculation_completed": False,
+                        "fit_attempted_this_run": False, "durable_saved": False,
+                        "current_refit_required": True, "generated_at": _iso(datetime.now(timezone.utc)),
+                        "source_commit": args.source_commit, "protocol_hash": digest(protocol)})
+                    continue
             report = study(runtime, league, protocol, source_commit=args.source_commit,
                 state_commit=args.state_commit, run_goalmodel=args.run_goalmodel, capacity_guard=guard)
-            results.append({"league": league, "status": "completed_development",
+            result = {"league": league, "status": "completed_development",
                 "requested_matches": report["requested_matches"], "latest_fits": report["latest_fits"],
-                "request_coverage": report["request_coverage"], "accuracy_improvement_verified": False})
+                "request_coverage": report["request_coverage"], "accuracy_improvement_verified": False,
+                "calculation_completed": True, "calculation_reused": False, "durable_saved": False,
+                "durability_status": "awaiting_checkpoint_save" if checkpoints else "not_requested_in_this_command"}
+            if checkpoints:
+                result["resume_not_used_reason"] = resume_reason
+            results.append(result)
+            guard.refresh()
             print(json.dumps({"league": league, "status": "research_completed", "requested_matches": report["requested_matches"],
                 "fitted_candidates": [k for k,v in report["latest_fits"].items() if v["status"] == "fitted"],
                 "capacity": guard.summary()}, ensure_ascii=False), flush=True)
+            if checkpoints:
+                # Save progress and the whole configured denominator before
+                # attempting a network save. A killed job leaves honest local
+                # calculation records; only verified Git closures are reused.
+                run_summary()
+                try:
+                    saved = checkpoints.persist(league, digest(protocol), identity, report, result, _write)
+                    result.update(saved)
+                    result["durability_status"] = "verified_cas_save" if saved["durable_saved"] else "resource_deferred"
+                except CapacityDeferred as exc:
+                    result.update(checkpoint_status="resource_deferred", checkpoint_capacity=exc.details,
+                                  durability_status="resource_deferred", durable_saved=False)
+                except (OSError, ValueError, RuntimeError) as exc:
+                    result.update(checkpoint_status="save_failed", checkpoint_error_code=type(exc).__name__,
+                                  durability_status="save_failed", durable_saved=False)
+                if not result["durable_saved"] or result.get("continue_after_save") is False:
+                    record_attempt({"league": league, "status": "checkpoint_save_incomplete",
+                        "calculation_completed": True, "durable_saved": result["durable_saved"],
+                        "checkpoint_status": result["checkpoint_status"],
+                        "generated_at": _iso(datetime.now(timezone.utc)), "source_commit": args.source_commit,
+                        "protocol_hash": digest(protocol)}, append=False)
+                    for pending in leagues[index + 1:]:
+                        record_attempt({"league": pending, "status": "checkpoint_blocked",
+                            "calculation_completed": False, "durable_saved": False,
+                            "fit_attempted_this_run": False, "reason": "pending_after_checkpoint_save_incomplete",
+                            "generated_at": _iso(datetime.now(timezone.utc)), "source_commit": args.source_commit,
+                            "protocol_hash": digest(protocol)})
+                    break
+                print(json.dumps({"league": league, "status": "research_checkpoint_saved",
+                    "state_commit": result["durable_state_commit"], "capacity": guard.summary()}, ensure_ascii=False), flush=True)
         except CapacityDeferred as exc:
             # Preserve the remaining configured denominator without launching
             # additional expensive fits once the shared guard is exhausted.
-            for pending in leagues[index:]:
+            calculated = bool(results and results[-1].get("league") == league
+                and results[-1]["status"] == "completed_development")
+            if calculated:
+                results[-1].update(checkpoint_status="resource_deferred", checkpoint_capacity=exc.details,
+                    durable_saved=False, durability_status="resource_deferred_after_calculation")
+            for pending in leagues[index + int(calculated):]:
                 history_path = runtime / "data" / (pending + ".json")
                 try:
                     count = len(_read(history_path)["matches"])
@@ -791,21 +910,19 @@ def main(argv=None):
                     "capacity": exc.details, "generated_at": _iso(datetime.now(timezone.utc)),
                     "source_commit": args.source_commit, "protocol_hash": digest(protocol)})
             break
-        except (OSError, ValueError, ArithmeticError) as exc:
+        except (OSError, ValueError, RuntimeError, ArithmeticError) as exc:
             failure = {"league": league, "status": "failed", **_failure(exc, "study"),
                 "generated_at": _iso(datetime.now(timezone.utc)), "source_commit": args.source_commit}
-            record_attempt(failure)
-    summary = {"results": results, "production_changed": False,
-        "research_full_completed": all(r["status"] == "completed_development" for r in results),
-        "configured_leagues": leagues, "completed_leagues": sum(r["status"] == "completed_development" for r in results),
-        "capacity_deferred_leagues": sum(r["status"] == "capacity_deferred" for r in results),
-        "source_commit": args.source_commit, "protocol_hash": digest(protocol),
-        "generated_at": _iso(datetime.now(timezone.utc)), "capacity": guard.summary()}
-    run_root = runtime / "advanced_models" / "study_runs"
-    path = save_artifact(runtime, run_root / "history", summary, guard=guard, final=True)
-    _write(run_root / "latest.json", {**summary, "full_report_ref": _ref(runtime, path)}, guard, final=True)
+            calculated = bool(results and results[-1].get("league") == league
+                and results[-1]["status"] == "completed_development")
+            if calculated:
+                results[-1].update(checkpoint_status="save_failed", durable_saved=False,
+                    post_calculation_error=_failure(exc, "after_study"))
+            record_attempt(failure, append=not calculated)
+    summary = run_summary(final=True)
     print(json.dumps(summary, ensure_ascii=False), flush=True)
-    return int(any(r["status"] == "failed" for r in results))
+    return int(any(r["status"] == "failed" or r.get("checkpoint_status") in
+        ("save_failed", "saved_postprocess_failed") for r in results))
 
 
 if __name__ == "__main__":

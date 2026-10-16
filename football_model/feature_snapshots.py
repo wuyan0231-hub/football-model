@@ -22,6 +22,7 @@ from .data import DataError, _integer, _iso, _utc
 from .fundamentals import _fixture, _validate_snapshot, build_features
 from .integration import _entry_for_match, match_packet
 from .settlement import matrix_array
+from .history_archive import read_bytes as history_read_bytes, exists as history_exists
 
 VERSION = "feature-snapshots-1.0"
 HORIZONS = ("EARLY", "LINEUP")
@@ -63,12 +64,12 @@ def _pairs(pairs):
 
 
 def _read(path):
-    return json.loads(Path(path).read_text(encoding="utf-8"), object_pairs_hook=_pairs,
+    return json.loads(history_read_bytes(path).decode("utf-8"), object_pairs_hook=_pairs,
                       parse_constant=lambda _: (_ for _ in ()).throw(SnapshotError("nonfinite_json")))
 
 
 def _sha(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    return hashlib.sha256(history_read_bytes(path)).hexdigest()
 
 
 def _times(value):
@@ -177,7 +178,7 @@ def _verify_refs(refs, cutoff, *, runtime=None):
                 r"[0-9a-f]{64}", ref.get("sha256", "")):
             raise SnapshotError("invalid_source_ref")
         path = _reference_path(ref, runtime)
-        if not path.is_file() or _sha(path) != ref["sha256"]:
+        if not history_exists(path) or _sha(path) != ref["sha256"]:
             raise SnapshotError("source_file_hash_mismatch")
         available = _utc(ref["available_at"])
         if available > cutoff:
@@ -599,7 +600,7 @@ def _freeze_source(path, runtime, root, cutoff, kind):
     runtime = runtime.resolve()
     if not path.is_relative_to(runtime):
         raise SnapshotError("source_path_escapes_runtime")
-    raw = path.read_bytes()
+    raw = history_read_bytes(path, runtime=runtime)
     sha = hashlib.sha256(raw).hexdigest()
     suffix = path.suffix if path.suffix in (".json", ".py") else ".bin"
     saved = _write_bytes(root / "sources" / (sha + suffix), raw)
@@ -697,7 +698,7 @@ def verify_baseline_capture(runtime, receipt):
     runtime = Path(runtime)
     ref = receipt["payload_ref"]
     path = _reference_path({"path": ref["path"], "runtime_relative_path": ref["path"]}, runtime)
-    if not path.is_file() or _sha(path) != ref["sha256"]:
+    if not history_exists(path) or _sha(path) != ref["sha256"]:
         raise SnapshotError("capture_payload_file_hash_mismatch")
     snapshot = _read(path)
     strict = _verify_payload(snapshot)
@@ -996,7 +997,7 @@ def _attach_candidate(payload, runtime, root, cutoff):
             if rel.is_absolute() or ".." in rel.parts:
                 raise SnapshotError("candidate_training_source_path_invalid")
             source=runtime/rel
-            if not source.is_file() or _sha(source)!=ref["sha256"]:
+            if not history_exists(source) or _sha(source)!=ref["sha256"]:
                 raise SnapshotError("candidate_training_source_hash_mismatch")
             parents.append((source,"candidate_training_source"))
         events = None
@@ -1072,7 +1073,7 @@ def _used_schedule_sources(values, history, events, coverage, runtime, cutoff, *
             if len(choices) != 1:
                 raise SnapshotError("used_schedule_frozen_response_ref_missing_or_ambiguous")
             path = _reference_path(choices[0], runtime)
-        if not re.fullmatch(r"[0-9a-f]{64}", ref.get("sha256", "")) or not path.is_file() or _sha(path) != ref["sha256"]:
+        if not re.fullmatch(r"[0-9a-f]{64}", ref.get("sha256", "")) or not history_exists(path) or _sha(path) != ref["sha256"]:
             raise SnapshotError("used_schedule_source_hash_mismatch")
         value = _read(path)
         _check_times(value, cutoff)

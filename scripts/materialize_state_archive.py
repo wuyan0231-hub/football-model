@@ -9,6 +9,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from football_model.state_storage import read_archive_bytes
+from football_model.history_archive import CATALOG_RELATIVE, FixedStateReader, _catalog
 
 
 def restore_selected(root, paths, output):
@@ -24,18 +25,37 @@ def restore_selected(root, paths, output):
     if access.get("status") != "files_materialized_not_model_verified" or not re.fullmatch(r"[0-9a-f]{40}", access.get("state_commit", "")):
         raise ValueError("verified connector materialization manifest required")
     records = {r["path"]: r for r in access["files"]}
-    manifest_bytes = (root / "state_storage.json").read_bytes()
-    manifest = json.loads(manifest_bytes)
     wanted = list(paths)
     if not wanted or len(set(wanted)) != len(wanted):
         raise ValueError("selected logical paths must be nonempty and unique")
     # Validate the authoritative manifest and safely read each selected member
     # before using any of its fields as filesystem paths.
-    bodies = {path: read_archive_bytes(root, path) for path in wanted}
-    entries = {e["path"]: e for e in manifest["entries"]}
-    dependencies = {"state_storage.json"}
-    for path in wanted:
-        dependencies.add("state_archives/" + entries[path]["blob_sha256"] + ".json.gz")
+    if (root / "runtime" / CATALOG_RELATIVE).is_file():
+        # The fixed-state reader verifies every current catalog/chunk and exact
+        # ancestor connector record it consumes. Missing history fails closed.
+        with FixedStateReader(root, access["state_commit"]) as reader:
+            bodies = {path: reader.read(path) for path in wanted}
+            entries = dict(_catalog(root / "runtime"))
+            missing = [path for path in wanted if path not in entries]
+            if missing:
+                # A new state can have cold history and ordinary current
+                # transport archives together. Classify each selected path;
+                # presence of a catalog does not change unrelated originals.
+                current = json.loads(reader.root_bytes("state_storage.json"))
+                current_entries = {e["path"]: e for e in current["entries"]}
+                for path in missing:
+                    if path not in current_entries:
+                        raise ValueError("selected path is not in the fixed archive indexes")
+                    entries[path] = current_entries[path]
+        dependencies = set()
+    else:
+        manifest_bytes = (root / "state_storage.json").read_bytes()
+        manifest = json.loads(manifest_bytes)
+        bodies = {path: read_archive_bytes(root, path) for path in wanted}
+        entries = {e["path"]: e for e in manifest["entries"]}
+        dependencies = {"state_storage.json"}
+        for path in wanted:
+            dependencies.add("state_archives/" + entries[path]["blob_sha256"] + ".json.gz")
     for path in dependencies:
         record = records.get(path)
         actual = root / path

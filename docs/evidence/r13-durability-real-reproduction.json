@@ -1,0 +1,66 @@
+{
+  "schema_version": "r13-durability-real-reproduction-v1",
+  "generated_at": "2026-10-16T01:09:49.716166+00:00",
+  "source_commit_before_fix": "9f5ec2a767b0b9873f4078fad981926b71bfc69b",
+  "fixed_state_commit": "eaef60f12b25ee68885c8bd2f71ca7e655e85c8d",
+  "original_failure_run_id": 38828942849,
+  "first_diagnostic_run_id": 38832161545,
+  "complete_diagnostic_run_id": 38832995518,
+  "complete_diagnostic_archive_sha256": "9ea0b0b559417697d527b799fab5382a951412fa17246e95331d9903b3aab8f2",
+  "original_diagnostic_sha256": "4ec19fb10e5574fe0f609de40c77675ad0e2b0cb3e1411b0e487c5915dfc1c17",
+  "complete_diagnostic_sha256": "ad8708941325dfa6c8d1d8f249dd204dca16221030b3c8088bc1eaa1fc8bf8b9",
+  "original_failure_preserved": true,
+  "first_failure": {
+    "error": "durable_source_hash_mismatch",
+    "path": "replay/bundles/13f34cce8df0c44c8dba853c974f024bc47b702e4cad9dcd340b98d38b414bc2.json.gz",
+    "claimed_sha256": "13f34cce8df0c44c8dba853c974f024bc47b702e4cad9dcd340b98d38b414bc2",
+    "raw_file_sha256": "6ead8dbf5bf83a311e619af57eea8a8f649a5ef7e16f44115bad9fb6f7002888",
+    "reproduced_canonical_payload_sha256": "13f34cce8df0c44c8dba853c974f024bc47b702e4cad9dcd340b98d38b414bc2",
+    "reference_hash_semantics": "production_replay_canonical_payload_sha256",
+    "explanation": "Recorder.save returns canonical replay payload SHA256, not compressed transport file SHA256; payload/envelope/schema/counts and bounded single-member gzip verified."
+  },
+  "full_closure": {
+    "anchor": {
+      "path": "advanced_snapshots/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/captures/argentina_a/1493190/LINEUP/first.json",
+      "sha256": "1d9afb2e8e58ae20b2eb8b508374afbff0236ee47079c9b43c85e8f1fc707dd1"
+    },
+    "unique_originals_verified": 1397,
+    "recorded_reference_reads": 1923,
+    "proof_method": "git_tree_typed_reference_closure_and_fixed_attempt_job_log_exact_saved_commit_v3",
+    "proof_schema": "advanced-durability-v3",
+    "closure_sha256": "2d1b1e68a678e16ffc1089c65f1a4dd204ed5cac7304f0629d3eabb893a65355",
+    "typed_references": {
+      "replay/bundles/13f34cce8df0c44c8dba853c974f024bc47b702e4cad9dcd340b98d38b414bc2.json.gz": [
+        "production_replay_canonical_payload_sha256"
+      ],
+      "replay/bundles/c7032984f70da56527d371a7e456a7ecd56404dae829eff7b5d1385357c802ed.json.gz": [
+        "production_replay_canonical_payload_sha256"
+      ]
+    },
+    "typed_raw_sha256": {
+      "replay/bundles/13f34cce8df0c44c8dba853c974f024bc47b702e4cad9dcd340b98d38b414bc2.json.gz": "6ead8dbf5bf83a311e619af57eea8a8f649a5ef7e16f44115bad9fb6f7002888",
+      "replay/bundles/c7032984f70da56527d371a7e456a7ecd56404dae829eff7b5d1385357c802ed.json.gz": "462643582636bebb43f0cdb7dd3bbcbd9cbee160726359479834e631cd297209"
+    },
+    "local_reproduction_seconds": 4.994026123000367,
+    "closure_verified": true,
+    "remote_run_completion_checked": false,
+    "remote_verified": false
+  },
+  "limits": [
+    "Full closure reproduced from actual fixed-state diagnostic originals; Git metadata response mocked only to supply separately observed fixed state metadata/commit clock.",
+    "No new fitting, production forecast, remote save proof, formal confirmation, or improvement claim."
+  ],
+  "verification_implementation_sha256": "2f6a7b7bbb56bfd999c170a12d511218fa8921d6c20f357d905d2094d0bb7ffe",
+  "targeted_regression": {
+    "modules": [
+      "tests.test_advanced_durability",
+      "tests.test_advanced_confirmation",
+      "tests.test_advanced_snapshots"
+    ],
+    "tests_run": 85,
+    "outcome": "passed",
+    "dependency_environment": "exact project Python dependencies supplied through the task dependency directory",
+    "full_suite_claimed": false,
+    "real_R_fitting_claimed": false
+  }
+}
