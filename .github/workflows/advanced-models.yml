@@ -30,6 +30,14 @@ on:
         required: false
         type: boolean
         default: false
+      research_leagues:
+        description: '仅main研究续跑可选剩余17联赛；最终仍核全部19联赛原件'
+        required: false
+        type: choice
+        default: all
+        options:
+          - all
+          - remaining_after_epl_championship
   schedule:
     - cron: '10,40 * * * *'
     - cron: '7 2 * * *'
@@ -50,6 +58,7 @@ jobs:
           RESEARCH_ONLY: ${{ inputs.research_only }}
           SHORT_ONLY: ${{ inputs.short_only }}
           DISPATCH_REF: ${{ github.ref }}
+          RESEARCH_LEAGUES: ${{ inputs.research_leagues || 'all' }}
         run: |
           if [ "$RESEARCH_ONLY" = true ] && [ "$SHORT_ONLY" = true ]; then
             echo '::error::research_only与short_only不能同时启用'
@@ -57,6 +66,15 @@ jobs:
           fi
           if [ "$SHORT_ONLY" = true ] && [ "$DISPATCH_REF" != refs/heads/main ]; then
             echo '::error::short_only仅允许在main执行'
+            exit 1
+          fi
+          selection="${RESEARCH_LEAGUES:-all}"
+          case "$selection" in
+            all|remaining_after_epl_championship) ;;
+            *) echo '::error::未知研究联赛范围'; exit 1 ;;
+          esac
+          if [ "$selection" != all ] && { [ "$RESEARCH_ONLY" != true ] || [ "$SHORT_ONLY" = true ] || [ "$DISPATCH_REF" != refs/heads/main ]; }; then
+            echo '::error::剩余联赛范围仅允许main的research_only手动续跑'
             exit 1
           fi
   verify:
@@ -85,11 +103,13 @@ jobs:
           Rscript --vanilla -e 'stopifnot(requireNamespace("jsonlite", quietly=TRUE))'
           python -m unittest discover -s tests -v
   pre_study_capture:
+    needs: validate_dispatch
     concurrency:
       group: ${{ github.ref == 'refs/heads/main' && 'football-model-state' || format('football-model-research-{0}', github.ref) }}
       cancel-in-progress: false
       queue: max
     if: >-
+      !cancelled() && (github.event_name != 'workflow_dispatch' || needs.validate_dispatch.result == 'success') &&
       github.repository == 'wuyan0231-hub/football-model' && github.ref == 'refs/heads/main' &&
       !(github.event_name == 'workflow_dispatch' && (inputs.research_only == true || inputs.short_only == true)) &&
       (github.event_name != 'schedule' || vars.ENABLE_SCHEDULE == 'true') &&
@@ -504,7 +524,9 @@ jobs:
       fail-fast: false
       max-parallel: 1
       matrix:
-        league: [epl, championship, laliga, bundesliga, serie_a, ligue_1, bundesliga_2, ligue_2, allsvenskan, eredivisie, primeira, brazil_a, j1, k1, mls, unl, liga_mx, segunda, argentina_a]
+        # A manual continuation never rewrites the all-league denominator.
+        # Finalize below still verifies all 19 saved checkpoints, without fits.
+        league: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.research_only == true && inputs.research_leagues == 'remaining_after_epl_championship' && '["laliga","bundesliga","serie_a","ligue_1","bundesliga_2","ligue_2","allsvenskan","eredivisie","primeira","brazil_a","j1","k1","mls","unl","liga_mx","segunda","argentina_a"]' || '["epl","championship","laliga","bundesliga","serie_a","ligue_1","bundesliga_2","ligue_2","allsvenskan","eredivisie","primeira","brazil_a","j1","k1","mls","unl","liga_mx","segunda","argentina_a"]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 100
     env:
@@ -580,7 +602,79 @@ jobs:
         id: research
         if: steps.preflight.outcome == 'success'
         continue-on-error: true
-        run: python scripts/advanced_study_window.py --selection "$STUDY_LEAGUE" -- python -m football_model.advanced_research study --runtime runtime --league "$STUDY_LEAGUE" --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE" --run-goalmodel --checkpoint-state --repo .
+        run: python scripts/advanced_study_window.py --selection "$STUDY_LEAGUE" -- python scripts/cloud_state_save_checked.py run --repo . --runtime runtime --receipt advanced-checkpoint-checked-save.json -- python -m football_model.advanced_research study --runtime runtime --league "$STUDY_LEAGUE" --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE" --run-goalmodel --checkpoint-state --repo .
+      - name: 分列原命令失败与精确远端保存恢复
+        id: recovery_record
+        if: ${{ !cancelled() && steps.research.outcome != 'skipped' }}
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import json,os,re,shutil
+          from pathlib import Path
+          receipt=json.loads(Path('advanced-checkpoint-checked-save.json').read_bytes())
+          if (receipt.get('schema_version')!='cloud-state-save-checked-v1'
+              or receipt.get('source_sha')!=os.environ['GITHUB_SHA']
+              or receipt.get('github_run_id')!=os.environ['GITHUB_RUN_ID']
+              or receipt.get('github_run_attempt')!=os.environ['GITHUB_RUN_ATTEMPT']
+              or receipt.get('study',{}).get('league')!=os.environ['STUDY_LEAGUE']):
+              raise ValueError('checked receipt is not this actual league command')
+          recovered=receipt.get('recovered_state_only') is True
+          planned=''
+          if recovered:
+              proof=receipt.get('recovery',{});planned=proof.get('planned_commit','')
+              if (receipt.get('status')!='push_timeout_remote_save_verified'
+                  or receipt.get('operation_completed') is not False
+                  or receipt.get('original_exit_code')!=124 or receipt.get('wrapper_exit_code')!=0
+                  or not re.fullmatch('[0-9a-f]{40}(?:[0-9a-f]{24})?',planned)
+                  or proof.get('remote_observations')!=[planned,planned]
+                  or proof.get('checkpoint',{}).get('calculation_completed') is not True
+                  or proof.get('checkpoint',{}).get('league')!=os.environ['STUDY_LEAGUE']
+                  or proof.get('checkpoint',{}).get('protocol_hash')!=receipt.get('study',{}).get('protocol_hash')):
+                  raise ValueError('incomplete timeout recovery proof')
+              shutil.copyfile('advanced-study-run-window.json','advanced-study-run-first-window.json')
+          with Path(os.environ['GITHUB_OUTPUT']).open('a') as handle:
+              handle.write('recovered='+str(recovered).lower()+'\n')
+              handle.write('state='+planned+'\n')
+          PY
+      - name: 保存恢复后实际重验检查点而不重新拟合
+        id: resume_research
+        if: steps.recovery_record.outputs.recovered == 'true'
+        continue-on-error: true
+        env:
+          RECOVERED_STATE: ${{ steps.recovery_record.outputs.state }}
+        run: python scripts/advanced_study_window.py --selection "$STUDY_LEAGUE" -- python -m football_model.advanced_research study --runtime runtime --league "$STUDY_LEAGUE" --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA" --state-commit "$RECOVERED_STATE" --run-goalmodel --checkpoint-state --repo . --resume-only
+      - name: 核实际检查点重验语义并保留延期失败
+        id: resume_check
+        if: ${{ !cancelled() && steps.recovery_record.outputs.recovered == 'true' }}
+        continue-on-error: true
+        env:
+          RESUME_RESEARCH: ${{ steps.resume_research.outcome }}
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from scripts.advanced_study_window import current_report
+          binding=current_report(os.environ['RESUME_RESEARCH'],os.environ['STUDY_LEAGUE'])
+          study=binding.get('report',{});results=study.get('results',[])
+          if (os.environ['RESUME_RESEARCH']!='success' or binding.get('status')!='current_report_verified'
+              or study.get('stored_research_durable_full_completed') is not True
+              or study.get('stored_verified_completed_leagues')!=1 or len(results)!=1
+              or results[0].get('league')!=os.environ['STUDY_LEAGUE']
+              or results[0].get('durable_saved') is not True
+              or results[0].get('saved_snapshot_verified') is not True
+              or results[0].get('durability_status')!='verified_saved_git_closure'):
+              raise ValueError('native zero exit is not a verified saved checkpoint')
+          receipt={'schema_version':'native-resume-verified-v1','status':'verified_saved_git_closure',
+              'league':os.environ['STUDY_LEAGUE'],'source_commit':os.environ['GITHUB_SHA'],
+              'github_run_id':os.environ['GITHUB_RUN_ID'],'github_run_attempt':os.environ['GITHUB_RUN_ATTEMPT'],
+              'report_path':binding['path'],'report_sha256':binding['sha256'],
+              'checkpoint_ref':results[0].get('checkpoint_ref'),
+              'current_inputs_match':results[0].get('current_inputs_match'),
+              'current_refit_required':results[0].get('current_refit_required'),
+              'fit_attempted_by_resume':False,'production_promoted':False}
+          with Path('advanced-resume-verification.json').open('x') as handle:
+              json.dump(receipt,handle,indent=2)
+          PY
       - name: 保存当次汇总与失败原件
         id: persist
         if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
@@ -596,6 +690,10 @@ jobs:
           DURABLE: ${{ steps.durable.outcome }}
           PREFLIGHT: ${{ steps.preflight.outcome }}
           RESEARCH: ${{ steps.research.outcome }}
+          RECOVERY_RECORD: ${{ steps.recovery_record.outcome }}
+          CHECKPOINT_RECOVERED: ${{ steps.recovery_record.outputs.recovered }}
+          RESUME_RESEARCH: ${{ steps.resume_research.outcome }}
+          RESUME_CHECK: ${{ steps.resume_check.outcome }}
           PERSIST: ${{ steps.persist.outcome }}
         run: |
           python - <<'PY'
@@ -603,13 +701,22 @@ jobs:
           from pathlib import Path
           keys=['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','STUDY_LEAGUE','ADVANCED_PARENT_STATE','STORAGE_GATE','ALLOW_FIT','RESTORE','DURABLE','PREFLIGHT','RESEARCH','PERSIST']
           receipt={k:os.environ.get(k) for k in keys}
+          receipt.update({k:os.environ.get(k) for k in ['RECOVERY_RECORD','CHECKPOINT_RECOVERED','RESUME_RESEARCH','RESUME_CHECK']})
+          checked_path=Path('advanced-checkpoint-checked-save.json')
+          if checked_path.is_file():
+              checked_raw=checked_path.read_bytes();checked=json.loads(checked_raw)
+              receipt['original_research_command']={'receipt_path':str(checked_path),'receipt_sha256':hashlib.sha256(checked_raw).hexdigest(),
+                  'original_exit_code':checked.get('original_exit_code'),'operation_completed':checked.get('operation_completed'),
+                  'recovered_state_only':checked.get('recovered_state_only'),'status':checked.get('status')}
           from scripts.advanced_study_window import current_report
-          binding=current_report(receipt['RESEARCH'],receipt['STUDY_LEAGUE'])
+          native_outcome=receipt['RESUME_RESEARCH'] if receipt['CHECKPOINT_RECOVERED']=='true' else receipt['RESEARCH']
+          binding=current_report(native_outcome,receipt['STUDY_LEAGUE'])
           receipt['study_report_binding']={k:v for k,v in binding.items() if k!='report'}
           study=binding.get('report',{})
           if binding['status']=='current_report_verified':
               receipt['study_report']=binding
           stop=receipt['STORAGE_GATE']!='success' or receipt['RESTORE']=='failure' or receipt['PREFLIGHT']=='failure' or receipt['PERSIST']=='failure' or any(study.get(k,0)>0 for k in ['capacity_deferred_leagues','checkpoint_deferred_leagues','checkpoint_failed_leagues'])
+          stop=stop or receipt['RECOVERY_RECORD']=='failure' or (receipt['CHECKPOINT_RECOVERED']=='true' and (receipt['RESUME_RESEARCH']!='success' or receipt['RESUME_CHECK']!='success'))
           receipt.update(storage_stop=stop,production_promoted=False,accuracy_improvement_verified=False,bundle_kind='thin_run_inspection')
           gitdir=Path(subprocess.check_output(['git','rev-parse','--absolute-git-dir'],text=True).strip())
           marker=gitdir/'football-cloud-state.json'
@@ -645,6 +752,9 @@ jobs:
             advanced-models-evidence.tar.sha256
             advanced-study-run-receipt.json
             advanced-study-run-gate.json
+            advanced-checkpoint-checked-save.json
+            advanced-study-run-first-window.json
+            advanced-resume-verification.json
             advanced-preflight*.json
           compression-level: 0
           retention-days: 2
@@ -653,7 +763,9 @@ jobs:
         if: >-
           !cancelled() && (steps.storage_gate.outcome != 'success' || steps.storage_gate.outputs.allow_fit != 'true' ||
           steps.restore.outcome != 'success' || steps.durable.outcome != 'success' || steps.preflight.outcome != 'success' ||
-          steps.research.outcome != 'success' || steps.persist.outcome != 'success' || hashFiles('advanced-study-storage-stop.json') != '')
+          steps.research.outcome != 'success' || steps.recovery_record.outcome != 'success' ||
+          (steps.recovery_record.outputs.recovered == 'true' && (steps.resume_research.outcome != 'success' || steps.resume_check.outcome != 'success')) ||
+          steps.persist.outcome != 'success' || hashFiles('advanced-study-storage-stop.json') != '')
         run: exit 1
   study_finalize:
     needs: [advanced, study_leagues]
