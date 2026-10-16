@@ -17,7 +17,7 @@ from test_data import NOW, SECRET, Response, envelope, fixture
 from football_model.data import APIError, RequestBudgetError, _NoRedirect
 from scripts.personnel_contract_probe import (
     ContractProbeClient, ContractProbeError, DAILY_RESERVE, MAX_TOTAL_REQUESTS,
-    ROOT, _date_field_states, run_probe,
+    ROOT, _date_field_states, _squad_players, run_probe,
 )
 import scripts.personnel_contract_probe as probe
 
@@ -364,6 +364,79 @@ class PersonnelContractProbeTests(unittest.TestCase):
         raw = b'{"response":[],"errors":[],"extra":1e999}'
         self.assertEqual(client._safe_body(raw), {"body_kind": "non_json", "body_bytes": len(raw),
             "body_sha256": hashlib.sha256(raw).hexdigest(), "body_hash_scope": "complete_body"})
+
+    def test_real_projected_duplicate_groups_select_singletons_without_certifying_roster(self):
+        fixture_path = ROOT / "tests/fixtures/personnel-squad-projected-observation-v1.json"
+        actual = json.loads(fixture_path.read_text())
+        for case in actual["cases"]:
+            with self.subTest(team=case["team"]["id"]):
+                players = [group["player"].copy() for group in case["groups"]
+                           for _ in range(group["occurrences"])]
+                rows = [{"team": case["team"], "players": players}]
+                original = json.dumps(rows, sort_keys=True)
+                ids, diagnostic = _squad_players(rows, case["team"]["id"])
+                self.assertEqual(ids[:2], case["expected_selected_singleton_ids"])
+                self.assertEqual(diagnostic["raw_player_rows"], case["original_player_row_count"])
+                self.assertEqual(diagnostic["unique_subject_count"], len(case["groups"]))
+                self.assertTrue(diagnostic["issues"])
+                self.assertTrue(all(issue["duplicate_kind"] == "exact_source_row_repetition"
+                                    for issue in diagnostic["issues"]))
+                self.assertFalse(diagnostic["roster_contract_verified"])
+                self.assertEqual(json.dumps(rows, sort_keys=True), original)
+
+    def test_duplicate_only_squads_continue_sidelined_but_overall_remains_incomplete(self):
+        def transport(request, **kwargs):
+            path = urlsplit(request.full_url).path
+            if path == "/players/squads":
+                params = parse_qs(urlsplit(request.full_url).query)
+                tid = int(params["team"][0])
+                self.calls.append((path, {"team": tid}))
+                players = [{"id": tid * 100 + offset, "name": "Observed " + str(offset)} for offset in (1, 2)]
+                return Response(envelope([{"team": {"id": tid}, "players": players + players}]))
+            return self.transport(request, **kwargs)
+        code, report, output = self.run_probe(self.client(transport))
+        self.assertEqual(code, 2)
+        self.assertEqual(len(self.calls), 8)
+        self.assertEqual(len(report["contract_issues"]), 4)
+        self.assertEqual(report["selected_subject_sidelined_observation_status"], "observed_for_selected_subjects_only")
+        self.assertEqual(report["observations"][1]["status"], "observed_with_contract_issues")
+        raw = json.loads((output / "response-02.json").read_text())
+        self.assertEqual(len(raw["response"][0]["players"]), 4)
+
+    def test_consistent_id_name_with_metadata_conflict_is_subject_only_and_keeps_issue(self):
+        rows = [{"team": {"id": 11}, "players": [
+            {"id": 1, "name": "One", "number": 3}, {"id": 1, "name": "One", "number": 4},
+            {"id": 2, "name": "Two"}]}]
+        ids, diagnostic = _squad_players(rows, 11)
+        self.assertEqual(ids, [2, 1])
+        self.assertEqual(diagnostic["issues"][0]["duplicate_kind"], "consistent_id_name_other_fields_conflict")
+        self.assertEqual(diagnostic["issues"][0]["conflicting_fields"], ["number"])
+        self.assertFalse(diagnostic["raw_response_rewritten_or_cleaned"])
+
+    def test_name_conflicts_and_unresolved_repeat_identity_are_excluded_without_guessing(self):
+        rows = [{"team": {"id": 11}, "players": [
+            {"id": 1, "name": "One"}, {"id": 1, "name": "Different"},
+            {"id": 2, "number": 3}, {"id": 2, "number": 4},
+            {"id": 3, "name": "Three"}]}]
+        ids, diagnostic = _squad_players(rows, 11)
+        self.assertEqual(ids, [3])
+        self.assertEqual([issue["player_id"] for issue in diagnostic["issues"] if issue["subject_excluded"]], [1, 2])
+
+    def test_cross_team_conflicts_check_entire_squads_not_only_top_two(self):
+        def transport(request, **kwargs):
+            parsed = urlsplit(request.full_url)
+            if parsed.path == "/players/squads":
+                tid = int(parse_qs(parsed.query)["team"][0])
+                self.calls.append((parsed.path, {"team": tid}))
+                ids = [1, 2, 3] if tid == 11 else [8, 9, 1]
+                return Response(envelope([{"team": {"id": tid}, "players": [
+                    {"id": pid, "name": "Observed " + str(pid)} for pid in ids]}]))
+            return self.transport(request, **kwargs)
+        code, report, _ = self.run_probe(self.client(transport))
+        self.assertEqual(code, 2)
+        requested = [params["player"] for path, params in self.calls if path == "/sidelined"]
+        self.assertEqual(requested, [2, 3, 8, 9])
+        self.assertIn({"category": "player_team_identity_conflict", "player_id": 1}, report["contract_issues"])
 
 
 if __name__ == "__main__":

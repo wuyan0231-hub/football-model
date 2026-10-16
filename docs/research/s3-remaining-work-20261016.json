@@ -177,5 +177,44 @@
     "后继轮滚动核当前状态；新保存不会覆盖此快照。",
     "Panna按现行范围继续暂缓，不计未完成。",
     "效果可以失败；不能靠反复挑选直到显著来关闭效果任务。"
+  ],
+  "updates": [
+    {
+      "recorded_at": "2026-10-16T13:44:00Z",
+      "code_commit": "36e11827c445e8172ff3b68b94d519dba4db4836",
+      "pr52_tests": {
+        "run_id": 38908891610,
+        "tests": 1624,
+        "seconds": 148.976,
+        "skips": 0,
+        "conclusion": "success"
+      },
+      "short_cycle": {
+        "run_id": 38896992700,
+        "conclusion": "failure",
+        "facts": "partial_provider_startXI_player_id_null_fixture1552487",
+        "capture_scoring_check_persist_export": "success",
+        "saved_state": "ec7366c61ee56785444db899bf41760305e869a0"
+      },
+      "R03_first_experiment": {
+        "status": "completed_exploratory_not_adopted",
+        "requested": 820,
+        "scored": 608,
+        "null": 211,
+        "scoreline_nll_v2_minus_old": 9.0045e-05,
+        "scoreline_nll_v2_minus_M0": 0.000997346,
+        "tests": 11,
+        "old_implementation_unchanged": true
+      },
+      "R10_first_real_probe": {
+        "run_id": 38909470927,
+        "total_attempts": 4,
+        "status": "incomplete_due_duplicate_squad_IDs",
+        "sidelined_observed": false,
+        "next": "v2 preserves source anomalies while querying unambiguous subjects only"
+      },
+      "whole_packages_closed": 0,
+      "meaning": "R03首项及其他子步骤已完成；13个整包仍有后继适用条件，不用子步骤成功冒充整包关闭。"
+    }
   ]
 }

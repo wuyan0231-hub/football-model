@@ -46,6 +46,7 @@ SEMANTICS = {
     "starting_xi_probabilities_created": False,
     "prediction_or_training_performed": False,
     "production_state_modified": False,
+    "subject_selection_does_not_verify_roster": True,
 }
 
 
@@ -59,7 +60,7 @@ class ContractProbeError(APIError):
 
 
 class ContractProbeClient(APIClient):
-    """Probe-only extension v1; explicitly adds squads and sidelined, not models.
+    """Probe-only extension v2; explicitly adds squads and sidelined, not models.
 
     The normal APIClient constructor consumes the configured GitHub secret.
     Its no-redirect opener, real budget/header accounting and cache redaction
@@ -67,7 +68,7 @@ class ContractProbeClient(APIClient):
     a 400-request daily reserve. No endpoint has additional probe retries.
     """
 
-    implementation_version = "personnel-contract-probe-client-v1"
+    implementation_version = "personnel-contract-probe-client-v2"
 
     def __init__(self, data_dir, **kwargs):
         if any(key in kwargs for key in ("max_requests", "daily_limit", "max_retries")):
@@ -252,7 +253,8 @@ def _fixture_teams(rows, fixture_id):
 
 def _squad_players(rows, team_id):
     if not rows:
-        return []
+        return [], {"raw_player_rows": 0, "observed_player_ids": [], "unique_subject_count": 0,
+                    "issues": [], "subject_selection_scope": "endpoint_contract_only_not_roster_verification"}
     if len(rows) != 1 or not isinstance(rows[0], dict):
         raise DataError("squad team must be unique")
     try:
@@ -261,12 +263,45 @@ def _squad_players(rows, team_id):
         players = rows[0]["players"]
         if not isinstance(players, list):
             raise DataError("squad players missing")
-        ids = [_integer(player["id"], "player.id", 1) for player in players]
-        if len(ids) != len(set(ids)):
-            raise DataError("duplicate player identity")
+        by_id = {}
+        for index, player in enumerate(players):
+            pid = _integer(player["id"], "player.id", 1)
+            by_id.setdefault(pid, []).append((index, player))
     except (KeyError, TypeError) as exc:
         raise DataError("squad contract fields missing") from exc
-    return sorted(ids)[:2]
+    issues, selectable = [], []
+    for pid, occurrences in by_id.items():
+        if len(occurrences) == 1:
+            selectable.append((0, pid))
+            continue
+        versions = {_json_bytes(player) for _, player in occurrences}
+        issue = {"category": "duplicate_squad_source_rows", "player_id": pid,
+                 "source_row_indices": [index for index, _ in occurrences],
+                 "occurrences": len(occurrences)}
+        if len(versions) == 1:
+            issue["duplicate_kind"] = "exact_source_row_repetition"
+            selectable.append((1, pid))
+        else:
+            names = [player.get("name") for _, player in occurrences]
+            fields = sorted({name for _, player in occurrences for name in player})
+            issue["conflicting_fields"] = [name for name in fields if len({
+                _json_bytes({"present": name in player, "value": player.get(name)})
+                for _, player in occurrences}) > 1]
+            if all(isinstance(name, str) and name.strip() and name == names[0] for name in names):
+                issue["duplicate_kind"] = "consistent_id_name_other_fields_conflict"
+                selectable.append((2, pid))
+            else:
+                issue["duplicate_kind"] = "subject_name_conflict_or_unresolved"
+                issue["subject_excluded"] = True
+        issues.append(issue)
+    diagnostic = {"raw_player_rows": len(players), "observed_player_ids": sorted(by_id),
+        "unique_subject_count": len(by_id), "duplicate_subject_count": len(issues),
+        "extra_duplicate_rows": len(players) - len(by_id), "issues": issues,
+        "subject_selection_scope": "endpoint_contract_only_not_roster_verification",
+        "selection_order": "singleton_then_exact_duplicate_then_consistent_id_name;numeric_id_within_tier",
+        "raw_response_rewritten_or_cleaned": False,
+        "roster_contract_verified": False}
+    return [pid for _, pid in sorted(selectable)], diagnostic
 
 
 def _sidelined_contract(rows, player_id):
@@ -328,7 +363,7 @@ def run_probe(fixture_id, output, *, client=None, clock=None, source_commit=None
     for relative in ("football_model/data.py", "config.json", "scripts/personnel_contract_probe.py"):
         path = ROOT / relative
         sources.append({"path": relative, "sha256": hashlib.sha256(path.read_bytes()).hexdigest()})
-    report = {"schema_version": "personnel-contract-probe-v1", "fixture_id": fixture_id,
+    report = {"schema_version": "personnel-contract-probe-v2", "fixture_id": fixture_id,
               "started_at": _iso(started), "source_commit": source_commit,
               "implementation_files": sources, "official_reference_urls": OFFICIAL_REFERENCES,
               "client_implementation": ContractProbeClient.implementation_version,
@@ -338,7 +373,7 @@ def run_probe(fixture_id, output, *, client=None, clock=None, source_commit=None
                                  "retries": 0, "configured_daily_limit": DAILY_LIMIT,
                                  "daily_requests_reserved": DAILY_RESERVE},
               "response_storage_representation": "redacted_client_envelope_canonical_json_not_http_wire_bytes",
-              "semantics": SEMANTICS.copy(), "observations": [], "issues": []}
+              "semantics": SEMANTICS.copy(), "observations": [], "issues": [], "contract_issues": []}
     paid_calls = 0
 
     def observe(endpoint, params, fetch):
@@ -384,7 +419,7 @@ def run_probe(fixture_id, output, *, client=None, clock=None, source_commit=None
             except (DataError, ValueError) as exc:
                 item.update(status="blocked", failure_category=_failure(exc))
         if teams:
-            selected = []
+            squads = []
             for team_id in teams:
                 params = {"team": team_id}
                 rows, item = observe("/players/squads", params,
@@ -393,19 +428,35 @@ def run_probe(fixture_id, output, *, client=None, clock=None, source_commit=None
                 if rows is None:
                     continue
                 try:
-                    ids = _squad_players(rows, team_id)
-                    item["selected_player_ids"] = ids
-                    selected.extend((team_id, pid) for pid in ids)
+                    ids, diagnostic = _squad_players(rows, team_id)
+                    item["subject_selection"] = diagnostic
+                    if diagnostic["issues"]:
+                        item["status"] = "observed_with_contract_issues"
+                        report["contract_issues"].extend({"endpoint": "/players/squads", "team_id": team_id,
+                                                         **issue} for issue in diagnostic["issues"])
+                    squads.append((team_id, ids, diagnostic["observed_player_ids"], item))
                     if not ids:
                         report["issues"].append({"category": "no_observed_player_ids", "team_id": team_id})
                 except (DataError, ValueError) as exc:
                     item.update(status="blocked", failure_category=_failure(exc))
-            # Reject overlapping current squad subjects rather than guessing a team.
-            counts = {pid: sum(other == pid for _, other in selected) for _, pid in selected}
+            # Cross-check whole observed ID sets, including non-selected and
+            # unresolved-name subjects. A conflict cannot hide behind top-two.
+            counts = {}
+            for _, _, observed_ids, _ in squads:
+                for pid in observed_ids:
+                    counts[pid] = counts.get(pid, 0) + 1
+            conflicts = sorted(pid for pid, count in counts.items() if count > 1)
+            report["contract_issues"].extend({"category": "player_team_identity_conflict", "player_id": pid}
+                                              for pid in conflicts)
+            selected = []
+            for team_id, candidates, _, item in squads:
+                ids = [pid for pid in candidates if counts[pid] == 1][:2]
+                item["selected_player_ids"] = ids
+                item["cross_team_excluded_player_ids"] = [pid for pid in candidates if counts[pid] > 1]
+                if item["cross_team_excluded_player_ids"]:
+                    item["status"] = "observed_with_contract_issues"
+                selected.extend((team_id, pid) for pid in ids)
             for team_id, player_id in selected:
-                if counts[player_id] != 1:
-                    report["issues"].append({"category": "player_team_identity_conflict", "player_id": player_id})
-                    continue
                 params = {"player": player_id}
                 rows, item = observe("/sidelined", params,
                     lambda params=params: client._cached_request("/sidelined", params,
@@ -428,7 +479,11 @@ def run_probe(fixture_id, output, *, client=None, clock=None, source_commit=None
         report["finished_at"] = _iso(_utc(clock()))
         report["paid_probe_calls_attempted"] = paid_calls
         observed = report["observations"]
-        complete = (len(observed) >= 3 and not report["issues"]
+        sidelined = [item for item in observed if item["endpoint"] == "/sidelined"]
+        report["selected_subject_sidelined_observation_status"] = (
+            "observed_for_selected_subjects_only" if sidelined and all(item["status"] == "observed" for item in sidelined)
+            else "partial_or_blocked" if sidelined else "not_attempted")
+        complete = (len(observed) >= 3 and not report["issues"] and not report["contract_issues"]
                     and all(item["status"] == "observed" for item in observed))
         report["status"] = "contract_observations_complete" if complete else "incomplete_or_blocked"
         report["effect_or_provider_coverage_verified"] = False
