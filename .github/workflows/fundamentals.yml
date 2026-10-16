@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   fundamentals:
-    if: ${{ github.event.repository.private == true && github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.repository == 'wuyan0231-hub/football-model' && github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     # The collector stops new network work after at most 900 seconds. Leave
     # another 15 minutes for reporting, validation, and durable state saving.

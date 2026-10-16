@@ -17,8 +17,8 @@ from .feature_research import score_forecast, _mean_metrics
 from .feature_scoring import (RESULT_DELAY, RESULT_REFRESH, RESULT_RECHECK_WINDOW,
     _immutable, _normalize_result, _pointer, _provider_league, _read_ref, _reference)
 from .feature_snapshots import SnapshotError, _digest, _read, _tick, HORIZONS
-from .advanced_snapshots import (candidate_ids, queue_members, load_verified_comparison,
-    _commit, _reason, _root as capture_root)
+from .advanced_snapshots import (candidate_ids, load_verified_comparison,
+    _commit, _reason, _root as capture_root, _VerifiedQueueIndex)
 
 VERSION = "advanced-future-scoring-v1"
 
@@ -111,8 +111,9 @@ def score_run(runtime, league="serie_a", *, config, protocol, source_commit, sta
     client = None; fetched = {}; current_records = []
     with lockpath.open("a") as lock:
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        queue_index = _VerifiedQueueIndex(runtime, protocol)
         try:
-            members = queue_members(runtime, league, protocol, started)
+            members = queue_index.members(runtime, league, protocol, started)
         except (ValueError, KeyError, TypeError, OSError) as exc:
             members = []; report["issues"].append({"reason": _reason(exc)})
         for member in members:
@@ -129,7 +130,7 @@ def score_run(runtime, league="serie_a", *, config, protocol, source_commit, sta
                         "horizon":member["horizon"],"score_ref":historical_ref,"current_verification_not_implied":True})
                 except (ValueError, OSError):
                     item["historical_first_pointer_unreadable"] = True
-            comparison = load_verified_comparison(runtime, league, member["match_id"], member["horizon"], protocol, now=now)
+            comparison = load_verified_comparison(runtime, league, member["match_id"], member["horizon"], protocol, now=now, _queue_index=queue_index)
             if comparison["status"] != "available":
                 item.update(status="missed_window" if now >= _utc(member["kickoff"]) else member["latest_status"],
                     reason=comparison.get("reason"), baseline_available=False)
@@ -230,8 +231,9 @@ def verified_confirmation_rows(runtime, league, advanced_protocol, *, include_sc
     runtime = Path(runtime).resolve(); now = _utc(now or datetime.now(timezone.utc)); output=[]
     config = config or _read(Path(__file__).resolve().parents[1] / "config.json")
     competition = next(v for v in config["competitions"] if v["key"]==league)
-    for member in queue_members(runtime,league,advanced_protocol,now):
-        comparison = load_verified_comparison(runtime,league,member["match_id"],member["horizon"],advanced_protocol,now=now)
+    queue_index = _VerifiedQueueIndex(runtime, advanced_protocol)
+    for member in queue_index.members(runtime, league, advanced_protocol, now):
+        comparison = load_verified_comparison(runtime,league,member["match_id"],member["horizon"],advanced_protocol,now=now, _queue_index=queue_index)
         saved=None; score_ref=None
         status=comparison["status"]
         if include_scores and status=="available":

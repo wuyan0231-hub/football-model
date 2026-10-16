@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   verify:
-    if: github.event.repository.private == true && github.ref == 'refs/heads/codex/recovery-20261014'
+    if: github.repository == 'wuyan0231-hub/football-model' && github.ref == 'refs/heads/codex/recovery-20261014'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:

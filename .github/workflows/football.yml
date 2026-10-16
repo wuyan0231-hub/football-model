@@ -53,9 +53,9 @@ concurrency:
 jobs:
   football:
     # No scheduled API calls until Settings > Variables > ENABLE_SCHEDULE=true.
-    # Data/licensing and model state are intended for this private repository.
+    # Only the designated source repository may run the state/API workflow.
     if: >-
-      github.event.repository.private == true &&
+      github.repository == 'wuyan0231-hub/football-model' &&
       (github.event_name == 'workflow_dispatch' || github.event_name == 'push' || vars.ENABLE_SCHEDULE == 'true')
     runs-on: ubuntu-latest
     # 60m model + 5m result sync + 10m quotes + 15m fundamentals soft limits;

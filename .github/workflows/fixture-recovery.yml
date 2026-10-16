@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   recover:
-    if: ${{ github.event.repository.private == true && github.ref == 'refs/heads/main' }}
+    if: ${{ github.repository == 'wuyan0231-hub/football-model' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     # API work has a 300-second soft deadline; leave time for complete saving.
     timeout-minutes: 30
