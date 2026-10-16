@@ -19,10 +19,10 @@ jobs:
           python-version: '3.12'
       - name: Fetch only the fixed saved Git objects
         run: git fetch --no-tags --depth=1 origin eaef60f12b25ee68885c8bd2f71ca7e655e85c8d
-      - name: Reproduce original dependency traversal without restoring runtime
+      - name: Reproduce original dependency traversal with registered replay contract
         env:
           PYTHONPATH: .
-        run: python scripts/diagnose_durability_r13.py --repo . --state-commit eaef60f12b25ee68885c8bd2f71ca7e655e85c8d --output durability-diagnostic
+        run: python scripts/diagnose_durability_r13.py --repo . --state-commit eaef60f12b25ee68885c8bd2f71ca7e655e85c8d --output durability-diagnostic --registered-replay-contract
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:

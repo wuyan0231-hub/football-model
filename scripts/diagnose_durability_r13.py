@@ -35,6 +35,8 @@ def main():
     p.add_argument("--state-commit", required=True)
     p.add_argument("--output", required=True)
     p.add_argument("--max-evidence-bytes", type=int, default=256 * 1024 * 1024)
+    p.add_argument("--registered-replay-contract", action="store_true",
+        help="Use the reviewed producer-specific replay payload digest contract; retain raw hashes.")
     args = p.parse_args()
     if not re.fullmatch(r"[0-9a-f]{40}", args.state_commit):
         raise ValueError("full_fixed_state_commit_required")
@@ -51,6 +53,7 @@ def main():
         "state_commit": args.state_commit, "observed_at": datetime.now(timezone.utc).isoformat(),
         "network_used": False, "runtime_restored": False, "state_modified": False,
         "traversal": "original_stamp_sorted_first_then_unfiltered_children", "anchors": [],
+        "registered_replay_contract": args.registered_replay_contract,
         "objects": [], "edges": [], "first_failure": None, "evidence_bytes": 0,
         "omitted_evidence": []}
     # This fixed manifest is the only large index parsed; no state is expanded.
@@ -117,6 +120,7 @@ def main():
                 continue
         visited = {}
         values = {}
+        source_data = {}
         def read(ref, chain):
             name = ref.get("runtime_relative_path", ref.get("path"))
             expected = ref.get("sha256")
@@ -124,13 +128,20 @@ def main():
                 raise ValueError("invalid_durable_ref")
             if Path(name).is_absolute() or ".." in Path(name).parts:
                 raise ValueError("unsafe_durable_ref")
-            if name in visited:
+            if name in visited and not args.registered_replay_contract:
                 if visited[name] != expected:
                     raise ValueError("conflicting_durable_ref")
                 return values[name]
-            raw = _tree_file(repo, args.state_commit, name, archive)
-            actual = sha(raw)
+            raw = source_data.get(name)
+            if raw is None:
+                raw = _tree_file(repo, args.state_commit, name, archive)
+            if args.registered_replay_contract:
+                from football_model.advanced_durability import _reference_value
+                value, semantics, actual = _reference_value(name, ref, raw)
+            else:
+                value, semantics, actual = None, "raw_bytes_sha256", sha(raw)
             item = {"path": name, "expected_sha256": expected, "actual_sha256": actual,
+                "raw_sha256": sha(raw), "reference_hash_semantics": semantics,
                 "raw_bytes": len(raw), "chain": chain,
                 "evidence_file": preserve(name, raw, critical=actual != expected)}
             report["objects"].append(item)
@@ -138,8 +149,12 @@ def main():
                 report["first_failure"] = {"error": "durable_source_hash_mismatch", "anchor": anchor_ref,
                     **item, "reference": ref, "interpretation": "unclassified_until_semantic_review"}
                 raise Failure()
+            if name in visited:
+                return values[name]
             visited[name] = expected
-            value = json.loads(raw)
+            if not args.registered_replay_contract:
+                value = json.loads(raw)
+            source_data[name] = raw
             values[name] = value
             def children(x, pointer):
                 if isinstance(x, dict):
