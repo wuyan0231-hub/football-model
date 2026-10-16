@@ -1,6 +1,8 @@
 import importlib.util
 from pathlib import Path
 import unittest
+import json
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "scripts/fixed_research_report_audit.py"
@@ -134,6 +136,55 @@ class SelectionTests(unittest.TestCase):
         replay = {"forecasts":[{"match_id":1,"target_available_at":"2026-01-01T00:00:00Z"}]*2}
         with self.assertRaises(audit.AuditError):
             audit.expected_training_ids(replay,{1:{"home":{},"away":{}}},[],self.cutoff)
+
+
+class ProgressTests(unittest.TestCase):
+    def test_atomic_partial_preserves_completed_leagues_and_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp)/"audit.json"
+            audit.checkpoint_output(p, {"status":"audit_in_progress","results":[{"league":"example","status":"completed_with_stated_scope"}]})
+            out = json.loads(p.read_text());out["status"]="audit_incomplete"
+            audit.checkpoint_output(p,out)
+            self.assertEqual(json.loads(p.read_text())["results"],out["results"])
+            self.assertEqual(list(Path(tmp).glob("*.tmp")),[])
+
+    def test_output_bound_preserves_previous_checkpoint(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp)/"audit.json"
+            audit.checkpoint_output(p,{"status":"audit_in_progress"})
+            original = p.read_bytes()
+            with self.assertRaises(audit.AuditError):
+                audit.checkpoint_output(p,{"oversized":"x"*(513*1024)})
+            self.assertEqual(p.read_bytes(),original)
+
+    def test_nonfinite_checkpoint_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp)/"audit.json"
+            with self.assertRaises(ValueError):
+                audit.checkpoint_output(p,{"value":float("nan")})
+            self.assertFalse(p.exists())
+
+    def test_exception_values_and_source_lines_not_exported(self):
+        try:
+            raise KeyError("private-input-not-for-export")
+        except KeyError as exc:
+            detail = audit.failure_detail(exc)
+        self.assertNotIn("private-input-not-for-export",json.dumps(detail))
+        self.assertTrue(detail["frames"])
+        self.assertEqual(set(detail["frames"][-1]),{"file","function","line"})
+
+    def test_existing_outputs_cannot_be_overwritten(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p=Path(tmp)/"audit.json";p.touch()
+            with self.assertRaises(audit.AuditError):
+                audit.validate_output(p,Path(tmp))
+
+    def test_protected_runtime_and_source_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for parent in ("runtime","fixed-research-audit-runtime","football_model","scripts","tests",".github",".git"):
+                with self.assertRaises(audit.AuditError):
+                    audit.validate_output(Path(tmp)/parent/"audit.json",Path(tmp))
+            self.assertEqual(audit.validate_output(Path(tmp)/"audit.json",Path(tmp)),Path(tmp)/"audit.json")
 
 
 if __name__ == "__main__":
