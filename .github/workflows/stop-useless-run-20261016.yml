@@ -1,0 +1,29 @@
+name: One-time stop of failed S3 run 38828942849
+
+on:
+  push:
+    branches: [codex/stop-useless-run-20261016]
+    paths: [.github/workflows/stop-useless-run-20261016.yml]
+
+permissions:
+  actions: write
+
+jobs:
+  stop_failed_run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Stop only the explicitly identified failed run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: wuyan0231-hub/football-model
+        shell: bash
+        run: |
+          set -euo pipefail
+          target_state="$(gh api repos/wuyan0231-hub/football-model/actions/runs/38828942849 --jq .status)"
+          if [ "$target_state" = completed ]; then
+            echo "Target run already completed; no cancellation required."
+          else
+            gh api --method POST repos/wuyan0231-hub/football-model/actions/runs/38828942849/force-cancel --silent
+            echo "Force cancellation accepted for run 38828942849."
+          fi
