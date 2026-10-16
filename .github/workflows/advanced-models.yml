@@ -25,6 +25,11 @@ on:
         required: false
         type: boolean
         default: false
+      short_only:
+        description: '仅在main执行完整短轮；与research_only互斥，不重跑历史研究'
+        required: false
+        type: boolean
+        default: false
   schedule:
     - cron: '10,40 * * * *'
     - cron: '7 2 * * *'
@@ -34,9 +39,30 @@ permissions:
   actions: read
 
 jobs:
+  validate_dispatch:
+    if: >-
+      github.repository == 'wuyan0231-hub/football-model' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 验证手动模式互斥与短轮分支
+        env:
+          RESEARCH_ONLY: ${{ inputs.research_only }}
+          SHORT_ONLY: ${{ inputs.short_only }}
+          DISPATCH_REF: ${{ github.ref }}
+        run: |
+          if [ "$RESEARCH_ONLY" = true ] && [ "$SHORT_ONLY" = true ]; then
+            echo '::error::research_only与short_only不能同时启用'
+            exit 1
+          fi
+          if [ "$SHORT_ONLY" = true ] && [ "$DISPATCH_REF" != refs/heads/main ]; then
+            echo '::error::short_only仅允许在main执行'
+            exit 1
+          fi
   verify:
     if: >-
       github.repository == 'wuyan0231-hub/football-model' &&
+      !(github.event_name == 'workflow_dispatch' && inputs.short_only == true) &&
       (github.event_name != 'schedule' || vars.ENABLE_SCHEDULE == 'true') &&
       (github.event_name != 'schedule' || github.event.schedule == '7 2 * * *')
     runs-on: ubuntu-latest
@@ -65,7 +91,7 @@ jobs:
       queue: max
     if: >-
       github.repository == 'wuyan0231-hub/football-model' && github.ref == 'refs/heads/main' &&
-      !(github.event_name == 'workflow_dispatch' && inputs.research_only == true) &&
+      !(github.event_name == 'workflow_dispatch' && (inputs.research_only == true || inputs.short_only == true)) &&
       (github.event_name != 'schedule' || vars.ENABLE_SCHEDULE == 'true') &&
       (github.event_name != 'schedule' || github.event.schedule == '7 2 * * *')
     runs-on: ubuntu-latest
@@ -147,9 +173,12 @@ jobs:
       group: ${{ github.ref == 'refs/heads/main' && 'football-model-state' || format('football-model-research-{0}', github.ref) }}
       cancel-in-progress: false
       queue: max
-    needs: [pre_study_capture, verify]
+    needs: [pre_study_capture, verify, validate_dispatch]
     if: >-
-      !cancelled() && (needs.verify.result == 'success' ||
+      !cancelled() && (github.event_name != 'workflow_dispatch' || needs.validate_dispatch.result == 'success') &&
+      !(github.event_name == 'workflow_dispatch' && inputs.research_only == true && inputs.short_only == true) &&
+      !(github.event_name == 'workflow_dispatch' && inputs.short_only == true && github.ref != 'refs/heads/main') &&
+      (needs.verify.result == 'success' ||
       (needs.verify.result == 'skipped' && !(github.event_name == 'workflow_dispatch' && inputs.research_only == true))) &&
       (needs.pre_study_capture.result == 'skipped' ||
       (needs.pre_study_capture.outputs.restore_outcome == 'success' &&
@@ -157,7 +186,7 @@ jobs:
       github.repository == 'wuyan0231-hub/football-model' &&
       (github.event_name != 'schedule' || vars.ENABLE_SCHEDULE == 'true')
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ (github.event_name != 'schedule' || github.event.schedule == '7 2 * * *') && 180 || 110 }}
+    timeout-minutes: ${{ ((github.event_name != 'schedule' || github.event.schedule == '7 2 * * *') && !(github.event_name == 'workflow_dispatch' && inputs.short_only == true)) && 180 || 110 }}
     outputs:
       restore_outcome: ${{ steps.restore.outcome }}
       persist_outcome: ${{ steps.persist.outcome }}
@@ -166,9 +195,10 @@ jobs:
       OPENBLAS_NUM_THREADS: '1'
       OMP_NUM_THREADS: '1'
       IS_RELEASE: ${{ github.ref == 'refs/heads/main' }}
-      STUDY_RUN: ${{ github.event_name != 'schedule' || github.event.schedule == '7 2 * * *' }}
-      LEGACY_SHORT_RUN: ${{ github.event_name == 'schedule' && github.event.schedule != '7 2 * * *' }}
+      STUDY_RUN: ${{ (github.event_name != 'schedule' || github.event.schedule == '7 2 * * *') && !(github.event_name == 'workflow_dispatch' && inputs.short_only == true) }}
+      LEGACY_SHORT_RUN: ${{ (github.event_name == 'schedule' && github.event.schedule != '7 2 * * *') || (github.event_name == 'workflow_dispatch' && inputs.short_only == true) }}
       RESEARCH_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.research_only == true }}
+      SHORT_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.short_only == true }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -337,7 +367,7 @@ jobs:
           python - <<'PY'
           import json,os
           from pathlib import Path
-          keys=['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','ADVANCED_PARENT_STATE','IS_RELEASE','STUDY_RUN','LEGACY_SHORT_RUN','RESEARCH_ONLY','RESTORE','DURABLE','PRE_STUDY_CAPTURE','PRE_RESTORE','PRE_PERSIST','PRE_DURABLE','PRE_FACTS','PRE_CONFIRMATION','PRE_CAPTURE','CLUB_SCHEDULE_COLLECTION','PILOT_COLLECTION','COLLECTION','PLAYER_LOAD_COLLECTION','RESEARCH','FACTS','CONFIRMATION','CAPTURE','SCORING','LEGACY_CAPTURE_V1','LEGACY_CAPTURE_V2','LEGACY_SCORING_V1','LEGACY_SCORING_V2','CHECK','PERSIST']
+          keys=['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','ADVANCED_PARENT_STATE','IS_RELEASE','STUDY_RUN','LEGACY_SHORT_RUN','RESEARCH_ONLY','SHORT_ONLY','RESTORE','DURABLE','PRE_STUDY_CAPTURE','PRE_RESTORE','PRE_PERSIST','PRE_DURABLE','PRE_FACTS','PRE_CONFIRMATION','PRE_CAPTURE','CLUB_SCHEDULE_COLLECTION','PILOT_COLLECTION','COLLECTION','PLAYER_LOAD_COLLECTION','RESEARCH','FACTS','CONFIRMATION','CAPTURE','SCORING','LEGACY_CAPTURE_V1','LEGACY_CAPTURE_V2','LEGACY_SCORING_V1','LEGACY_SCORING_V2','CHECK','PERSIST']
           receipt={k:os.environ.get(k) for k in keys}
           if receipt['IS_RELEASE']=='true' and receipt['LEGACY_SHORT_RUN']=='true':
               legacy={k:receipt[k] for k in ['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','IS_RELEASE','STUDY_RUN']}
@@ -460,7 +490,8 @@ jobs:
   study_leagues:
     needs: advanced
     if: >-
-      !cancelled() && github.ref == 'refs/heads/main' &&
+      !cancelled() && github.repository == 'wuyan0231-hub/football-model' && github.ref == 'refs/heads/main' &&
+      !(github.event_name == 'workflow_dispatch' && inputs.short_only == true) &&
       (github.event_name != 'schedule' || github.event.schedule == '7 2 * * *') &&
       needs.advanced.outputs.restore_outcome == 'success' && needs.advanced.outputs.persist_outcome == 'success'
     # Reacquire the same state-writer lock after each league. Other short jobs
@@ -627,7 +658,8 @@ jobs:
   study_finalize:
     needs: [advanced, study_leagues]
     if: >-
-      !cancelled() && github.ref == 'refs/heads/main' &&
+      !cancelled() && github.repository == 'wuyan0231-hub/football-model' && github.ref == 'refs/heads/main' &&
+      !(github.event_name == 'workflow_dispatch' && inputs.short_only == true) &&
       (github.event_name != 'schedule' || github.event.schedule == '7 2 * * *') &&
       needs.advanced.outputs.restore_outcome == 'success' && needs.advanced.outputs.persist_outcome == 'success'
     concurrency:
