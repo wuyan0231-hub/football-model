@@ -1,0 +1,136 @@
+{
+  "schema_version": "independent-null-development-v2-local-receipt-v1",
+  "observed_at": "2026-10-16T13:42:31.635367+00:00",
+  "status": "locally_implemented_tested_and_executed_exploratory_development_only",
+  "protocol_id": "s3-r03-null-inner-option-exploratory-epl-20261016-v2",
+  "protocol_semantic_sha256": "0833548d9f0161885f92a0b073f40a6f434daed953a9aa2ee96f9fd9fdb7331e",
+  "protocol_raw_sha256": "8ba599aed6502d5831502b8077e1ada5747dc0a570cf8014c0bdc4cf5d1568ac",
+  "runner_entrypoint_sha256": "9c874c2a26c8d491a7c44c15d1617f3a4382e4ede859584a3098e183769aa568",
+  "runner_implementation_sha256": "ab955c05e7de9441fa77ff3198fd5c47887495f3ed3bbf71f7693e23c28cb19d",
+  "run_identity": "8ecbf658db734f359ead774aceff9a18b8f434aa50a2a4dbd67f243e552414ac",
+  "source_state_commit": "7a9d1813ca902fe6bdaf304ca9cfe282e17b84ec",
+  "source_report_ref": {
+    "path": "advanced_models/epl/18a3498b0d24276904c54fe8c063ff7dbf1ce24d300c6cb6cf8632206e0fd448/reports/history/984b60750e7424d69dc9f6d9242325d47f510509a13b350a34095384e3e5d6ea.json",
+    "sha256": "984b60750e7424d69dc9f6d9242325d47f510509a13b350a34095384e3e5d6ea"
+  },
+  "result": {
+    "local_relative_path": "execution/development-null-correction-v2/0833548d9f0161885f92a0b073f40a6f434daed953a9aa2ee96f9fd9fdb7331e/8ecbf658db734f359ead774aceff9a18b8f434aa50a2a4dbd67f243e552414ac/result.json",
+    "sha256": "47f60ce3f8bdfcd773a46de29df5c8c54203b08779855b04f472891df0fe4332",
+    "bytes": 25450773
+  },
+  "compressed_result": {
+    "local_relative_path": "execution/development-null-correction-v2/0833548d9f0161885f92a0b073f40a6f434daed953a9aa2ee96f9fd9fdb7331e/8ecbf658db734f359ead774aceff9a18b8f434aa50a2a4dbd67f243e552414ac/result.json.gz",
+    "sha256": "07e59f50dd4dfbfd3c3d0a759420175f79aedaa2a99790949a3c2f7116c13ed7",
+    "bytes": 3468376,
+    "raw_sha256": "47f60ce3f8bdfcd773a46de29df5c8c54203b08779855b04f472891df0fe4332"
+  },
+  "summary_ref": {
+    "local_relative_path": "execution/development-null-correction-v2/0833548d9f0161885f92a0b073f40a6f434daed953a9aa2ee96f9fd9fdb7331e/8ecbf658db734f359ead774aceff9a18b8f434aa50a2a4dbd67f243e552414ac/summary.json",
+    "sha256": "5f9992a37c63de0c778eac701e8a3a1fa7157b2747ceb97b5dc2676e3ef5cf20",
+    "bytes": 369470
+  },
+  "local_readback": {
+    "result_parse_verified": true,
+    "summary_matches_full_result": true,
+    "gzip_raw_bytes_match": true,
+    "first_run_numerical_scores_and_summary_unchanged": true
+  },
+  "earlier_runs_preserved": [
+    {
+      "run": "first_before_review",
+      "result_sha256": "227768942472eb1598e3f48ac91f48b9149eed899a0fa12b008940f61ef96cf5",
+      "bytes": 25449233
+    },
+    {
+      "run": "identity_hardened_before_failed_stage_audit",
+      "result_sha256": "2dca020299f04b3a099b0a3b41936e141d59f3f05218f9180bd947cf836d3d02"
+    }
+  ],
+  "tests": {
+    "command": [
+      "./.venv/bin/python",
+      "-m",
+      "unittest",
+      "tests.test_development_null_correction"
+    ],
+    "python": "football-model/.venv/bin/python",
+    "count": 11,
+    "failures": 0,
+    "skipped": 0,
+    "log_sha256": "b5ef02892c2bf46dd6ec270711f1e40fb5284881831ce4a0cf7fd8b0ccbf6719"
+  },
+  "actual_command": [
+    "./.venv/bin/python",
+    "scripts/development_null_correction.py",
+    "--runtime",
+    "/workspace/scratch/60512f4bf8b4/execution/current-epl-audit/runtime",
+    "--report-summary",
+    "/workspace/scratch/60512f4bf8b4/execution/current-epl-audit/report-latest.json",
+    "--output",
+    "/workspace/scratch/60512f4bf8b4/execution/development-null-correction-v2"
+  ],
+  "numeric_environment": {
+    "python": "3.12.14",
+    "numpy": "2.3.5",
+    "scipy": "1.17.0",
+    "statsmodels": "0.15.0"
+  },
+  "original_50_file_implementation_sha256": "1e311689b3405f64c6ad9636732d2defb7ad67e26b4bc7e04b01a5b1b2b2d6ac",
+  "original_50_files_unchanged_before_and_after": true,
+  "original_comparator_max_five_metric_difference": 1.120437076451708e-12,
+  "source_scope": "consumed_compact_objects_only;not_complete_parent_evidence_closure",
+  "source_objects_consumed": 1570,
+  "outer_blocks": 23,
+  "null_blocks_including_warmup": 11,
+  "summary": {
+    "arms": {
+      "existing_forced_nonzero": {
+        "requested_matches": 820,
+        "policy_scored_matches": 608,
+        "status_counts": {
+          "unforecast_no_M0": 212,
+          "unchanged_M0_fit_failure_fallback": 40,
+          "nonzero_correction_predicted": 568
+        },
+        "null_fraction_of_M0_available_matches": 0.0,
+        "metrics": {
+          "scoreline_nll": 2.949444174504341,
+          "one_x_two_nll": 1.0213734029649089,
+          "one_x_two_brier": 0.6127062413014381,
+          "total_goal_nll": 1.8844981062751618,
+          "goal_difference_nll": 1.8931463299425844
+        },
+        "scoreline_difference_from_same_match_M0": 0.0009073011980786503
+      },
+      "v2_null_allowed": {
+        "requested_matches": 820,
+        "policy_scored_matches": 608,
+        "status_counts": {
+          "unforecast_no_M0": 212,
+          "null_unchanged_M0": 211,
+          "nonzero_correction_predicted": 397
+        },
+        "null_fraction_of_M0_available_matches": 0.3470394736842105,
+        "metrics": {
+          "scoreline_nll": 2.949534219646513,
+          "one_x_two_nll": 1.020728078664625,
+          "one_x_two_brier": 0.6122672068484699,
+          "total_goal_nll": 1.8847625252716973,
+          "goal_difference_nll": 1.892977684396826
+        },
+        "scoreline_difference_from_same_match_M0": 0.0009973463402509826
+      }
+    },
+    "same_match_count": 608,
+    "v2_minus_existing_policy_scoreline_nll": 9.004514217233224e-05
+  },
+  "development_decision": "do_not_adopt_this_v2;retain_production_M0;no_confirmed_accuracy_or_returns_claim",
+  "existing_380_family_changed": false,
+  "existing_protocols_changed": false,
+  "EPL_results_seen_before_design": true,
+  "new_API_requests": 0,
+  "new_GitHub_dispatches": 0,
+  "production_changed": false,
+  "remote_publication_verified": false,
+  "remote_durable_save_verified": false
+}
