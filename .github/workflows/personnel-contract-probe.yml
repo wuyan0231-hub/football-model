@@ -1,0 +1,56 @@
+name: 人员数据：手动只读合同探测
+
+# No push, schedule, training, state checkout/save, betting or production lock.
+on:
+  workflow_dispatch:
+    inputs:
+      fixture_id:
+        description: 真实 API-Football 比赛正整数 ID；不猜测球队或球员 ID
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    if: ${{ github.repository == 'wuyan0231-hub/football-model' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FIXTURE_ID: ${{ inputs.fixture_id }}
+      SOURCE_COMMIT: ${{ github.sha }}
+      PROBE_OUTPUT: personnel-contract-probe/${{ github.run_id }}-${{ github.run_attempt }}
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - name: 只读获取当前源码
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: 准备 Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: 最多七次付费请求及一次额度状态请求
+        id: probe
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: >-
+          python scripts/personnel_contract_probe.py --fixture-id "$FIXTURE_ID"
+          --source-commit "$SOURCE_COMMIT" --output "$PROBE_OUTPUT"
+      - name: 保留实际原响应、字段合同、指纹及阻断分类
+        if: ${{ !cancelled() && steps.probe.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: personnel-contract-probe-${{ github.run_id }}-${{ github.run_attempt }}
+          path: personnel-contract-probe/
+          if-no-files-found: error
+          retention-days: 14
+          include-hidden-files: false
+      - name: 未完成探测如实标为失败
+        if: ${{ !cancelled() && steps.probe.outcome != 'success' }}
+        run: |
+          echo '合同探测未完整完成；见独立附件。客户端白名单阻断不代表供应商无数据。'
+          exit 1
