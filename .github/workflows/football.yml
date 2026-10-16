@@ -296,8 +296,34 @@ jobs:
           --output "$RUNNER_TEMP/football-run-summary.json"
           --summary "$GITHUB_STEP_SUMMARY"
 
-      - name: 上传本次报告便捷副本（保留 14 天）
-        if: ${{ !cancelled() && steps.check.outcome == 'success' }}
+      - name: 为本轮已保存状态导出有界薄报告
+        id: thin_evidence
+        if: ${{ !cancelled() && steps.persist.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PERSIST_OUTCOME: ${{ steps.persist.outcome }}
+        run: >-
+          python scripts/export_production_evidence.py --repo . --runtime runtime
+          --context "$RUNNER_TEMP/football-run-context.json"
+          --summary "$RUNNER_TEMP/football-run-summary.json"
+
+      - name: 上传已保存状态的薄报告（不含完整原件闭包）
+        if: ${{ !cancelled() && steps.thin_evidence.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: football-report-thin-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            football-production-report.tar.gz
+            football-production-report.tar.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 2
+          include-hidden-files: false
+
+      - name: 上传未保存或导出失败的原便捷副本（不含全部缓存，保留 14 天）
+        if: ${{ !cancelled() && steps.check.outcome == 'success' && (steps.persist.outcome != 'success' || steps.thin_evidence.outcome != 'success') }}
         uses: actions/upload-artifact@v7
         with:
           name: football-report-${{ github.run_id }}-${{ github.run_attempt }}
@@ -329,7 +355,7 @@ jobs:
           include-hidden-files: false
 
       - name: 将实际失败标记为失败
-        if: ${{ !cancelled() && (steps.model.outcome != 'success' || steps.persist.outcome != 'success' || steps.prospective.outcome == 'failure' || steps.result_sync.outcome == 'failure' || steps.quotes.outcome == 'failure' || steps.shadow_models.outcome == 'failure' || steps.total_shrink_shadow.outcome == 'failure' || steps.replay_check.outcome == 'failure' || steps.summary.outcome != 'success') }}
+        if: ${{ !cancelled() && (steps.model.outcome != 'success' || steps.persist.outcome != 'success' || steps.prospective.outcome == 'failure' || steps.result_sync.outcome == 'failure' || steps.quotes.outcome == 'failure' || steps.shadow_models.outcome == 'failure' || steps.total_shrink_shadow.outcome == 'failure' || steps.replay_check.outcome == 'failure' || steps.summary.outcome != 'success' || (steps.persist.outcome == 'success' && steps.thin_evidence.outcome != 'success')) }}
         run: |
-          echo '本次检查/训练、回放录制、前瞻冻结、赛果同步、报价采集、F4/F5-C影子实验或状态保存未完成。请查看分层摘要；不能将其视为全部成功。'
+          echo '本次检查/训练、回放录制、前瞻冻结、赛果同步、报价采集、F4/F5-C影子实验、状态保存或已保存薄报告导出未完成。请查看分层摘要；不能将其视为全部成功。'
           exit 1
