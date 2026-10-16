@@ -1,0 +1,74 @@
+{
+  "schema_version": "cold-start-uncertainty-local-engineering-acceptance-v1",
+  "observed_at": "2026-10-16T14:06:38.547712+00:00",
+  "scope": "R12 step3 calculator and fixed parameter numerical demonstration only; no prior estimation or calibration",
+  "execution_status": "complete",
+  "run_identity": "db1944f00ccad9a2560415bc88cafcc30c5b2e0d4460609b9cf0daa920460a21",
+  "runner_sha256": "be871899135e39e21f95e2e888db30ed91b89a0772780674ca95bec8bad8f805",
+  "parameters_raw_sha256": "29d1132a7cf437a207a815c1e4dbeab59db47015c48ea1f2bd01b31f6e441a36",
+  "source_input_sha256": "42374cc143786eebb3bf9f50394f3e472aaac39313d2dfb5cd2ede16ea896eea",
+  "original_50_file_implementation_sha256": "1e311689b3405f64c6ad9636732d2defb7ad67e26b4bc7e04b01a5b1b2b2d6ac",
+  "original_50_files_unchanged": true,
+  "source_state_commit": "7a9d1813ca902fe6bdaf304ca9cfe282e17b84ec",
+  "main_horizon": "EARLY",
+  "independent_matches": 13,
+  "parameter_scenario_outputs": 26,
+  "successful_outputs": 26,
+  "fixed_variances": {
+    "attack": 0.04,
+    "defence": 0.04
+  },
+  "fixed_tau_values": [
+    0,
+    1
+  ],
+  "scales_not_fitted_or_selected_from_results": true,
+  "outcomes_not_scored": true,
+  "point_prior_zero_tau_prediction_exact": true,
+  "positive_tau_outputs": 13,
+  "maximum_joint_grid_tail_bound": 4.292785401649255e-09,
+  "maximum_GH_L1_last_difference_indicator": 1.935363940561041e-16,
+  "maximum_accepted_node_order": 32,
+  "maximum_matrix_mean_minus_analytic_mean": 1.3322676295501878e-14,
+  "first_demo_preserved_and_all_matrix_values_identical": true,
+  "tests": {
+    "command": [
+      "./.venv/bin/python",
+      "-m",
+      "unittest",
+      "tests.test_cold_start_uncertainty"
+    ],
+    "count": 15,
+    "failures": 0,
+    "skips": 0,
+    "stdout": "",
+    "stderr": "...............\n----------------------------------------------------------------------\nRan 15 tests in 5.697s\n\nOK\n"
+  },
+  "numeric_environment": {
+    "python": "3.12.14",
+    "numpy": "2.3.5",
+    "scipy": "1.17.0"
+  },
+  "artifacts": {
+    "directory": "execution/cold-start-uncertainty/db1944f00ccad9a2560415bc88cafcc30c5b2e0d4460609b9cf0daa920460a21",
+    "predictions_sha256": "78092014ccd2915709fdf50c2a0d1d80b385cbab84c63d6b6fbee8f37d069e15",
+    "predictions_bytes": 524919,
+    "receipt_sha256": "6ce79c457cec70b09076bf57f690ee882288596a17cc0af3c01feb23c572b4e9",
+    "fixed_parameters_sha256": "29d1132a7cf437a207a815c1e4dbeab59db47015c48ea1f2bd01b31f6e441a36",
+    "source_input_sha256": "42374cc143786eebb3bf9f50394f3e472aaac39313d2dfb5cd2ede16ea896eea"
+  },
+  "existing_380_family_changed": false,
+  "production_changed": false,
+  "calibration_verified": false,
+  "predictive_effect_verified": false,
+  "new_API_requests": 0,
+  "GitHub_workflow_dispatches": 0,
+  "remote_publication_verified": false,
+  "notes": [
+    "variance values are arbitrary preregistered engineering settings, not estimates of football strength",
+    "GH differences are convergence diagnostics, not rigorous global quadrature error bounds",
+    "grid tail upper bound includes lognormal prior-above-cap and Poisson conditional tail; cap never clips node rates",
+    "only unknown-team diagonal latent uncertainty integrated; known coefficients and correlations fixed",
+    "artifact replay requires matching repository numerical dependencies; this is not a full repository closure"
+  ]
+}

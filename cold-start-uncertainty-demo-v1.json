@@ -1,0 +1,28 @@
+{
+  "schema_version": "cold-start-uncertainty-fixed-engineering-parameters-v1",
+  "purpose": "numerical_engineering_only;not_fitted_or_calibrated;EPL_outcomes_already_seen",
+  "source_state_commit": "7a9d1813ca902fe6bdaf304ca9cfe282e17b84ec",
+  "source_input_sha256": "42374cc143786eebb3bf9f50394f3e472aaac39313d2dfb5cd2ede16ea896eea",
+  "horizon": "EARLY",
+  "engineering_demo_tau_values": [0.0, 1.0],
+  "prior_parameters": {
+    "attack_variance": 0.04,
+    "defence_variance": 0.04,
+    "attack_defence_correlation": 0.0,
+    "cross_team_correlation": 0.0,
+    "known_parameter_uncertainty": false
+  },
+  "numerical_settings": {
+    "node_orders": [12, 20, 32, 48, 64, 96, 128],
+    "quadrature_l1_tolerance": 1e-10,
+    "tail_tolerance": 1e-8,
+    "max_goal": 512,
+    "max_log_rate_variance": 1.0
+  },
+  "parameter_selection": "fixed_before_numerical_demo;arbitrary_engineering_stress_values;not_estimates_of_team_strength",
+  "mean_parameterization": "A_mean=-variance_A/2;D_mean=+variance_D/2;keep_unconditional_goal_rates_equal_to_point_prior",
+  "sample_unit": "13_unique_EPL_matches;two_tau_outputs_are_not26_matches",
+  "existing_380_family_changed": false,
+  "calibration_verified": false,
+  "production_promotion": false
+}
