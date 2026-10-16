@@ -33,17 +33,18 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - name: 安装原 Python 依赖（不安装 R、不训练）
-        timeout-minutes: 4
+        timeout-minutes: 3
         run: python -m pip install -r requirements.txt
       - name: 原生恢复、资源实测、冷原件、单场及持久证明
         id: probe
-        timeout-minutes: 25
+        timeout-minutes: 26
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python scripts/resource_probe_r13.py --phase run --repo . --output r13-resource-evidence --budget-seconds 1440
+        run: python scripts/resource_probe_r13.py --phase run --repo . --output r13-resource-evidence --budget-seconds 1500
       - name: 上传有界只读验收证据
         if: ${{ !cancelled() }}
+        timeout-minutes: 2
         uses: actions/upload-artifact@v7
         with:
           name: r13-readonly-resources-${{ github.run_id }}-${{ github.run_attempt }}

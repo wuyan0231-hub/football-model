@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
 import importlib.util
@@ -12,19 +13,112 @@ import resource
 import shutil
 import subprocess
 import sys
+import threading
 import time
 
-SOURCE_SHA = "93b8a12f1011653895dae4b027ed1693868b74db"
-SOURCE_TREE = "d106f31ac951ad78ec6309b542dcf86633e5e9a6"
+SOURCE_SHA = "721419d8929f468cbcd2ab39c19e222de0e0d526"
+SOURCE_TREE = "d6a87d153e8c172fed520f698be7d818d6197fa7"
 REQUESTED_STATE = "eaef60f12b25ee68885c8bd2f71ca7e655e85c8d"
 MAX_ARTIFACT = 16 * 1024 * 1024
 MAX_JSON = 2 * 1024 * 1024
-PHASE_LIMITS = {"identity": 90, "load": 780, "check": 180, "preflight": 180,
+PHASE_LIMITS = {"identity": 60, "load": 840, "check": 360, "preflight": 360,
                 "cold": 120, "integration": 180, "durability": 540}
+RUN_BUDGET_SECONDS = 1500
+FINALIZATION_RESERVE_SECONDS = 90
 
 
 def now():
     return datetime.now(timezone.utc).isoformat()
+
+
+class NativeProgress:
+    """Observe native calls without replacing validation, bytes or arithmetic."""
+    def __init__(self, phase, output=None):
+        self.phase, self.started = phase, time.monotonic()
+        self.stack, self.records = [], []
+        self.counts = {"expand_calls": 0, "compressed_input_bytes_read": 0,
+                       "gzip_calls": 0, "gzip_raw_bytes": 0,
+                       "large_sha_calls": 0, "large_sha_bytes": 0}
+        self.stop = threading.Event()
+        self.output = output
+
+    def emit(self, event, **details):
+        print("RESOURCE_PROBE_PROGRESS=" + json.dumps({"at": now(), "phase": self.phase,
+            "event": event, "elapsed_seconds": round(time.monotonic() - self.started, 3),
+            "native_stage_stack": list(self.stack), "counters": dict(self.counts), **details},
+            sort_keys=True), flush=True)
+
+    def wrap(self, owner, name, label):
+        original = getattr(owner, name)
+        def tracked(*args, **kwargs):
+            start = time.monotonic()
+            self.stack.append(label)
+            self.emit("native_stage_started", stage=label)
+            status = "failed"
+            try:
+                result = original(*args, **kwargs)
+                status = "passed"
+                return result
+            finally:
+                elapsed = time.monotonic() - start
+                self.records.append({"stage": label, "elapsed_seconds": elapsed, "status": status})
+                self.emit("native_stage_finished", stage=label, status=status,
+                          stage_elapsed_seconds=round(elapsed, 3))
+                self.stack.pop()
+        setattr(owner, name, tracked)
+        return lambda: setattr(owner, name, original)
+
+    @contextmanager
+    def observe(self, repo, cloud=None):
+        sys.path.insert(0, str(repo))
+        from football_model import state_storage as storage, history_archive as history
+        undo = []
+        for owner, name, label in [(storage, "validate_storage_tree", "validate_complete_transport"),
+                (storage, "validate_runtime", "validate_active_runtime"),
+                (storage, "restore_runtime", "restore_active_and_cold_catalog"),
+                (storage, "estimate_runtime", "estimate_actual_gzip_transport"),
+                (history, "restore_history_catalog", "construct_fixed_history_catalog"),
+                (history, "_write_catalog", "write_bounded_history_catalog")]:
+            undo.append(self.wrap(owner, name, label))
+        if cloud is not None:
+            for name, label in [("_git", "native_git_read"), ("_restore_disk_budget", "measure_restore_disk_budget"),
+                                ("_ensure_disk_space", "check_actual_disk_headroom")]:
+                undo.append(self.wrap(cloud, name, label))
+        expand, compress, digest = storage._expand, storage.gzip.compress, history._sha
+        def counted_expand(raw, *args, **kwargs):
+            self.counts["expand_calls"] += 1
+            self.counts["compressed_input_bytes_read"] += len(raw)
+            return expand(raw, *args, **kwargs)
+        def counted_compress(raw, *args, **kwargs):
+            self.counts["gzip_calls"] += 1
+            self.counts["gzip_raw_bytes"] += len(raw)
+            return compress(raw, *args, **kwargs)
+        def counted_sha(raw):
+            if len(raw) >= 32 * 1024 * 1024:
+                self.counts["large_sha_calls"] += 1
+                self.counts["large_sha_bytes"] += len(raw)
+                if self.phase == "load" and self.counts["large_sha_calls"] > 4:
+                    raise ValueError("probe_load_repeated_large_digest_guard")
+            return digest(raw)
+        storage._expand, storage.gzip.compress, history._sha = counted_expand, counted_compress, counted_sha
+        def heartbeat():
+            while not self.stop.wait(30):
+                self.emit("heartbeat")
+        thread = threading.Thread(target=heartbeat, daemon=True)
+        thread.start()
+        self.emit("phase_native_work_started")
+        try:
+            yield self
+        finally:
+            self.stop.set()
+            thread.join(timeout=1)
+            storage._expand, storage.gzip.compress, history._sha = expand, compress, digest
+            for restore in reversed(undo):
+                restore()
+            self.emit("phase_native_work_finished")
+            if self.output is not None:
+                write_json(self.output / (self.phase + "-native-stages.json"),
+                           {"stages": self.records, "counters": self.counts})
 
 
 def sha(raw):
@@ -84,10 +178,12 @@ def snapshot(repo):
     for name in ("runtime", ".git"):
         path = repo / name
         if path.exists():
-            result = subprocess.run(["du", "-sx", "--block-size=1", str(path)],
-                                    capture_output=True, timeout=90)
-            if result.returncode == 0:
-                allocated[name] = int(result.stdout.split()[0])
+            try:
+                result = subprocess.run(["du", "-sx", "--block-size=1", str(path)],
+                                        capture_output=True, timeout=20)
+                allocated[name] = int(result.stdout.split()[0]) if result.returncode == 0 else None
+            except (OSError, ValueError, subprocess.TimeoutExpired):
+                allocated[name] = None  # Unknown allocation is never zero/free.
     return {"at": now(), "disk_total_bytes": disk.total, "disk_used_bytes": disk.used,
             "disk_free_bytes": disk.free, "allocated_bytes": allocated,
             "process_max_rss_kib": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss, **fields}
@@ -114,8 +210,10 @@ def identity(repo, out):
 
 def load(repo, out):
     cloud = cloud_module(repo)
-    observed = cloud._remote_oid(repo)
-    actual = cloud.load_state(repo)
+    progress = NativeProgress("load", out)
+    with progress.observe(repo, cloud):
+        observed = cloud._remote_oid(repo)
+        actual = cloud.load_state(repo)
     if not actual:
         raise ValueError("probe_requires_existing_saved_state")
     saved = marker(repo)
@@ -128,13 +226,18 @@ def load(repo, out):
 
 def check(repo, out):
     cloud = cloud_module(repo)
-    estimate = cloud._validate_runtime(repo / "runtime")
+    progress = NativeProgress("check", out)
+    with progress.observe(repo, cloud):
+        estimate = cloud._validate_runtime(repo / "runtime")
     return {"validation": "native cloud_state._validate_runtime", "actual_state": marker(repo)["state_oid"],
             "estimate": {k: v for k, v in estimate.items() if k != "retained_inline"}}
 
 
 def preflight(repo, out):
-    report = cloud_module(repo).preflight_state(repo)
+    cloud = cloud_module(repo)
+    progress = NativeProgress("preflight", out)
+    with progress.observe(repo, cloud):
+        report = cloud.preflight_state(repo)
     if report["can_save"] is not True:
         write_json(out / "preflight-capacity-details.json", report)
         raise ValueError("native_save_preflight_does_not_have_resource_headroom")
@@ -283,12 +386,14 @@ def parse_time(path):
 def run(args):
     repo, out = args.repo.resolve(), args.output.resolve()
     out.mkdir(parents=True, exist_ok=True)
+    if not 30 <= args.budget_seconds <= RUN_BUDGET_SECONDS:
+        raise ValueError("probe_budget_outside_bounded_job_window")
     deadline = time.monotonic() + args.budget_seconds
     runs = []
     for name, maximum in PHASE_LIMITS.items():
         if name == "durability" and not args.include_durability:
             continue
-        remaining = int(deadline - time.monotonic() - 90)
+        remaining = int(deadline - time.monotonic() - FINALIZATION_RESERVE_SECONDS)
         if remaining < 30 or (name not in {"identity", "load"} and not (out / "load.json").exists()):
             runs.append({"phase": name, "status": "not_run", "reason": "budget_or_load_not_completed"})
             continue
@@ -305,11 +410,18 @@ def run(args):
                                    env={**os.environ, "FOOTBALL_API_KEY": "", "GIT_TERMINAL_PROMPT": "0"})
         logged = 0
         with log.open("wb") as stream:
-            while chunk := process.stdout.read(65536):
+            while chunk := process.stdout.readline(16 * 1024):
                 allowed = max(0, 256 * 1024 - logged)
                 stream.write(chunk[:allowed])
+                stream.flush()
                 logged += min(len(chunk), allowed)
+                if chunk.startswith((b"RESOURCE_PROBE_PROGRESS=", b"MODEL_STATE_RESTORE_PREFLIGHT=")):
+                    print(chunk.decode("utf-8", errors="replace").rstrip(), flush=True)
         code = process.wait()
+        if not (out / (name + ".json")).exists():
+            write_json(out / (name + ".json"), {"phase": name, "status": "failed",
+                "exit_code": code, "error_code": "phase_timeout" if code in (124, 137) else "terminated_without_result",
+                "limit_seconds": limit, "finished_at": now()})
         result = json.loads((out / (name + ".json")).read_text()) if (out / (name + ".json")).exists() else {}
         runs.append({"phase": name, "exit_code": code, "status": result.get("status", "terminated_without_result"),
                      "time_v": parse_time(timing)})
@@ -326,6 +438,8 @@ def run(args):
         "source_sha": SOURCE_SHA, "requested_state": REQUESTED_STATE, "phases": runs,
         "new_fits": 0, "football_api_calls": 0, "state_saves": 0, "remote_writes": 0,
         "durability_optional_probe_requested": args.include_durability,
+        "run_budget_seconds": args.budget_seconds, "workflow_total_limit_seconds": 1800,
+        "finalization_reserve_seconds": FINALIZATION_RESERVE_SECONDS,
         "evidence": manifest, "evidence_bytes_before_summary": total,
         "artifact_limit_bytes": MAX_ARTIFACT, "all_executed_phases_passed": all(r.get("exit_code") == 0 for r in runs),
         "no_resource_result_implies_accuracy_improvement": True}
@@ -341,7 +455,7 @@ def main():
     parser.add_argument("--phase", choices=["run", *PHASE_LIMITS], default="run")
     parser.add_argument("--repo", type=Path, default=Path.cwd())
     parser.add_argument("--output", type=Path, default=Path("r13-resource-evidence"))
-    parser.add_argument("--budget-seconds", type=int, default=1440)
+    parser.add_argument("--budget-seconds", type=int, default=RUN_BUDGET_SECONDS)
     parser.add_argument("--include-durability", action="store_true")
     args = parser.parse_args()
     return run(args) if args.phase == "run" else phase(args)
