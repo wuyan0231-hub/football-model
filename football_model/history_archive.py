@@ -681,11 +681,14 @@ def restore_history_catalog(runtime, tree, state_commit, repo, manifest_entries)
     catalog_path = tree / "runtime" / CATALOG_RELATIVE
     entries = _decode_catalog(catalog_path.read_bytes(), lambda name: (tree / "runtime" / name).read_bytes()) if catalog_path.is_file() else {}
     manifest_raw = (tree / "state_storage.json").read_bytes() if (tree / "state_storage.json").is_file() else None
+    # One source digest identifies every member. Hashing the full 56 MiB
+    # manifest inside the 86k-entry loop would scan terabytes per restoration.
+    manifest_sha = _sha(manifest_raw) if manifest_raw is not None else None
     cold = set(entries)
     for original in manifest_entries:
         name = original["path"]
         if select_cold_path(name):
-            candidate = _transport_entry(name, original, state_commit, _sha(manifest_raw))
+            candidate = _transport_entry(name, original, state_commit, manifest_sha)
             if name in entries and entries[name]["raw_sha256"] != candidate["raw_sha256"]:
                 raise StorageError("历史目录与已保存原件冲突，已停止。")
             entries.setdefault(name, candidate)
@@ -710,6 +713,7 @@ def compact_existing_history(runtime, base_oid, repo):
     _ensure_commit(repo, base_oid)
     entries = dict(_catalog(runtime))
     manifest_raw = _git_bytes(repo, base_oid, "state_storage.json", missing=True)
+    manifest_sha = _sha(manifest_raw) if manifest_raw is not None else None
     manifest = _manifest_json(manifest_raw) if manifest_raw is not None else {"entries": []}
     by_path = {e["path"]: e for e in manifest.get("entries", [])}
     previous_catalog_raw = _git_bytes(repo, base_oid, "runtime/" + CATALOG_RELATIVE, missing=True)
@@ -726,7 +730,7 @@ def compact_existing_history(runtime, base_oid, repo):
             original = by_path[name]
             if _sha(raw) != original["raw_sha256"] or len(raw) != original["raw_bytes"]:
                 continue
-            candidate = _transport_entry(name, original, base_oid, _sha(manifest_raw))
+            candidate = _transport_entry(name, original, base_oid, manifest_sha)
         elif name in previous_catalog:
             candidate = previous_catalog[name]
             if _sha(raw) != candidate["raw_sha256"] or len(raw) != candidate["raw_bytes"]:
