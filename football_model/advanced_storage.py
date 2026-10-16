@@ -10,6 +10,8 @@ import hashlib
 import json
 from pathlib import Path
 
+from .history_archive import read_bytes, exists
+
 MAX_PIECE_BYTES = 4 * 1024 * 1024
 INLINE_BYTES = 256 * 1024
 # Actual Serie A reports/training inputs show the 512-byte threshold creates
@@ -29,7 +31,7 @@ def _raw(value):
 
 def _ref(runtime, path):
     return {"path": path.resolve().relative_to(runtime.resolve()).as_posix(),
-            "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+            "sha256": hashlib.sha256(read_bytes(path)).hexdigest()}
 
 
 def _persist(runtime, directory, value, guard=None, final=False):
@@ -39,8 +41,8 @@ def _persist(runtime, directory, value, guard=None, final=False):
     key = hashlib.sha256(raw).hexdigest()
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / (key + ".json")
-    if path.exists():
-        if path.read_bytes() != raw:
+    if exists(path):
+        if read_bytes(path) != raw:
             raise ValueError("immutable advanced object collision")
     else:
         ticket = guard.check_write(path, raw, final=final) if guard is not None else None
@@ -148,7 +150,7 @@ def load_artifact(runtime, ref):
             raise ValueError("cyclic advanced object graph")
         if key in cache:
             return cache[key]
-        raw = path.read_bytes()
+        raw = read_bytes(path, runtime=runtime)
         if hashlib.sha256(raw).hexdigest() != reference.get("sha256"):
             raise ValueError("advanced object fingerprint mismatch")
         # Legacy full reports may exceed the new piece size; preservation is

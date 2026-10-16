@@ -27,6 +27,7 @@ from .feature_snapshots import (HORIZONS, SnapshotError, _bytes, _check_times,
     _path_ref, _prediction_same, _read, _reference_path, _save, _sha, _tick,
     _write_bytes, snapshot_from_evidence, verify_baseline_capture)
 from .feature_scoring import _path, _read_ref, _pointer, _reference, _raw as _pointer_bytes
+from .history_archive import read_bytes as history_read_bytes, exists as history_exists
 
 VERSION = "advanced-snapshots-v1"
 
@@ -91,7 +92,7 @@ def _guarded_freeze(path, runtime, root, cutoff, kind, guard):
     path = Path(path).resolve()
     if not path.is_relative_to(runtime):
         raise SnapshotError("source_path_escapes_runtime")
-    raw = path.read_bytes()
+    raw = history_read_bytes(path, runtime=runtime)
     suffix = path.suffix if path.suffix in (".json", ".py") else ".bin"
     sha = hashlib.sha256(raw).hexdigest()
     destination = root / "sources" / (sha + suffix)
@@ -151,7 +152,7 @@ def freeze_inputs(runtime, root, refs, cutoff, *, capacity_guard=None):
                 raise SnapshotError("advanced_input_escapes_runtime")
             p = p.resolve().relative_to(runtime)
         path = _path(runtime, p.as_posix())
-        if not path.is_file() or _sha(path) != ref["sha256"]:
+        if not history_exists(path) or _sha(path) != ref["sha256"]:
             raise SnapshotError("advanced_input_hash_mismatch")
         key = p.as_posix()
         if key in saved:
@@ -194,7 +195,7 @@ def frozen_runtime(runtime, refs, cutoff):
             origin = ref.get("origin_runtime_path")
             dest = _path(output, origin)
             source = _reference_path(ref, runtime)
-            if not source.is_file() or _sha(source) != ref["sha256"]:
+            if not history_exists(source) or _sha(source) != ref["sha256"]:
                 raise SnapshotError("advanced_frozen_input_hash_mismatch")
             if origin in seen and seen[origin] != ref["sha256"]:
                 raise SnapshotError("advanced_frozen_input_version_conflict")
@@ -202,7 +203,7 @@ def frozen_runtime(runtime, refs, cutoff):
             if source.suffix == ".json":
                 _check_times(_read(source), cutoff)
             dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_bytes(source.read_bytes())
+            dest.write_bytes(history_read_bytes(source, runtime=runtime))
         yield output
 
 

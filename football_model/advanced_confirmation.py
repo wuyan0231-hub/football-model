@@ -13,6 +13,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
+from .history_archive import read_bytes as history_read_bytes, exists as history_exists
 from statistics import mean, variance
 
 from scipy.stats import chi2, norm, t
@@ -52,12 +53,12 @@ def _iso(value):
 
 
 def _read(path):
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    return json.loads(history_read_bytes(path).decode("utf-8"))
 
 
 def _ref(root, path):
     return {"path": Path(path).resolve().relative_to(Path(root).resolve()).as_posix(),
-            "sha256": hashlib.sha256(Path(path).read_bytes()).hexdigest()}
+            "sha256": hashlib.sha256(history_read_bytes(path)).hexdigest()}
 
 
 def _read_ref(root, ref):
@@ -67,7 +68,7 @@ def _read_ref(root, ref):
     path = (Path(root) / relative).resolve()
     if relative.is_absolute() or ".." in relative.parts or not path.is_relative_to(Path(root).resolve()):
         raise ConfirmationError("unsafe_reference")
-    if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != ref.get("sha256"):
+    if not history_exists(path) or hashlib.sha256(history_read_bytes(path)).hexdigest() != ref.get("sha256"):
         raise ConfirmationError("reference_hash_mismatch")
     return _read(path)
 

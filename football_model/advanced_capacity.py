@@ -33,17 +33,44 @@ class CapacityGuard:
         self.runtime = Path(runtime).resolve()
         self.max_logical, self.max_physical, self.max_file = max_logical, max_physical, max_file
         self.reserve_logical, self.reserve_physical = reserve_logical, reserve_physical
+        self.writes = 0
+        self.refresh_count = 0
+        self.generation = 0
+        # Initial measurement retains the old ability to record a bounded
+        # capacity diagnosis when the restored state is already at its limit.
+        # Every attempted write is still checked by _check().
+        self.refresh(check_limits=False)
+
+    def refresh(self, *, check_limits=True):
+        """Reconcile conservative writes against the complete current bytes.
+
+        League boundaries/checkpoints are safe places to reclaim duplicate
+        archive and replaced-pointer accounting. No limit is changed, and
+        tickets issued against the old measurement must not authorize writes.
+        """
         estimate = estimate_runtime(self.runtime)
+        if check_limits and (estimate["logical_bytes"] > self.max_logical or estimate["persisted_bytes"] > self.max_physical):
+            raise CapacityDeferred({"reason": "measured_runtime_capacity_exceeded",
+                "logical_bytes": estimate["logical_bytes"], "conservative_physical_bytes": estimate["persisted_bytes"],
+                "logical_limit_bytes": self.max_logical, "physical_limit_bytes": self.max_physical})
         self.logical = estimate["logical_bytes"]
         self.physical = estimate["persisted_bytes"]
+        self.historical_raw_bytes = estimate["historical_raw_bytes"]
+        self.historical_file_count = estimate["historical_file_count"]
         self.retained = frozenset(estimate["retained_inline"])
-        self.writes = 0
+        self.refresh_count += 1
+        self.generation += 1
+        return self.summary()
 
     def summary(self):
         return {"logical_bytes": self.logical, "conservative_physical_bytes": self.physical,
                 "logical_limit_bytes": self.max_logical, "physical_limit_bytes": self.max_physical,
+                "logical_limit_scope": "active_expanded_runtime",
+                "historical_raw_bytes": self.historical_raw_bytes,
+                "historical_file_count": self.historical_file_count,
                 "reserve_logical_bytes": self.reserve_logical, "reserve_physical_bytes": self.reserve_physical,
-                "accounted_writes": self.writes, "scope": "current_sequential_optional_collector_writes"}
+                "accounted_writes": self.writes, "exact_refreshes": self.refresh_count,
+                "scope": "current_sequential_optional_collector_writes"}
 
     def _check(self, logical_delta, physical_delta, *, final=False):
         logical = self.logical + logical_delta
@@ -80,10 +107,12 @@ class CapacityGuard:
         return {"path": relative, "old_sha256": hashlib.sha256(old).hexdigest() if old is not None else None,
                 "new_sha256": hashlib.sha256(raw).hexdigest(), "logical_delta": logical_delta,
                 "physical_delta": physical_delta, "logical_before": self.logical, "physical_before": self.physical,
+                "generation": self.generation,
                 "committed": False}
 
     def commit_write(self, ticket):
-        if ticket["committed"] or self.logical != ticket["logical_before"] or self.physical != ticket["physical_before"]:
+        if (ticket["committed"] or ticket.get("generation") != self.generation
+                or self.logical != ticket["logical_before"] or self.physical != ticket["physical_before"]):
             raise ValueError("capacity_write_ticket_stale")
         path = self.runtime / ticket["path"]
         if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != ticket["new_sha256"]:

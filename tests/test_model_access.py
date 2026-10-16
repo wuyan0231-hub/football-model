@@ -63,7 +63,7 @@ class ModelAccessTests(unittest.TestCase):
         self.assertEqual(256, saved["files"][2]["bytes"])
 
     def test_wrong_schema_repository_and_short_commit_rejected(self):
-        for key, value in [("schema_version", True), ("schema_version", 2),
+        for key, value in [("schema_version", True), ("schema_version", 3),
                            ("repository", "other/repository"), ("source_commit", "a" * 7),
                            ("state_commit", "b" * 39)]:
             with self.subTest(key=key, value=value):

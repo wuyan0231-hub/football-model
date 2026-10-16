@@ -126,20 +126,20 @@ jobs:
         run: python -m football_model.feature_scoring score --runtime runtime --config config.json --league serie_a --source-commit "$GITHUB_SHA" --protocol feature-models-v2.json
       - name: 核输出完整性与既有存储上限
         id: check
-        if: always() && steps.restore.outcome == 'success'
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
         continue-on-error: true
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
         run: python scripts/cloud_state.py check --runtime runtime
       - name: 保存新研究与影子原件
         id: persist
-        if: always() && env.IS_RELEASE == 'true' && steps.check.outcome == 'success'
+        if: ${{ !cancelled() && env.IS_RELEASE == 'true' && steps.check.outcome == 'success' }}
         continue-on-error: true
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
         run: python scripts/cloud_state.py save --runtime runtime
       - name: 保存本轮执行回执
-        if: always()
+        if: ${{ !cancelled() }}
         env:
           RESTORE_OUTCOME: ${{ steps.restore.outcome }}
           SCHEDULE_OUTCOME: ${{ steps.schedule.outcome }}
@@ -168,7 +168,7 @@ jobs:
               out.write('\n未采用新方案替换生产基线；双时距首发与人员特征是否实到另按原件。\n')
           PY
       - name: 上传独立工程原件
-        if: always() && steps.check.outcome == 'success'
+        if: ${{ !cancelled() && steps.check.outcome == 'success' }}
         uses: actions/upload-artifact@v7
         with:
           name: feature-models-${{ github.run_id }}-${{ github.run_attempt }}
@@ -181,7 +181,7 @@ jobs:
           if-no-files-found: error
       - name: 标明真实失败
         if: >-
-          always() &&
+          !cancelled() &&
           (steps.restore.outcome != 'success' || steps.check.outcome != 'success' ||
           (env.STUDY_RUN == 'true' && (steps.research.outcome != 'success' || steps.research_v2.outcome != 'success')) ||
           (env.IS_RELEASE == 'true' && (steps.persist.outcome != 'success' || steps.facts.outcome != 'success' || steps.capture.outcome != 'success' || steps.capture_v2.outcome != 'success' || steps.scoring.outcome != 'success' || steps.scoring_v2.outcome != 'success')) ||

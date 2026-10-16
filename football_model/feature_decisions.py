@@ -18,6 +18,7 @@ import re
 from .decision_quotes import adapt_quote_row
 from .evidence import _quote_interval, _time, select_quotes
 from .settlement import STATES, probabilities, matrix_array, unit_return
+from .history_archive import read_bytes as history_read_bytes, exists as history_exists
 
 VERSION = "feature-decision-comparison-v1"
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
@@ -38,11 +39,11 @@ def _read_ref(runtime, ref):
             or Path(relative).is_absolute() or ".." in Path(relative).parts):
         raise ValueError("decision_unsafe_evidence_path")
     path = root / relative
-    if any(p.is_symlink() for p in (path, *path.parents)) or not path.is_file():
+    if any(p.is_symlink() for p in (path, *path.parents)) or not history_exists(path):
         raise ValueError("decision_evidence_not_regular")
-    if path.stat().st_size > 60 * 1024 * 1024:
+    raw = history_read_bytes(path, runtime=root)
+    if len(raw) > 60 * 1024 * 1024:
         raise ValueError("decision_evidence_size_limit")
-    raw = path.read_bytes()
     digest = hashlib.sha256(raw).hexdigest()
     if digest != ref.get("sha256") or ("bytes" in ref and len(raw) != ref["bytes"]):
         raise ValueError("decision_evidence_hash_mismatch")
@@ -135,7 +136,7 @@ def _file_ref(runtime, path):
     if any(p.is_symlink() for p in (path, *path.parents)):
         raise ValueError("decision_evidence_not_regular")
     return {"path": str(path.resolve().relative_to(Path(runtime).resolve())),
-            "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+            "sha256": hashlib.sha256(history_read_bytes(path)).hexdigest()}
 
 
 def schedule_comparisons(runtime, league, match_id, *, row, now):

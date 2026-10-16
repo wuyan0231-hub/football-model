@@ -75,7 +75,7 @@ jobs:
 
       - name: 检查输出是否可以保存和上传
         id: check
-        if: ${{ always() && steps.restore.outcome == 'success' && steps.collect.outcome != 'skipped' }}
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' && steps.collect.outcome != 'skipped' }}
         continue-on-error: true
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
@@ -83,7 +83,7 @@ jobs:
 
       - name: 保存证据、缓存和不可覆盖的采集历史
         id: persist
-        if: ${{ always() && steps.check.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.check.outcome == 'success' }}
         continue-on-error: true
         env:
           # Used only by credential checks; never written or printed.
@@ -92,7 +92,7 @@ jobs:
 
       - name: 上传本次证据便捷副本（保留 14 天）
         id: upload
-        if: ${{ always() && steps.check.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.check.outcome == 'success' }}
         uses: actions/upload-artifact@v7
         with:
           name: football-fundamentals-${{ github.run_id }}-${{ github.run_attempt }}
@@ -102,7 +102,7 @@ jobs:
           include-hidden-files: false
 
       - name: 显示采集状态、缺失原因和保存结果
-        if: ${{ always() }}
+        if: ${{ !cancelled() }}
         env:
           COLLECT_OUTCOME: ${{ steps.collect.outcome }}
           STATE_OUTCOME: ${{ steps.persist.outcome }}
@@ -135,7 +135,7 @@ jobs:
           PY
 
       - name: 将采集或保存失败标记为失败
-        if: ${{ always() && (steps.collect.outcome != 'success' || steps.persist.outcome != 'success') }}
+        if: ${{ !cancelled() && (steps.collect.outcome != 'success' || steps.persist.outcome != 'success') }}
         run: |
           echo '单场证据采集或状态保存未完整完成。请查看摘要和已保存的部分记录；概率调整未启用。'
           exit 1

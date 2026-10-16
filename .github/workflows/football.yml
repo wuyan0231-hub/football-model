@@ -124,7 +124,7 @@ jobs:
 
       - name: 检查本次生产回放包已录制
         id: replay_check
-        if: ${{ always() && steps.restore.outcome == 'success' && steps.model.outcome != 'skipped' }}
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' && steps.model.outcome != 'skipped' }}
         continue-on-error: true
         run: |
           python - <<'PY'
@@ -143,7 +143,7 @@ jobs:
 
       - name: 核对逐联赛冻结并评分已结束比赛
         id: prospective
-        if: ${{ always() && steps.restore.outcome == 'success' && steps.model.outcome != 'skipped' && env.MODE == 'train' }}
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' && steps.model.outcome != 'skipped' && env.MODE == 'train' }}
         # Freeze before the separate evidence collector; preserve valid records
         # even when another competition failed or a capture was too late.
         continue-on-error: true
@@ -154,7 +154,7 @@ jobs:
 
       - name: 独立同步待结算比赛的常规时间赛果
         id: result_sync
-        if: ${{ always() && steps.restore.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
         # Independent of model/train/report success; preserve old forecast scores.
         # Five-minute soft deadline, shared daily quota and original cache times.
         continue-on-error: true
@@ -167,7 +167,7 @@ jobs:
 
       - name: 积累全赛事未来7天真实参考报价
         id: quotes
-        if: ${{ always() && steps.restore.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
         continue-on-error: true
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
@@ -180,7 +180,7 @@ jobs:
 
       - name: 采集未来24小时比赛的基本面证据
         id: fundamentals
-        if: ${{ always() && steps.restore.outcome == 'success' && steps.model.outcome != 'skipped' && env.MODE == 'train' }}
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' && steps.model.outcome != 'skipped' && env.MODE == 'train' }}
         # Evidence can be incomplete without invalidating the separate score model.
         # The collector has a 15-minute soft deadline and shares the daily quota.
         continue-on-error: true
@@ -193,7 +193,7 @@ jobs:
 
       - name: 保存真实未来模型对照并评分原有影子预测
         id: shadow_models
-        if: ${{ always() && steps.restore.outcome == 'success' && env.MODE == 'train' }}
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' && env.MODE == 'train' }}
         # Offline fits use existing admitted data. No API key, added schedule,
         # production parameter change, decision recommendation or actual bet.
         continue-on-error: true
@@ -220,7 +220,7 @@ jobs:
 
       - name: 保存F5-C总球收缩对照并评分已有记录
         id: total_shrink_shadow
-        if: ${{ always() && steps.restore.outcome == 'success' && env.MODE == 'train' }}
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' && env.MODE == 'train' }}
         # Derive only from already saved production180 predictions. No fit,
         # network, API credentials, production mutation or added schedule.
         continue-on-error: true
@@ -256,7 +256,7 @@ jobs:
 
       - name: 检查输出是否可以保存和上传
         id: check
-        if: ${{ always() && steps.restore.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
         continue-on-error: true
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
@@ -264,7 +264,7 @@ jobs:
 
       - name: 保存模型、缓存和报告的长期历史
         id: persist
-        if: ${{ always() && steps.check.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.check.outcome == 'success' }}
         continue-on-error: true
         env:
           # Only used for accidental-credential checks, never written or logged.
@@ -273,7 +273,7 @@ jobs:
 
       - name: 在运行摘要中显示分层结果
         id: summary
-        if: ${{ always() }}
+        if: ${{ !cancelled() }}
         env:
           RESTORE_OUTCOME: ${{ steps.restore.outcome }}
           MODEL_OUTCOME: ${{ steps.model.outcome }}
@@ -297,7 +297,7 @@ jobs:
           --summary "$GITHUB_STEP_SUMMARY"
 
       - name: 上传本次报告便捷副本（保留 14 天）
-        if: ${{ always() && steps.check.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.check.outcome == 'success' }}
         uses: actions/upload-artifact@v7
         with:
           name: football-report-${{ github.run_id }}-${{ github.run_attempt }}
@@ -319,7 +319,7 @@ jobs:
           include-hidden-files: false
 
       - name: 上传分层摘要（独立于原运行附件布局）
-        if: ${{ always() && steps.summary.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.summary.outcome == 'success' }}
         uses: actions/upload-artifact@v7
         with:
           name: football-run-summary-${{ github.run_id }}-${{ github.run_attempt }}
@@ -329,7 +329,7 @@ jobs:
           include-hidden-files: false
 
       - name: 将实际失败标记为失败
-        if: ${{ always() && (steps.model.outcome != 'success' || steps.persist.outcome != 'success' || steps.prospective.outcome == 'failure' || steps.result_sync.outcome == 'failure' || steps.quotes.outcome == 'failure' || steps.shadow_models.outcome == 'failure' || steps.total_shrink_shadow.outcome == 'failure' || steps.replay_check.outcome == 'failure' || steps.summary.outcome != 'success') }}
+        if: ${{ !cancelled() && (steps.model.outcome != 'success' || steps.persist.outcome != 'success' || steps.prospective.outcome == 'failure' || steps.result_sync.outcome == 'failure' || steps.quotes.outcome == 'failure' || steps.shadow_models.outcome == 'failure' || steps.total_shrink_shadow.outcome == 'failure' || steps.replay_check.outcome == 'failure' || steps.summary.outcome != 'success') }}
         run: |
           echo '本次检查/训练、回放录制、前瞻冻结、赛果同步、报价采集、F4/F5-C影子实验或状态保存未完成。请查看分层摘要；不能将其视为全部成功。'
           exit 1

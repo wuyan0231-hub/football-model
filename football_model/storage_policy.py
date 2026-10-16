@@ -5,6 +5,10 @@ MIB = 1024 * 1024
 # Keep the whole current transport tree below GitHub's 2 GiB push bound; cloud
 # save also measures the actual new reachable pack before attempting a push.
 MAX_PHYSICAL_BYTES = 1792 * MIB
+# This finite bound applies to the active, expanded working tree. Immutable
+# research originals pinned in the history catalog remain in ordinary reachable
+# ancestor commits and are checked/read on demand; their expanded total is
+# disclosed separately, not silently counted as active bytes or discarded.
 MAX_LOGICAL_BYTES = 8192 * MIB
 SHADOW_WRITE_LIMIT_BYTES = 1536 * MIB
 DIAGNOSTIC_RESERVE_BYTES = 256 * 1024
