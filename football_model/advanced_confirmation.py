@@ -13,6 +13,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
+import re
 from .history_archive import read_bytes as history_read_bytes, exists as history_exists
 from statistics import mean, variance
 
@@ -81,6 +82,35 @@ def _read_development_artifact(runtime, ref):
         return load_report(runtime, ref)
     except (ValueError, OSError, KeyError, TypeError) as exc:
         raise ConfirmationError("development_artifact_integrity: " + str(exc)) from exc
+
+
+def _summary_rejects_implementation(summary, reference, current, protocol, league):
+    """A valid stale summary can reject identity, never authorize a trial.
+
+    Matching, missing or malformed metadata still requires the complete frozen
+    report. Even a stale summary contradicting a current full report is only a
+    conservative refusal; no source/score verification is claimed here.
+    """
+    if (not isinstance(summary, dict) or summary.get("schema_version") != "advanced-research-v1"
+            or summary.get("league") != league or summary.get("purpose") != "historical_development_only"
+            or summary.get("protocol_hash", summary.get("protocol_sha256")) != digest(protocol)
+            or digest(summary.get("protocol")) != digest(protocol)
+            or not isinstance(reference, dict) or not isinstance(reference.get("path"), str) or not reference["path"]
+            or Path(reference["path"]).is_absolute() or ".." in Path(reference["path"]).parts
+            or not re.fullmatch(r"[0-9a-f]{64}", str(reference.get("sha256", "")))):
+        return False
+    saved = summary.get("implementation_fingerprint")
+    if (not isinstance(saved, dict)
+            or set(saved) != {"schema_version", "files", "sha256"}
+            or saved.get("schema_version") != "advanced-implementation-fingerprint-v1"
+            or not isinstance(saved.get("files"), dict) or not saved["files"]
+            or not re.fullmatch(r"[0-9a-f]{64}", str(saved.get("sha256", "")))
+            or any(not isinstance(path, str) or not path or not isinstance(sha, str)
+                   or not re.fullmatch(r"[0-9a-f]{64}", sha)
+                   for path, sha in saved["files"].items())
+            or digest(saved["files"]) != saved["sha256"]):
+        return False
+    return saved != current
 
 
 def _save(root, category, value):
@@ -672,11 +702,23 @@ def run(runtime, league, advanced_protocol, design, *, auto_activate=False, cloc
     root = runtime / "advanced_models" / league / protocol_hash
     report_pointer = root / "reports" / "latest.json"
     report_ref, report, development_error = None, None, None
+    summary_identity_rejection = None
     if report_pointer.exists():
         try:
             pointer = _read(report_pointer)
+            if not isinstance(pointer, dict):
+                raise ConfirmationError("development_summary_invalid")
             report_ref = pointer.get("full_report_ref", pointer.get("report_ref"))
-            report = _read_development_artifact(runtime, report_ref)
+            if _summary_rejects_implementation(pointer, report_ref, current_implementation,
+                                               advanced_protocol, league):
+                summary_identity_rejection = {
+                    "report_implementation_sha256": pointer["implementation_fingerprint"]["sha256"],
+                    "current_implementation_sha256": current_implementation["sha256"],
+                    "development_ref": report_ref,
+                    "implementation_identity_source": "latest_summary_rejection_only",
+                    "full_report_verification": "not_performed_identity_rejected"}
+            else:
+                report = _read_development_artifact(runtime, report_ref)
         except (OSError, ValueError, TypeError) as exc:
             development_error = str(exc)
     if row_loader is None:
@@ -706,7 +748,11 @@ def run(runtime, league, advanced_protocol, design, *, auto_activate=False, cloc
             if activation is None:
                 if development_error is not None:
                     raise ConfirmationError(development_error)
-                if report is None:
+                if summary_identity_rejection is not None:
+                    gate = {"status": "blocked_pending_development",
+                        "failures": ["implementation_changed_requires_fresh_development_study"],
+                        **summary_identity_rejection}
+                elif report is None:
                     gate = {"status": "blocked_pending_development", "failures": [development_error or "development_report_unavailable"]}
                 elif report.get("implementation_fingerprint") != current_implementation:
                     gate = {"status": "blocked_pending_development", "failures": ["implementation_changed_requires_fresh_development_study"],
