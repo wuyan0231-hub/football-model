@@ -83,6 +83,19 @@ def select_references(summary, league, implementation):
     return list(refs.values())
 
 
+def research_implementation(execution, saved=None):
+    """Bind old saved input identity separately from the code under diagnosis.
+
+    This does not authorize capturing or promoting old cards with a new
+    implementation. The only operation here is an isolated closure experiment.
+    """
+    require(isinstance(execution, str) and bool(re.fullmatch(r'[0-9a-f]{64}', execution)), 'invalid_implementation')
+    value = execution if saved is None else saved
+    require(isinstance(value, str) and bool(re.fullmatch(r'[0-9a-f]{64}', value)),
+            'invalid_research_implementation')
+    return value
+
+
 def prewarm_saved_originals(runtime, refs, *, read_bytes, refs_in, select_cold_path,
                            guard, progress, max_nodes=10000, max_edges=200000,
                            max_warm_bytes=512*1024*1024, max_occurrences=2000000):
@@ -183,11 +196,12 @@ def main(argv=None):
     parser.add_argument('--state-commit', type=sha40, required=True)
     parser.add_argument('--league', choices=['championship'], required=True)
     parser.add_argument('--implementation', required=True)
+    parser.add_argument('--research-implementation', help='Exact original fingerprint of the saved cards; never rewritten')
     parser.add_argument('--deadline-seconds', type=int, default=1500)
     parser.add_argument('--prewarm', action='store_true', help='Materialize exact immutable cold originals before unchanged native freeze')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args(argv)
-    require(re.fullmatch(r'[0-9a-f]{64}', args.implementation), 'invalid_implementation')
+    saved_implementation = research_implementation(args.implementation, args.research_implementation)
     require(60 <= args.deadline_seconds <= 1500, 'invalid_deadline')
     repo = args.repo.resolve()
     output = validate_output(args.output, repo)
@@ -202,6 +216,7 @@ def main(argv=None):
     out = {'schema_version': 'fixed-capture-input-profile-v1',
            'state_commit': args.state_commit, 'league': args.league,
            'implementation': args.implementation,
+           'research_implementation': saved_implementation,
            'started_at': datetime.now(timezone.utc).isoformat(),
            'network_football_requests': 0, 'fits': 0, 'remote_state_writes': 0,
            'live_capture_or_first_output_created': False,
@@ -251,13 +266,14 @@ def main(argv=None):
         out['diagnostic_source_commit'] = cloud._git(repo, 'rev-parse', 'HEAD').stdout.strip()
         actual = implementation_fingerprint()
         require(actual['sha256'] == args.implementation, 'actual_implementation_mismatch')
+        out['execution_implementation_fingerprint'] = actual
         out['restore_preflight'] = restore_fixed(repo, runtime, args.state_commit, cloud)
         progress('read_fixed_latest_card_references')
         paths = list((runtime / 'advanced_models' / args.league).glob('*/reports/latest.json'))
         require(len(paths) == 1, 'summary_namespace_not_unique')
         raw = read_bytes(paths[0], runtime=runtime)
         summary = json.loads(raw)
-        refs = select_references(summary, args.league, args.implementation)
+        refs = select_references(summary, args.league, saved_implementation)
         out.update(summary_sha256=hashlib.sha256(raw).hexdigest(),
                    research_source_commit=summary['source_commit'], selected_cards=len(refs))
         progress('native_capacity_guard')
@@ -265,10 +281,12 @@ def main(argv=None):
         out['prewarm_enabled'] = args.prewarm
         if args.prewarm:
             from football_model.history_archive import select_cold_path
+            from football_model.history_archive import verified_catalog_read_session
             from football_model.advanced_snapshots import _refs_in
             progress('prewarm_exact_saved_originals')
-            out['prewarm'] = prewarm_saved_originals(runtime, refs, read_bytes=read_bytes,
-                refs_in=_refs_in, select_cold_path=select_cold_path, guard=guard, progress=progress)
+            with verified_catalog_read_session(runtime):
+                out['prewarm'] = prewarm_saved_originals(runtime, refs, read_bytes=read_bytes,
+                    refs_in=_refs_in, select_cold_path=select_cold_path, guard=guard, progress=progress)
             progress('prewarm_completed', **out['prewarm'])
         cutoff = datetime.now(timezone.utc)
         progress('native_freeze_saved_card_inputs', selected_cards=len(refs))

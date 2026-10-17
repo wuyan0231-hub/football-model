@@ -29,6 +29,16 @@ def summary():
 
 
 class ProfileTests(unittest.TestCase):
+    def test_saved_identity_is_separate_and_never_relabelled(self):
+        self.assertEqual(profile.research_implementation(IMPL, '2'*64), '2'*64)
+        self.assertEqual(profile.research_implementation(IMPL), IMPL)
+
+    def test_both_implementation_hashes_must_be_exact(self):
+        for execution, saved in ((None, IMPL), ('main', IMPL), (IMPL, 'main'),
+                                 (IMPL, 'A'*64), (IMPL, '2'*63)):
+            with self.subTest(execution=execution, saved=saved), self.assertRaises(profile.ProfileError):
+                profile.research_implementation(execution, saved)
+
     def test_selected_latest_refs(self):
         self.assertEqual(len(profile.select_references(summary(), 'championship', IMPL)), 1)
 
@@ -95,7 +105,7 @@ class ProfileTests(unittest.TestCase):
         self.assertLessEqual(len(rows), 2)
         self.assertTrue(all('/' not in r['file'] and 'locals' not in r for r in rows))
 
-    def run_main(self, *, deadline=False, failed=False):
+    def run_main(self, *, deadline=False, failed=False, execution_implementation=IMPL, saved_implementation=None, expect_freeze=True):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory); output = root / 'profile.json'
             status = {}; closes = []; calls = []
@@ -128,14 +138,18 @@ class ProfileTests(unittest.TestCase):
                 'football_model.advanced_snapshots': types.SimpleNamespace(freeze_inputs=freeze),
                 'football_model.advanced_capacity': types.SimpleNamespace(CapacityGuard=lambda runtime: object()),
                 'football_model.advanced_research': types.SimpleNamespace(
-                    implementation_fingerprint=lambda: {'sha256': IMPL})}
+                    implementation_fingerprint=lambda: {'sha256': execution_implementation})}
             with patch.dict(sys.modules, modules), patch.object(profile.signal, 'signal', side_effect=set_signal), \
                     patch.object(profile.signal, 'alarm'), contextlib.redirect_stdout(io.StringIO()):
-                code = profile.main(['--repo', str(root), '--state-commit', '2' * 40,
-                                     '--league', 'championship', '--implementation', IMPL,
-                                     '--deadline-seconds', '60', '--output', str(output)])
+                argv = ['--repo', str(root), '--state-commit', '2' * 40,
+                        '--league', 'championship', '--implementation', execution_implementation,
+                        '--deadline-seconds', '60', '--output', str(output)]
+                if saved_implementation is not None:
+                    argv += ['--research-implementation', saved_implementation]
+                code = profile.main(argv)
             result = json.loads(output.read_text())
-            self.assertTrue(closes and calls)
+            self.assertTrue(closes)
+            self.assertEqual(bool(calls), expect_freeze)
             self.assertEqual(result['network_football_requests'], 0)
             self.assertEqual(result['fits'], 0)
             self.assertEqual(result['remote_state_writes'], 0)
@@ -147,6 +161,18 @@ class ProfileTests(unittest.TestCase):
         code, result = self.run_main()
         self.assertEqual(code, 0)
         self.assertEqual(result['frozen_originals'], 1)
+
+    def test_new_execution_reads_old_saved_identity_without_rewriting_it(self):
+        code, result = self.run_main(execution_implementation='2'*64, saved_implementation=IMPL)
+        self.assertEqual(code, 0)
+        self.assertEqual(result['research_implementation'], IMPL)
+        self.assertEqual(result['execution_implementation_fingerprint']['sha256'], '2'*64)
+        self.assertFalse(result['live_capture_or_first_output_created'])
+
+    def test_new_execution_cannot_claim_old_cards_are_new(self):
+        code, result = self.run_main(execution_implementation='2'*64, expect_freeze=False)
+        self.assertEqual(code, 1)
+        self.assertEqual(result['error_code'], 'implementation_mismatch')
 
     def test_deadline_keeps_incomplete_profile(self):
         code, result = self.run_main(deadline=True)
