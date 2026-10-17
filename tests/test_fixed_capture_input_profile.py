@@ -1,5 +1,6 @@
 import cProfile
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
@@ -159,5 +160,116 @@ class ProfileTests(unittest.TestCase):
         self.assertEqual(result['status'], 'diagnostic_incomplete')
 
 
+class PrewarmTests(unittest.TestCase):
+    def run_warm(self, root, documents, refs, **kwargs):
+        reads, tickets = [], []
+        def read(path, **_):
+            name = path.relative_to(root).as_posix(); reads.append(name)
+            return documents[name]
+        def refs_in(value):
+            if isinstance(value, dict):
+                if 'path' in value and 'sha256' in value: yield value
+                for item in value.values(): yield from refs_in(item)
+            elif isinstance(value, list):
+                for item in value: yield from refs_in(item)
+        def commit(ticket):
+            self.assertEqual(ticket[0].read_bytes(), ticket[1]); tickets.append(ticket)
+        guard = types.SimpleNamespace(check_write=lambda p, b: (p, b), commit_write=commit)
+        value = profile.prewarm_saved_originals(root, refs, read_bytes=read, refs_in=refs_in,
+            select_cold_path=lambda n: bool(profile.re.fullmatch(r'advanced_models/(objects|inputs)/[0-9a-f]{64}\.json', n)),
+            guard=guard, progress=lambda *_, **__: None, **kwargs)
+        return value, reads, tickets
+
+    def ref(self, raw, name=None):
+        digest = hashlib.sha256(raw).hexdigest()
+        return {'path': name or 'advanced_models/objects/' + digest + '.json', 'sha256': digest}
+
+    def test_exact_once_with_repeated_edges(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); b = b'{"value": 7}'; leaf = self.ref(b)
+            a = json.dumps([leaf, leaf, leaf]).encode(); parent = self.ref(a, 'advanced_models/championship/card.json')
+            result, reads, tickets = self.run_warm(root, {parent['path']: a, leaf['path']: b}, [parent, parent])
+            self.assertEqual(reads, [parent['path'], leaf['path']])
+            self.assertEqual(result['edges'], 5)
+            self.assertEqual(result['warmed_originals'], 1)
+            self.assertEqual(len(tickets), 1)
+            self.assertEqual((root / leaf['path']).read_bytes(), b)
+            self.assertFalse((root / parent['path']).exists())
+            self.assertTrue(result['native_freeze_still_required'])
+
+    def test_existing_original_not_overwritten(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); b = b'{}'; ref = self.ref(b); path = root / ref['path']
+            path.parent.mkdir(parents=True); path.write_bytes(b)
+            result, _, tickets = self.run_warm(root, {ref['path']: b}, [ref])
+            self.assertEqual(result['warmed_originals'], 0); self.assertEqual(tickets, [])
+            self.assertEqual(path.read_bytes(), b)
+
+    def test_nonimmutable_paths_read_but_never_written(self):
+        for name in ('cache/api_cache/a.json', 'advanced_models/inputs/latest.json',
+                     'advanced_snapshots/first.json', 'advanced_models/championship/reports/latest.json'):
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory); b = b'{}'; ref = self.ref(b, name)
+                result, _, tickets = self.run_warm(root, {name: b}, [ref])
+                self.assertEqual(result['warmed_originals'], 0); self.assertEqual(tickets, [])
+                self.assertFalse((root / name).exists())
+
+    def test_hash_mismatch_never_written(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); ref = self.ref(b'{}')
+            with self.assertRaisesRegex(profile.ProfileError, 'hash_mismatch'):
+                self.run_warm(root, {ref['path']: b'{"other":1}'}, [ref])
+            self.assertFalse((root / ref['path']).exists())
+
+    def test_conflicting_repeated_reference_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); b = b'{}'; ref = self.ref(b)
+            other = {**ref, 'sha256': '1' * 64}
+            with self.assertRaisesRegex(profile.ProfileError, 'version_conflict'):
+                self.run_warm(root, {ref['path']: b}, [other, ref])
+
+    def test_unsafe_paths_rejected(self):
+        for name in ('/absolute', '../escape', './x', 'a//b', 'a/../b', 'a\\b', 'a\nx', 'a\x7fx'):
+            with tempfile.TemporaryDirectory() as directory:
+                with self.assertRaisesRegex(profile.ProfileError, 'invalid_reference_path'):
+                    self.run_warm(Path(directory), {}, [self.ref(b'{}', name)])
+
+    def test_symlink_parent_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); (root / 'advanced_models').symlink_to(root)
+            ref = self.ref(b'{}')
+            with self.assertRaisesRegex(profile.ProfileError, 'symlink'):
+                self.run_warm(root, {ref['path']: b'{}'}, [ref])
+
+    def test_byte_and_node_limits(self):
+        for kwargs, error in (({'max_warm_bytes': 1}, 'byte_limit'), ({'max_nodes': 0}, 'node_limit'),
+                              ({'max_edges': 0}, 'edge_limit')):
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory); ref = self.ref(b'{}')
+                with self.assertRaisesRegex(profile.ProfileError, error):
+                    self.run_warm(root, {ref['path']: b'{}'}, [ref], **kwargs)
+                self.assertFalse((root / ref['path']).exists())
+
+    def test_read_budget_applies_to_hot_inputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); b = b'{"large": "1234567890"}'; ref = self.ref(b, 'hot.json')
+            with self.assertRaisesRegex(profile.ProfileError, 'read_byte_limit'):
+                self.run_warm(root, {ref['path']: b}, [ref], max_warm_bytes=1)
+
+    def test_nonfinite_and_duplicate_json_rejected(self):
+        for b, error in ((b'{"x":NaN}', 'nonfinite_json'), (b'{"x":1,"x":2}', 'duplicate_json_key')):
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory); ref = self.ref(b, 'hot.json')
+                with self.assertRaisesRegex(profile.ProfileError, error):
+                    self.run_warm(root, {ref['path']: b}, [ref])
+
+    def test_bad_digest_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            ref = {'path': 'hot.json', 'sha256': 'bad'}
+            with self.assertRaisesRegex(profile.ProfileError, 'invalid_digest'):
+                self.run_warm(Path(directory), {}, [ref])
+
+
 if __name__ == '__main__':
     unittest.main()
+
