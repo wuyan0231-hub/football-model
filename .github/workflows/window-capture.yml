@@ -1,0 +1,202 @@
+name: 足球真实首发窗口：单联赛捕获与立即保存
+
+# Bounded supplement. It neither replaces the all-league final short cycle nor
+# changes existing schedules, protocols, parameters or research identity.
+# Cron cannot encode a year: validate gates the real date/time to Oct 17, 2026
+# 10:00Z-11:30Z. Remove this one-date cron after the attempt; never sleep in a lock.
+on:
+  schedule:
+    - cron: '0 10 17 10 *'
+  workflow_dispatch:
+    inputs:
+      league:
+        description: 本入口限定英超；不是全19赛事短轮
+        required: true
+        type: choice
+        default: epl
+        options: [epl]
+      match_id:
+        description: 已保存未来比赛ID；必须是真实时点及原协议首发窗口
+        required: true
+        type: string
+        default: '1557430'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    if: github.repository == 'wuyan0231-hub/football-model' && (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      WINDOW_LEAGUE: ${{ github.event_name == 'schedule' && 'epl' || inputs.league }}
+      WINDOW_MATCH_ID: ${{ github.event_name == 'schedule' && '1557430' || inputs.match_id }}
+    outputs:
+      proceed: ${{ steps.gate.outputs.proceed }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: 仅验证手动输入，不请求足球API或状态写入
+        id: gate
+        run: python scripts/window_capture_audit.py validate
+
+  capture:
+    needs: validate
+    if: needs.validate.result == 'success' && needs.validate.outputs.proceed == 'true'
+    permissions:
+      contents: write
+      actions: read
+    concurrency:
+      group: football-model-state
+      cancel-in-progress: false
+      queue: max
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    env:
+      PYTHONUNBUFFERED: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+      WINDOW_LEAGUE: ${{ github.event_name == 'schedule' && 'epl' || inputs.league }}
+      WINDOW_MATCH_ID: ${{ github.event_name == 'schedule' && '1557430' || inputs.match_id }}
+    outputs:
+      saved_state: ${{ steps.receipt.outputs.saved_state }}
+      capture_ref: ${{ steps.receipt.outputs.capture_ref }}
+      first_ref: ${{ steps.receipt.outputs.first_ref }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: python -m pip install -r requirements.txt
+      - name: 保持正在运行研究的50文件身份
+        run: >-
+          python -c "from scripts.window_capture_audit import check_implementation; check_implementation()"
+      - name: 恢复完整固定父状态（保持原共享写入锁和CAS）
+        id: restore
+        run: python scripts/cloud_state.py load --runtime runtime
+      - name: 登记实际父状态并清除本轮可变报告入口
+        run: |
+          python - <<'PARENT'
+          import json, os, subprocess
+          from pathlib import Path
+          from football_model.feature_research import digest
+          gitdir = Path(subprocess.check_output(['git', 'rev-parse', '--absolute-git-dir'], text=True).strip())
+          marker = json.loads((gitdir / 'football-cloud-state.json').read_text())
+          if not marker.get('state_oid') or marker.get('source_sha') != os.environ['GITHUB_SHA']:
+              raise SystemExit('valid_loaded_parent_required')
+          with Path(os.environ['GITHUB_ENV']).open('a') as out:
+              out.write('WINDOW_PARENT_STATE=' + marker['state_oid'] + '\n')
+          Path('window-parent-state.json').write_text(json.dumps({k: marker.get(k) for k in ('state_oid','source_sha','loaded_at')}, indent=2))
+          protocol = json.loads(Path('advanced-models-v1.json').read_text())
+          (Path('runtime/advanced_snapshots') / digest(protocol) / 'reports' / os.environ['WINDOW_LEAGUE'] / 'latest.json').unlink(missing_ok=True)
+          Path('runtime/fundamentals/reports/latest.json').unlink(missing_ok=True)
+          PARENT
+      - name: 只采集目标比赛的当前真实信息（不倒填、不等待、不新增轮询）
+        id: facts
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: >-
+          python -m football_model.collect_fundamentals --runtime runtime --config config.json
+          --league "$WINDOW_LEAGUE" --match-id "$WINDOW_MATCH_ID" --horizon-hours 11 --recent-matches 5
+      - name: 原生捕获该联赛真实窗口（首发未知、迟到与失败保持原判定）
+        id: capture
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' && steps.facts.outcome != 'skipped' }}
+        continue-on-error: true
+        run: >-
+          python -m football_model.advanced_snapshots capture --runtime runtime --league "$WINDOW_LEAGUE"
+          --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA" --state-commit "$WINDOW_PARENT_STATE"
+      - name: 原生检查输出与完整性
+        id: check
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python scripts/cloud_state.py check --runtime runtime
+      - name: 立即保存本轮原件与失败（不在全19评分之后等待）
+        id: persist
+        if: ${{ !cancelled() && steps.check.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: >-
+          python scripts/cloud_state_save_once.py --runtime runtime
+          --preflight-report window-preflight.json --receipt window-save-run-receipt.json
+      - name: 保存有界逐步骤回执（不上传完整API缓存或模型原件）
+        id: receipt
+        if: ${{ always() }}
+        env:
+          RESTORE: ${{ steps.restore.outcome }}
+          FACTS: ${{ steps.facts.outcome }}
+          CAPTURE: ${{ steps.capture.outcome }}
+          CHECK: ${{ steps.check.outcome }}
+          PERSIST: ${{ steps.persist.outcome }}
+        run: python scripts/window_capture_audit.py record --output window-run-receipt.json
+      - uses: actions/upload-artifact@v7
+        if: ${{ always() }}
+        with:
+          name: single-league-window-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            window-run-receipt.json
+            window-save-run-receipt.json
+            window-parent-state.json
+          retention-days: 14
+          if-no-files-found: warn
+      - name: 保留任何原生步骤失败
+        if: ${{ !cancelled() && (steps.restore.outcome != 'success' || steps.facts.outcome != 'success' || steps.capture.outcome != 'success' || steps.check.outcome != 'success' || steps.persist.outcome != 'success' || steps.receipt.outcome != 'success' || steps.receipt.outputs.capture_ref == 'null' || steps.receipt.outputs.first_ref == 'null') }}
+        run: exit 1
+
+  fixed_readback:
+    needs: capture
+    if: ${{ always() && !cancelled() && needs.capture.outputs.saved_state != '' && needs.capture.outputs.capture_ref != 'null' && needs.capture.outputs.first_ref != 'null' }}
+    permissions:
+      contents: read
+      actions: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PYTHONUNBUFFERED: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+      FOOTBALL_API_KEY: ''
+      WINDOW_LEAGUE: ${{ github.event_name == 'schedule' && 'epl' || inputs.league }}
+      WINDOW_MATCH_ID: ${{ github.event_name == 'schedule' && '1557430' || inputs.match_id }}
+      WINDOW_SAVED_STATE: ${{ needs.capture.outputs.saved_state }}
+      WINDOW_CAPTURE_REF: ${{ needs.capture.outputs.capture_ref }}
+      WINDOW_FIRST_REF: ${{ needs.capture.outputs.first_ref }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: python -m pip install -r requirements.txt
+      - name: 前序保存作业完成后，原生固定Git闭包及首输出重验
+        id: audit
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/window_capture_audit.py audit --output window-fixed-readback.json
+      - uses: actions/upload-artifact@v7
+        if: ${{ always() }}
+        with:
+          name: single-league-window-fixed-readback-${{ github.run_id }}-${{ github.run_attempt }}
+          path: window-fixed-readback.json
+          retention-days: 14
+          if-no-files-found: warn
+      - name: 捕获、首输出、完整闭包或开赛前远端保存未证明时保持失败
+        if: ${{ !cancelled() && steps.audit.outcome != 'success' }}
+        run: exit 1
