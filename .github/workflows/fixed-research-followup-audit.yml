@@ -2,10 +2,21 @@ name: 已完成联赛逐项固定研究只读验收
 
 on:
   push:
-    branches: [codex/s3-bundesliga2-report-audit-20261017]
+    branches: [codex/s3-reusable-fixed-audit-20261017]
     paths:
       - '.github/workflows/fixed-research-followup-audit.yml'
   workflow_dispatch:
+    inputs:
+      league:
+        description: 已完成研究的单联赛（不重新拟合）
+        type: choice
+        required: true
+        default: ligue_2
+        options: [epl, championship, laliga, bundesliga, serie_a, ligue_1, bundesliga_2, ligue_2, allsvenskan, eredivisie, primeira, brazil_a, j1, k1, mls, unl, liga_mx, segunda, argentina_a]
+      state_commit:
+        description: 已核实的精确40位model-state提交SHA（不允许移动分支）
+        type: string
+        required: true
 
 permissions:
   contents: read
@@ -13,22 +24,27 @@ permissions:
 
 jobs:
   fixed_completed_league_audit:
-    if: github.repository == 'wuyan0231-hub/football-model'
+    if: github.repository == 'wuyan0231-hub/football-model' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    strategy:
-      fail-fast: true
-      max-parallel: 1
-      matrix:
-        # All six previously accepted report scopes remain accepted at their original heads.
-        # This run only audits the newly completed Bundesliga 2 report; never refits it.
-        league: [bundesliga_2]
     env:
       PYTHONUNBUFFERED: '1'
       OPENBLAS_NUM_THREADS: '1'
       OMP_NUM_THREADS: '1'
       FOOTBALL_API_KEY: ''
+      AUDIT_LEAGUE: ${{ github.event_name == 'push' && 'ligue_2' || inputs.league }}
+      AUDIT_STATE_COMMIT: ${{ github.event_name == 'push' && 'e55c1dad479990567169341624345db239ed8f4e' || inputs.state_commit }}
     steps:
+      - name: 验证精确单联赛和固定状态（不联网或读取其他环境字段）
+        run: |
+          python - <<'VALIDATE_FIXED_AUDIT'
+          import os, re
+          allowed = {'epl', 'championship', 'laliga', 'bundesliga', 'serie_a', 'ligue_1', 'bundesliga_2', 'ligue_2', 'allsvenskan', 'eredivisie', 'primeira', 'brazil_a', 'j1', 'k1', 'mls', 'unl', 'liga_mx', 'segunda', 'argentina_a'}
+          if os.environ.get('AUDIT_LEAGUE') not in allowed:
+              raise SystemExit('invalid_single_audit_league')
+          if not re.fullmatch(r'[0-9a-f]{40}', os.environ.get('AUDIT_STATE_COMMIT', '')):
+              raise SystemExit('exact_fixed_state_sha_required')
+          VALIDATE_FIXED_AUDIT
       - uses: actions/checkout@v7
         with:
           fetch-depth: 2
@@ -36,24 +52,25 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - name: 原依赖与已合并只读验收器安全回归
+      - name: 原依赖与只读验收器安全回归
         run: |
           python -m pip install -r requirements.txt
           python -m unittest discover -s tests -p test_fixed_research_report_audit.py -v
+          python -m unittest discover -s tests -p test_fixed_research_workflow_inputs.py -v
       - name: 单联赛完整报告与同池评分（零API、零拟合、零远端状态写入）
         id: audit
         continue-on-error: true
         run: >-
           python scripts/fixed_research_report_audit.py --repo .
-          --state-commit 5e0d27af59f9d1a402036e925a711927c08a74aa
+          --state-commit "$AUDIT_STATE_COMMIT"
           --implementation 1e311689b3405f64c6ad9636732d2defb7ad67e26b4bc7e04b01a5b1b2b2d6ac
-          --leagues ${{ matrix.league }}
+          --leagues "$AUDIT_LEAGUE"
           --output fixed-research-report-audit.json
       - name: 仅保存有界数字回执及失败阶段（不上传原始API或完整单场包）
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
-          name: fixed-completed-research-audit-${{ matrix.league }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: fixed-completed-research-audit-${{ env.AUDIT_LEAGUE }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: fixed-research-report-audit.json
           retention-days: 14
           if-no-files-found: warn
