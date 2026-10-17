@@ -205,6 +205,32 @@ class PrewarmTests(unittest.TestCase):
             self.assertEqual(result['warmed_originals'], 0); self.assertEqual(tickets, [])
             self.assertEqual(path.read_bytes(), b)
 
+    def test_repeated_frontier_is_deduplicated_before_enqueue(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); b = b'{}'; leaf = self.ref(b)
+            a = json.dumps([leaf] * 10000).encode(); parent = self.ref(a, 'card.json')
+            result, reads, _ = self.run_warm(root, {parent['path']: a, leaf['path']: b}, [parent], max_edges=2)
+            self.assertEqual(result['edges'], 10001)
+            self.assertEqual(result['scheduled_bindings'], 2)
+            self.assertEqual(result['deduplicated_occurrences'], 9999)
+            self.assertEqual(result['peak_pending'], 1)
+            self.assertEqual(reads, [parent['path'], leaf['path']])
+
+    def test_pending_conflict_is_checked_even_before_read(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); b = b'{}'; leaf = self.ref(b)
+            a = json.dumps([leaf, {**leaf, 'sha256': '1' * 64}]).encode()
+            parent = self.ref(a, 'card.json')
+            with self.assertRaisesRegex(profile.ProfileError, 'version_conflict'):
+                self.run_warm(root, {parent['path']: a, leaf['path']: b}, [parent])
+            self.assertFalse((root / leaf['path']).exists())
+
+    def test_occurrences_remain_finitely_bounded(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); b = b'{}'; ref = self.ref(b)
+            with self.assertRaisesRegex(profile.ProfileError, 'occurrence_limit'):
+                self.run_warm(root, {ref['path']: b}, [ref, ref], max_occurrences=1)
+
     def test_nonimmutable_paths_read_but_never_written(self):
         for name in ('cache/api_cache/a.json', 'advanced_models/inputs/latest.json',
                      'advanced_snapshots/first.json', 'advanced_models/championship/reports/latest.json'):
