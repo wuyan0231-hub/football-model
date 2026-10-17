@@ -293,7 +293,7 @@ def main(argv=None):
     args = p.parse_args(argv)
     require(bool(re.fullmatch(r"[a-f0-9]{64}", args.implementation)), "invalid_implementation")
     leagues = args.leagues.split(",")
-    require(len(leagues) == len(set(leagues)) and all(re.fullmatch(r"[a-z][a-z_]*", l) for l in leagues), "invalid_leagues")
+    require(len(leagues) == len(set(leagues)) and all(re.fullmatch(r"[a-z][a-z0-9_]*", l) for l in leagues), "invalid_leagues")
     repo = args.repo.resolve()
     args.output = validate_output(args.output, repo)
     sys.path.insert(0, str(repo))
