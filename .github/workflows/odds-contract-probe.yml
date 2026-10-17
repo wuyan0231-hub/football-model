@@ -1,0 +1,54 @@
+name: 两场赔率：独立只读完整接口探针
+
+on:
+  push:
+    branches: [codex/odds-detail-probe-20261017]
+    paths:
+      - '.github/workflows/odds-contract-probe.yml'
+      - 'scripts/odds_contract_probe.py'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    if: github.repository == 'wuyan0231-hub/football-model' && github.ref == 'refs/heads/codex/odds-detail-probe-20261017'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONUNBUFFERED: '1'
+      PROBE_OUTPUT: odds-contract-probe/${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: 安装原客户端依赖
+        run: python -m pip install -r requirements.txt
+      - name: 限定两场读取全部赔率分页，最多30次网络请求
+        id: probe
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: >-
+          python scripts/odds_contract_probe.py --future-id 1557434 --completed-id 1557430
+          --source-commit "$GITHUB_SHA" --output "$PROBE_OUTPUT"
+      - name: 保存完整原响应和比较摘要
+        if: ${{ !cancelled() && steps.probe.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: odds-contract-probe-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            odds-contract-probe/**/raw/
+            odds-contract-probe/**/*summary.json
+          if-no-files-found: error
+          retention-days: 14
+          include-hidden-files: false
+      - name: 保留不完整状态
+        if: ${{ !cancelled() && steps.probe.outcome != 'success' }}
+        run: exit 1
