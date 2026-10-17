@@ -1,0 +1,57 @@
+name: 固定捕获输入闭包有界性能诊断
+
+on:
+  push:
+    branches: [codex/s3-fixed-capture-profile-20261017]
+    paths: ['.github/workflows/fixed-capture-input-profile.yml']
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  fixed_capture_input_profile:
+    if: github.repository == 'wuyan0231-hub/football-model'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      PYTHONUNBUFFERED: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+      FOOTBALL_API_KEY: ''
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+          persist-credentials: true
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: 安装原依赖并核诊断边界
+        run: |
+          python -m pip install -r requirements.txt
+          python -m unittest discover -s tests -p test_fixed_capture_input_profile.py -v
+      - name: 新实现固定旧研究输入的完整冻结（非窗口捕获或旧身份改写）
+        id: profile
+        continue-on-error: true
+        run: >-
+          python scripts/fixed_capture_input_profile.py --repo .
+          --state-commit e55c1dad479990567169341624345db239ed8f4e
+          --league championship
+          --implementation 4467e636a3f3e20c4ef6e40b23b967b76842ad8b9edcc3b72fd4f0517926cd5e
+          --research-implementation 1e311689b3405f64c6ad9636732d2defb7ad67e26b4bc7e04b01a5b1b2b2d6ac
+          --deadline-seconds 1500
+          --prewarm
+          --output fixed-capture-input-profile.json
+      - name: 仅保留有界调用数字和无局部变量的栈
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: fixed-capture-input-profile-${{ github.run_id }}-${{ github.run_attempt }}
+          path: fixed-capture-input-profile.json
+          retention-days: 14
+          if-no-files-found: warn
+      - name: 保持诊断未完成或实际失败
+        if: ${{ !cancelled() && steps.profile.outcome != 'success' }}
+        run: exit 1
+
