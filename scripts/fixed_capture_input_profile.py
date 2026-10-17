@@ -85,7 +85,7 @@ def select_references(summary, league, implementation):
 
 def prewarm_saved_originals(runtime, refs, *, read_bytes, refs_in, select_cold_path,
                            guard, progress, max_nodes=10000, max_edges=200000,
-                           max_warm_bytes=512*1024*1024):
+                           max_warm_bytes=512*1024*1024, max_occurrences=2000000):
     """Materialize only native immutable cold paths, then still run native freeze.
 
     This is disposable fixed-state preparation, never a cache of admission
@@ -94,12 +94,15 @@ def prewarm_saved_originals(runtime, refs, *, read_bytes, refs_in, select_cold_p
     """
     runtime = Path(runtime).absolute()
     require(not any(p.is_symlink() for p in (runtime, *runtime.parents)), 'warm_root_symlink')
-    pending = list(refs)
+    pending, scheduled = [], {}
     seen, inventory = {}, []
-    edges = warmed = warm_bytes = unique_bytes = 0
-    while pending:
-        ref = pending.pop(); edges += 1
-        require(edges <= max_edges, 'warm_edge_limit')
+    edges = warmed = warm_bytes = unique_bytes = peak_pending = 0
+
+    def schedule(ref):
+        nonlocal edges, peak_pending
+        edges += 1
+        require(edges <= max_occurrences, 'warm_reference_occurrence_limit')
+        require(isinstance(ref, dict), 'warm_invalid_reference')
         name = ref.get('runtime_relative_path', ref.get('path'))
         require(isinstance(name, str) and name and not Path(name).is_absolute()
                 and all(p not in ('', '.', '..') for p in name.split('/'))
@@ -107,12 +110,25 @@ def prewarm_saved_originals(runtime, refs, *, read_bytes, refs_in, select_cold_p
                 'warm_invalid_reference_path')
         digest = ref.get('sha256')
         require(isinstance(digest, str) and re.fullmatch(r'[0-9a-f]{64}', digest), 'warm_invalid_digest')
+        # Bound pending work by exact path/digest bindings, not duplicates
+        # waiting on the stack. Check conflicts on every occurrence, including
+        # those not yet read. This is only preparation: native freeze below
+        # still validates every original edge and its complete bytes.
+        if name in scheduled:
+            require(scheduled[name] == digest, 'warm_reference_version_conflict')
+            return
+        require(len(scheduled) < max_edges, 'warm_edge_limit')
+        require(len(scheduled) < max_nodes, 'warm_node_limit')
+        scheduled[name] = digest
+        pending.append((name, digest))
+        peak_pending = max(peak_pending, len(pending))
+
+    for ref in refs:
+        schedule(ref)
+    while pending:
+        name, digest = pending.pop()
         path = runtime / name
         require(not any(p.is_symlink() for p in (path, *path.parents)), 'warm_reference_symlink')
-        if name in seen:
-            require(seen[name] == digest, 'warm_reference_version_conflict')
-            continue
-        require(len(seen) < max_nodes, 'warm_node_limit')
         raw = read_bytes(path, runtime=runtime)
         require(isinstance(raw, bytes) and hashlib.sha256(raw).hexdigest() == digest,
                 'warm_reference_hash_mismatch')
@@ -143,16 +159,19 @@ def prewarm_saved_originals(runtime, refs, *, read_bytes, refs_in, select_cold_p
                 raise ProfileError('warm_nonfinite_json')
             body = json.loads(raw, object_pairs_hook=pairs, parse_constant=nonfinite)
             for child in refs_in(body):
-                require(len(pending) + edges < max_edges, 'warm_edge_limit')
-                pending.append(child)
+                schedule(child)
         if len(seen) % 128 == 0:
             progress('prewarm_exact_saved_originals', unique_nodes=len(seen), edges=edges,
+                     scheduled_bindings=len(scheduled), peak_pending=peak_pending,
                      warmed_originals=warmed, warmed_bytes=warm_bytes)
     return {'unique_nodes': len(seen), 'edges': edges, 'warmed_originals': warmed,
+            'scheduled_bindings': len(scheduled), 'deduplicated_occurrences': edges-len(scheduled),
+            'peak_pending': peak_pending,
             'warmed_bytes': warm_bytes, 'unique_read_bytes': unique_bytes,
             'inventory_sha256': hashlib.sha256(json.dumps(sorted(inventory), separators=(',', ':')).encode()).hexdigest(),
             'closure_inventory_sha256': hashlib.sha256(json.dumps(sorted(seen.items()), separators=(',', ':')).encode()).hexdigest(),
-            'limits': {'nodes': max_nodes, 'edges': max_edges, 'warm_bytes': max_warm_bytes},
+            'limits': {'nodes': max_nodes, 'scheduled_bindings': max_edges,
+                       'reference_occurrences': max_occurrences, 'warm_bytes': max_warm_bytes},
             'native_freeze_still_required': True}
 
 
