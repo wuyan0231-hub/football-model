@@ -2,6 +2,9 @@ import importlib.util
 from pathlib import Path
 import unittest
 import json
+import os
+import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -185,6 +188,42 @@ class ProgressTests(unittest.TestCase):
                 with self.assertRaises(audit.AuditError):
                     audit.validate_output(Path(tmp)/parent/"audit.json",Path(tmp))
             self.assertEqual(audit.validate_output(Path(tmp)/"audit.json",Path(tmp)),Path(tmp)/"audit.json")
+
+
+class CLILeagueTests(unittest.TestCase):
+    def run_cli(self, repo, output, leagues):
+        # An empty non-Git directory stops at local rev-parse, before any fetch,
+        # state restore, fitting or football request. Exercise the real CLI.
+        env = os.environ.copy()
+        env["PYTHONPATH"] = os.pathsep.join([str(ROOT), str(SOURCE.parent), env.get("PYTHONPATH", "")])
+        return subprocess.run([sys.executable, str(SOURCE), "--repo", str(repo),
+            "--state-commit", "0"*40, "--implementation", "0"*64,
+            "--leagues", leagues, "--output", str(output)],
+            cwd=ROOT, env=env, text=True, capture_output=True, timeout=30)
+
+    def test_real_cli_accepts_digit_league_keys_before_restore(self):
+        for leagues in ("ligue_1", "ligue_1,bundesliga_2,j1,k1"):
+            with self.subTest(leagues=leagues), tempfile.TemporaryDirectory() as tmp:
+                output = Path(tmp)/"audit.json"
+                result = self.run_cli(Path(tmp), output, leagues)
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertNotIn("invalid_leagues", result.stderr)
+                receipt = json.loads(output.read_text())
+                self.assertEqual(receipt["status"], "audit_incomplete")
+                self.assertEqual(receipt["active_stage"]["stage"], "restore_exact_fixed_state")
+                self.assertEqual(receipt["exception_class"], "StorageError")
+                self.assertEqual(receipt["results"], [])
+                self.assertEqual([receipt[k] for k in ("network_football_requests", "fits", "remote_state_writes")], [0, 0, 0])
+
+    def test_real_cli_still_rejects_duplicates_and_path_like_keys(self):
+        for leagues in ("ligue_1,ligue_1", "../ligue_1", "ligue/1", "ligue-1",
+                "Ligue_1", "1ligue", "ligue_1,", "ligue_1\n", ""):
+            with self.subTest(leagues=leagues), tempfile.TemporaryDirectory() as tmp:
+                output = Path(tmp)/"audit.json"
+                result = self.run_cli(Path(tmp), output, leagues)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("AuditError: invalid_leagues", result.stderr)
+                self.assertFalse(output.exists())
 
 
 if __name__ == "__main__":
