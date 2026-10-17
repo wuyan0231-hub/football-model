@@ -2,7 +2,7 @@ name: 已完成联赛逐项固定研究只读验收
 
 on:
   push:
-    branches: [codex/s3-completed-league-audits-20261017]
+    branches: [codex/s3-bundesliga2-report-audit-20261017]
     paths:
       - '.github/workflows/fixed-research-followup-audit.yml'
   workflow_dispatch:
@@ -20,9 +20,9 @@ jobs:
       fail-fast: true
       max-parallel: 1
       matrix:
-        # The previous fixed run already completed the other four leagues.
-        # Retry only the failed key validation after its code fix.
-        league: [ligue_1]
+        # All six previously accepted report scopes remain accepted at their original heads.
+        # This run only audits the newly completed Bundesliga 2 report; never refits it.
+        league: [bundesliga_2]
     env:
       PYTHONUNBUFFERED: '1'
       OPENBLAS_NUM_THREADS: '1'
@@ -45,7 +45,7 @@ jobs:
         continue-on-error: true
         run: >-
           python scripts/fixed_research_report_audit.py --repo .
-          --state-commit 8d05a8eab883a6a128d359be29d97120be07c35a
+          --state-commit 5e0d27af59f9d1a402036e925a711927c08a74aa
           --implementation 1e311689b3405f64c6ad9636732d2defb7ad67e26b4bc7e04b01a5b1b2b2d6ac
           --leagues ${{ matrix.league }}
           --output fixed-research-report-audit.json
