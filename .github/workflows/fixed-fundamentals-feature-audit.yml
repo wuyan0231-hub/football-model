@@ -1,0 +1,42 @@
+name: 固定单场原始基本面到特征只读重建
+on:
+  push:
+    branches: [codex/s3-fixed-raw-feature-audit-20261017]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  fixed_current_input_audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      PYTHONUNBUFFERED: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+      FOOTBALL_API_KEY: ''
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: python -m pip install -r requirements.txt
+      - name: 原始输入边界与重建对抗回归
+        run: python -m unittest discover -s tests -p test_fixed_fundamentals_feature_audit.py -v
+      - name: 固定已保存单场原件重建（零API、零拟合、零远端写）
+        run: >-
+          python scripts/fixed_fundamentals_feature_audit.py --repo .
+          --state-commit 8aa5d590f83ab48f9d7a17c627b16526157591f8 --match-id 1557430
+          --output fixed-fundamentals-feature-audit.json
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: fixed-fundamentals-feature-audit-${{ github.run_id }}-${{ github.run_attempt }}
+          path: fixed-fundamentals-feature-audit.json
+          retention-days: 14
+          if-no-files-found: warn
+
