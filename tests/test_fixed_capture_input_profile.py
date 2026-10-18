@@ -20,6 +20,9 @@ if not SOURCE.exists():
 spec = importlib.util.spec_from_file_location('fixed_capture_input_profile', SOURCE)
 profile = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(profile)
+checkpoint_spec = importlib.util.spec_from_file_location('profile_output_audit', SOURCE.with_name('fixed_research_report_audit.py'))
+checkpoint_audit = importlib.util.module_from_spec(checkpoint_spec)
+checkpoint_spec.loader.exec_module(checkpoint_audit)
 IMPL = '1' * 64
 
 
@@ -163,6 +166,88 @@ class ReaderObservationTests(unittest.TestCase):
         finally: observation.stop()
 
 
+class OutputBudgetTests(unittest.TestCase):
+    def payload(self, observation):
+        frame = {'file': 'bounded_code_location_' + 'x' * 80 + '.py',
+                 'function': 'bounded_function_' + 'x' * 80, 'line': 99999}
+        return {'status': 'diagnostic_deadline', 'exception_class': 'StorageError',
+            'error_code': 'native_diagnostic_failure', 'failed_stage': 'native_freeze_saved_card_inputs',
+            'frozen_originals': 5401, 'frozen_inventory_sha256': 'a' * 64,
+            'state_commit': 'b' * 40, 'diagnostic_source_commit': 'c' * 40,
+            'summary_sha256': 'd' * 64, 'research_implementation': 'e' * 64,
+            'execution_implementation_fingerprint': {'sha256': IMPL,
+                'files': {'football_model/' + str(i) + '_' + 'x' * 100 + '.py': 'f' * 64 for i in range(50)}},
+            'stack_samples': [{'elapsed_seconds': 1500.0, 'stage': 'native_freeze_saved_card_inputs',
+                'frames': [dict(frame) for _ in range(12)]} for _ in range(30)],
+            'profile_functions': [{**frame, 'calls': 999999999, 'recursive_calls': 999999999,
+                'own_seconds': 1500.0, 'cumulative_seconds': 1500.0} for _ in range(40)],
+            'reader_cache_observation': observation.snapshot(trace=True),
+            'ended_at': '2026-10-18T00:00:00+00:00', 'elapsed_seconds': 1511.532}
+
+    def assert_real_checkpoint(self, out):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'final.json'
+            checkpoint_audit.checkpoint_output(path, out)
+            self.assertEqual(path.stat().st_size, out['output_budget']['serialized_bytes'])
+            self.assertLessEqual(path.stat().st_size, 512 * 1024)
+            self.assertEqual(json.loads(path.read_text()), out)
+
+    def test_saturated_observer_and_full_results_fit_original_pretty_json_gate(self):
+        kind = ReaderObservationTests().reader_type()
+        readers = [kind() for _ in range(profile.ReaderCacheObservation.MAX_READERS)]
+        observation = profile.ReaderCacheObservation(kind, native_policy='skip_manifest')
+        observation.start()
+        try:
+            for i in range(observation.MAX_EVENTS + 1):
+                reader = readers[i % len(readers)]
+                reader._blob('c', 'state_archives/' + str(i % observation.MAX_KEYS))
+            out = self.payload(observation)
+            required = {key: value for key, value in out.items() if key != 'reader_cache_observation'}
+            aggregate = observation.snapshot()
+            self.assertEqual(aggregate['traced_keys'], observation.MAX_KEYS)
+            self.assertEqual(aggregate['traced_events'], observation.MAX_EVENTS)
+            self.assertEqual(aggregate['calls'], observation.MAX_EVENTS + 1)
+            self.assertFalse(aggregate['trace_complete'])
+            profile.budget_final_output(out)
+            self.assertEqual({key: out[key] for key in required}, required)
+            snapshot = out['reader_cache_observation']
+            self.assertEqual({key: snapshot[key] for key in aggregate}, aggregate)
+            self.assertEqual(snapshot['detailed_trace_export'], 'detailed_trace_not_exported_within_original_bound')
+            self.assertNotIn('keys', snapshot); self.assertNotIn('events', snapshot)
+            self.assertEqual(len(snapshot['reader_summaries']), 8)
+            self.assert_real_checkpoint(out)
+        finally: observation.stop()
+
+    def test_old_large_trace_is_optional_but_failure_and_counters_are_preserved(self):
+        observation = profile.ReaderCacheObservation(None, native_policy='skip_manifest')
+        out = self.payload(observation)
+        snapshot = out['reader_cache_observation']
+        snapshot.update(keys=[['a' * 64, 0, 'transport', 99999] for _ in range(1796)],
+                        events=[[i % 1796, 0] for i in range(18586)], resets=[[18586, 0]])
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(checkpoint_audit.AuditError, 'bounded_output_limit'):
+                checkpoint_audit.checkpoint_output(Path(directory) / 'oversized.json', out)
+        profile.budget_final_output(out)
+        self.assertEqual(out['status'], 'diagnostic_deadline')
+        self.assertEqual(out['error_code'], 'native_diagnostic_failure')
+        self.assertEqual(snapshot['native_replay_match_counter'], 'actual_vs_skip_manifest_hit_mismatches')
+        self.assertEqual(set(out['output_budget']['optional_reader_trace_fields_removed']),
+            {'key_columns', 'event_columns', 'keys', 'events', 'resets', 'initial_cache_key_indices'})
+        self.assert_real_checkpoint(out)
+
+    def test_required_results_remain_subject_to_unchanged_hard_limit(self):
+        out = self.payload(profile.ReaderCacheObservation(None))
+        out['required_result'] = 'x' * (512 * 1024)
+        profile.budget_final_output(out)
+        self.assertEqual(len(out['required_result']), 512 * 1024)
+        self.assertGreater(out['output_budget']['serialized_bytes'], 512 * 1024)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'final.json'; path.write_text('previous checkpoint')
+            with self.assertRaisesRegex(checkpoint_audit.AuditError, 'bounded_output_limit'):
+                checkpoint_audit.checkpoint_output(path, out)
+            self.assertEqual(path.read_text(), 'previous checkpoint')
+
+
 def summary():
     return {'league': 'championship', 'source_commit': '3' * 40,
             'implementation_fingerprint': {'sha256': IMPL, 'files': ['x'] * 50},
@@ -273,7 +358,7 @@ class ProfileTests(unittest.TestCase):
             modules = {
                 'fixed_fixture_validation_audit': types.SimpleNamespace(restore_fixed=restore, sha40=sha40),
                 'fixed_research_report_audit': types.SimpleNamespace(
-                    checkpoint_output=lambda path, obj: path.write_text(json.dumps(obj))),
+                    checkpoint_output=checkpoint_audit.checkpoint_output),
                 'cloud_state': types.SimpleNamespace(_git=lambda *_: types.SimpleNamespace(stdout='4' * 40)),
                 'football_model.history_archive': types.SimpleNamespace(
                     read_bytes=lambda path, **_: path.read_bytes(), _close_readers=lambda: closes.append(True)),
@@ -297,6 +382,10 @@ class ProfileTests(unittest.TestCase):
             self.assertEqual(result['remote_state_writes'], 0)
             self.assertFalse(result['live_capture_or_first_output_created'])
             self.assertNotIn('sensitive free exception text', json.dumps(result))
+            self.assertEqual(output.stat().st_size, result['output_budget']['serialized_bytes'])
+            self.assertEqual(result['reader_cache_observation']['detailed_trace_export'],
+                'detailed_trace_not_exported_within_original_bound')
+            self.assertNotIn('events', result['reader_cache_observation'])
             return code, result
 
     def test_end_to_end_diagnostic_not_capture(self):

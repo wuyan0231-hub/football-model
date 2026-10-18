@@ -34,8 +34,8 @@ class ReaderCacheObservation:
     simulations retain sizes only and stop when their exact trace is bounded.
     They predict cache requests, not runtime or a validated production speedup.
     """
-    MAX_EVENTS = 50000
-    MAX_KEYS = 4096
+    MAX_EVENTS = 4096
+    MAX_KEYS = 1024
     MAX_READERS = 8
 
     def __init__(self, reader_type, *, native_policy='unspecified'):
@@ -285,6 +285,30 @@ def profile_rows(profiler, limit=40):
                      'own_seconds': round(item.inlinetime, 6),
                      'cumulative_seconds': round(item.totaltime, 6)})
     return sorted(rows, key=lambda r: -r['cumulative_seconds'])[:limit]
+
+
+def budget_final_output(out):
+    """Keep optional request detail out of the original 512 KiB checkpoint.
+
+    Aggregate counters and all diagnostic results remain intact. Use exactly
+    checkpoint_output's serializer to account for the whole final document;
+    its unchanged gate still rejects oversized required results.
+    """
+    snapshot = out.get('reader_cache_observation', {})
+    optional = ('key_columns', 'event_columns', 'keys', 'events', 'resets', 'initial_cache_key_indices')
+    omitted = [name for name in optional if name in snapshot]
+    for name in omitted:
+        del snapshot[name]
+    snapshot['detailed_trace_export'] = 'detailed_trace_not_exported_within_original_bound'
+    out['output_budget'] = {'limit_bytes': 512 * 1024, 'serialized_bytes': 0,
+        'optional_reader_trace_fields_removed': omitted, 'required_results_preserved': True}
+    # Including the byte count changes its own serialized width. Iterate to
+    # its fixed point rather than measuring a different, compact JSON shape.
+    while True:
+        size = len((json.dumps(out, ensure_ascii=False, indent=2, allow_nan=False) + '\n').encode())
+        if out['output_budget']['serialized_bytes'] == size:
+            return
+        out['output_budget']['serialized_bytes'] = size
 
 
 def validate_output(path, repo):
@@ -558,10 +582,11 @@ def main(argv=None):
             _close_readers()
         finally:
             cache_observation.stop()
-            out['reader_cache_observation'] = cache_observation.snapshot(trace=True)
+            out['reader_cache_observation'] = cache_observation.snapshot()
         out['profile_functions'] = profile_rows(profiler)
         out['ended_at'] = datetime.now(timezone.utc).isoformat()
         out['elapsed_seconds'] = round(time.monotonic()-started, 3)
+        budget_final_output(out)
         flush()
     print(json.dumps(out, ensure_ascii=False, allow_nan=False), flush=True)
     return 0 if out['status'] == 'diagnostic_completed_with_stated_scope' else 1
