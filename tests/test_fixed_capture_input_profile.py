@@ -112,6 +112,74 @@ class ReaderObservationTests(unittest.TestCase):
             self.assertLessEqual(reader._cached_bytes, 12)
         finally: observation.stop()
 
+    def test_budget_transitions_evict_both_replays_to_the_native_capacity(self):
+        kind = self.reader_type(); reader = kind()
+        reader.total_cache_bytes = 12
+        reader.member_cache_budget_bytes = 0
+        reader.cache_budget_generation = 0
+        for name in 'abcd': reader._blob('c', 'state_archives/' + name)
+        observation = profile.ReaderCacheObservation(kind, native_policy='original'); observation.start()
+        def reserve(blob_budget):
+            while reader._cache and reader._cached_bytes > blob_budget:
+                _, raw = reader._cache.popitem(last=False); reader._cached_bytes -= len(raw)
+            reader.cache_bytes = blob_budget
+            reader.member_cache_budget_bytes = reader.total_cache_bytes - blob_budget
+            reader.cache_budget_generation += 1
+        try:
+            reader._blob('c', 'state_archives/a')
+            reserve(6)
+            self.assertEqual(reader._blob('c', 'state_archives/a'), b'raw')
+            self.assertEqual(reader._blob('c', 'state_archives/b'), b'raw')
+            reserve(12)
+            self.assertEqual(reader._blob('c', 'state_archives/b'), b'raw')
+            result = observation.snapshot(trace=True)
+            summary = result['reader_summaries'][0]
+            self.assertEqual(summary['budget_changes'], 2)
+            self.assertEqual(summary['actual_vs_original_hit_mismatches'], 0)
+            self.assertEqual(summary['actual_vs_skip_manifest_hit_mismatches'], 0)
+            self.assertEqual(result['budget_events'], [[1, 0, 1, 6, 12, 6], [3, 0, 2, 12, 12, 0]])
+            self.assertEqual(reader.calls, 8)
+            self.assertEqual(reader.cache_bytes, 12)
+        finally: observation.stop()
+
+    def test_budget_events_share_the_original_trace_bound(self):
+        kind = self.reader_type(); reader = kind()
+        reader.total_cache_bytes = 12; reader.member_cache_budget_bytes = 0; reader.cache_budget_generation = 0
+        observation = profile.ReaderCacheObservation(kind, native_policy='original')
+        observation.MAX_EVENTS = 2; observation.start()
+        try:
+            reader._blob('c', 'state_archives/a')
+            for generation in range(1, 20):
+                reader.cache_budget_generation = generation
+                self.assertEqual(reader._blob('c', 'state_archives/a'), b'raw')
+            result = observation.snapshot(trace=True)
+            self.assertFalse(result['trace_complete'])
+            self.assertEqual(result['trace_truncation'], 'event_limit')
+            self.assertLessEqual(result['traced_events'] + result['traced_resets'] + result['traced_budget_changes'], 2)
+            self.assertEqual(result['reader_summaries'][0]['budget_changes'], 19)
+            self.assertEqual(reader.calls, 20)
+        finally: observation.stop()
+
+    def test_native_metrics_are_read_outside_observation_lock_and_only_numeric_fields(self):
+        kind = self.reader_type(); reader = kind()
+        observation = profile.ReaderCacheObservation(kind)
+        def metrics():
+            self.assertFalse(observation.lock._is_owned())
+            return {'current_bytes': 12, 'peak_bytes': 24, 'hits': 9, 'budget_bytes': 36,
+                    'total_cache_bytes': 64, 'secret_provider_data': b'not-exported'}
+        reader.member_cache_metrics = metrics
+        observation.start()
+        try:
+            reader._blob('c', 'state_archives/a')
+            snapshot = observation.snapshot(trace=True)
+            self.assertEqual(snapshot['reader_summaries'][0]['member_cache']['peak_bytes'], 24)
+            self.assertNotIn('secret_provider_data', json.dumps(snapshot))
+            self.assertTrue(any('profile_member_cache' in line for line in observation.minute_lines(snapshot)))
+            reader.close()
+            snapshot = observation.snapshot()
+            self.assertEqual(snapshot['reader_summaries'][0]['member_cache_before_last_close']['hits'], 9)
+        finally: observation.stop()
+
     def test_candidate_real_git_native_matches_skip_policy_not_prior_baseline(self):
         from football_model import history_archive as history
         from football_model.state_storage import pack_runtime
@@ -232,7 +300,8 @@ class OutputBudgetTests(unittest.TestCase):
         self.assertEqual(out['error_code'], 'native_diagnostic_failure')
         self.assertEqual(snapshot['native_replay_match_counter'], 'actual_vs_skip_manifest_hit_mismatches')
         self.assertEqual(set(out['output_budget']['optional_reader_trace_fields_removed']),
-            {'key_columns', 'event_columns', 'keys', 'events', 'resets', 'initial_cache_key_indices'})
+            {'key_columns', 'event_columns', 'keys', 'events', 'resets', 'initial_cache_key_indices',
+             'budget_event_columns', 'budget_events'})
         self.assert_real_checkpoint(out)
 
     def test_required_results_remain_subject_to_unchanged_hard_limit(self):
@@ -332,10 +401,13 @@ class ProfileTests(unittest.TestCase):
         self.assertLessEqual(len(rows), 2)
         self.assertTrue(all('/' not in r['file'] and 'locals' not in r for r in rows))
 
-    def run_main(self, *, deadline=False, failed=False, execution_implementation=IMPL, saved_implementation=None, expect_freeze=True):
+    def run_main(self, *, deadline=False, swallow_deadline=False, failed=False,
+                 freeze_elapsed=0.0, cleanup_elapsed=None, execution_implementation=IMPL,
+                 saved_implementation=None, expect_freeze=True):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory); output = root / 'profile.json'
             status = {}; closes = []; calls = []
+            clock = {'elapsed': 0.0}
             def sha40(value):
                 if len(value) != 40: raise ValueError('bad')
                 return value
@@ -348,10 +420,18 @@ class ProfileTests(unittest.TestCase):
                 self.assertEqual(destination.name, 'diagnostic-profile-inputs')
                 self.assertFalse((runtime / 'advanced_snapshots').exists())
                 if deadline:
-                    status['handler'](0, None)
+                    if swallow_deadline:
+                        try: status['handler'](0, None)
+                        except BaseException: pass
+                    else:
+                        status['handler'](0, None)
                 if failed:
                     raise ValueError('sensitive free exception text')
+                clock['elapsed'] = freeze_elapsed
                 return [{'origin_runtime_path': 'saved/input.json', 'sha256': 'c' * 64}]
+            def close_readers():
+                closes.append(True)
+                if cleanup_elapsed is not None: clock['elapsed'] = cleanup_elapsed
             def set_signal(_number, handler):
                 previous = status.get('handler'); status['handler'] = handler
                 return previous
@@ -361,13 +441,15 @@ class ProfileTests(unittest.TestCase):
                     checkpoint_output=checkpoint_audit.checkpoint_output),
                 'cloud_state': types.SimpleNamespace(_git=lambda *_: types.SimpleNamespace(stdout='4' * 40)),
                 'football_model.history_archive': types.SimpleNamespace(
-                    read_bytes=lambda path, **_: path.read_bytes(), _close_readers=lambda: closes.append(True)),
+                    read_bytes=lambda path, **_: path.read_bytes(), _close_readers=close_readers),
                 'football_model.advanced_snapshots': types.SimpleNamespace(freeze_inputs=freeze),
                 'football_model.advanced_capacity': types.SimpleNamespace(CapacityGuard=lambda runtime: object()),
                 'football_model.advanced_research': types.SimpleNamespace(
                     implementation_fingerprint=lambda: {'sha256': execution_implementation})}
             with patch.dict(sys.modules, modules), patch.object(profile.signal, 'signal', side_effect=set_signal), \
-                    patch.object(profile.signal, 'alarm'), contextlib.redirect_stdout(io.StringIO()):
+                    patch.object(profile.signal, 'alarm'), \
+                    patch.object(profile.time, 'monotonic', side_effect=lambda: 100.0 + clock['elapsed']), \
+                    contextlib.redirect_stdout(io.StringIO()):
                 argv = ['--repo', str(root), '--state-commit', '2' * 40,
                         '--league', 'championship', '--implementation', execution_implementation,
                         '--deadline-seconds', '60', '--output', str(output)]
@@ -410,6 +492,43 @@ class ProfileTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(result['status'], 'diagnostic_deadline')
         self.assertEqual(result['failed_stage'], 'native_freeze_saved_card_inputs')
+
+    def test_deadline_survives_real_path_resolve_oserror_fallback(self):
+        class OldDeadline(OSError): pass
+        path = Path('/__engineering_deadline_probe_missing__/child')
+        with patch('os.lstat', side_effect=OldDeadline('deadline')):
+            self.assertEqual(path.resolve(strict=False), path)
+        with patch('os.lstat', side_effect=profile.ProfileDeadline('deadline')):
+            with self.assertRaises(profile.ProfileDeadline): path.resolve(strict=False)
+
+    def test_expired_flag_cannot_be_erased_by_a_lower_layer_catching_baseexception(self):
+        code, result = self.run_main(deadline=True, swallow_deadline=True)
+        self.assertEqual(code, 1)
+        self.assertEqual(result['status'], 'diagnostic_deadline')
+        self.assertTrue(result['deadline_observation']['expired_flag'])
+        self.assertEqual(result['error_code'], 'bounded_diagnostic_deadline')
+
+    def test_completion_uses_unrounded_elapsed_when_the_signal_is_delayed(self):
+        code, result = self.run_main(freeze_elapsed=60.0004)
+        self.assertEqual(result['elapsed_seconds'], 60.0)
+        self.assertEqual(code, 1)
+        self.assertEqual(result['status'], 'diagnostic_deadline')
+        self.assertTrue(result['deadline_observation']['unrounded_elapsed_exceeded_limit'])
+
+    def test_cleanup_is_inside_the_same_elapsed_success_gate(self):
+        code, result = self.run_main(freeze_elapsed=59.0, cleanup_elapsed=60.0004)
+        self.assertEqual(code, 1)
+        self.assertEqual(result['frozen_originals'], 1)
+        self.assertEqual(result['status'], 'diagnostic_deadline')
+        self.assertEqual(result['failed_stage'], 'final_cleanup')
+
+    def test_cleanup_deadline_preserves_an_earlier_native_failure(self):
+        code, result = self.run_main(failed=True, cleanup_elapsed=61.0)
+        self.assertEqual(code, 1)
+        self.assertEqual(result['status'], 'diagnostic_deadline')
+        self.assertEqual(result['prior_native_failure']['exception_class'], 'ValueError')
+        self.assertEqual(result['prior_native_failure']['error_code'], 'native_diagnostic_failure')
+        self.assertEqual(result['prior_native_failure']['status'], 'diagnostic_incomplete')
 
     def test_native_failure_redacted(self):
         code, result = self.run_main(failed=True)

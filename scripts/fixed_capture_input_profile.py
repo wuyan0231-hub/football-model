@@ -23,7 +23,7 @@ class ProfileError(ValueError):
     pass
 
 
-class ProfileDeadline(OSError):
+class ProfileDeadline(BaseException):
     pass
 
 
@@ -47,6 +47,7 @@ class ReaderCacheObservation:
         self.key_ids = {}
         self.events = []
         self.resets = []
+        self.budget_events = []
         self.initial = []
         self.complete = True
         self.truncation = None
@@ -84,6 +85,11 @@ class ReaderCacheObservation:
                 self.truncate('reader_limit')
                 return None
             state = {'number': len(self.readers), 'budget': reader.cache_bytes,
+                'replay_budget_at_prefix': reader.cache_bytes,
+                'total_budget': getattr(reader, 'total_cache_bytes', reader.cache_bytes),
+                'member_budget': getattr(reader, 'member_cache_budget_bytes', 0),
+                'budget_generation': getattr(reader, 'cache_budget_generation', 0),
+                'budget_changes': 0,
                 'original': OrderedDict(), 'skip_manifest': OrderedDict(),
                 'original_bytes': 0, 'skip_manifest_bytes': 0,
                 'original_hits': 0, 'original_misses': 0, 'skip_manifest_hits': 0, 'skip_manifest_misses': 0,
@@ -106,7 +112,40 @@ class ReaderCacheObservation:
                         for policy in ('original', 'skip_manifest'):
                             state[policy][index] = len(raw)
                             state[policy + '_bytes'] += len(raw)
-        return self.readers[identity]
+        state = self.readers[identity]
+        generation = getattr(reader, 'cache_budget_generation', 0)
+        if (reader.cache_bytes, generation) != (state['budget'], state['budget_generation']):
+            state.update(budget=reader.cache_bytes, budget_generation=generation,
+                total_budget=getattr(reader, 'total_cache_bytes', reader.cache_bytes),
+                member_budget=getattr(reader, 'member_cache_budget_bytes', 0))
+            state['budget_changes'] += 1
+            if self.complete:
+                if self.trace_size() >= self.MAX_EVENTS:
+                    self.truncate('event_limit')
+                else:
+                    self.budget_events.append([len(self.events), state['number'], generation,
+                        state['budget'], state['total_budget'], state['member_budget']])
+                    state['replay_budget_at_prefix'] = state['budget']
+                    for policy in ('original', 'skip_manifest'):
+                        while state[policy] and state[policy + '_bytes'] > state['budget']:
+                            _, previous = state[policy].popitem(last=False)
+                            state[policy + '_bytes'] -= previous
+        return state
+
+    def trace_size(self):
+        return len(self.events) + len(self.resets) + len(self.budget_events)
+
+    @staticmethod
+    def member_metrics(reader):
+        method = getattr(reader, 'member_cache_metrics', None)
+        if method is None:
+            return None
+        metrics = method()
+        allowed = ('current_bytes', 'current_entries', 'peak_bytes', 'peak_entries',
+            'hits', 'misses', 'evictions', 'budget_bytes', 'total_cache_bytes',
+            'blob_cache_bytes', 'budget_generation', 'indexed_paths',
+            'current_proved_members', 'index_charge_bytes', 'proof_charge_bytes', 'max_paths', 'max_sources')
+        return {key: metrics[key] for key in allowed if key in metrics and type(metrics[key]) is int}
 
     def replay(self, state, policy, index, actual_hit):
         cache = state[policy]
@@ -162,7 +201,7 @@ class ReaderCacheObservation:
                     bounds = (4096, 65536, 1048576, 8388608, 33554432)
                     counters['size_bins'][next((i for i, bound in enumerate(bounds) if size <= bound), 5)] += 1
                     if observation.complete and state is not None:
-                        if len(observation.events) + len(observation.resets) >= observation.MAX_EVENTS:
+                        if observation.trace_size() >= observation.MAX_EVENTS:
                             observation.truncate('event_limit')
                         else:
                             index = observation.key(state, commit, relative, size)
@@ -172,14 +211,19 @@ class ReaderCacheObservation:
                                 observation.replay(state, 'skip_manifest', index, hit)
                 return raw
         def close(reader):
+            # Do not acquire a native reader lock while holding the observation
+            # lock: native _blob may itself call close under its reader lock.
+            metrics = observation.member_metrics(reader)
             with observation.lock:
                 state = observation.readers.get(reader)
                 if state is not None:
+                    state = observation.reader(reader)
+                    if metrics is not None: state['member_cache_before_last_close'] = metrics
                     state['close_calls'] += 1
                     state['close_with_process'] += int(reader._process is not None)
                     state['close_cached_bytes'] += reader._cached_bytes
                     if observation.complete:
-                        if len(observation.events) + len(observation.resets) >= observation.MAX_EVENTS:
+                        if observation.trace_size() >= observation.MAX_EVENTS:
                             observation.truncate('event_limit')
                         else:
                             observation.resets.append([len(observation.events), state['number']])
@@ -194,6 +238,12 @@ class ReaderCacheObservation:
 
     def snapshot(self, *, trace=False):
         with self.lock:
+            observed_readers = list(self.readers)
+        metrics = [(reader, self.member_metrics(reader)) for reader in observed_readers]
+        with self.lock:
+            for reader, value in metrics:
+                state = self.reader(reader)
+                if value is not None: state['member_cache'] = value
             readers = []
             for state in self.readers.values():
                 summary = {key: value for key, value in state.items() if not isinstance(value, OrderedDict)}
@@ -211,17 +261,21 @@ class ReaderCacheObservation:
                 'process_replacements': self.process_replacements, 'categories': categories,
                 'reader_summaries': readers, 'trace_complete': self.complete, 'trace_truncation': self.truncation,
                 'traced_events': len(self.events), 'traced_resets': len(self.resets), 'traced_keys': len(self.keys),
-                'limits': {'events_including_resets': self.MAX_EVENTS, 'keys': self.MAX_KEYS, 'readers': self.MAX_READERS},
+                'traced_budget_changes': len(self.budget_events),
+                'limits': {'events_including_resets': self.MAX_EVENTS, 'budget_changes_share_event_limit': True,
+                    'keys': self.MAX_KEYS, 'readers': self.MAX_READERS},
                 'native_policy': self.native_policy,
                 'policy_labels': {'original': 'prior_cache_all_baseline', 'skip_manifest': 'exclude_manifest_admission'},
                 'native_replay_match_counter': ('actual_vs_' + self.native_policy + '_hit_mismatches'
                     if self.native_policy in ('original', 'skip_manifest') else None),
-                'replay_scope': 'Exact recorded prefix, seeded from observed native cache; alternative is request-count simulation only',
+                'replay_scope': 'Exact recorded prefix with observed budget changes, seeded from native cache; alternative is request-count simulation only',
                 'native_cache_or_return_values_changed': False}
             if trace:
                 result.update(key_columns=['sha256_of_exact_reader_commit_path', 'reader', 'category', 'bytes'],
                     event_columns=['key_index', 'actual_hit'], keys=list(self.keys), events=list(self.events),
-                    resets=list(self.resets), initial_cache_key_indices=list(self.initial))
+                    resets=list(self.resets), initial_cache_key_indices=list(self.initial),
+                    budget_event_columns=['event_offset', 'reader', 'generation', 'blob_budget', 'total_budget', 'member_budget'],
+                    budget_events=list(self.budget_events))
             return result
 
     def minute_lines(self, snapshot=None):
@@ -251,9 +305,19 @@ class ReaderCacheObservation:
                     'prefix_bytes': reader[policy + '_bytes'], 'manifest_bytes': counts['manifest'],
                     'transport_bytes': counts['transport']}
             lines.append(line('profile_cache_reader', {'id': reader['number'], 'native': snapshot['native_policy'],
-                'budget': reader['budget'], 'close': reader['close_calls'],
+                'budget': reader['budget'], 'total_budget': reader['total_budget'],
+                'member_budget': reader['member_budget'], 'budget_changes': reader['budget_changes'],
+                'prefix_budget': reader['replay_budget_at_prefix'],
+                'close': reader['close_calls'],
                 'close_with_process': reader['close_with_process'], 'replay_prefix_only': not snapshot['trace_complete'],
                 **policies}, 800))
+            if 'member_cache' in reader:
+                aliases = {'current_bytes': 'bytes', 'peak_bytes': 'peak', 'current_entries': 'sources',
+                    'indexed_paths': 'paths', 'current_proved_members': 'proved', 'index_charge_bytes': 'index_charge',
+                    'proof_charge_bytes': 'proof_charge', 'hits': 'hits', 'misses': 'misses', 'evictions': 'evictions',
+                    'total_cache_bytes': 'total_budget', 'blob_cache_bytes': 'blob_budget', 'budget_bytes': 'member_budget'}
+                lines.append(line('profile_member_cache', {'id': reader['number'], **{
+                    alias: reader['member_cache'][key] for key, alias in aliases.items() if key in reader['member_cache']}}, 400))
         return lines
 
 
@@ -295,7 +359,8 @@ def budget_final_output(out):
     its unchanged gate still rejects oversized required results.
     """
     snapshot = out.get('reader_cache_observation', {})
-    optional = ('key_columns', 'event_columns', 'keys', 'events', 'resets', 'initial_cache_key_indices')
+    optional = ('key_columns', 'event_columns', 'keys', 'events', 'resets', 'initial_cache_key_indices',
+        'budget_event_columns', 'budget_events')
     omitted = [name for name in optional if name in snapshot]
     for name in omitted:
         del snapshot[name]
@@ -485,6 +550,7 @@ def main(argv=None):
     stop = threading.Event()
     main_ident = threading.get_ident()
     expired = False
+    native_completed = False
     profiler = cProfile.Profile()
     cache_observation = ReaderCacheObservation(getattr(history_observed, 'FixedStateReader', None), native_policy='skip_manifest')
 
@@ -564,12 +630,20 @@ def main(argv=None):
             require(out['prewarm']['unique_nodes'] == len(inventory)
                     and out['prewarm']['closure_inventory_sha256'] == out['frozen_inventory_sha256'],
                     'prewarm_native_inventory_mismatch')
-        out['status'] = 'diagnostic_completed_with_stated_scope'
+        # Path.resolve(strict=False) can suppress OSError. The deadline must
+        # survive such native fallbacks, and elapsed time remains a separate
+        # gate even if a lower layer intentionally catches BaseException.
+        if expired or time.monotonic() - started > args.deadline_seconds:
+            expired = True
+            raise ProfileDeadline('bounded_diagnostic_deadline')
         progress('native_freeze_completed', frozen_originals=len(inventory))
-    except Exception as exc:
+        native_completed = True
+    except (Exception, ProfileDeadline) as exc:
+        expired = expired or isinstance(exc, ProfileDeadline)
         out.update(status='diagnostic_deadline' if expired else 'diagnostic_incomplete',
                    exception_class=type(exc).__name__,
-                   error_code=str(exc) if isinstance(exc, ProfileError) else 'native_diagnostic_failure',
+                   error_code=('bounded_diagnostic_deadline' if expired else
+                       (str(exc) if isinstance(exc, ProfileError) else 'native_diagnostic_failure')),
                    failed_stage=out['active_stage']['stage'])
     finally:
         profiler.disable()
@@ -585,7 +659,21 @@ def main(argv=None):
             out['reader_cache_observation'] = cache_observation.snapshot()
         out['profile_functions'] = profile_rows(profiler)
         out['ended_at'] = datetime.now(timezone.utc).isoformat()
-        out['elapsed_seconds'] = round(time.monotonic()-started, 3)
+        elapsed = time.monotonic() - started
+        exceeded = elapsed > args.deadline_seconds
+        out['elapsed_seconds'] = round(elapsed, 3)
+        out['deadline_observation'] = {'limit_seconds': args.deadline_seconds,
+            'expired_flag': expired, 'unrounded_elapsed_exceeded_limit': exceeded,
+            'cleanup_included_in_elapsed_gate': True}
+        if expired or exceeded:
+            if out['status'] == 'diagnostic_incomplete':
+                out['prior_native_failure'] = {key: out[key] for key in
+                    ('status', 'exception_class', 'error_code', 'failed_stage') if key in out}
+            out.update(status='diagnostic_deadline', error_code='bounded_diagnostic_deadline',
+                exception_class='ProfileDeadline',
+                failed_stage='final_cleanup' if native_completed else out['active_stage']['stage'])
+        elif native_completed:
+            out['status'] = 'diagnostic_completed_with_stated_scope'
         budget_final_output(out)
         flush()
     print(json.dumps(out, ensure_ascii=False, allow_nan=False), flush=True)

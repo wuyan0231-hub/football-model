@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import fnmatch
 import atexit
+from bisect import bisect_left
 from collections import OrderedDict
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -46,6 +47,11 @@ _VERIFIED_COMMITS = set()
 _READERS = OrderedDict()
 _READER_SCOPE = ContextVar("fixed_history_reader", default=None)
 _CATALOG_SCOPE = ContextVar("verified_history_catalog", default=None)
+READER_CACHE_BYTES = 64 * 1024 * 1024
+MEMBER_CACHE_BYTES = 8 * 1024 * 1024
+MEMBER_CACHE_MAX_PATHS = 250000
+MEMBER_CACHE_MAX_SOURCES = 128
+_MEMBER_FIELDS = ("path", "raw_sha256", "raw_bytes", "blob_sha256", "compressed_bytes")
 
 # A depth-1 fetch has no blob filter: a missing source may require the whole
 # immutable transport snapshot, not merely the selected logical original.
@@ -88,14 +94,141 @@ class FixedStateReader:
     Repeated references reuse exact immutable transport bytes.  Callers still
     verify the saved compressed and raw fingerprints on every logical read.
     """
-    def __init__(self, repo, state_commit, *, cache_bytes=64 * 1024 * 1024):
+    def __init__(self, repo, state_commit, *, cache_bytes=READER_CACHE_BYTES):
         self.repo = _safe_path(repo)
         self.state_commit = state_commit
         self.cache_bytes = cache_bytes
+        self.total_cache_bytes = cache_bytes
+        self.member_cache_budget_bytes = 0
+        self.cache_budget_generation = 0
+        self._member_scope = None
+        self._member_cache = OrderedDict()
+        self._member_paths = None
+        self._member_index_charge = 0
+        self._member_cached_bytes = 0
+        self._member_peak_bytes = self._member_peak_entries = 0
+        self._member_hits = self._member_misses = self._member_evictions = 0
         self._cache = OrderedDict()
         self._cached_bytes = 0
         self._process = None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
+
+    def _reserve_members(self, session):
+        with self._lock:
+            if self._member_scope is session:
+                return True
+            # Custom small readers retain their existing admission semantics.
+            if (self._member_scope is not None or self.total_cache_bytes != READER_CACHE_BYTES
+                    or self.cache_bytes != self.total_cache_bytes
+                    or len(session.entries) > MEMBER_CACHE_MAX_PATHS
+                    or 20 * len(session.entries) + 1024 > MEMBER_CACHE_BYTES):
+                return False
+            self.cache_bytes = self.total_cache_bytes - MEMBER_CACHE_BYTES
+            while self._cache and self._cached_bytes > self.cache_bytes:
+                _, raw = self._cache.popitem(last=False)
+                self._cached_bytes -= len(raw)
+            self.member_cache_budget_bytes = MEMBER_CACHE_BYTES
+            self.cache_budget_generation += 1
+            self._member_scope = session
+            session.member_readers.add(self)
+            return True
+
+    def _clear_members(self):
+        self._member_cache.clear()
+        self._member_paths = None
+        self._member_index_charge = 0
+        self._member_cached_bytes = 0
+
+    def _release_members(self, session):
+        with self._lock:
+            if self._member_scope is session:
+                self._clear_members()
+                self._member_scope = None
+                self.member_cache_budget_bytes = 0
+                self.cache_bytes = self.total_cache_bytes
+                self.cache_budget_generation += 1
+
+    def _member(self, session, key, path):
+        with self._lock:
+            if self._member_scope is not session:
+                return None
+            value = self._member_cache.get(key)
+            if value is None or self._member_paths is None:
+                self._member_misses += 1
+                return False
+            offset = bisect_left(self._member_paths, path)
+            if (offset >= len(self._member_paths) or self._member_paths[offset] != path
+                    or not value[0][offset // 8] & (1 << (offset % 8))):
+                self._member_misses += 1
+                return False
+            self._member_hits += 1
+            self._member_cache.move_to_end(key)
+            return True
+
+    def _remember_members(self, session, key, index):
+        with self._lock:
+            if self._member_scope is not session or session.failure:
+                return
+            if key in self._member_cache:
+                self._member_cache.move_to_end(key)
+                return
+            count = len(session.entries)
+            index_charge = 20 * count + 1024
+            # The borrowed-string sorted tuple reserves the construction peak
+            # (list, sort scratch and tuple). Each source reserves both its
+            # temporary bytearray and immutable bytes, plus keys/slots/headers.
+            charge = 1024 + sys.getsizeof(key) + sum(map(sys.getsizeof, key)) + 2 * ((count + 7) // 8)
+            if (count > MEMBER_CACHE_MAX_PATHS or MEMBER_CACHE_MAX_SOURCES < 1
+                    or index_charge + charge > self.member_cache_budget_bytes):
+                return
+            while self._member_cache and (len(self._member_cache) >= MEMBER_CACHE_MAX_SOURCES
+                    or self._member_cached_bytes + charge > self.member_cache_budget_bytes):
+                _, (_, previous, _) = self._member_cache.popitem(last=False)
+                self._member_cached_bytes -= previous
+                self._member_evictions += 1
+            if self._member_paths is None:
+                self._member_index_charge = index_charge
+                self._member_cached_bytes = index_charge
+                try:
+                    self._member_paths = tuple(sorted(session.entries))
+                except BaseException:
+                    self._clear_members()
+                    raise
+            self._member_cached_bytes += charge
+            self._member_peak_bytes = max(self._member_peak_bytes, self._member_cached_bytes)
+            try:
+                bits = bytearray((count + 7) // 8)
+                proved = 0
+                for offset, path in enumerate(self._member_paths):
+                    pinned = session.entries[path]
+                    if (pinned["codec"] == "gzip-single-member" and pinned["state_commit"] == key[1]
+                            and pinned["manifest_sha256"] == key[2]):
+                        expected = {field: pinned[field] for field in _MEMBER_FIELDS}
+                        # Equality includes the complete exact five-field shape;
+                        # pinned catalog validation binds the four routing fields.
+                        if index.get(path) == expected:
+                            bits[offset // 8] |= 1 << (offset % 8)
+                            proved += 1
+                self._member_cache[key] = (bytes(bits), charge, proved)
+            except BaseException:
+                self._member_cache.pop(key, None)
+                self._member_cached_bytes -= charge
+                raise
+            self._member_peak_entries = max(self._member_peak_entries, len(self._member_cache))
+
+    def member_cache_metrics(self):
+        """Bounded counters only; safe during an internal close under _blob."""
+        with self._lock:
+            return {"current_bytes": self._member_cached_bytes, "current_entries": len(self._member_cache),
+                    "peak_bytes": self._member_peak_bytes, "peak_entries": self._member_peak_entries,
+                    "hits": self._member_hits, "misses": self._member_misses, "evictions": self._member_evictions,
+                    "budget_bytes": self.member_cache_budget_bytes, "total_cache_bytes": self.total_cache_bytes,
+                    "blob_cache_bytes": self.cache_bytes, "budget_generation": self.cache_budget_generation,
+                    "indexed_paths": len(self._member_paths) if self._member_paths is not None else 0,
+                    "current_proved_members": sum(value[2] for value in self._member_cache.values()),
+                    "index_charge_bytes": self._member_index_charge,
+                    "proof_charge_bytes": self._member_cached_bytes - self._member_index_charge,
+                    "max_paths": MEMBER_CACHE_MAX_PATHS, "max_sources": MEMBER_CACHE_MAX_SOURCES}
 
     def _blob(self, commit, relative, *, missing=False):
         if any(ord(c) < 32 for c in relative):
@@ -189,15 +322,19 @@ class FixedStateReader:
             _READER_SCOPE.reset(token)
 
     def close(self):
-        process, self._process = self._process, None
-        if process is not None:
-            try:
-                process.kill()
-            except ProcessLookupError:
-                pass
-            process.communicate()
-        self._cache.clear()
-        self._cached_bytes = 0
+        with self._lock:
+            process, self._process = self._process, None
+            if process is not None:
+                try:
+                    process.kill()
+                except ProcessLookupError:
+                    pass
+                process.communicate()
+            self._cache.clear()
+            self._cached_bytes = 0
+            # _blob also closes before its first process starts. Keep an active
+            # scope's reservation; only scope exit returns the full blob budget.
+            self._clear_members()
 
     def __enter__(self):
         return self
@@ -372,9 +509,16 @@ class _VerifiedCatalogReadSession:
         self.offline_repo = None
         self.source_repo = None
         self.failure = None
+        self.member_readers = set()
+
+    def clear_members(self):
+        for reader in tuple(self.member_readers):
+            reader._release_members(self)
+        self.member_readers.clear()
 
     def fail(self, reason):
         self.failure = self.failure or reason
+        self.clear_members()
         raise StorageError(reason)
 
     def pin(self, path, raw=None, *, limit=MAX_FILE_BYTES):
@@ -514,7 +658,10 @@ def verified_catalog_read_session(runtime):
         else:
             session.finish()
     finally:
-        _CATALOG_SCOPE.reset(token)
+        try:
+            session.clear_members()
+        finally:
+            _CATALOG_SCOPE.reset(token)
 
 
 def _catalog(runtime):
@@ -821,13 +968,40 @@ def _state_catalog(repo, commit):
     return _STATE_CATALOG_CACHE[key]
 
 
+def _manifest_member(repo, entry):
+    """Check one member, reusing only successful immutable scoped projections."""
+    expected = {key: entry[key] for key in _MEMBER_FIELDS}
+    session = _CATALOG_SCOPE.get()
+    reader = cache_key = None
+    if session is not None:
+        repo = _safe_path(repo)
+        session.check_repo_binding(repo)
+        if session.failure:
+            raise StorageError(session.failure)
+        pinned = session.entries.get(entry["path"])
+        git_marker = session.git_markers.get(repo / ".git")
+        if (session.offline_repo is None and git_marker is not None and pinned == entry
+                and entry["codec"] == "gzip-single-member"):
+            reader = _reader(repo, entry["state_commit"])
+            if reader._reserve_members(session):
+                cache_key = (str(repo), entry["state_commit"], entry["manifest_sha256"])
+                if reader._member(session, cache_key, entry["path"]):
+                    if tuple(pinned[key] for key in _MEMBER_FIELDS) != tuple(expected[key] for key in _MEMBER_FIELDS):
+                        raise StorageError("历史原件与固定来源清单不符，已停止。")
+                    return None
+    _, index = _manifest_index(repo, entry["state_commit"], entry["manifest_sha256"])
+    if index.get(entry["path"]) != expected:
+        raise StorageError("历史原件与固定来源清单不符，已停止。")
+    if cache_key is not None:
+        return reader, session, cache_key, index
+    return None
+
+
 def _entry_body(repo, entry, seen):
     commit = entry["state_commit"]
+    member = None
     if entry["codec"] == "gzip-single-member":
-        _, index = _manifest_index(repo, commit, entry["manifest_sha256"])
-        expected = {key: entry[key] for key in ("path", "raw_sha256", "raw_bytes", "blob_sha256", "compressed_bytes")}
-        if index.get(entry["path"]) != expected:
-            raise StorageError("历史原件与固定来源清单不符，已停止。")
+        member = _manifest_member(repo, entry)
         blob = _git_bytes(repo, commit, entry["transport_path"])
         if len(blob) != entry["compressed_bytes"] or _sha(blob) != entry["blob_sha256"]:
             raise StorageError("历史压缩原件长度或指纹不符，已停止。")
@@ -838,6 +1012,10 @@ def _entry_body(repo, entry, seen):
         raise StorageError("历史恢复原件长度或指纹不符，已停止。")
     _manifest_json(raw)
     _scan_secret(raw)
+    if member is not None:
+        reader, session, key, index = member
+        session.check_repo_binding(_safe_path(repo))
+        reader._remember_members(session, key, index)
     return raw
 
 

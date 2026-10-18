@@ -7,6 +7,8 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import sys
+import types
 import unittest
 from unittest.mock import patch
 
@@ -86,16 +88,329 @@ class CatalogReadSessionTests(unittest.TestCase):
             token = history._READER_SCOPE.set(reader)
             try:
                 with patch.object(history, "_expand", wraps=history._expand) as expand, \
-                        patch.object(history, "_manifest_index", wraps=history._manifest_index) as manifest:
+                        patch.object(history, "_manifest_index", wraps=history._manifest_index) as manifest, \
+                        patch.object(history, "_manifest_member", wraps=history._manifest_member) as member:
                     with history.verified_catalog_read_session(self.runtime):
                         for _ in range(3):
                             self.assertEqual(history.read_bytes(self.runtime / self.name), self.raw)
+                        self.assertEqual(reader.cache_bytes, 56 * 1024 * 1024)
+                        self.assertEqual(reader.member_cache_metrics()["hits"], 2)
                     self.assertEqual(expand.call_count, 3)
-                    self.assertEqual(manifest.call_count, 3)
+                    self.assertEqual(member.call_count, 3)
+                    self.assertEqual(manifest.call_count, 1)
                 self.assertEqual(reader.cache_bytes, 64 * 1024 * 1024)
+                self.assertEqual(reader.member_cache_metrics()["current_entries"], 0)
                 self.assertNotIn((self.oid, "state_storage.json"), reader._cache)
             finally:
                 history._READER_SCOPE.reset(token)
+
+    def test_member_reservation_evicts_existing_payload_and_survives_initial_close(self):
+        with history.FixedStateReader(self.repo, self.oid) as reader:
+            # Exercise admission before a batch process exists, as production
+            # does; _blob's first internal close must keep the reservation.
+            large = b"x" * (30 * 1024 * 1024)
+            reader._cache[(self.oid, "one")] = large
+            reader._cache[(self.oid, "two")] = large
+            reader._cached_bytes = 2 * len(large)
+            token = history._READER_SCOPE.set(reader)
+            try:
+                with history.verified_catalog_read_session(self.runtime) as session:
+                    self.assertTrue(reader._reserve_members(session))
+                    self.assertEqual(reader._cached_bytes, len(large))
+                    self.assertEqual(history.read_bytes(self.runtime / self.name), self.raw)
+                    self.assertEqual(reader.cache_bytes, 56 * 1024 * 1024)
+                    self.assertLessEqual(reader._cached_bytes, reader.cache_bytes)
+                    metrics = reader.member_cache_metrics()
+                    self.assertEqual(metrics["current_entries"], 1)
+                    self.assertLessEqual(reader._cached_bytes + metrics["current_bytes"], reader.total_cache_bytes)
+                    self.assertEqual(reader.cache_budget_generation, 1)
+                    reader.close()
+                    self.assertEqual(reader.member_cache_metrics()["current_entries"], 0)
+                    self.assertEqual(reader.member_cache_budget_bytes, 8 * 1024 * 1024)
+                    self.assertEqual(reader.cache_bytes, 56 * 1024 * 1024)
+                    self.assertEqual(history.read_bytes(self.runtime / self.name), self.raw)
+                self.assertEqual(reader.cache_bytes, reader.total_cache_bytes)
+                self.assertEqual(reader.member_cache_budget_bytes, 0)
+                self.assertEqual(reader.cache_budget_generation, 2)
+            finally: history._READER_SCOPE.reset(token)
+
+    def test_member_cache_has_deep_byte_and_entry_bounds_with_oversize_opt_out(self):
+        paths = ["advanced_models/inputs/" + f"{i:064x}" + ".json" for i in range(108665)]
+        session = types.SimpleNamespace(member_readers=set(), failure=None,
+            entries=dict.fromkeys(paths, {"codec": "identity"}))
+        with history.FixedStateReader(self.repo, self.oid) as reader:
+            self.assertTrue(reader._reserve_members(session))
+            for i in range(160):
+                key = ("库" * 40000 + str(i), self.oid, f"{i:064x}")
+                reader._remember_members(session, key, {})
+            metrics = reader.member_cache_metrics()
+            self.assertGreater(metrics["evictions"], 0)
+            self.assertLessEqual(metrics["peak_bytes"], history.MEMBER_CACHE_BYTES)
+            self.assertLessEqual(metrics["peak_entries"], history.MEMBER_CACHE_MAX_SOURCES)
+            self.assertEqual(metrics["indexed_paths"], 108665)
+            self.assertEqual(metrics["index_charge_bytes"], 20 * 108665 + 1024)
+            self.assertEqual(metrics["index_charge_bytes"] + metrics["proof_charge_bytes"], metrics["current_bytes"])
+            original_path_ids = {id(path) for path in paths}
+            self.assertTrue(all(id(path) in original_path_ids for path in reader._member_paths))
+            seen = set()
+            def deep_size(value):
+                if id(value) in seen: return 0
+                seen.add(id(value)); total = sys.getsizeof(value)
+                if isinstance(value, dict):
+                    total += sum(deep_size(k) + deep_size(v) for k, v in value.items())
+                elif isinstance(value, tuple): total += sum(map(deep_size, value))
+                return total
+            self.assertLessEqual(deep_size(reader._member_cache) + sys.getsizeof(reader._member_paths), metrics["current_bytes"])
+            oversized = ("x" * history.MEMBER_CACHE_BYTES, self.oid, "d" * 64)
+            reader._remember_members(session, oversized, {})
+            self.assertNotIn(oversized, reader._member_cache)
+            reader._clear_members()
+            with patch.object(history, "MEMBER_CACHE_MAX_SOURCES", 2):
+                for i in range(3):
+                    reader._remember_members(session, ("repo", "commit", str(i)), {})
+                self.assertEqual(len(reader._member_cache), 2)
+            reader._release_members(session)
+            self.assertEqual(reader.member_cache_metrics()["current_bytes"], 0)
+
+    def test_member_cache_scope_concurrency_and_custom_readers_opt_out(self):
+        first = types.SimpleNamespace(member_readers=set(), failure=None, entries={})
+        second = types.SimpleNamespace(member_readers=set(), failure=None, entries={})
+        with history.FixedStateReader(self.repo, self.oid) as reader:
+            self.assertTrue(reader._reserve_members(first))
+            self.assertFalse(reader._reserve_members(second))
+            self.assertEqual(reader.cache_bytes + reader.member_cache_budget_bytes, reader.total_cache_bytes)
+            reader._release_members(first)
+            self.assertTrue(reader._reserve_members(second))
+            reader._release_members(second)
+        with history.FixedStateReader(self.repo, self.oid, cache_bytes=128) as reader:
+            self.assertFalse(reader._reserve_members(first))
+            self.assertEqual(reader.cache_bytes, 128)
+        with history.FixedStateReader(self.repo, self.oid) as reader:
+            with patch.object(history, "MEMBER_CACHE_MAX_PATHS", -1):
+                self.assertFalse(reader._reserve_members(first))
+            with patch.object(history, "MEMBER_CACHE_BYTES", 100):
+                self.assertFalse(reader._reserve_members(first))
+            self.assertEqual(reader.cache_bytes, history.READER_CACHE_BYTES)
+
+    def test_member_hits_cannot_hide_route_hash_or_five_field_changes(self):
+        with history.FixedStateReader(self.repo, self.oid) as reader:
+            token = history._READER_SCOPE.set(reader)
+            try:
+                with history.verified_catalog_read_session(self.runtime):
+                    self.assertEqual(history.read_bytes(self.runtime / self.name), self.raw)
+                    entry = dict(history._catalog(self.runtime)[self.name])
+                    before = reader.member_cache_metrics()["current_entries"]
+                    for field, value in (("manifest_sha256", "f" * 64), ("raw_bytes", len(self.raw) + 1),
+                                         ("raw_sha256", "e" * 64), ("path", self.name + "other"),
+                                         ("state_commit", "d" * 40)):
+                        changed = {**entry, field: value}
+                        with self.subTest(field=field), \
+                                patch.object(history, "_fetch_cold_commit", side_effect=StorageError("unknown_source")), \
+                                self.assertRaises((StorageError, FileNotFoundError)):
+                            history._entry_body(self.repo, changed, set())
+                        self.assertEqual(reader.member_cache_metrics()["current_entries"], before)
+                    key = next(iter(reader._member_cache))
+                    bits, charge, _ = reader._member_cache[key]
+                    reader._member_cache[key] = (bytes(len(bits)), charge, 0)
+                    with patch.object(history, "_manifest_index", wraps=history._manifest_index) as manifest:
+                        self.assertEqual(history.read_bytes(self.runtime / self.name), self.raw)
+                        self.assertEqual(manifest.call_count, 1)
+            finally: history._READER_SCOPE.reset(token)
+
+    def test_member_hits_keep_transport_expand_raw_json_and_secret_validation(self):
+        with history.FixedStateReader(self.repo, self.oid) as reader:
+            token = history._READER_SCOPE.set(reader)
+            try:
+                with history.verified_catalog_read_session(self.runtime):
+                    self.assertEqual(history.read_bytes(self.runtime / self.name), self.raw)
+                    entry = history._catalog(self.runtime)[self.name]
+                    payload = reader._cache[(self.oid, entry["transport_path"])]
+                    reader._cache[(self.oid, entry["transport_path"])] = b"x" * len(payload)
+                    with self.assertRaisesRegex(StorageError, "压缩原件长度或指纹不符"):
+                        history.read_bytes(self.runtime / self.name)
+                    reader._cache[(self.oid, entry["transport_path"])] = payload
+                    for replacement, message in ((self.raw + b" ", "恢复原件长度或指纹不符"),):
+                        with patch.object(history, "_expand", return_value=replacement):
+                            with self.assertRaisesRegex(StorageError, message):
+                                history.read_bytes(self.runtime / self.name)
+                    with patch.object(history, "_manifest_json", wraps=history._manifest_json) as parse, \
+                            patch.object(history, "_scan_secret", wraps=history._scan_secret) as scan, \
+                            patch.object(history, "_expand", wraps=history._expand) as expand:
+                        for _ in range(3): self.assertEqual(history.read_bytes(self.runtime / self.name), self.raw)
+                        self.assertEqual(expand.call_count, 3)
+                        self.assertEqual(parse.call_count, 3)
+                        self.assertEqual(scan.call_count, 3)
+                self.assertEqual(reader.member_cache_metrics()["current_entries"], 0)
+            finally: history._READER_SCOPE.reset(token)
+
+    def test_member_cache_cleared_on_business_failure_and_source_binding_change(self):
+        with history.FixedStateReader(self.repo, self.oid) as reader:
+            token = history._READER_SCOPE.set(reader)
+            try:
+                with self.assertRaisesRegex(ValueError, "business"):
+                    with history.verified_catalog_read_session(self.runtime):
+                        history.read_bytes(self.runtime / self.name)
+                        raise ValueError("business")
+                self.assertEqual(reader.member_cache_metrics()["current_entries"], 0)
+                self.assertEqual(reader.cache_bytes, history.READER_CACHE_BYTES)
+                with self.assertRaisesRegex(StorageError, "binding_changed"):
+                    with history.verified_catalog_read_session(self.runtime):
+                        history.read_bytes(self.runtime / self.name)
+                        marker = self.repo / ".git"
+                        moved = self.repo / "original-git"
+                        marker.rename(moved); shutil.copytree(moved, marker)
+                        history.read_bytes(self.runtime / self.name)
+                self.assertEqual(reader.member_cache_metrics()["current_entries"], 0)
+                self.assertEqual(reader.cache_bytes, history.READER_CACHE_BYTES)
+            finally: history._READER_SCOPE.reset(token)
+
+    def test_member_cache_offline_and_unscoped_keep_original_path(self):
+        root = self.offline()
+        with patch.object(history.FixedStateReader, "_reserve_members", side_effect=AssertionError("ineligible")):
+            self.assertEqual(history.read_bytes(self.runtime / self.name), self.raw)
+            with history.verified_catalog_read_session(root / "runtime"):
+                for _ in range(2): self.assertEqual(history.read_bytes(root / "runtime" / self.name), self.raw)
+
+    def test_member_cache_reuses_three_real_git_sources_with_two_full_indexes(self):
+        entries, originals = {}, []
+        for i in range(3):
+            source = self.base / ("source-" + str(i))
+            group = []
+            for j in range(200):
+                name = "advanced_models/inputs/" + f"{i * 200 + j:064x}" + ".json"
+                raw = encoded({"original": i * 200 + j})
+                path = source / name; path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(raw)
+                group.append((name, raw))
+            packed = self.base / ("packed-" + str(i))
+            packed.mkdir()
+            pack_runtime(source, packed)
+            manifest_raw = (packed / "state_storage.json").read_bytes()
+            manifest = json.loads(manifest_raw)
+            shutil.copy2(packed / "state_storage.json", self.repo / "state_storage.json")
+            for blob in (packed / "state_archives").iterdir():
+                shutil.copy2(blob, self.repo / "state_archives" / blob.name)
+            self.git("add", "state_storage.json", "state_archives")
+            self.git("commit", "-qm", "another immutable source")
+            commit = self.git("rev-parse", "HEAD").decode().strip()
+            for item in manifest["entries"]:
+                entries[item["path"]] = history._transport_entry(item["path"], item, commit, digest(manifest_raw))
+            originals.append(group)
+        history._write_catalog(self.runtime, entries)
+        history._MANIFEST_CACHE.clear()
+        with history.FixedStateReader(self.repo, self.oid) as reader:
+            token = history._READER_SCOPE.set(reader)
+            try:
+                with patch.object(history, "_manifest_index", wraps=history._manifest_index) as manifest, \
+                        patch.object(history, "_expand", wraps=history._expand) as expand:
+                    with history.verified_catalog_read_session(self.runtime):
+                        # Every initial edge is a new path, interleaved across
+                        # three commits. A lazy per-request tuple cache would
+                        # still reload all 600 complete source manifests.
+                        for group in zip(*originals):
+                            for name, raw in group:
+                                self.assertEqual(history.read_bytes(self.runtime / name), raw)
+                        self.assertEqual(manifest.call_count, 3)
+                        self.assertEqual(expand.call_count, 600)
+                        self.assertLessEqual(len(history._MANIFEST_CACHE), 2)
+                        self.assertEqual(reader.member_cache_metrics()["hits"], 597)
+                        self.assertEqual(reader.member_cache_metrics()["current_entries"], 3)
+                        self.assertEqual(reader.member_cache_metrics()["current_proved_members"], 600)
+                self.assertEqual(reader.member_cache_metrics()["current_entries"], 0)
+            finally: history._READER_SCOPE.reset(token)
+
+    def test_member_first_read_failures_never_admit_projection(self):
+        with history.FixedStateReader(self.repo, self.oid) as reader:
+            token = history._READER_SCOPE.set(reader)
+            try:
+                with history.verified_catalog_read_session(self.runtime):
+                    with patch.object(history, "_expand", return_value=self.raw + b" "):
+                        with self.assertRaisesRegex(StorageError, "恢复原件长度或指纹不符"):
+                            history.read_bytes(self.runtime / self.name)
+                    self.assertEqual(reader.member_cache_metrics()["current_entries"], 0)
+                    self.assertEqual(history.read_bytes(self.runtime / self.name), self.raw)
+                    self.assertEqual(reader.member_cache_metrics()["current_entries"], 1)
+            finally: history._READER_SCOPE.reset(token)
+        original = dict(history._catalog(self.runtime)[self.name])
+        duplicate = {**self.manifest, "entries": self.manifest["entries"] * 2}
+        for raw, expected_sha, message in ((encoded(self.manifest), "f" * 64, "来源清单指纹不符"),
+                (b"{}", None, "来源清单无效"),
+                (encoded(duplicate), None, "路径重复或无效")):
+            (self.repo / "state_storage.json").write_bytes(raw)
+            self.git("add", "state_storage.json"); self.git("commit", "--allow-empty", "-qm", "invalid source")
+            commit = self.git("rev-parse", "HEAD").decode().strip()
+            entry = {**original, "state_commit": commit, "manifest_sha256": expected_sha or digest(raw)}
+            history._write_catalog(self.runtime, {self.name: entry})
+            with history.FixedStateReader(self.repo, commit) as reader:
+                token = history._READER_SCOPE.set(reader)
+                try:
+                    with self.assertRaisesRegex(StorageError, message):
+                        with history.verified_catalog_read_session(self.runtime):
+                            history.read_bytes(self.runtime / self.name)
+                    self.assertEqual(reader.member_cache_metrics()["current_entries"], 0)
+                    self.assertEqual(reader.cache_bytes, history.READER_CACHE_BYTES)
+                finally: history._READER_SCOPE.reset(token)
+
+    def test_bulk_proof_zero_bits_keep_unrelated_bad_entries_local(self):
+        other = "advanced_models/inputs/" + "b" * 64 + ".json"
+        original = dict(history._catalog(self.runtime)[self.name])
+        for extra in (None, {"extra": True}, {"raw_bytes": len(self.raw) + 1}):
+            rows = list(self.manifest["entries"])
+            if extra is not None:
+                rows.append({**rows[0], "path": other, **extra})
+            raw = encoded({**self.manifest, "entries": rows})
+            (self.repo / "state_storage.json").write_bytes(raw)
+            self.git("add", "state_storage.json"); self.git("commit", "--allow-empty", "-qm", "partly invalid source")
+            commit = self.git("rev-parse", "HEAD").decode().strip()
+            entries = {name: {**original, "path": name, "state_commit": commit,
+                              "manifest_sha256": digest(raw)} for name in (self.name, other)}
+            history._write_catalog(self.runtime, entries)
+            with history.FixedStateReader(self.repo, commit) as reader:
+                token = history._READER_SCOPE.set(reader)
+                try:
+                    with history.verified_catalog_read_session(self.runtime):
+                        # The unrelated bad/missing member cannot invalidate a
+                        # good requested path or acquire a positive proof bit.
+                        self.assertEqual(history.read_bytes(self.runtime / self.name), self.raw)
+                        self.assertEqual(reader.member_cache_metrics()["current_proved_members"], 1)
+                        with patch.object(history, "_manifest_index", wraps=history._manifest_index) as manifest:
+                            with self.assertRaisesRegex(StorageError, "固定来源清单不符"):
+                                history.read_bytes(self.runtime / other)
+                            self.assertEqual(manifest.call_count, 1)
+                        self.assertEqual(reader.member_cache_metrics()["current_proved_members"], 1)
+                finally: history._READER_SCOPE.reset(token)
+
+    def test_bulk_proof_construction_is_precharged_and_overflow_falls_back(self):
+        entry = dict(history._catalog(self.runtime)[self.name])
+        session = types.SimpleNamespace(member_readers=set(), failure=None, entries={self.name: entry})
+        key = (str(self.repo), self.oid, entry["manifest_sha256"])
+        index = {self.name: {field: entry[field] for field in history._MEMBER_FIELDS}}
+        with history.FixedStateReader(self.repo, self.oid) as reader:
+            self.assertTrue(reader._reserve_members(session))
+            sorted_native, bytearray_native = sorted, bytearray
+            def observed_sort(value):
+                self.assertEqual(reader.member_cache_metrics()["index_charge_bytes"], 20 + 1024)
+                self.assertEqual(reader.member_cache_metrics()["current_bytes"], 20 + 1024)
+                return sorted_native(value)
+            def observed_bits(size):
+                metrics = reader.member_cache_metrics()
+                self.assertGreater(metrics["proof_charge_bytes"], 2 * size)
+                self.assertLessEqual(metrics["current_bytes"], metrics["budget_bytes"])
+                return bytearray_native(size)
+            with patch.object(history, "sorted", observed_sort, create=True), \
+                    patch.object(history, "bytearray", observed_bits, create=True):
+                reader._remember_members(session, key, index)
+            self.assertTrue(reader._member(session, key, self.name))
+            reader._clear_members()
+            with patch.object(history, "MEMBER_CACHE_MAX_SOURCES", 0):
+                reader._remember_members(session, key, index)
+            self.assertEqual(reader.member_cache_metrics()["current_entries"], 0)
+            with patch.object(history, "MEMBER_CACHE_MAX_PATHS", 0):
+                reader._remember_members(session, key, index)
+            self.assertEqual(reader.member_cache_metrics()["current_entries"], 0)
+            reader.member_cache_budget_bytes = 1024
+            reader._remember_members(session, key, index)
+            self.assertEqual(reader.member_cache_metrics()["current_entries"], 0)
+            reader._release_members(session)
 
     def test_manifest_missing_and_invalid_errors_are_preserved(self):
         (self.repo / "state_storage.json").unlink()
