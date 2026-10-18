@@ -4,6 +4,7 @@ on:
   workflow_run:
     workflows: ['足球全面特征：补采、训练、未来对照与确认']
     types: [completed]
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -17,14 +18,23 @@ jobs:
   fixed_saved_league:
     if: >-
       github.repository == 'wuyan0231-hub/football-model' &&
-      github.event.workflow_run.id == 38928003279 &&
-      github.event.workflow_run.run_attempt == 2 &&
-      github.event.workflow_run.head_sha == '4ae6764f2502c8892bb892c3a08bf0a34d604b1a' &&
-      github.event.workflow_run.head_branch == 'main' &&
-      github.event.workflow_run.event == 'workflow_dispatch' &&
-      github.event.workflow_run.path == '.github/workflows/advanced-models.yml' &&
       github.event.repository.id == 1380205666 &&
-      github.event.workflow_run.head_repository.id == 1380205666
+      (
+        (
+          github.event_name == 'workflow_dispatch' &&
+          github.ref == 'refs/heads/main'
+        ) ||
+        (
+          github.event_name == 'workflow_run' &&
+          github.event.workflow_run.id == 38928003279 &&
+          github.event.workflow_run.run_attempt == 2 &&
+          github.event.workflow_run.head_sha == '4ae6764f2502c8892bb892c3a08bf0a34d604b1a' &&
+          github.event.workflow_run.head_branch == 'main' &&
+          github.event.workflow_run.event == 'workflow_dispatch' &&
+          github.event.workflow_run.path == '.github/workflows/advanced-models.yml' &&
+          github.event.workflow_run.head_repository.id == 1380205666
+        )
+      )
     strategy:
       fail-fast: false
       max-parallel: 2
