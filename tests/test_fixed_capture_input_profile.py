@@ -674,7 +674,7 @@ class NativeTimingIntegrationTests(unittest.TestCase):
         self.assertNotIn('--prewarm', text)
         self.assertIn('--deadline-seconds 1500', text)
         self.assertIn('--state-commit e55c1dad479990567169341624345db239ed8f4e', text)
-        self.assertIn('--implementation b443defab7ced799e16354126fdfed42cda43f5ac09518a24b9b5711002fe6f4', text)
+        self.assertIn('--implementation f4b3d8aafaf0cea8b8c0d6b557cf9efa5d6da124296c57a561de7d5c8f4e526f', text)
         self.assertIn('--research-implementation 1e311689b3405f64c6ad9636732d2defb7ad67e26b4bc7e04b01a5b1b2b2d6ac', text)
         self.assertIn('--output fixed-capture-native-timing.json', text)
         self.assertIn('name: fixed-capture-native-timing-${{ github.run_id }}-${{ github.run_attempt }}', text)

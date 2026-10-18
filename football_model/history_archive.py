@@ -55,6 +55,7 @@ MEMBER_CACHE_MAX_SOURCES = 128
 _MEMBER_FIELDS = ("path", "raw_sha256", "raw_bytes", "blob_sha256", "compressed_bytes")
 _PATH_IGNORED_ERRNOS = (errno.ENOENT, errno.ENOTDIR, errno.EBADF, errno.ELOOP)
 _PATH_IGNORED_WINERRORS = (21, 123, 1921)
+_NATIVE_PATH_CLASS = type(Path())
 
 # A depth-1 fetch has no blob filter: a missing source may require the whole
 # immutable transport snapshot, not merely the selected logical original.
@@ -91,7 +92,10 @@ def _path_stat_error_ignored(exc):
 
 
 def _safe_path(path):
-    path = Path(path).absolute()
+    # Reuse only an exact native absolute Path value, never filesystem state.
+    # Relative values and custom subclasses retain the original conversion.
+    if type(path) is not _NATIVE_PATH_CLASS or not path.is_absolute():
+        path = Path(path).absolute()
     current = os.fspath(path)
     while True:
         # Match Python 3.12 Path.is_symlink's syscall and error policy while
@@ -547,6 +551,9 @@ class _VerifiedCatalogReadSession:
         raise StorageError(reason)
 
     def pin(self, path, raw=None, *, limit=MAX_FILE_BYTES):
+        return self._pin_with_digest(path, raw, limit=limit)[0]
+
+    def _pin_with_digest(self, path, raw=None, *, limit=MAX_FILE_BYTES):
         path = _safe_path(path)
         before = _file_identity(path)
         if before is not None:
@@ -561,7 +568,7 @@ class _VerifiedCatalogReadSession:
         if path in self.files and self.files[path] != record:
             self.fail("verified_catalog_session_input_changed")
         self.files[path] = record
-        return raw
+        return raw, record[1]
 
     def pin_offline(self, repo, path, raw=None):
         if _safe_path(repo) != self.offline_repo:
@@ -1022,7 +1029,7 @@ def _manifest_member(repo, entry):
     return None
 
 
-def _entry_body(repo, entry, seen):
+def _entry_body(repo, entry, seen, *, with_digest=False):
     commit = entry["state_commit"]
     member = None
     if entry["codec"] == "gzip-single-member":
@@ -1033,7 +1040,10 @@ def _entry_body(repo, entry, seen):
         raw = _expand(blob, entry["raw_bytes"])
     else:
         raw = _read_state_bytes(repo, commit, entry["path"], seen)
-    if len(raw) != entry["raw_bytes"] or _sha(raw) != entry["raw_sha256"]:
+    if len(raw) != entry["raw_bytes"]:
+        raise StorageError("历史恢复原件长度或指纹不符，已停止。")
+    raw_digest = _sha(raw)
+    if raw_digest != entry["raw_sha256"]:
         raise StorageError("历史恢复原件长度或指纹不符，已停止。")
     _manifest_json(raw)
     _scan_secret(raw)
@@ -1041,7 +1051,7 @@ def _entry_body(repo, entry, seen):
         reader, session, key, index = member
         session.check_repo_binding(_safe_path(repo))
         reader._remember_members(session, key, index)
-    return raw
+    return (raw, raw_digest) if with_digest else raw
 
 
 def _read_state_bytes(repo, commit, logical_path, seen):
@@ -1075,6 +1085,20 @@ def read_state_bytes(repo, state_commit, logical_path):
 
 
 def read_bytes(path, *, runtime=None):
+    return _read_bytes(path, runtime=runtime, with_digest=False)
+
+
+def read_bytes_with_digest(path, *, runtime=None):
+    """Return immutable bytes and their actual SHA from this validated read.
+
+    The digest is computed anew for every read, never taken from a catalog or
+    retained across edges. Transport, expansion, JSON and secret checks are
+    identical to read_bytes; callers may also compare this digest to a ref.
+    """
+    return _read_bytes(path, runtime=runtime, with_digest=True)
+
+
+def _read_bytes(path, *, runtime, with_digest):
     path = _safe_path(path)
     root = _find_runtime(path, runtime)
     entry = _catalog(root).get(path.relative_to(root).as_posix()) if root is not None else None
@@ -1083,12 +1107,23 @@ def read_bytes(path, *, runtime=None):
         # Hot inputs remain mutable even when routing is pinned. Read and
         # register the same bytes atomically with respect to file identity;
         # scope exit rejects any later change, including a change then revert.
-        raw = session.pin(path) if session is not None else path.read_bytes()
-        if entry is not None and (_sha(raw) != entry["raw_sha256"] or len(raw) != entry["raw_bytes"]):
+        if session is not None and with_digest:
+            raw, raw_digest = session._pin_with_digest(path)
+            if raw is None:
+                # pin() uses None for absent metadata. An original that
+                # disappears here still cannot acquire a valid byte digest.
+                raw_digest = _sha(raw)
+        else:
+            raw = session.pin(path) if session is not None else path.read_bytes()
+            raw_digest = _sha(raw) if with_digest else None
+        if entry is not None and ((raw_digest if with_digest else _sha(raw)) != entry["raw_sha256"]
+                                  or len(raw) != entry["raw_bytes"]):
             raise StorageError("活动原件与冻结历史目录冲突，已停止。")
-        return raw
+        return (raw, raw_digest) if with_digest else raw
     if entry is None:
         raise FileNotFoundError(path)
+    if with_digest:
+        return _entry_body(_repo(root), entry, set(), with_digest=True)
     return _entry_body(_repo(root), entry, set())
 
 

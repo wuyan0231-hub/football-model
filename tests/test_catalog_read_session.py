@@ -127,6 +127,26 @@ class SafePathTraversalTests(unittest.TestCase):
                 self.assertIs(raised.exception, deadline)
                 self.assertEqual(observed.call_count, 1)
 
+    def test_native_path_reuse_does_not_trust_custom_subclass_methods(self):
+        class UntrustedPath(type(Path())):
+            def is_absolute(self):
+                raise AssertionError("custom absolute predicate must not run")
+            def __fspath__(self):
+                raise AssertionError("custom path conversion must not run")
+            def is_symlink(self):
+                return False
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory); parent = base / "parent"; parent.mkdir()
+            leaf = parent / "file"; leaf.write_bytes(b"{}")
+            link = base / "link"; link.symlink_to(parent, target_is_directory=True)
+            for path in (UntrustedPath(leaf), UntrustedPath("relative/missing"), UntrustedPath(link / "file")):
+                expected, original_calls = self.observed(self.reference, path)
+                actual, calls = self.observed(history._safe_path, path)
+                self.assertEqual(actual, expected)
+                self.assertEqual(calls, original_calls)
+            with self.assertRaisesRegex(StorageError, "符号链接"):
+                history._safe_path(UntrustedPath(link / "file"))
+
     def test_every_call_rechecks_replaced_ancestor_and_restored_symlink(self):
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory); parent = base / "parent"; parent.mkdir()
@@ -191,6 +211,127 @@ class CatalogReadSessionTests(unittest.TestCase):
     def git(self, *args):
         return subprocess.run(["git", "-C", str(self.repo), *args], check=True,
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout
+
+    def test_digest_read_hashes_each_actual_raw_once_and_preserves_all_body_checks(self):
+        with history.FixedStateReader(self.repo, self.oid) as reader:
+            token = history._READER_SCOPE.set(reader)
+            try:
+                with history.verified_catalog_read_session(self.runtime):
+                    history.read_bytes_with_digest(self.runtime / self.name)
+                    with patch.object(history, "_sha", wraps=history._sha) as sha, \
+                            patch.object(history, "_expand", wraps=history._expand) as expand, \
+                            patch.object(history, "_manifest_json", wraps=history._manifest_json) as parse, \
+                            patch.object(history, "_scan_secret", wraps=history._scan_secret) as secret:
+                        for _ in range(3):
+                            raw, actual = history.read_bytes_with_digest(self.runtime / self.name)
+                            self.assertIsInstance(raw, bytes)
+                            self.assertEqual(raw, self.raw)
+                            self.assertEqual(actual, digest(self.raw))
+                        self.assertEqual(sum(call.args[0] == self.raw for call in sha.call_args_list), 3)
+                        self.assertEqual(expand.call_count, 3)
+                        self.assertEqual(parse.call_count, 3)
+                        self.assertEqual(secret.call_count, 3)
+                    self.assertIsInstance(history.read_bytes(self.runtime / self.name), bytes)
+            finally:
+                history._READER_SCOPE.reset(token)
+
+    def test_digest_read_rejects_wrong_body_before_json_and_preserves_business_errors(self):
+        with history.verified_catalog_read_session(self.runtime):
+            history.read_bytes_with_digest(self.runtime / self.name)
+            for read in (history.read_bytes, history.read_bytes_with_digest):
+                with patch.object(history, "_expand", return_value=b"x" * len(self.raw)), \
+                        patch.object(history, "_manifest_json", wraps=history._manifest_json) as parse:
+                    with self.assertRaisesRegex(StorageError, "恢复原件长度或指纹不符"):
+                        read(self.runtime / self.name)
+                    self.assertEqual(parse.call_count, 0)
+                for stage in ("_manifest_json", "_scan_secret"):
+                    error = StorageError("actual body validation failure")
+                    with patch.object(history, stage, side_effect=error):
+                        with self.assertRaises(StorageError) as raised:
+                            read(self.runtime / self.name)
+                        self.assertIs(raised.exception, error)
+
+    def test_digest_hot_read_uses_current_bytes_hash_and_keeps_change_revert_guard(self):
+        path = self.runtime / "hot.json"
+        path.write_bytes(self.raw)
+        with self.assertRaisesRegex(StorageError, "input_changed"):
+            with history.verified_catalog_read_session(self.runtime):
+                with patch.object(history, "_sha", wraps=history._sha) as sha:
+                    for _ in range(3):
+                        self.assertEqual(history.read_bytes_with_digest(path), (self.raw, digest(self.raw)))
+                    self.assertEqual(sum(call.args[0] == self.raw for call in sha.call_args_list), 3)
+                changed = self.raw.replace(b"1", b"9", 1)
+                path.write_bytes(changed)
+                path.write_bytes(self.raw)
+        self.assertIsNone(history._CATALOG_SCOPE.get())
+
+    def test_digest_read_keeps_offline_source_binding_and_identity_routes(self):
+        root = self.offline()
+        with history.verified_catalog_read_session(root / "runtime"):
+            self.assertEqual(history.read_bytes_with_digest(root / "runtime" / self.name),
+                             (self.raw, digest(self.raw)))
+        source = self.repo / "runtime" / self.name
+        source.parent.mkdir(parents=True)
+        source.write_bytes(self.raw)
+        self.git("add", "runtime"); self.git("commit", "-qm", "direct original")
+        commit = self.git("rev-parse", "HEAD").decode().strip()
+        entry = {"path": self.name, "state_commit": commit, "transport_path": "runtime/" + self.name,
+                 "codec": "identity", "raw_sha256": digest(self.raw), "raw_bytes": len(self.raw),
+                 "blob_sha256": digest(self.raw), "compressed_bytes": len(self.raw), "manifest_sha256": None}
+        history._write_catalog(self.runtime, {self.name: entry})
+        with history.verified_catalog_read_session(self.runtime):
+            self.assertEqual(history.read_bytes_with_digest(self.runtime / self.name),
+                             (self.raw, digest(self.raw)))
+
+    def test_digest_read_rejects_transport_corruption_and_changed_git_binding_after_a_hit(self):
+        with history.FixedStateReader(self.repo, self.oid) as reader:
+            token = history._READER_SCOPE.set(reader)
+            try:
+                with self.assertRaisesRegex(StorageError, "binding_changed"):
+                    with history.verified_catalog_read_session(self.runtime):
+                        history.read_bytes_with_digest(self.runtime / self.name)
+                        entry = history._catalog(self.runtime)[self.name]
+                        key = (self.oid, entry["transport_path"])
+                        compressed = reader._cache[key]
+                        reader._cache[key] = b"x" * len(compressed)
+                        with patch.object(history, "_expand", wraps=history._expand) as expand:
+                            with self.assertRaisesRegex(StorageError, "压缩原件长度或指纹不符"):
+                                history.read_bytes_with_digest(self.runtime / self.name)
+                            self.assertEqual(expand.call_count, 0)
+                        reader._cache[key] = compressed
+                        marker = self.repo / ".git"
+                        moved = self.repo / "original-git"
+                        marker.rename(moved); shutil.copytree(moved, marker)
+                        history.read_bytes_with_digest(self.runtime / self.name)
+                self.assertEqual(reader.member_cache_metrics()["current_entries"], 0)
+            finally:
+                history._READER_SCOPE.reset(token)
+
+    def test_freeze_uses_the_digest_from_each_validated_read_without_rehashing_each_edge(self):
+        cutoff = datetime(2025, 1, 2, tzinfo=timezone.utc)
+        ref = {"path": self.name, "sha256": digest(self.raw)}
+        sha = hashlib.sha256
+        freeze = snapshots._guarded_freeze
+        freezer_hashes = 0
+        def raw_hash_count():
+            return sum(call.args[0] == self.raw for call in actual.call_args_list)
+        def counted_freeze(*args, **kwargs):
+            nonlocal freezer_hashes
+            before = raw_hash_count()
+            result = freeze(*args, **kwargs)
+            freezer_hashes += raw_hash_count() - before
+            return result
+        # The actual freezer and capacity guard retain their own checks.
+        # Outside that first-write span, each edge hashes its raw once.
+        with patch.object(hashlib, "sha256", wraps=sha) as actual, \
+                patch.object(history, "_expand", wraps=history._expand) as expand, \
+                patch.object(snapshots, "_guarded_freeze", side_effect=counted_freeze) as freezer:
+            frozen = snapshots.freeze_inputs(self.runtime, self.runtime / "frozen", [ref] * 4, cutoff)
+        self.assertEqual(raw_hash_count() - freezer_hashes, 4)
+        self.assertEqual(freezer.call_count, 1)
+        self.assertEqual(expand.call_count, 4)
+        self.assertEqual(len(frozen), 1)
+        self.assertEqual(Path(frozen[0]["path"]).read_bytes(), self.raw)
 
     def test_manifest_reads_do_not_evict_transport_or_change_git_bytes(self):
         manifest_raw = (self.repo / "state_storage.json").read_bytes()

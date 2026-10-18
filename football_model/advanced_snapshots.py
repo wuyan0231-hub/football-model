@@ -28,6 +28,7 @@ from .feature_snapshots import (HORIZONS, SnapshotError, _bytes, _check_times,
     _write_bytes, snapshot_from_evidence, verify_baseline_capture)
 from .feature_scoring import _path, _read_ref, _pointer, _reference, _raw as _pointer_bytes
 from .history_archive import (read_bytes as history_read_bytes, exists as history_exists,
+    read_bytes_with_digest as history_read_bytes_with_digest,
     _catalog as _history_catalog, _safe_path as _history_safe_path,
     verified_catalog_read_session)
 
@@ -160,8 +161,8 @@ def freeze_inputs(runtime, root, refs, cutoff, *, capacity_guard=None):
             # Validate every edge against the bytes that will actually be
             # frozen and traversed. Reopening a hot pointer after its hash
             # check could otherwise freeze another version of that path.
-            raw = history_read_bytes(path, runtime=runtime)
-            if hashlib.sha256(raw).hexdigest() != ref["sha256"]:
+            raw, actual_digest = history_read_bytes_with_digest(path, runtime=runtime)
+            if actual_digest != ref["sha256"]:
                 raise SnapshotError("advanced_input_hash_mismatch")
             key = p.as_posix()
             if key in saved:
