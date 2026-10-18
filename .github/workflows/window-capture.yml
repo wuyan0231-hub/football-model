@@ -1,12 +1,10 @@
 name: 足球真实首发窗口：单联赛捕获与立即保存
 
 # Bounded supplement. It neither replaces the all-league final short cycle nor
-# changes existing schedules, protocols, parameters or research identity.
-# Cron cannot encode a year: validate gates the real date/time to Oct 17, 2026
-# 10:00Z-11:30Z. Remove this one-date cron after the attempt; never sleep in a lock.
+# changes existing recurring schedules, protocols or parameters. The completed
+# Oct 17 one-date cron is removed. This remains an explicit manual entry point;
+# live candidates must match the reviewed execution fingerprint natively.
 on:
-  schedule:
-    - cron: '0 10 17 10 *'
   workflow_dispatch:
     inputs:
       league:
@@ -19,7 +17,6 @@ on:
         description: 已保存未来比赛ID；必须是真实时点及原协议首发窗口
         required: true
         type: string
-        default: '1557430'
 
 permissions:
   contents: read
@@ -27,12 +24,12 @@ permissions:
 
 jobs:
   validate:
-    if: github.repository == 'wuyan0231-hub/football-model' && (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main'
+    if: github.repository == 'wuyan0231-hub/football-model' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      WINDOW_LEAGUE: ${{ github.event_name == 'schedule' && 'epl' || inputs.league }}
-      WINDOW_MATCH_ID: ${{ github.event_name == 'schedule' && '1557430' || inputs.match_id }}
+      WINDOW_LEAGUE: ${{ inputs.league }}
+      WINDOW_MATCH_ID: ${{ inputs.match_id }}
     outputs:
       proceed: ${{ steps.gate.outputs.proceed }}
     steps:
@@ -60,8 +57,8 @@ jobs:
       PYTHONUNBUFFERED: '1'
       OPENBLAS_NUM_THREADS: '1'
       OMP_NUM_THREADS: '1'
-      WINDOW_LEAGUE: ${{ github.event_name == 'schedule' && 'epl' || inputs.league }}
-      WINDOW_MATCH_ID: ${{ github.event_name == 'schedule' && '1557430' || inputs.match_id }}
+      WINDOW_LEAGUE: ${{ inputs.league }}
+      WINDOW_MATCH_ID: ${{ inputs.match_id }}
     outputs:
       saved_state: ${{ steps.receipt.outputs.saved_state }}
       capture_ref: ${{ steps.receipt.outputs.capture_ref }}
@@ -77,7 +74,7 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
       - run: python -m pip install -r requirements.txt
-      - name: 保持正在运行研究的50文件身份
+      - name: 核对已审查的新执行身份（旧卡不改标、不豁免）
         run: >-
           python -c "from scripts.window_capture_audit import check_implementation; check_implementation()"
       - name: 恢复完整固定父状态（保持原共享写入锁和CAS）
@@ -168,8 +165,8 @@ jobs:
       OPENBLAS_NUM_THREADS: '1'
       OMP_NUM_THREADS: '1'
       FOOTBALL_API_KEY: ''
-      WINDOW_LEAGUE: ${{ github.event_name == 'schedule' && 'epl' || inputs.league }}
-      WINDOW_MATCH_ID: ${{ github.event_name == 'schedule' && '1557430' || inputs.match_id }}
+      WINDOW_LEAGUE: ${{ inputs.league }}
+      WINDOW_MATCH_ID: ${{ inputs.match_id }}
       WINDOW_SAVED_STATE: ${{ needs.capture.outputs.saved_state }}
       WINDOW_CAPTURE_REF: ${{ needs.capture.outputs.capture_ref }}
       WINDOW_FIRST_REF: ${{ needs.capture.outputs.first_ref }}

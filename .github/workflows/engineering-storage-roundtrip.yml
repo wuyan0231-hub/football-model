@@ -1,0 +1,114 @@
+name: 工程提速部署：纯存储往返与固定提交回读
+
+# Manual only. No schedule, football API secret, fit, capture or research entry.
+# A successful separate read-only profile supplies freeze acceptance; this job
+# only tests native full-state load/check/save and one new bounded receipt.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  storage:
+    if: github.repository == 'wuyan0231-hub/football-model' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    concurrency:
+      group: football-model-state
+      cancel-in-progress: false
+      queue: max
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    env:
+      PYTHONUNBUFFERED: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+      FOOTBALL_API_KEY: ''
+    outputs:
+      saved_state: ${{ steps.receipt.outputs.saved_state }}
+      parent_state: ${{ steps.receipt.outputs.parent_state }}
+      receipt_ref: ${{ steps.receipt.outputs.receipt_ref }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: python -m pip install -r requirements.txt
+      - name: 原生加载完整父状态（共享写锁内，保持CAS）
+        id: restore
+        run: python scripts/cloud_state.py load --runtime runtime
+      - name: 仅新增有界工程身份及hash回执（不生成足球输出）
+        id: prepare
+        run: python scripts/engineering_storage_roundtrip.py prepare
+      - name: 原生完整状态检查
+        id: check
+        run: python scripts/cloud_state.py check --runtime runtime
+      - name: 仅执行一次原生保存（含容量、pack及CAS门禁）
+        id: persist
+        run: >-
+          python scripts/cloud_state_save_once.py --runtime runtime
+          --receipt engineering-save-receipt.json
+      - name: 核验本轮真实步骤和保存身份
+        id: receipt
+        if: ${{ always() && !cancelled() }}
+        env:
+          RESTORE: ${{ steps.restore.outcome }}
+          PREPARE: ${{ steps.prepare.outcome }}
+          CHECK: ${{ steps.check.outcome }}
+          PERSIST: ${{ steps.persist.outcome }}
+        run: >-
+          python scripts/engineering_storage_roundtrip.py record
+          --output engineering-roundtrip.json
+      - uses: actions/upload-artifact@v7
+        if: ${{ always() }}
+        with:
+          name: engineering-storage-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            engineering-roundtrip.json
+            engineering-save-receipt.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  fixed_readback:
+    needs: storage
+    if: ${{ !cancelled() && needs.storage.result == 'success' && needs.storage.outputs.saved_state != '' }}
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONUNBUFFERED: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+      FOOTBALL_API_KEY: ''
+      ENGINEERING_SAVED_STATE: ${{ needs.storage.outputs.saved_state }}
+      ENGINEERING_PARENT_STATE: ${{ needs.storage.outputs.parent_state }}
+      ENGINEERING_RECEIPT_REF: ${{ needs.storage.outputs.receipt_ref }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: python -m pip install -r requirements.txt
+      - name: 新作业只读固定保存提交、精确父提交、原字节回执和元数据
+        run: >-
+          python scripts/engineering_storage_roundtrip.py audit
+          --output engineering-fixed-readback.json
+      - uses: actions/upload-artifact@v7
+        if: ${{ always() }}
+        with:
+          name: engineering-storage-fixed-readback-${{ github.run_id }}-${{ github.run_attempt }}
+          path: engineering-fixed-readback.json
+          if-no-files-found: warn
+          retention-days: 14

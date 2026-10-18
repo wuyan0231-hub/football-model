@@ -10,6 +10,7 @@ from __future__ import annotations
 import fnmatch
 import atexit
 from collections import OrderedDict
+from contextlib import contextmanager
 from contextvars import ContextVar
 import hashlib
 import json
@@ -18,9 +19,11 @@ from pathlib import Path
 import re
 import shutil
 import signal
+import stat as stat_module
 import subprocess
 import sys
 import threading
+from types import MappingProxyType
 
 from .state_storage import (MAX_FILE_BYTES, StorageError, _expand, _manifest_json,
                             _relative, _scan_secret, _supported_limits)
@@ -42,6 +45,7 @@ _STATE_CATALOG_CACHE = OrderedDict()
 _VERIFIED_COMMITS = set()
 _READERS = OrderedDict()
 _READER_SCOPE = ContextVar("fixed_history_reader", default=None)
+_CATALOG_SCOPE = ContextVar("verified_history_catalog", default=None)
 
 # A depth-1 fetch has no blob filter: a missing source may require the whole
 # immutable transport snapshot, not merely the selected logical original.
@@ -288,7 +292,7 @@ def _decode_catalog(raw, read_member):
     return entries
 
 
-def _catalog(runtime):
+def _catalog_unscoped(runtime, *, use_cache=True):
     runtime = _safe_path(runtime)
     path = runtime / CATALOG_RELATIVE
     if not path.exists():
@@ -305,7 +309,7 @@ def _catalog(runtime):
             offline_identity = (str(access), a.st_mtime_ns, a.st_ctime_ns, a.st_size)
             break
     key = (str(path), stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size, offline_identity)
-    cached = _CATALOG_CACHE.get(key)
+    cached = _CATALOG_CACHE.get(key) if use_cache else None
     if cached is not None:
         entries, signatures = cached
         if all((runtime / name).is_file() and not (runtime / name).is_symlink()
@@ -340,7 +344,187 @@ def _catalog(runtime):
     return result
 
 
+def _file_identity(path):
+    """Identity of mutable local input; do not follow a replaced symlink."""
+    _safe_path(path)
+    try:
+        value = path.stat()
+    except FileNotFoundError:
+        return None
+    return (value.st_dev, value.st_ino, value.st_mode, value.st_size,
+            value.st_mtime_ns, value.st_ctime_ns)
+
+
+class _VerifiedCatalogReadSession:
+    """One fixed catalog view, revalidated before it can return success.
+
+    This caches only the fully decoded routing index. Original byte, transport,
+    time and capacity checks still run on every original read/write. Local
+    connector sources remain mutable inputs and are pinned separately.
+    """
+    def __init__(self, runtime):
+        self.runtime = _safe_path(runtime)
+        self.entries = None
+        self.files = {}
+        self.directories = {}
+        self.git_markers = {}
+        self.offline_repo = None
+        self.source_repo = None
+        self.failure = None
+
+    def fail(self, reason):
+        self.failure = self.failure or reason
+        raise StorageError(reason)
+
+    def pin(self, path, raw=None, *, limit=MAX_FILE_BYTES):
+        path = _safe_path(path)
+        before = _file_identity(path)
+        if before is not None:
+            if not stat_module.S_ISREG(before[2]) or before[3] > limit:
+                self.fail("verified_catalog_session_invalid_file")
+            raw = path.read_bytes() if raw is None else raw
+            if _file_identity(path) != before or len(raw) != before[3]:
+                self.fail("verified_catalog_session_input_changed")
+        elif raw is not None:
+            self.fail("verified_catalog_session_input_changed")
+        record = (before, _sha(raw) if raw is not None else None)
+        if path in self.files and self.files[path] != record:
+            self.fail("verified_catalog_session_input_changed")
+        self.files[path] = record
+        return raw
+
+    def pin_offline(self, repo, path, raw=None):
+        if _safe_path(repo) != self.offline_repo:
+            self.fail("verified_catalog_session_cross_runtime")
+        return self.pin(path, raw)
+
+    def check_repo_binding(self, repo):
+        if repo != self.source_repo:
+            self.fail("verified_catalog_session_cross_runtime")
+        git = repo / ".git"
+        current = _file_identity(git)
+        if (current[:3] if current is not None else None) != self.git_markers[git]:
+            self.fail("verified_catalog_session_binding_changed")
+        if git in self.files and current != self.files[git][0]:
+            self.fail("verified_catalog_session_binding_changed")
+        access = repo / "model_access_manifest.json"
+        if _file_identity(access) != self.files[access][0]:
+            self.fail("verified_catalog_session_binding_changed")
+
+    def verify(self, *, contents):
+        if self.failure:
+            raise StorageError(self.failure)
+        for path, identity in self.directories.items():
+            current = _file_identity(path)
+            if current is None or current[:3] != identity:
+                self.fail("verified_catalog_session_root_changed")
+        for path, identity in self.git_markers.items():
+            current = _file_identity(path)
+            # Git's object store may grow, but the binding cannot move/appear.
+            current = current[:3] if current is not None else None
+            if current != identity:
+                self.fail("verified_catalog_session_binding_changed")
+        for path, (identity, digest) in self.files.items():
+            if _file_identity(path) != identity:
+                self.fail("verified_catalog_session_input_changed")
+            if contents and identity is not None:
+                raw = path.read_bytes()
+                if _sha(raw) != digest or _file_identity(path) != identity:
+                    self.fail("verified_catalog_session_input_changed")
+
+    def start(self):
+        for parent in (self.runtime, *self.runtime.parents):
+            identity = _file_identity(parent)
+            if identity is None or not stat_module.S_ISDIR(identity[2]):
+                self.fail("verified_catalog_session_invalid_runtime")
+            self.directories[parent] = identity[:3]
+            git = parent / ".git"
+            marker = _file_identity(git)
+            self.git_markers[git] = marker[:3] if marker is not None else None
+            if marker is not None and stat_module.S_ISREG(marker[2]):
+                self.pin(git)
+            access = parent / "model_access_manifest.json"
+            raw = self.pin(access)
+            if self.source_repo is None and (raw is not None or (marker is not None and
+                    (stat_module.S_ISDIR(marker[2]) or stat_module.S_ISREG(marker[2])))):
+                self.source_repo = parent
+            if self.offline_repo is None and raw is not None and marker is None:
+                self.offline_repo = parent
+        raw = self.pin(self.runtime / CATALOG_RELATIVE)
+        if raw is not None:
+            value = _manifest_json(raw)
+            if isinstance(value, dict) and value.get("schema_version") == INDEX_SCHEMA_VERSION:
+                if not isinstance(value.get("chunks"), list):
+                    self.fail("verified_catalog_session_invalid_chunk")
+                for ref in value.get("chunks", []):
+                    if (not isinstance(ref, dict) or not isinstance(ref.get("sha256"), str)
+                            or not _SHA.fullmatch(ref["sha256"])
+                            or ref.get("path") != CATALOG_CHUNK_PREFIX + ref["sha256"] + ".json"):
+                        self.fail("verified_catalog_session_invalid_chunk")
+                    self.pin(self.runtime / ref["path"], limit=CATALOG_CHUNK_BYTES)
+        # Always decode all entries/chunks and validate offline source binding,
+        # even if another caller previously populated the process-wide cache.
+        entries = _catalog_unscoped(self.runtime, use_cache=False)
+        self.entries = MappingProxyType({name: MappingProxyType(dict(entry))
+                                         for name, entry in entries.items()})
+        self.verify(contents=False)
+
+    def finish(self):
+        self.verify(contents=True)
+        entries = _catalog_unscoped(self.runtime, use_cache=False)
+        if entries != self.entries:
+            self.fail("verified_catalog_session_catalog_changed")
+        self.verify(contents=False)
+
+    def lookup(self, runtime):
+        if self.failure:
+            raise StorageError(self.failure)
+        if _safe_path(runtime) != self.runtime or self.entries is None:
+            self.fail("verified_catalog_session_cross_runtime")
+        return self.entries
+
+
+@contextmanager
+def verified_catalog_read_session(runtime):
+    """Pin one complete catalog for a read operation, with no nested scopes.
+
+    A changed catalog, chunk, root or read offline original rejects the entire
+    operation at exit. Catalog writes and cross-runtime reads are forbidden,
+    including when their immediate exception is caught inside the scope.
+    No cache survives this context, and original reads are never cached here.
+    """
+    previous = _CATALOG_SCOPE.get()
+    if previous is not None:
+        previous.fail("verified_catalog_session_nested")
+    session = _VerifiedCatalogReadSession(runtime)
+    token = _CATALOG_SCOPE.set(session)
+    try:
+        session.start()
+        try:
+            yield session
+        except BaseException as exc:
+            try:
+                session.finish()
+            except Exception as verification:
+                # Preserve the actual business failure, while retaining the
+                # separate failed final-integrity check for its caller.
+                exc.add_note("catalog_session_final_check_failed: " + type(verification).__name__)
+            raise
+        else:
+            session.finish()
+    finally:
+        _CATALOG_SCOPE.reset(token)
+
+
+def _catalog(runtime):
+    session = _CATALOG_SCOPE.get()
+    return session.lookup(runtime) if session is not None else _catalog_unscoped(runtime)
+
+
 def _write_catalog(runtime, entries):
+    session = _CATALOG_SCOPE.get()
+    if session is not None:
+        session.fail("verified_catalog_session_write_forbidden")
     runtime = _safe_path(runtime)
     value = {"schema_version": SCHEMA_VERSION,
              "entries": [entries[name] for name in sorted(entries)]}
@@ -417,6 +601,10 @@ def _write_catalog(runtime, entries):
 
 def _find_runtime(path, runtime=None):
     path = _safe_path(path)
+    session = _CATALOG_SCOPE.get()
+    if session is not None and (not path.is_relative_to(session.runtime)
+            or (runtime is not None and _safe_path(runtime) != session.runtime)):
+        session.fail("verified_catalog_session_cross_runtime")
     if runtime is not None:
         root = _safe_path(runtime)
         if not path.is_relative_to(root):
@@ -523,11 +711,17 @@ def _ensure_commit(repo, commit):
 def _git_bytes(repo, commit, relative, *, missing=False):
     _relative(relative)
     repo = _safe_path(repo)
+    session = _CATALOG_SCOPE.get()
+    if session is not None:
+        session.check_repo_binding(repo)
     access = repo / "model_access_manifest.json"
     if access.is_file() and not (repo / ".git").exists():
         # A selected connector bundle carries separately bound ancestor source
         # files. Never contact the network or invent Git membership offline.
-        document = _manifest_json(access.read_bytes())
+        access_raw = access.read_bytes()
+        if session is not None:
+            session.pin_offline(repo, access, access_raw)
+        document = _manifest_json(access_raw)
         if (document.get("status") != "files_materialized_not_model_verified"
                 or not isinstance(document.get("files"), list)):
             raise StorageError("历史原件离线接入清单无效，已停止。")
@@ -550,6 +744,8 @@ def _git_bytes(repo, commit, relative, *, missing=False):
         if (len(raw) != record.get("bytes") or _sha(raw) != record.get("sha256")
                 or git_blob != record.get("git_blob_sha")):
             raise StorageError("历史离线原件来源指纹不符，已停止。")
+        if session is not None:
+            session.pin_offline(repo, path, raw)
         return raw
     _ensure_commit(repo, commit)
     return _reader(repo, commit)._blob(commit, relative, missing=missing)
@@ -557,6 +753,9 @@ def _git_bytes(repo, commit, relative, *, missing=False):
 
 def _manifest_index(repo, commit, expected_sha=None):
     repo = _safe_path(repo)
+    session = _CATALOG_SCOPE.get()
+    if session is not None:
+        session.check_repo_binding(repo)
     identity = None
     access = repo / "model_access_manifest.json"
     if access.is_file() and not (repo / ".git").exists():
@@ -565,6 +764,10 @@ def _manifest_index(repo, commit, expected_sha=None):
         # cache identity to both access records and the actual source manifest.
         source = repo / ("state_storage.json" if _manifest_json(access.read_bytes()).get("state_commit") == commit
                          else "history_sources/" + commit + "/state_storage.json")
+        session = _CATALOG_SCOPE.get()
+        if session is not None:
+            session.pin_offline(repo, access)
+            session.pin_offline(repo, source)
         s = source.stat() if source.is_file() else None
         identity = (a.st_mtime_ns, a.st_ctime_ns, a.st_size,
                     (s.st_mtime_ns, s.st_ctime_ns, s.st_size) if s else None)
@@ -672,7 +875,11 @@ def read_bytes(path, *, runtime=None):
     root = _find_runtime(path, runtime)
     entry = _catalog(root).get(path.relative_to(root).as_posix()) if root is not None else None
     if path.is_file():
-        raw = path.read_bytes()
+        session = _CATALOG_SCOPE.get()
+        # Hot inputs remain mutable even when routing is pinned. Read and
+        # register the same bytes atomically with respect to file identity;
+        # scope exit rejects any later change, including a change then revert.
+        raw = session.pin(path) if session is not None else path.read_bytes()
         if entry is not None and (_sha(raw) != entry["raw_sha256"] or len(raw) != entry["raw_bytes"]):
             raise StorageError("活动原件与冻结历史目录冲突，已停止。")
         return raw

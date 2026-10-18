@@ -136,6 +136,30 @@ class AdvancedResearchTests(unittest.TestCase):
         self.assertNotIn("M_shots", corrupt["predictions"])
         self.assertIn("M_schedule", corrupt["predictions"])
 
+    def test_engineering_cutover_rejects_old_card_without_relabelling_or_refitting(self):
+        root = self.runtime(matches(40))
+        self.run_study(root)
+        path = root / "advanced_models" / "serie_a" / digest(spec()) / "models" / "M_shots" / "latest.json"
+        card = json.loads(path.read_bytes())
+        card["implementation_fingerprint"]["sha256"] = (
+            "1e311689b3405f64c6ad9636732d2defb7ad67e26b4bc7e04b01a5b1b2b2d6ac")
+        card["model_hash"] = digest({k: v for k, v in card.items() if k != "model_hash"})
+        path.write_text(json.dumps(card))
+        original = path.read_bytes()
+        features = dataset(root, "serie_a", matches=[matches(1)[0]])["rows"][0]
+        features["horizon"] = "EARLY"
+        for side in ("home", "away"):
+            features[side].update({n: 5.0 for n in FEATURE_GROUPS["schedule"]})
+        baseline = {**_distribution_from_rates(1.4, 1.1), "match_id": 999,
+            "home_id": 1, "away_id": 2, "neutral": False, "kickoff": "2024-03-02T12:00:00Z",
+            "training_cutoff": "2024-03-01T00:00:00Z"}
+        with patch("football_model.advanced_research.fit_correction", side_effect=AssertionError("unexpected_refit")):
+            output = build_live_predictions(root, "serie_a", spec(), baseline, features, "2024-03-02T02:00:00Z")
+        self.assertNotIn("M_shots", output["predictions"])
+        self.assertIn("implementation differs from saved fit", str(output["failures"]["M_shots"]))
+        self.assertIn("M_schedule", output["predictions"])
+        self.assertEqual(path.read_bytes(), original)
+
     def test_self_consistent_card_coefficient_edit_is_rejected_against_fitted_bundle(self):
         root = self.runtime(matches(40))
         self.run_study(root)
