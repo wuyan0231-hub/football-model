@@ -45,9 +45,33 @@ LIMITATIONS = [
     'No API collection, production state write, current-card relabelling, promotion, or R08 activation.'
 ]
 THRESHOLD_ORIGIN = 'Pre-registered conservative audit thresholds; not production gates or optimizer error bounds.'
+AUDIT_ERROR_CODES = frozenset({
+    'API_client_forbidden', 'G0_G1_training_pool_mismatch', 'R_cutoff_mismatch',
+    'R_feature_names_mismatch', 'R_refit_error_set_mismatch', 'R_refit_fit_contract_mismatch',
+    'R_refit_identity_mismatch', 'R_timeout_changed', 'R_training_digest_mismatch',
+    'audit_output_limit', 'audit_output_must_be_new', 'card_implementation_mismatch',
+    'card_source_mismatch', 'cold_reader_repository_mismatch', 'cold_runtime_not_inside_reader_checkout',
+    'conflicting_original_path', 'duplicate_rebuilt_feature_target', 'expanded_report_limit',
+    'feature_dataset_metadata_mismatch', 'materialized_input_changed', 'materialized_original_changed',
+    'materialized_root_changed', 'materialized_root_exists', 'numeric_implementation_changed',
+    'numeric_import_wrong_checkout', 'numeric_source_commit_mismatch', 'numerical_modules_preloaded',
+    'original_R_request_mismatch', 'original_latest_R_not_successful', 'protected_output_path',
+    'protocol_hash_mismatch', 'raw_feature_numeric_or_admitted_provenance_mismatch',
+    'raw_rebuilt_R_training_features_mismatch', 'raw_rebuilt_R_training_matches_mismatch',
+    'raw_rebuilt_probe_features_mismatch', 'raw_stage_deadline', 'reader_is_not_checkout_root',
+    'report_implementation_mismatch', 'report_league_mismatch', 'report_source_mismatch',
+    'requested_match_count_mismatch', 'restore_not_readonly', 'restore_reader_commit_mismatch',
+    'restore_reader_repository_mismatch', 'restore_state_mismatch', 'restored_runtime_mismatch',
+    'saved_R_fit_mismatch', 'source_count_limit', 'source_destination_overlap', 'source_file_limit',
+    'source_hash_mismatch', 'source_sha_invalid', 'source_total_limit', 'symlink_path',
+    'unavailable_targets_mismatch', 'unexpected_materialized_original', 'unexpected_probe_count',
+    'unsafe_path', 'unsupported_materialized_member',
+})
 
 class DeepAuditError(ValueError):
-    pass
+    def __init__(self, code, comparison=None):
+        super().__init__(code)
+        self.comparison = comparison
 
 class DeepAuditDeadline(BaseException):
     pass
@@ -130,7 +154,90 @@ def compare(actual, expected, *, atol=0.0, rtol=0.0):
 
 
 def exact(actual, expected, code):
-    require(compare(actual, expected)['passed'], code)
+    result = compare(actual, expected)
+    if not result['passed']:
+        raise DeepAuditError(code, comparison_failure(actual, expected, result))
+
+
+def comparison_failure(actual, expected, result):
+    """Content hashes and safe field paths; no mismatching original values."""
+    fields = {'rows','home','away','match_id','horizon','league','schema_version',
+        'source_refs','source_issues','optional_diagnostic_refs','requested_matches',
+        'failures','status','mode','feature_names','training_count','training_match_ids',
+        'protocol_hash','implementation_fingerprint','sha256','path','original_path',
+        'runtime_relative_path','cutoff','generated_at','request_sha256','parameters',
+        'expected_goals','score_matrix','probabilities','xg_for_mean','matches'}
+    parts = str(result.get('first_mismatch') or '').split('/')[1:17]
+    safe_path = '/' + '/'.join(part if part in fields or (part.isascii() and part.isdigit() and len(part)<=12)
+        else 'field_sha256_'+digest(part.encode())[:16] for part in parts) if parts else ''
+    def canonical_hash(value):
+        try:
+            hashed = hashlib.sha256()
+            for piece in json.JSONEncoder(sort_keys=True,ensure_ascii=True,allow_nan=False,
+                                          separators=(',',':')).iterencode(value):
+                hashed.update(piece.encode())
+            return hashed.hexdigest()
+        except (TypeError,ValueError,MemoryError,RecursionError):
+            return None
+    return {'mismatches': result['mismatches'], 'numeric_leaves': result['numeric_leaves'],
+            'first_mismatch': safe_path, 'unknown_field_names_hashed': True,
+            'actual_canonical_sha256': canonical_hash(actual),
+            'expected_canonical_sha256': canonical_hash(expected),
+            'mismatching_values_included': False}
+
+
+def cold_storage_preflight(runtime, reader, receipt, resolve_repo):
+    """Use the old reader's real ancestor routing, never an injected fallback."""
+    runtime, reader = Path(runtime).resolve(), Path(reader).resolve()
+    require(runtime == reader / 'fixed-runtime', 'cold_runtime_not_inside_reader_checkout')
+    require(Path(receipt.get('reader_repository', '')).resolve() == reader,
+            'restore_reader_repository_mismatch')
+    require(Path(resolve_repo(runtime)).resolve() == reader, 'cold_reader_repository_mismatch')
+    return {'runtime_relative_to_reader': 'fixed-runtime',
+            'native_ancestor_repository_matches_reader': True,
+            'routing_override_used': False}
+
+
+def safe_exception_details(exc, numeric):
+    """Emit fixed error codes and source locations, never arbitrary error text."""
+    storage_codes = {
+        '历史原件需要已授权的本地 Git 对象库，已停止。': 'cold_git_repository_not_found',
+        '历史冷源获取失败（接收文件硬限、网络或权限）；未缓存来源提交。': 'cold_source_fetch_failed',
+        '历史冷源获取超时或不可用；未缓存来源提交。': 'cold_source_fetch_unavailable',
+        '固定历史状态原件无法读取，已停止。': 'cold_fixed_object_unreadable',
+        '固定历史对象未保存，已停止。': 'cold_fixed_object_missing',
+        '历史原件来源清单指纹不符，已停止。': 'cold_source_manifest_hash_mismatch',
+        '历史原件与固定来源清单不符，已停止。': 'cold_source_manifest_entry_mismatch',
+        '历史恢复原件长度或指纹不符，已停止。': 'cold_original_hash_or_size_mismatch',
+    }
+    code = 'unclassified_audit_error'
+    if isinstance(exc, DeepAuditError):
+        code = str(exc) if str(exc) in AUDIT_ERROR_CODES else 'unclassified_audit_error'
+    elif isinstance(exc, DeepAuditDeadline):
+        code = 'bounded_deadline'
+    elif isinstance(exc, MemoryError):
+        code = 'worker_memory_limit'
+    elif type(exc).__name__ == 'StorageError':
+        code = storage_codes.get(str(exc), 'unclassified_storage_error')
+    frames = []
+    tb = exc.__traceback__
+    numeric = Path(numeric).resolve()
+    auditor = Path(__file__).resolve()
+    while tb is not None:
+        path = Path(tb.tb_frame.f_code.co_filename).resolve()
+        if path == auditor:
+            name = 'auditor/' + auditor.name
+        elif path.is_relative_to(numeric):
+            name = 'original-numeric/' + path.relative_to(numeric).as_posix()
+        else:
+            name = 'external_frame'
+        frames.append({'file': name, 'line': tb.tb_lineno})
+        tb = tb.tb_next
+    details = {'exception_class': type(exc).__name__, 'error_code': code,
+               'safe_traceback': frames[-12:], 'exception_text_included': False}
+    if isinstance(exc,DeepAuditError) and exc.comparison is not None:
+        details['comparison_failure'] = exc.comparison
+    return details
 
 
 def root_fd(path):
@@ -261,8 +368,11 @@ def reconstruct_features(report, root):
         exact({k:v for k,v in rebound.items() if k!='rows'},
               {k:v for k,v in expected.items() if k!='rows'},'feature_dataset_metadata_mismatch')
         projected=lambda rows:[{k:v for k,v in row.items() if k not in diagnostic_fields} for row in rows]
-        result=compare(projected(rebound['rows']),projected(expected['rows']),atol=TOLERANCES['raw_feature_atol'])
-        require(result['passed'],'raw_feature_numeric_or_admitted_provenance_mismatch')
+        actual_rows,expected_rows=projected(rebound['rows']),projected(expected['rows'])
+        result=compare(actual_rows,expected_rows,atol=TOLERANCES['raw_feature_atol'])
+        if not result['passed']:
+            raise DeepAuditError('raw_feature_numeric_or_admitted_provenance_mismatch',
+                comparison_failure(actual_rows,expected_rows,result))
         diag=compare([{k:r.get(k) for k in diagnostic_fields} for r in rebound['rows']],
                      [{k:r.get(k) for k in diagnostic_fields} for r in expected['rows']])
         receipts[horizon]={'requested':len(matches),'rows':len(rebuilt['rows']),
@@ -352,11 +462,13 @@ def compare_refit(actual,original):
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--numeric-repo',type=Path,required=True)
+    parser.add_argument('--reader-repo',type=Path,required=True)
     parser.add_argument('--runtime',type=Path,required=True)
     parser.add_argument('--restore-receipt',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
     args=parser.parse_args(argv)
-    numeric=args.numeric_repo.resolve();runtime=args.runtime.resolve();output=args.output.resolve()
+    numeric=args.numeric_repo.resolve();reader=args.reader_repo.resolve()
+    runtime=args.runtime.resolve();output=args.output.resolve()
     require(not output.exists(),'audit_output_must_be_new')
     require(not output.is_relative_to(numeric) and not output.is_relative_to(runtime)
             and not runtime.is_relative_to(output),'protected_output_path')
@@ -396,7 +508,7 @@ def main(argv=None):
         sys.path.insert(0,str(numeric))
         from football_model.advanced_research import implementation_fingerprint,verify_goalmodel_probes
         from football_model.advanced_storage import load_artifact
-        from football_model.history_archive import read_bytes
+        from football_model.history_archive import read_bytes, _repo as native_cold_repo
         from football_model.goalmodel_adapter import fit_predict_goalmodel,RSCRIPT_TIMEOUT_SECONDS
         from football_model.data import APIClient
         def forbidden_api(*_a,**_kw):raise DeepAuditError('API_client_forbidden')
@@ -405,6 +517,14 @@ def main(argv=None):
         exact(RSCRIPT_TIMEOUT_SECONDS,LIMITS['R_per_fit_seconds'],'R_timeout_changed')
         import football_model.advanced_features as numerical_module
         require(Path(numerical_module.__file__).resolve().is_relative_to(numeric),'numeric_import_wrong_checkout')
+        out['cold_storage_route']=cold_storage_preflight(runtime,reader,receipt,native_cold_repo)
+        reader_head=subprocess.run(['git','rev-parse','HEAD'],cwd=reader,text=True,capture_output=True,check=True).stdout.strip()
+        exact(reader_head,receipt.get('reader_commit'),'restore_reader_commit_mismatch')
+        reader_top=subprocess.run(['git','rev-parse','--show-toplevel'],cwd=reader,text=True,capture_output=True,check=True).stdout.strip()
+        exact(Path(reader_top).resolve().as_posix(),reader.as_posix(),'reader_is_not_checkout_root')
+        subprocess.run(['git','cat-file','-e',STATE+'^{commit}'],cwd=reader,
+            capture_output=True,check=True)
+        out['cold_storage_route'].update(reader_commit=reader_head,fixed_state_present_locally=True)
         out['auditor_script_sha256']=digest(Path(__file__).read_bytes())
         out['protocol_before_fits']=save(output/'audit-preregistered-policy.json',{'tolerances':TOLERANCES,'threshold_origin':THRESHOLD_ORIGIN,'limits':LIMITS,'state':STATE,'source':SOURCE,'implementation':IMPLEMENTATION,'report':REPORT_REF,'candidates':CANDIDATES,'limitations':LIMITATIONS})
         checkpoint('expand_fixed_report')
@@ -463,8 +583,7 @@ def main(argv=None):
             out['real_R_processes_started']=None
             out['interrupted_R_candidate']=active_R
             out['real_R_process_count_complete']=False
-        out.update(status='audit_incomplete',exception_class=type(exc).__name__,
-            error_code=str(exc) if isinstance(exc,DeepAuditError) else 'bounded_deadline' if isinstance(exc,DeepAuditDeadline) else 'unclassified_audit_error')
+        out.update(status='audit_incomplete',**safe_exception_details(exc,numeric))
     finally:
         signal.alarm(0);signal.signal(signal.SIGALRM,previous)
         out['ended_at']=datetime.now(timezone.utc).isoformat()

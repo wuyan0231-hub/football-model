@@ -3,7 +3,10 @@ import copy
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -95,6 +98,111 @@ class DeepAuditTests(unittest.TestCase):
         self.assertIn('590s python',text)
         self.assertIn('10s 2090s',text)
         self.assertEqual(audit.LIMITS['restore_seconds']+audit.LIMITS['restore_kill_grace_seconds']+audit.LIMITS['outer_worker_seconds']+audit.LIMITS['outer_worker_kill_grace_seconds'],2700)
+        self.assertIn("runtime=repo/'fixed-runtime'",text)
+        self.assertIn('--reader-repo reader --runtime reader/fixed-runtime',text)
+        self.assertIn("'reader_repository':str(repo)",text)
+        self.assertIn('R02_NUMERIC_FIXTURE_REPO="$GITHUB_WORKSPACE/original-numeric"',text)
+
+    def test_cold_route_preflight_rejects_wrong_parent_and_receipt(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary);reader=root/'reader';runtime=reader/'fixed-runtime'
+            runtime.mkdir(parents=True)
+            receipt={'reader_repository':str(reader)}
+            result=audit.cold_storage_preflight(runtime,reader,receipt,lambda _:reader)
+            self.assertTrue(result['native_ancestor_repository_matches_reader'])
+            cases=[(root/'fixed-runtime',reader,receipt,lambda _:reader),
+                   (runtime,reader,{'reader_repository':str(root)},lambda _:reader),
+                   (runtime,reader,receipt,lambda _:root)]
+            for args in cases:
+                with self.assertRaises(audit.DeepAuditError):audit.cold_storage_preflight(*args)
+
+    def test_native_cold_object_reads_only_from_matching_reader_layout(self):
+        # The real deep workflow points this subprocess at exact old source;
+        # ordinary regression runs exercise the same native reader contract.
+        numeric=Path(os.environ.get('R02_NUMERIC_FIXTURE_REPO',str(ROOT))).resolve()
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary);reader=root/'reader';reader.mkdir()
+            def git(*args):
+                return subprocess.run(['git','-C',str(reader),*args],check=True,
+                    capture_output=True,text=True).stdout.strip()
+            git('init','-q')
+            raw=b'{"cold_original":true,"matches":[]}'
+            relative='advanced_models/primeira/cold-layout.json'
+            source=reader/'runtime'/relative;source.parent.mkdir(parents=True);source.write_bytes(raw)
+            git('add','runtime')
+            git('-c','user.name=Audit Fixture','-c','user.email=audit@invalid.local',
+                'commit','-qm','Local immutable cold-object fixture')
+            state=git('rev-parse','HEAD');sha=audit.digest(raw)
+            entry={'path':relative,'state_commit':state,'transport_path':'runtime/'+relative,
+                'codec':'identity','raw_sha256':sha,'raw_bytes':len(raw),'blob_sha256':sha,
+                'compressed_bytes':len(raw),'manifest_sha256':None}
+            for runtime in [root/'fixed-runtime',reader/'fixed-runtime']:
+                (runtime/'history_archive').mkdir(parents=True)
+                (runtime/'history_archive/catalog.json').write_text(json.dumps({
+                    'schema_version':'fixed-git-history-catalog-v1','entries':[entry]}))
+            script="""
+import json,sys
+from pathlib import Path
+from football_model import history_archive as history
+from football_model.advanced_storage import load_artifact
+root,numeric=Path(sys.argv[1]),Path(sys.argv[2]);reference=json.loads(sys.argv[3])
+assert Path(history.__file__).resolve().is_relative_to(numeric)
+def no_fetch(*_):raise history.StorageError('fixture_network_fetch_forbidden')
+history._fetch_cold_commit=no_fetch
+wrong=root/'fixed-runtime';right=root/'reader/fixed-runtime'
+try:
+    assert history._repo(wrong)!=root/'reader'
+except history.StorageError as exc:
+    assert str(exc)=='历史原件需要已授权的本地 Git 对象库，已停止。'
+try:
+    load_artifact(wrong,reference)
+except history.StorageError as exc:
+    assert str(exc) in ('历史原件需要已授权的本地 Git 对象库，已停止。',
+                       'fixture_network_fetch_forbidden')
+    wrong_reason='no_ancestor_repository' if str(exc).startswith('历史原件需要') else 'wrong_ancestor_repository'
+else:
+    raise AssertionError('sibling cold runtime unexpectedly succeeded')
+assert history._repo(right)==root/'reader'
+value=load_artifact(right,reference)
+assert value=={'cold_original':True,'matches':[]}
+print(json.dumps({'old_or_current_native_cold_read_verified':True,'wrong_layout_reason':wrong_reason}))
+"""
+            result=subprocess.run([sys.executable,'-c',script,str(root),str(numeric),
+                json.dumps({'path':relative,'sha256':sha})],cwd=root,
+                env={**os.environ,'PYTHONPATH':str(numeric)},capture_output=True,text=True,
+                check=True,timeout=20)
+            self.assertTrue(json.loads(result.stdout)['old_or_current_native_cold_read_verified'])
+
+    def test_safe_exception_diagnostics_omit_arbitrary_payloads(self):
+        from football_model.state_storage import StorageError
+        known=StorageError('历史原件需要已授权的本地 Git 对象库，已停止。')
+        self.assertEqual(audit.safe_exception_details(known,ROOT)['error_code'],
+                         'cold_git_repository_not_found')
+        self.assertEqual(audit.safe_exception_details(MemoryError(),ROOT)['error_code'],
+                         'worker_memory_limit')
+        for kind in (StorageError,ValueError,audit.DeepAuditError):
+            try:raise kind('arbitrary_private_payload_DO_NOT_OUTPUT')
+            except Exception as exc:result=audit.safe_exception_details(exc,ROOT)
+            self.assertNotIn('arbitrary_private_payload',json.dumps(result))
+            self.assertFalse(result['exception_text_included'])
+            self.assertLessEqual(len(result['safe_traceback']),12)
+            self.assertTrue(result['safe_traceback'])
+
+    def test_comparison_failure_has_hashes_and_paths_without_values(self):
+        actual={'home':{'xg_for_mean':2,'PRIVATE_UNREGISTERED_FIELD':'PRIVATE_ACTUAL_VALUE'}}
+        expected={'home':{'xg_for_mean':1,'PRIVATE_UNREGISTERED_FIELD':'PRIVATE_EXPECTED_VALUE'}}
+        with self.assertRaises(audit.DeepAuditError) as raised:
+            audit.exact(actual,expected,'feature_dataset_metadata_mismatch')
+        result=audit.safe_exception_details(raised.exception,ROOT)['comparison_failure']
+        self.assertEqual(result['mismatches'],2)
+        self.assertEqual(result['first_mismatch'],'/home/xg_for_mean')
+        self.assertNotEqual(result['actual_canonical_sha256'],result['expected_canonical_sha256'])
+        self.assertNotIn('PRIVATE_',json.dumps(result))
+        actual['home']['xg_for_mean']=1
+        result=audit.comparison_failure(actual,expected,audit.compare(actual,expected))
+        self.assertTrue(result['first_mismatch'].startswith('/home/field_sha256_'))
+        self.assertNotIn('PRIVATE_',json.dumps(result))
+        self.assertFalse(result['mismatching_values_included'])
 
     def test_fixed_thresholds_are_predeclared_and_distinct(self):
         self.assertEqual(audit.TOLERANCES['refit_parameter_atol'],1e-8)

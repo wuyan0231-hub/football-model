@@ -40,7 +40,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends r-base-core r-cran-jsonlite
           Rscript --vanilla -e 'stopifnot(requireNamespace("jsonlite", quietly=TRUE)); print(R.version.string); print(packageVersion("jsonlite")); print(extSoftVersion())'
           cd reader
-          python -m unittest discover -s tests -p test_fixed_research_deep_audit.py -v
+          R02_NUMERIC_FIXTURE_REPO="$GITHUB_WORKSPACE/original-numeric" python -m unittest discover -s tests -p test_fixed_research_deep_audit.py -v
       - name: 首次真实重拟前输出固定审计协议及指纹
         run: |
           python - <<'PREREGISTER'
@@ -65,7 +65,7 @@ jobs:
           timeout --signal=TERM --kill-after=10s 590s python - <<'RESTORE_FIXED'
           from pathlib import Path
           import json,sys,time
-          repo=Path('reader').resolve();runtime=Path('fixed-runtime').resolve()
+          repo=Path('reader').resolve();runtime=repo/'fixed-runtime'
           sys.path.insert(0,str(repo));sys.path.insert(0,str(repo/'scripts'))
           from scripts.fixed_fixture_validation_audit import restore_fixed
           import cloud_state
@@ -74,7 +74,8 @@ jobs:
           resources=restore_fixed(repo,runtime,state,cloud_state)
           value={'status':'restored_exact_state','state_commit':state,'runtime':str(runtime),
             'save_marker_created':False,'elapsed_seconds':time.monotonic()-started,'resources':resources,
-            'reader_commit':cloud_state._git(repo,'rev-parse','HEAD').stdout.strip()}
+            'reader_commit':cloud_state._git(repo,'rev-parse','HEAD').stdout.strip(),
+            'reader_repository':str(repo)}
           Path('audit-restore-receipt.json').write_text(json.dumps(value,indent=2)+'\n')
           print(json.dumps(value))
           RESTORE_FIXED
@@ -85,7 +86,7 @@ jobs:
         run: >-
           timeout --signal=TERM --kill-after=10s 2090s
           python reader/scripts/fixed_research_deep_audit.py
-          --numeric-repo original-numeric --runtime fixed-runtime
+          --numeric-repo original-numeric --reader-repo reader --runtime reader/fixed-runtime
           --restore-receipt audit-restore-receipt.json --output audit-output
       - name: 仅有界验收回执和新的R数值结果（不上传原始API或冻结输入树）
         if: ${{ always() }}
