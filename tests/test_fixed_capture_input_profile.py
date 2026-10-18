@@ -403,10 +403,11 @@ class ProfileTests(unittest.TestCase):
 
     def run_main(self, *, deadline=False, swallow_deadline=False, failed=False,
                  freeze_elapsed=0.0, cleanup_elapsed=None, execution_implementation=IMPL,
-                 saved_implementation=None, expect_freeze=True):
+                 saved_implementation=None, expect_freeze=True, function_profiler=True, prewarm=False):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory); output = root / 'profile.json'
             status = {}; closes = []; calls = []
+            guard_instance = object()
             clock = {'elapsed': 0.0}
             def sha40(value):
                 if len(value) != 40: raise ValueError('bad')
@@ -419,6 +420,9 @@ class ProfileTests(unittest.TestCase):
                 calls.append((runtime, destination, refs))
                 self.assertEqual(destination.name, 'diagnostic-profile-inputs')
                 self.assertFalse((runtime / 'advanced_snapshots').exists())
+                self.assertEqual(refs, list(summary()['model_cards'].values()))
+                self.assertIsNotNone(cutoff.utcoffset())
+                self.assertIs(capacity_guard, guard_instance)
                 if deadline:
                     if swallow_deadline:
                         try: status['handler'](0, None)
@@ -443,10 +447,15 @@ class ProfileTests(unittest.TestCase):
                 'football_model.history_archive': types.SimpleNamespace(
                     read_bytes=lambda path, **_: path.read_bytes(), _close_readers=close_readers),
                 'football_model.advanced_snapshots': types.SimpleNamespace(freeze_inputs=freeze),
-                'football_model.advanced_capacity': types.SimpleNamespace(CapacityGuard=lambda runtime: object()),
+                'football_model.advanced_capacity': types.SimpleNamespace(CapacityGuard=lambda runtime: guard_instance),
                 'football_model.advanced_research': types.SimpleNamespace(
                     implementation_fingerprint=lambda: {'sha256': execution_implementation})}
-            with patch.dict(sys.modules, modules), patch.object(profile.signal, 'signal', side_effect=set_signal), \
+            factory_patch = (patch.object(profile.cProfile, 'Profile', wraps=cProfile.Profile) if function_profiler
+                else patch.object(profile.cProfile, 'Profile', side_effect=AssertionError('native timing constructed cProfile')))
+            rows_patch = (contextlib.nullcontext() if function_profiler
+                else patch.object(profile, 'profile_rows', side_effect=AssertionError('native timing read function stats')))
+            with factory_patch as factory, rows_patch, patch.dict(sys.modules, modules), \
+                    patch.object(profile.signal, 'signal', side_effect=set_signal), \
                     patch.object(profile.signal, 'alarm'), \
                     patch.object(profile.time, 'monotonic', side_effect=lambda: 100.0 + clock['elapsed']), \
                     contextlib.redirect_stdout(io.StringIO()):
@@ -455,10 +464,23 @@ class ProfileTests(unittest.TestCase):
                         '--deadline-seconds', '60', '--output', str(output)]
                 if saved_implementation is not None:
                     argv += ['--research-implementation', saved_implementation]
+                if not function_profiler:
+                    argv += ['--no-function-profiler']
+                if prewarm:
+                    argv += ['--prewarm']
                 code = profile.main(argv)
+                self.assertEqual(factory.call_count, int(function_profiler))
             result = json.loads(output.read_text())
             self.assertTrue(closes)
-            self.assertEqual(bool(calls), expect_freeze)
+            self.assertEqual(len(calls), 1 if expect_freeze else 0)
+            self.assertEqual(result['function_profiler_enabled'], function_profiler)
+            self.assertEqual(result['measurement_kind'], 'full_function_diagnostic' if function_profiler
+                else 'native_production_timing')
+            self.assertEqual(result['schema_version'], 'fixed-capture-input-profile-v1' if function_profiler
+                else 'fixed-capture-native-timing-v1')
+            if not function_profiler:
+                self.assertIsNone(result['profile_functions'])
+                self.assertFalse(result['prewarm_enabled'])
             self.assertEqual(result['network_football_requests'], 0)
             self.assertEqual(result['fits'], 0)
             self.assertEqual(result['remote_state_writes'], 0)
@@ -474,6 +496,52 @@ class ProfileTests(unittest.TestCase):
         code, result = self.run_main()
         self.assertEqual(code, 0)
         self.assertEqual(result['frozen_originals'], 1)
+        self.assertTrue(result['function_profiler_enabled'])
+        self.assertIsInstance(result['profile_functions'], list)
+        self.assertGreater(len(result['profile_functions']), 0)
+
+    def test_native_timing_skips_profiler_and_keeps_the_same_single_freeze_call(self):
+        code, result = self.run_main(function_profiler=False)
+        self.assertEqual(code, 0)
+        expected = [('saved/input.json', 'c' * 64)]
+        self.assertEqual(result['frozen_inventory_sha256'],
+            hashlib.sha256(json.dumps(expected, separators=(',', ':')).encode()).hexdigest())
+
+    def test_native_timing_forbids_prewarm_before_loading_or_profiler_creation(self):
+        with self.assertRaisesRegex(profile.ProfileError, 'native_timing_prewarm_forbidden'):
+            self.run_main(function_profiler=False, prewarm=True)
+
+    def test_native_timing_direct_deadline_is_preserved(self):
+        code, result = self.run_main(function_profiler=False, deadline=True)
+        self.assertEqual(code, 1)
+        self.assertEqual(result['status'], 'diagnostic_deadline')
+        self.assertTrue(result['deadline_observation']['expired_flag'])
+
+    def test_native_timing_swallowed_deadline_still_fails(self):
+        code, result = self.run_main(function_profiler=False, deadline=True, swallow_deadline=True)
+        self.assertEqual(code, 1)
+        self.assertEqual(result['status'], 'diagnostic_deadline')
+        self.assertTrue(result['deadline_observation']['expired_flag'])
+
+    def test_native_timing_late_signal_keeps_unrounded_gate(self):
+        code, result = self.run_main(function_profiler=False, freeze_elapsed=60.0004)
+        self.assertEqual(code, 1)
+        self.assertEqual(result['elapsed_seconds'], 60.0)
+        self.assertTrue(result['deadline_observation']['unrounded_elapsed_exceeded_limit'])
+
+    def test_native_timing_cleanup_overshoot_fails(self):
+        code, result = self.run_main(function_profiler=False, freeze_elapsed=59.0, cleanup_elapsed=60.0004)
+        self.assertEqual(code, 1)
+        self.assertEqual(result['status'], 'diagnostic_deadline')
+        self.assertEqual(result['failed_stage'], 'final_cleanup')
+        self.assertTrue(result['deadline_observation']['cleanup_included_in_elapsed_gate'])
+
+    def test_native_timing_keeps_native_failure_when_cleanup_exceeds_limit(self):
+        code, result = self.run_main(function_profiler=False, failed=True, cleanup_elapsed=61.0)
+        self.assertEqual(code, 1)
+        self.assertEqual(result['status'], 'diagnostic_deadline')
+        self.assertEqual(result['prior_native_failure']['exception_class'], 'ValueError')
+        self.assertEqual(result['prior_native_failure']['status'], 'diagnostic_incomplete')
 
     def test_new_execution_reads_old_saved_identity_without_rewriting_it(self):
         code, result = self.run_main(execution_implementation='2'*64, saved_implementation=IMPL)
@@ -534,6 +602,89 @@ class ProfileTests(unittest.TestCase):
         code, result = self.run_main(failed=True)
         self.assertEqual(code, 1)
         self.assertEqual(result['status'], 'diagnostic_incomplete')
+
+
+class NativeTimingIntegrationTests(unittest.TestCase):
+    def test_disabled_mode_runs_real_native_recursive_freeze_without_constructing_profiler(self):
+        from football_model import advanced_snapshots as native_snapshots
+        from football_model.advanced_capacity import CapacityGuard
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory); output = repo / 'native.json'
+            original = {}
+            def restore(_repo, runtime, _state, _cloud):
+                child = 'advanced_models/inputs/' + 'c' * 64 + '.json'
+                original[child] = b'{"synthetic":true}\n'
+                child_ref = {'path': child, 'sha256': hashlib.sha256(original[child]).hexdigest()}
+                card = summary()['model_cards']['G0']['path']
+                original[card] = json.dumps({'training_source': child_ref, 'duplicate': child_ref}).encode()
+                document = summary()
+                document['model_cards']['G0']['sha256'] = hashlib.sha256(original[card]).hexdigest()
+                for name, raw in original.items():
+                    path = runtime / name; path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(raw)
+                latest = runtime / 'advanced_models/championship/p/reports/latest.json'
+                latest.parent.mkdir(parents=True); latest.write_text(json.dumps(document))
+                return {'test_only': True}
+            helpers = {
+                'fixed_fixture_validation_audit': types.SimpleNamespace(restore_fixed=restore, sha40=lambda value: value),
+                'fixed_research_report_audit': types.SimpleNamespace(checkpoint_output=checkpoint_audit.checkpoint_output),
+                'cloud_state': types.SimpleNamespace(_git=lambda *_: types.SimpleNamespace(stdout='4' * 40)),
+                'football_model.advanced_research': types.SimpleNamespace(implementation_fingerprint=lambda: {'sha256': IMPL})}
+            with patch.dict(sys.modules, helpers), \
+                    patch.object(profile.cProfile, 'Profile', side_effect=AssertionError('native timing constructed cProfile')), \
+                    patch.object(profile, 'profile_rows', side_effect=AssertionError('native timing sampled functions')), \
+                    patch.object(native_snapshots, 'freeze_inputs', wraps=native_snapshots.freeze_inputs) as native_freeze, \
+                    contextlib.redirect_stdout(io.StringIO()):
+                code = profile.main(['--repo', str(repo), '--state-commit', '2' * 40,
+                    '--league', 'championship', '--implementation', IMPL, '--deadline-seconds', '60',
+                    '--no-function-profiler', '--output', str(output)])
+            result = json.loads(output.read_text())
+            self.assertEqual(code, 0, result)
+            self.assertEqual(native_freeze.call_count, 1)
+            runtime = repo / 'fixed-capture-profile-runtime'
+            args, kwargs = native_freeze.call_args
+            self.assertEqual(args[0], runtime)
+            self.assertEqual(args[1], runtime / 'diagnostic-profile-inputs')
+            self.assertEqual(len(args[2]), 1)
+            self.assertIsNotNone(args[3].utcoffset())
+            self.assertIsInstance(kwargs['capacity_guard'], CapacityGuard)
+            self.assertEqual(result['frozen_originals'], 2)
+            inventory = sorted((name, hashlib.sha256(raw).hexdigest()) for name, raw in original.items())
+            self.assertEqual(result['frozen_inventory_sha256'],
+                hashlib.sha256(json.dumps(inventory, separators=(',', ':')).encode()).hexdigest())
+            for name, raw in original.items():
+                self.assertEqual((runtime / name).read_bytes(), raw)
+                self.assertEqual((args[1] / 'sources' / (hashlib.sha256(raw).hexdigest() + '.json')).read_bytes(), raw)
+            self.assertFalse((runtime / 'advanced_snapshots').exists())
+            self.assertFalse(result['prewarm_enabled'])
+            self.assertFalse(result['function_profiler_enabled'])
+            self.assertIsNone(result['profile_functions'])
+            self.assertEqual(result['measurement_kind'], 'native_production_timing')
+            self.assertEqual(result['schema_version'], 'fixed-capture-native-timing-v1')
+            self.assertEqual(result['deadline_observation']['limit_seconds'], 60)
+            self.assertTrue(result['deadline_observation']['cleanup_included_in_elapsed_gate'])
+            self.assertLessEqual(output.stat().st_size, 512 * 1024)
+            for key in ('network_football_requests', 'fits', 'remote_state_writes'):
+                self.assertEqual(result[key], 0)
+
+    def test_workflow_uses_a_distinct_fresh_native_measurement_and_original_bounds(self):
+        text = (ROOT / '.github/workflows/fixed-capture-input-profile.yml').read_text()
+        self.assertIn('name: 固定捕获输入：原生无预热性能验收', text)
+        self.assertEqual(text.count('python scripts/fixed_capture_input_profile.py'), 1)
+        self.assertIn('--no-function-profiler', text)
+        self.assertNotIn('--prewarm', text)
+        self.assertIn('--deadline-seconds 1500', text)
+        self.assertIn('--state-commit e55c1dad479990567169341624345db239ed8f4e', text)
+        self.assertIn('--implementation b443defab7ced799e16354126fdfed42cda43f5ac09518a24b9b5711002fe6f4', text)
+        self.assertIn('--research-implementation 1e311689b3405f64c6ad9636732d2defb7ad67e26b4bc7e04b01a5b1b2b2d6ac', text)
+        self.assertIn('--output fixed-capture-native-timing.json', text)
+        self.assertIn('name: fixed-capture-native-timing-${{ github.run_id }}-${{ github.run_attempt }}', text)
+        self.assertIn('path: fixed-capture-native-timing.json', text)
+        self.assertNotIn('concurrency:', text)
+        self.assertNotIn('schedule:', text)
+        self.assertIn('runs-on: ubuntu-latest', text)
+        self.assertIn("FOOTBALL_API_KEY: ''", text)
+        self.assertNotIn('cloud_state_save_once', text)
+        self.assertNotIn('advanced_research study', text)
 
 
 class PrewarmTests(unittest.TestCase):

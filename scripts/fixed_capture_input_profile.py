@@ -1,4 +1,4 @@
-"""Bounded diagnostic of native freezing of saved training-card input closures.
+"""Bounded function diagnostic or explicit native timing of saved-card freezing.
 
 No live capture, queue, first output, football API, fitting, promotion or remote
 state write. Local diagnostic copies are disposable; this is NOT an EARLY replay.
@@ -519,8 +519,11 @@ def main(argv=None):
     parser.add_argument('--research-implementation', help='Exact original fingerprint of the saved cards; never rewritten')
     parser.add_argument('--deadline-seconds', type=int, default=1500)
     parser.add_argument('--prewarm', action='store_true', help='Materialize exact immutable cold originals before unchanged native freeze')
+    parser.add_argument('--no-function-profiler', action='store_true',
+                        help='Explicit native timing measurement; do not construct or enable cProfile')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args(argv)
+    require(not (args.no_function_profiler and args.prewarm), 'native_timing_prewarm_forbidden')
     saved_implementation = research_implementation(args.implementation, args.research_implementation)
     require(60 <= args.deadline_seconds <= 1500, 'invalid_deadline')
     repo = args.repo.resolve()
@@ -534,15 +537,22 @@ def main(argv=None):
     from football_model.advanced_snapshots import freeze_inputs
     from football_model.advanced_capacity import CapacityGuard
     from football_model.advanced_research import implementation_fingerprint
-    out = {'schema_version': 'fixed-capture-input-profile-v1',
+    out = {'schema_version': ('fixed-capture-native-timing-v1' if args.no_function_profiler
+                              else 'fixed-capture-input-profile-v1'),
            'state_commit': args.state_commit, 'league': args.league,
            'implementation': args.implementation,
            'research_implementation': saved_implementation,
+           'measurement_kind': ('native_production_timing'
+               if args.no_function_profiler else 'full_function_diagnostic'),
+           'function_profiler_enabled': not args.no_function_profiler,
+           'profile_functions': None,
            'started_at': datetime.now(timezone.utc).isoformat(),
            'network_football_requests': 0, 'fits': 0, 'remote_state_writes': 0,
            'live_capture_or_first_output_created': False,
            'status': 'diagnostic_in_progress', 'stack_samples': [],
-           'limitations': ['Instrumented fixed saved-card closure only, not the canceled job stack.',
+           'limitations': [('Native fixed saved-card timing with bounded reader observation; no function profile.'
+                           if args.no_function_profiler else
+                           'Instrumented fixed saved-card closure only, not the canceled job stack.'),
                           'No original EARLY output recovered or live horizon qualified.',
                           'No production speedup, full short, independent R refit or all19 acceptance.']}
     started = time.monotonic()
@@ -551,7 +561,7 @@ def main(argv=None):
     main_ident = threading.get_ident()
     expired = False
     native_completed = False
-    profiler = cProfile.Profile()
+    profiler = None if args.no_function_profiler else cProfile.Profile()
     cache_observation = ReaderCacheObservation(getattr(history_observed, 'FixedStateReader', None), native_policy='skip_manifest')
 
     def flush():
@@ -618,9 +628,11 @@ def main(argv=None):
             progress('prewarm_completed', **out['prewarm'])
         cutoff = datetime.now(timezone.utc)
         progress('native_freeze_saved_card_inputs', selected_cards=len(refs))
-        profiler.enable()
+        if profiler is not None:
+            profiler.enable()
         frozen = freeze_inputs(runtime, runtime / 'diagnostic-profile-inputs', refs, cutoff, capacity_guard=guard)
-        profiler.disable()
+        if profiler is not None:
+            profiler.disable()
         # Native freezing already validates every edge. Bind the diagnostic copy
         # inventory without exporting provider content or mutable current files.
         inventory = sorted((r['origin_runtime_path'], r['sha256']) for r in frozen)
@@ -646,7 +658,8 @@ def main(argv=None):
                        (str(exc) if isinstance(exc, ProfileError) else 'native_diagnostic_failure')),
                    failed_stage=out['active_stage']['stage'])
     finally:
-        profiler.disable()
+        if profiler is not None:
+            profiler.disable()
         signal.alarm(0)
         signal.signal(signal.SIGALRM, previous)
         stop.set()
@@ -657,7 +670,7 @@ def main(argv=None):
         finally:
             cache_observation.stop()
             out['reader_cache_observation'] = cache_observation.snapshot()
-        out['profile_functions'] = profile_rows(profiler)
+        out['profile_functions'] = None if profiler is None else profile_rows(profiler)
         out['ended_at'] = datetime.now(timezone.utc).isoformat()
         elapsed = time.monotonic() - started
         exceeded = elapsed > args.deadline_seconds
