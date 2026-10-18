@@ -537,6 +537,7 @@ def main(argv=None):
     from football_model.advanced_snapshots import freeze_inputs
     from football_model.advanced_capacity import CapacityGuard
     from football_model.advanced_research import implementation_fingerprint
+    from football_model.state_storage import _can_pin_restore_tree
     out = {'schema_version': ('fixed-capture-native-timing-v1' if args.no_function_profiler
                               else 'fixed-capture-input-profile-v1'),
            'state_commit': args.state_commit, 'league': args.league,
@@ -605,6 +606,11 @@ def main(argv=None):
         actual = implementation_fingerprint()
         require(actual['sha256'] == args.implementation, 'actual_implementation_mismatch')
         out['execution_implementation_fingerprint'] = actual
+        out['restore_source_identity_pinning_supported'] = _can_pin_restore_tree()
+        out['restore_validation_strategy'] = (
+            'single_full_validation_with_source_identity_pin'
+            if out['restore_source_identity_pinning_supported']
+            else 'two_full_validations_fallback')
         out['restore_preflight'] = restore_fixed(repo, runtime, args.state_commit, cloud)
         progress('read_fixed_latest_card_references')
         paths = list((runtime / 'advanced_models' / args.league).glob('*/reports/latest.json'))

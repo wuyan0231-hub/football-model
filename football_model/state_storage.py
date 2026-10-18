@@ -13,6 +13,8 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
+import stat
+from types import MappingProxyType
 import zlib
 from .storage_policy import (MAX_PHYSICAL_BYTES, MAX_LOGICAL_BYTES,
                              SUPPORTED_MANIFEST_LIMITS)
@@ -432,8 +434,80 @@ def validate_storage_tree(tree: Path, *, max_file_bytes=MAX_FILE_BYTES,
     return {**stats, "logical_bytes": logical, "physical_bytes": physical, "entries": document["entries"]}
 
 
-def restore_runtime(tree: Path, runtime: Path, *, cold_state_commit=None, cold_repo=None, **limits) -> dict:
+def _can_pin_restore_tree() -> bool:
+    return (hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_DIRECTORY")
+            and os.open in os.supports_dir_fd and os.stat in os.supports_dir_fd
+            and os.listdir in os.supports_fd)
+
+
+def _restore_tree_identity(tree: Path) -> bytes:
+    """Pin source names and no-follow identities across the resource preflight.
+
+    This is a streaming digest, not a cache of bytes or validation verdicts.
+    ctime also detects a same-size write whose mtime was restored. Directory
+    identities detect renamed/replaced children. The Git administrative entry
+    is excluded, as it is from transport validation and restore.
+    """
+    digest = hashlib.sha256()
+    allowed = {"runtime", "README.md", "state_metadata.json", MANIFEST_NAME, ARCHIVE_DIR}
+
+    def identity(item):
+        return (item.st_dev, item.st_ino, item.st_mode,
+                item.st_size, item.st_mtime_ns, item.st_ctime_ns)
+
+    def visit(name, relative, parent=None):
+        item = os.stat(name, dir_fd=parent, follow_symlinks=False)
+        record = (relative, item.st_dev, item.st_ino, item.st_mode,
+                  item.st_size, item.st_mtime_ns, item.st_ctime_ns)
+        digest.update(json.dumps(record, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+        digest.update(b"\n")
+        if stat.S_ISDIR(item.st_mode):
+            descriptor = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent)
+            try:
+                if identity(os.fstat(descriptor)) != identity(item):
+                    raise StorageError("状态源在资源检查期间改变，已停止。")
+                for child in sorted(os.listdir(descriptor)):
+                    if not relative and child not in allowed:
+                        continue
+                    visit(child, f"{relative}/{child}" if relative else child, descriptor)
+            finally:
+                os.close(descriptor)
+
+    try:
+        visit(str(Path(tree)), "")
+    except OSError as exc:
+        raise StorageError("状态源在资源检查期间改变，已停止。") from exc
+    return digest.digest()
+
+
+def restore_runtime(tree: Path, runtime: Path, *, cold_state_commit=None, cold_repo=None,
+                    before_restore=None, **limits) -> dict:
+    """Validate completely, preflight resources, then restore original bytes.
+
+    The optional preflight consumes the same validated source statistics and
+    must finish before any destination write. Its view cannot modify the
+    validated manifest. On platforms with POSIX no-follow directory handles,
+    source identities are checked across validation and the callback. Other
+    platforms retain the original second complete validation after preflight;
+    that fallback does not claim to detect every same-size inline rewrite.
+    """
+    pinned = before_restore is not None and _can_pin_restore_tree()
+    identity = _restore_tree_identity(tree) if pinned else None
     stats = validate_storage_tree(tree, **limits)
+    if before_restore is not None:
+        readonly = MappingProxyType({**stats, "entries": tuple(
+            MappingProxyType(entry) for entry in stats["entries"])})
+        before_restore(readonly)
+        if pinned:
+            if _restore_tree_identity(tree) != identity:
+                raise StorageError("状态源在资源检查期间改变，已停止。")
+        else:
+            # Platforms without no-follow directory descriptors retain the
+            # original second complete validation after the resource check.
+            current = validate_storage_tree(tree, **limits)
+            if current != stats:
+                raise StorageError("状态源在资源检查期间改变，已停止。")
+            stats = current
     runtime = Path(runtime)
     if runtime.is_symlink() or (runtime.exists() and (not runtime.is_dir() or any(runtime.iterdir()))):
         raise StorageError("runtime 已有内容，拒绝覆盖恢复。")

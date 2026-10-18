@@ -314,6 +314,77 @@ class CloudStateTests(unittest.TestCase):
         with self.assertRaisesRegex(cloud_state.StateError, "尚未成功 load"):
             cloud_state.save_state(self.repo)
 
+    def test_load_preflights_same_disk_budget_after_one_complete_source_validation(self) -> None:
+        cloud_state.load_state(self.repo)
+        self.write_model(self.repo, 1)
+        saved = cloud_state.save_state(self.repo)
+        restored = self.clone("single-validation-load")
+        budgets = []
+        original_budget = cloud_state._restore_disk_budget
+        def budget(tree, stats):
+            self.assertFalse((restored / "runtime").exists())
+            self.assertFalse((restored / ".git/football-cloud-state.json").exists())
+            copied = {**stats, "entries": [dict(entry) for entry in stats["entries"]]}
+            expected = original_budget(tree, copied)
+            actual = original_budget(tree, stats)
+            self.assertEqual(actual, expected)
+            budgets.append(actual)
+            return actual
+        with patch.object(cloud_state, "_restore_disk_budget", side_effect=budget), \
+                patch.object(cloud_state.state_storage, "validate_storage_tree",
+                             wraps=cloud_state.state_storage.validate_storage_tree) as validate:
+            self.assertEqual(cloud_state.load_state(restored), saved)
+        self.assertEqual(validate.call_count, 1)
+        self.assertEqual(len(budgets), 1)
+        self.assertGreater(budgets[0]["additional_bytes"], 0)
+        self.assertEqual((restored / "runtime/models/epl.json").read_bytes(),
+                         (self.repo / "runtime/models/epl.json").read_bytes())
+
+    def test_load_disk_preflight_failure_never_authorizes_save_or_writes_runtime(self) -> None:
+        cloud_state.load_state(self.repo)
+        self.write_model(self.repo, 1)
+        cloud_state.save_state(self.repo)
+        restored = self.clone("failed-resource-load")
+        failure = cloud_state.StateError("insufficient test disk space")
+        with patch.object(cloud_state, "_ensure_disk_space", side_effect=[None, failure]):
+            with self.assertRaises(cloud_state.StateError) as caught:
+                cloud_state.load_state(restored)
+        self.assertIs(caught.exception, failure)
+        self.assertFalse((restored / "runtime").exists())
+        with self.assertRaisesRegex(cloud_state.StateError, "尚未成功 load"):
+            cloud_state.save_state(restored)
+
+    def test_fixed_audit_restore_keeps_one_full_validation_and_no_save_marker(self) -> None:
+        spec = importlib.util.spec_from_file_location("fixed_fixture_resource_audit",
+            SCRIPT.with_name("fixed_fixture_validation_audit.py"))
+        audit = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(audit)
+        cloud_state.load_state(self.repo)
+        self.write_model(self.repo, 1)
+        saved = cloud_state.save_state(self.repo)
+        restored = self.clone("fixed-audit-source")
+        destination = restored / "fixed-audit-runtime"
+        with patch.object(cloud_state.state_storage, "validate_storage_tree",
+                          wraps=cloud_state.state_storage.validate_storage_tree) as validate:
+            resources = audit.restore_fixed(restored, destination, saved, cloud_state)
+        self.assertEqual(validate.call_count, 1)
+        self.assertGreater(resources["additional_bytes"], 0)
+        self.assertEqual((destination / "models/epl.json").read_bytes(),
+                         (self.repo / "runtime/models/epl.json").read_bytes())
+        self.assertFalse((restored / ".git/football-cloud-state.json").exists())
+        self.assertEqual(git(restored, "rev-parse", "HEAD"), self.source_sha)
+        self.assertEqual(git(self.remote, "rev-parse", "model-state"), saved)
+        class Deadline(BaseException):
+            pass
+        for index, failure in enumerate((cloud_state.StateError("disk budget unavailable"), Deadline("deadline"))):
+            blocked = restored / f"fixed-blocked-{index}"
+            with patch.object(cloud_state, "_ensure_disk_space", side_effect=[None, failure]):
+                with self.assertRaises(type(failure)) as caught:
+                    audit.restore_fixed(restored, blocked, saved, cloud_state)
+            self.assertIs(caught.exception, failure)
+            self.assertFalse(blocked.exists())
+            self.assertFalse((restored / ".git/football-cloud-state.json").exists())
+
     def test_failed_load_invalidates_previous_save_authorization(self) -> None:
         cloud_state.load_state(self.repo)
         self.write_model(self.repo, 1)

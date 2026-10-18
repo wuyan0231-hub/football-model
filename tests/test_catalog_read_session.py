@@ -180,6 +180,104 @@ class SafePathTraversalTests(unittest.TestCase):
                 leaf.unlink()
 
 
+class FreezeInputPathTests(unittest.TestCase):
+    @staticmethod
+    def outcome(function, runtime, relative):
+        try:
+            result = function(runtime, relative)
+            return ("returned", type(result), result)
+        except Exception as exc:
+            return ("raised", type(exc), str(exc), getattr(exc, "errno", None))
+
+    def test_values_and_original_errors_match_for_missing_symlink_and_encoding_paths(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = Path(directory).resolve() / "runtime"
+            parent = runtime / "a" / "b"; parent.mkdir(parents=True)
+            leaf = parent / "normal.json"; leaf.write_bytes(b"{}")
+            (runtime / "inside").symlink_to(parent, target_is_directory=True)
+            (runtime / "outside").symlink_to(runtime.parent, target_is_directory=True)
+            (runtime / "broken").symlink_to(runtime / "missing")
+            (runtime / "loop").symlink_to(runtime / "loop")
+            relatives = ["a/b/normal.json", "a/b/missing.json", "missing/child.json",
+                "inside/normal.json", "outside/elsewhere.json", "broken/child", "loop/child",
+                "a/b/normal.json/child", ".", "./a//b/normal.json", "a/b/../other",
+                "/absolute", "//absolute", "a/中文.json", "bad\0name", "bad\ud800name", "", None, 42]
+            class StringSubclass(str):
+                pass
+            relatives.extend([StringSubclass("a/b/normal.json"), Path("a/b/normal.json")])
+            for relative in relatives:
+                with self.subTest(relative=repr(relative)):
+                    self.assertEqual(self.outcome(snapshots._freeze_input_path, runtime, relative),
+                                     self.outcome(snapshots._path, runtime, relative))
+
+    def test_each_normal_or_missing_edge_repeats_every_actual_no_follow_ancestor_stat(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = Path(directory).resolve() / "runtime"; runtime.mkdir()
+            parent = runtime / "a"; parent.mkdir()
+            (parent / "file.json").write_bytes(b"{}")
+            native_stat = os.stat
+            for relative in ("a/file.json", "a/missing.json", "absent/child.json"):
+                candidate = runtime / relative
+                expected = [str(candidate), *map(str, candidate.parents)]
+                calls = []
+                def forwarded(path, *args, **kwargs):
+                    self.assertEqual(args, ())
+                    self.assertEqual(kwargs, {"follow_symlinks": False})
+                    calls.append(os.fspath(path))
+                    return native_stat(path, *args, **kwargs)
+                with patch.object(os, "stat", side_effect=forwarded), \
+                        patch.object(snapshots, "_path", side_effect=AssertionError("unexpected fallback")):
+                    for _ in range(2):
+                        self.assertEqual(snapshots._freeze_input_path(runtime, relative), candidate)
+                self.assertEqual(calls, expected * 2)
+
+    def test_errors_fall_back_but_deadline_baseexception_is_preserved(self):
+        runtime = Path(tempfile.gettempdir()).resolve()
+        errors = [PermissionError(errno.EACCES, "denied"), OSError(errno.EIO, "io"),
+                  OSError(errno.EBADF, "badfd"), OSError(errno.ELOOP, "loop"), ValueError("encoding")]
+        for error in errors:
+            sentinel = runtime / "resolved-by-original"
+            with patch.object(os, "stat", side_effect=error), \
+                    patch.object(snapshots, "_path", return_value=sentinel) as fallback:
+                self.assertIs(snapshots._freeze_input_path(runtime, "relative.json"), sentinel)
+            fallback.assert_called_once_with(runtime, "relative.json")
+        from scripts.fixed_capture_input_profile import ProfileDeadline
+        deadline = ProfileDeadline("bounded_diagnostic_deadline")
+        with patch.object(os, "stat", side_effect=deadline), \
+                patch.object(snapshots, "_path", side_effect=AssertionError("deadline swallowed")):
+            with self.assertRaises(ProfileDeadline) as raised:
+                snapshots._freeze_input_path(runtime, "relative.json")
+        self.assertIs(raised.exception, deadline)
+
+    def test_uncanonical_runtime_and_custom_values_use_the_original_resolver_once(self):
+        class CustomPath(type(Path())):
+            pass
+        class CustomString(str):
+            pass
+        for runtime, relative in [(Path("relative/runtime"), "file.json"),
+                (Path("/parent/../runtime"), "file.json"), (Path("//runtime"), "file.json"),
+                (CustomPath("/runtime"), "file.json"), (Path("/runtime"), CustomString("file.json"))]:
+            with self.subTest(runtime=repr(runtime), relative=repr(relative)):
+                sentinel = Path("/original-result")
+                with patch.object(snapshots, "_path", return_value=sentinel) as fallback:
+                    self.assertIs(snapshots._freeze_input_path(runtime, relative), sentinel)
+                fallback.assert_called_once_with(runtime, relative)
+
+    def test_symlink_replacement_and_reversion_never_reuse_a_filesystem_verdict(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = Path(directory).resolve() / "runtime"; runtime.mkdir()
+            original = runtime / "original"; original.mkdir()
+            alternate = runtime / "alternate"; alternate.mkdir()
+            moved = runtime / "moved"
+            relative = "original/file.json"
+            self.assertEqual(snapshots._freeze_input_path(runtime, relative), original / "file.json")
+            original.rename(moved)
+            original.symlink_to(alternate, target_is_directory=True)
+            self.assertEqual(snapshots._freeze_input_path(runtime, relative), alternate / "file.json")
+            original.unlink(); moved.rename(original)
+            self.assertEqual(snapshots._freeze_input_path(runtime, relative), original / "file.json")
+
+
 class CatalogReadSessionTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -211,6 +309,27 @@ class CatalogReadSessionTests(unittest.TestCase):
     def git(self, *args):
         return subprocess.run(["git", "-C", str(self.repo), *args], check=True,
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout
+
+    def test_fast_path_and_original_resolver_freeze_the_same_recursive_originals(self):
+        raw = encoded({"refs": [{"path": self.name, "sha256": digest(self.raw)}] * 3})
+        parent = self.runtime / "hot-parent.json"; parent.write_bytes(raw)
+        alias = self.runtime / "alias.json"; alias.symlink_to(parent)
+        refs = [{"path": "hot-parent.json", "sha256": digest(raw)}] * 2
+        cutoff = datetime(2025, 1, 2, tzinfo=timezone.utc)
+        # Full-capacity admission rejects a symlink in either implementation.
+        for resolver in (snapshots._freeze_input_path, snapshots._path):
+            with patch.object(snapshots, "_freeze_input_path", resolver):
+                with self.assertRaisesRegex(StorageError, "符号链接"):
+                    snapshots.freeze_inputs(self.runtime, self.runtime / "rejected", refs, cutoff)
+        alias.unlink()
+        actual = snapshots.freeze_inputs(self.runtime, self.runtime / "fast-frozen", refs, cutoff)
+        with patch.object(snapshots, "_freeze_input_path", snapshots._path):
+            original = snapshots.freeze_inputs(self.runtime, self.runtime / "original-frozen", refs, cutoff)
+        def identity(rows):
+            return sorted((row["origin_runtime_path"], row["sha256"], row["kind"],
+                           row["available_at"], Path(row["path"]).read_bytes()) for row in rows)
+        self.assertEqual(identity(actual), identity(original))
+        self.assertEqual(len(actual), 2)
 
     def test_digest_read_hashes_each_actual_raw_once_and_preserves_all_body_checks(self):
         with history.FixedStateReader(self.repo, self.oid) as reader:

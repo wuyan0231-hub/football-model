@@ -507,6 +507,15 @@ class ProfileTests(unittest.TestCase):
         self.assertEqual(result['frozen_inventory_sha256'],
             hashlib.sha256(json.dumps(expected, separators=(',', ':')).encode()).hexdigest())
 
+    def test_restore_strategy_records_platform_capability_without_changing_admission(self):
+        from football_model.state_storage import _can_pin_restore_tree
+        code, result = self.run_main(function_profiler=False)
+        self.assertEqual(code, 0)
+        self.assertEqual(result['restore_source_identity_pinning_supported'], _can_pin_restore_tree())
+        self.assertEqual(result['restore_validation_strategy'],
+            'single_full_validation_with_source_identity_pin' if _can_pin_restore_tree()
+            else 'two_full_validations_fallback')
+
     def test_native_timing_forbids_prewarm_before_loading_or_profiler_creation(self):
         with self.assertRaisesRegex(profile.ProfileError, 'native_timing_prewarm_forbidden'):
             self.run_main(function_profiler=False, prewarm=True)
@@ -674,7 +683,7 @@ class NativeTimingIntegrationTests(unittest.TestCase):
         self.assertNotIn('--prewarm', text)
         self.assertIn('--deadline-seconds 1500', text)
         self.assertIn('--state-commit e55c1dad479990567169341624345db239ed8f4e', text)
-        self.assertIn('--implementation f4b3d8aafaf0cea8b8c0d6b557cf9efa5d6da124296c57a561de7d5c8f4e526f', text)
+        self.assertIn('--implementation 041d304f087669467c66ea0f3d67c710411098d95dbd670b7f7531673239a96d', text)
         self.assertIn('--research-implementation 1e311689b3405f64c6ad9636732d2defb7ad67e26b4bc7e04b01a5b1b2b2d6ac', text)
         self.assertIn('--output fixed-capture-native-timing.json', text)
         self.assertIn('name: fixed-capture-native-timing-${{ github.run_id }}-${{ github.run_attempt }}', text)
