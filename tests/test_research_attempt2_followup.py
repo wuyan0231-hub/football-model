@@ -23,6 +23,55 @@ def raw(value):
     return json.dumps(value,sort_keys=True,separators=(',',':')).encode()
 
 
+class SyntheticValidationLogTests(unittest.TestCase):
+    # Synthetic four-line environment block only. This fixture contains no
+    # original Actions log or runner metadata and does not verify the live pin.
+    SYNTHETIC_LOG=(b'\xef\xbb\xbf2026-01-01T00:00:00Z   RESEARCH_ONLY: true\n'
+        b'2026-01-01T00:00:00Z   SHORT_ONLY: false\n'
+        b'2026-01-01T00:00:00Z   DISPATCH_REF: refs/heads/main\n'
+        b'2026-01-01T00:00:00Z   RESEARCH_LEAGUES: remaining_after_epl_championship\n')
+    SYNTHETIC_SHA256='2a8055e0625e4178c70744ef0ae3780f8a3e0815ec70ee5196afce9a42b033f6'
+
+    def fixture(self):
+        job={'name':'validate_dispatch','run_id':a.RUN,'run_attempt':a.ATTEMPT,
+            'head_sha':a.SOURCE,'head_branch':'main','status':'completed','conclusion':'success'}
+        return job,self.SYNTHETIC_LOG
+
+    def validate_synthetic(self,job,body):
+        with patch.object(a,'VALIDATE_HASH',self.SYNTHETIC_SHA256):
+            a.validate_dispatch(job,body)
+
+    def test_synthetic_validation_log_bytes_pass_without_normalization(self):
+        job,body=self.fixture()
+        self.assertEqual(len(body),214)
+        self.assertEqual(a.sha(body),self.SYNTHETIC_SHA256)
+        self.assertTrue(body.startswith(b'\xef\xbb\xbf'))
+        self.assertTrue(body.endswith(b'\n') and not body.endswith(b'\n\n'))
+        self.validate_synthetic(job,body)
+
+    def test_synthetic_added_or_missing_newline_and_content_changes_are_rejected(self):
+        job,body=self.fixture()
+        changed=(body+b'\n',body[:-1],body.removeprefix(b'\xef\xbb\xbf'),
+            body.replace(b'RESEARCH_ONLY: true',b'RESEARCH_ONLY: false'),
+            body.replace(b'SHORT_ONLY: false',b'SHORT_ONLY: true'))
+        for value in changed:
+            with self.subTest(sha256=a.sha(value)):
+                with self.assertRaisesRegex(a.Refused,'validate_dispatch_original_log'):
+                    self.validate_synthetic(job,value)
+
+    def test_synthetic_correct_bytes_never_override_wrong_job_identity(self):
+        job,body=self.fixture()
+        for key,value in (('name','other'),('run_id',a.RUN+1),('run_attempt',1),
+                ('head_sha','0'*40),('head_branch','other'),('status','in_progress')):
+            bad=copy.deepcopy(job);bad[key]=value
+            with self.subTest(field=key):
+                with self.assertRaisesRegex(a.Refused,'job_identity'):
+                    self.validate_synthetic(bad,body)
+        bad=copy.deepcopy(job);bad['conclusion']='failure'
+        with self.assertRaisesRegex(a.Refused,'validate_dispatch_original_log'):
+            self.validate_synthetic(bad,body)
+
+
 class ContractTests(unittest.TestCase):
     def setUp(self):
         self.league='mls';self.parent='1'*40;self.checkpoint='2'*40;self.final='3'*40
