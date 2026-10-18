@@ -85,14 +85,17 @@ def restore_fixed(repo, runtime, state, cloud):
     if cloud._git(repo, "rev-parse", "FETCH_HEAD").stdout.strip() != state:
         raise AuditError("fetched_commit_mismatch")
     with cloud._worktree(repo, state) as tree:
-        stats = cloud._validate_tree(tree)
-        resources = cloud._restore_disk_budget(tree, stats)
-        cloud._ensure_disk_space(repo, resources["additional_bytes"])
+        resources = None
+        def before_restore(stats):
+            nonlocal resources
+            resources = cloud._restore_disk_budget(tree, stats)
+            cloud._ensure_disk_space(repo, resources["additional_bytes"])
         cloud.state_storage.restore_runtime(
             tree, runtime, max_file_bytes=cloud._MAX_FILE_BYTES,
             max_physical_bytes=cloud._MAX_TOTAL_BYTES,
             max_logical_bytes=cloud._MAX_LOGICAL_BYTES,
             cold_state_commit=state, cold_repo=repo,
+            before_restore=before_restore,
         )
     # Deliberately do NOT create a cloud-state marker authorizing a later save.
     return resources

@@ -11,11 +11,14 @@ from collections import Counter
 from contextlib import contextmanager
 from copy import deepcopy
 from datetime import datetime, timezone
+import errno
 import fcntl
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
+import stat
 import tempfile
 
 from .data import _iso, _utc
@@ -28,9 +31,12 @@ from .feature_snapshots import (HORIZONS, SnapshotError, _bytes, _check_times,
     _write_bytes, snapshot_from_evidence, verify_baseline_capture)
 from .feature_scoring import _path, _read_ref, _pointer, _reference, _raw as _pointer_bytes
 from .history_archive import (read_bytes as history_read_bytes, exists as history_exists,
-    _catalog as _history_catalog, _safe_path as _history_safe_path)
+    read_bytes_with_digest as history_read_bytes_with_digest,
+    _catalog as _history_catalog, _safe_path as _history_safe_path,
+    verified_catalog_read_session)
 
 VERSION = "advanced-snapshots-v1"
+_NATIVE_INPUT_PATH_CLASS = type(Path())
 
 
 def candidate_ids(protocol):
@@ -89,11 +95,11 @@ def _guarded_pointer(path, value, guard, *, first=False, final=False):
     guard.commit_write(ticket)
 
 
-def _guarded_freeze(path, runtime, root, cutoff, kind, guard):
+def _guarded_freeze(path, runtime, root, cutoff, kind, guard, *, raw=None):
     path = Path(path).resolve()
     if not path.is_relative_to(runtime):
         raise SnapshotError("source_path_escapes_runtime")
-    raw = history_read_bytes(path, runtime=runtime)
+    raw = history_read_bytes(path, runtime=runtime) if raw is None else raw
     suffix = path.suffix if path.suffix in (".json", ".py") else ".bin"
     sha = hashlib.sha256(raw).hexdigest()
     destination = root / "sources" / (sha + suffix)
@@ -139,33 +145,79 @@ def _refs_in(value):
             yield from _refs_in(item)
 
 
+def _freeze_input_path(runtime, relative):
+    """Resolve one edge under freeze_inputs' already canonical runtime.
+
+    A fresh no-follow walk can return the lexical path when no component is a
+    symlink. Missing paths are normal for cold originals. Every symlink and
+    other filesystem/encoding error uses the original resolver; no filesystem
+    verdict is retained for a later edge. Original reads still perform their
+    own path, mutable-file and repository-binding checks.
+    """
+    if (os.name != "posix" or type(runtime) is not _NATIVE_INPUT_PATH_CLASS
+            or runtime.anchor != "/" or ".." in runtime.parts or type(relative) is not str):
+        return _path(runtime, relative)
+    if not relative:
+        raise SnapshotError("invalid_scoring_reference_path")
+    requested = Path(relative)
+    if requested.is_absolute() or ".." in requested.parts:
+        raise SnapshotError("unsafe_scoring_reference_path")
+    candidate = runtime / requested
+    current = os.fspath(candidate)
+    try:
+        while True:
+            try:
+                value = os.stat(current, follow_symlinks=False)
+            except OSError as exc:
+                if exc.errno not in (errno.ENOENT, errno.ENOTDIR):
+                    raise
+            else:
+                if stat.S_ISLNK(value.st_mode):
+                    return _path(runtime, relative)
+            parent = os.path.dirname(current)
+            if parent == current:
+                break
+            current = parent
+    except (OSError, ValueError):
+        return _path(runtime, relative)
+    return candidate
+
+
 def freeze_inputs(runtime, root, refs, cutoff, *, capacity_guard=None):
     """Recursively preserve each runtime input, including card training parents."""
     runtime = Path(runtime).resolve()
     guard = capacity_guard if capacity_guard is not None else CapacityGuard(runtime)
     pending, saved = list(refs), {}
-    while pending:
-        ref = pending.pop()
-        rel = ref.get("runtime_relative_path", ref["path"])
-        p = Path(rel)
-        if p.is_absolute():
-            if not p.resolve().is_relative_to(runtime):
-                raise SnapshotError("advanced_input_escapes_runtime")
-            p = p.resolve().relative_to(runtime)
-        path = _path(runtime, p.as_posix())
-        if not history_exists(path) or _sha(path) != ref["sha256"]:
-            raise SnapshotError("advanced_input_hash_mismatch")
-        key = p.as_posix()
-        if key in saved:
-            if saved[key]["sha256"] != ref["sha256"]:
-                raise SnapshotError("advanced_input_version_conflict")
-            continue
-        frozen = _guarded_freeze(path, runtime, root, cutoff, "advanced_input", guard)
-        saved[key] = frozen
-        if path.suffix == ".json":
-            # References are assertions about exact bytes, not a license to
-            # ignore missing training evidence or silently read another latest.
-            pending.extend(_refs_in(_read(path)))
+    with verified_catalog_read_session(runtime):
+        while pending:
+            ref = pending.pop()
+            rel = ref.get("runtime_relative_path", ref["path"])
+            p = Path(rel)
+            if p.is_absolute():
+                if not p.resolve().is_relative_to(runtime):
+                    raise SnapshotError("advanced_input_escapes_runtime")
+                p = p.resolve().relative_to(runtime)
+            path = _freeze_input_path(runtime, p.as_posix())
+            if not history_exists(path):
+                raise SnapshotError("advanced_input_hash_mismatch")
+            # Validate every edge against the bytes that will actually be
+            # frozen and traversed. Reopening a hot pointer after its hash
+            # check could otherwise freeze another version of that path.
+            raw, actual_digest = history_read_bytes_with_digest(path, runtime=runtime)
+            if actual_digest != ref["sha256"]:
+                raise SnapshotError("advanced_input_hash_mismatch")
+            key = p.as_posix()
+            if key in saved:
+                if saved[key]["sha256"] != ref["sha256"]:
+                    raise SnapshotError("advanced_input_version_conflict")
+                continue
+            frozen = _guarded_freeze(path, runtime, root, cutoff, "advanced_input", guard, raw=raw)
+            saved[key] = frozen
+            if path.suffix == ".json":
+                # References are assertions about exact bytes, not a license to
+                # ignore missing training evidence or silently read another latest.
+                pending.extend(_refs_in(json.loads(raw, object_pairs_hook=_pairs,
+                    parse_constant=lambda _: (_ for _ in ()).throw(SnapshotError("nonfinite_json")))))
     return list(saved.values())
 
 

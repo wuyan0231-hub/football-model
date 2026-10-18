@@ -9,8 +9,11 @@ from __future__ import annotations
 
 import fnmatch
 import atexit
+from bisect import bisect_left
 from collections import OrderedDict
+from contextlib import contextmanager
 from contextvars import ContextVar
+import errno
 import hashlib
 import json
 import os
@@ -18,9 +21,11 @@ from pathlib import Path
 import re
 import shutil
 import signal
+import stat as stat_module
 import subprocess
 import sys
 import threading
+from types import MappingProxyType
 
 from .state_storage import (MAX_FILE_BYTES, StorageError, _expand, _manifest_json,
                             _relative, _scan_secret, _supported_limits)
@@ -42,6 +47,15 @@ _STATE_CATALOG_CACHE = OrderedDict()
 _VERIFIED_COMMITS = set()
 _READERS = OrderedDict()
 _READER_SCOPE = ContextVar("fixed_history_reader", default=None)
+_CATALOG_SCOPE = ContextVar("verified_history_catalog", default=None)
+READER_CACHE_BYTES = 64 * 1024 * 1024
+MEMBER_CACHE_BYTES = 8 * 1024 * 1024
+MEMBER_CACHE_MAX_PATHS = 250000
+MEMBER_CACHE_MAX_SOURCES = 128
+_MEMBER_FIELDS = ("path", "raw_sha256", "raw_bytes", "blob_sha256", "compressed_bytes")
+_PATH_IGNORED_ERRNOS = (errno.ENOENT, errno.ENOTDIR, errno.EBADF, errno.ELOOP)
+_PATH_IGNORED_WINERRORS = (21, 123, 1921)
+_NATIVE_PATH_CLASS = type(Path())
 
 # A depth-1 fetch has no blob filter: a missing source may require the whole
 # immutable transport snapshot, not merely the selected logical original.
@@ -71,10 +85,35 @@ def select_cold_path(name):
     return bool(re.fullmatch(r"advanced_models/(?:objects|inputs)/[0-9a-f]{64}\.json", name))
 
 
+def _path_stat_error_ignored(exc):
+    """Python 3.12 is_symlink policy, without private stdlib imports."""
+    return (getattr(exc, "errno", None) in _PATH_IGNORED_ERRNOS
+            or getattr(exc, "winerror", None) in _PATH_IGNORED_WINERRORS)
+
+
 def _safe_path(path):
-    path = Path(path).absolute()
-    if any(p.is_symlink() for p in (path, *path.parents)):
-        raise StorageError("历史原件路径含符号链接，已停止。")
+    # Reuse only an exact native absolute Path value, never filesystem state.
+    # Relative values and custom subclasses retain the original conversion.
+    if type(path) is not _NATIVE_PATH_CLASS or not path.is_absolute():
+        path = Path(path).absolute()
+    current = os.fspath(path)
+    while True:
+        # Match Python 3.12 Path.is_symlink's syscall and error policy while
+        # checking the same leaf-to-root sequence without ancestor Path objects.
+        try:
+            linked = stat_module.S_ISLNK(os.stat(current, follow_symlinks=False).st_mode)
+        except OSError as exc:
+            if not _path_stat_error_ignored(exc):
+                raise
+        except ValueError:
+            pass
+        else:
+            if linked:
+                raise StorageError("历史原件路径含符号链接，已停止。")
+        parent = os.path.dirname(current)
+        if parent == current:
+            break
+        current = parent
     return path
 
 
@@ -84,14 +123,141 @@ class FixedStateReader:
     Repeated references reuse exact immutable transport bytes.  Callers still
     verify the saved compressed and raw fingerprints on every logical read.
     """
-    def __init__(self, repo, state_commit, *, cache_bytes=64 * 1024 * 1024):
+    def __init__(self, repo, state_commit, *, cache_bytes=READER_CACHE_BYTES):
         self.repo = _safe_path(repo)
         self.state_commit = state_commit
         self.cache_bytes = cache_bytes
+        self.total_cache_bytes = cache_bytes
+        self.member_cache_budget_bytes = 0
+        self.cache_budget_generation = 0
+        self._member_scope = None
+        self._member_cache = OrderedDict()
+        self._member_paths = None
+        self._member_index_charge = 0
+        self._member_cached_bytes = 0
+        self._member_peak_bytes = self._member_peak_entries = 0
+        self._member_hits = self._member_misses = self._member_evictions = 0
         self._cache = OrderedDict()
         self._cached_bytes = 0
         self._process = None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
+
+    def _reserve_members(self, session):
+        with self._lock:
+            if self._member_scope is session:
+                return True
+            # Custom small readers retain their existing admission semantics.
+            if (self._member_scope is not None or self.total_cache_bytes != READER_CACHE_BYTES
+                    or self.cache_bytes != self.total_cache_bytes
+                    or len(session.entries) > MEMBER_CACHE_MAX_PATHS
+                    or 20 * len(session.entries) + 1024 > MEMBER_CACHE_BYTES):
+                return False
+            self.cache_bytes = self.total_cache_bytes - MEMBER_CACHE_BYTES
+            while self._cache and self._cached_bytes > self.cache_bytes:
+                _, raw = self._cache.popitem(last=False)
+                self._cached_bytes -= len(raw)
+            self.member_cache_budget_bytes = MEMBER_CACHE_BYTES
+            self.cache_budget_generation += 1
+            self._member_scope = session
+            session.member_readers.add(self)
+            return True
+
+    def _clear_members(self):
+        self._member_cache.clear()
+        self._member_paths = None
+        self._member_index_charge = 0
+        self._member_cached_bytes = 0
+
+    def _release_members(self, session):
+        with self._lock:
+            if self._member_scope is session:
+                self._clear_members()
+                self._member_scope = None
+                self.member_cache_budget_bytes = 0
+                self.cache_bytes = self.total_cache_bytes
+                self.cache_budget_generation += 1
+
+    def _member(self, session, key, path):
+        with self._lock:
+            if self._member_scope is not session:
+                return None
+            value = self._member_cache.get(key)
+            if value is None or self._member_paths is None:
+                self._member_misses += 1
+                return False
+            offset = bisect_left(self._member_paths, path)
+            if (offset >= len(self._member_paths) or self._member_paths[offset] != path
+                    or not value[0][offset // 8] & (1 << (offset % 8))):
+                self._member_misses += 1
+                return False
+            self._member_hits += 1
+            self._member_cache.move_to_end(key)
+            return True
+
+    def _remember_members(self, session, key, index):
+        with self._lock:
+            if self._member_scope is not session or session.failure:
+                return
+            if key in self._member_cache:
+                self._member_cache.move_to_end(key)
+                return
+            count = len(session.entries)
+            index_charge = 20 * count + 1024
+            # The borrowed-string sorted tuple reserves the construction peak
+            # (list, sort scratch and tuple). Each source reserves both its
+            # temporary bytearray and immutable bytes, plus keys/slots/headers.
+            charge = 1024 + sys.getsizeof(key) + sum(map(sys.getsizeof, key)) + 2 * ((count + 7) // 8)
+            if (count > MEMBER_CACHE_MAX_PATHS or MEMBER_CACHE_MAX_SOURCES < 1
+                    or index_charge + charge > self.member_cache_budget_bytes):
+                return
+            while self._member_cache and (len(self._member_cache) >= MEMBER_CACHE_MAX_SOURCES
+                    or self._member_cached_bytes + charge > self.member_cache_budget_bytes):
+                _, (_, previous, _) = self._member_cache.popitem(last=False)
+                self._member_cached_bytes -= previous
+                self._member_evictions += 1
+            if self._member_paths is None:
+                self._member_index_charge = index_charge
+                self._member_cached_bytes = index_charge
+                try:
+                    self._member_paths = tuple(sorted(session.entries))
+                except BaseException:
+                    self._clear_members()
+                    raise
+            self._member_cached_bytes += charge
+            self._member_peak_bytes = max(self._member_peak_bytes, self._member_cached_bytes)
+            try:
+                bits = bytearray((count + 7) // 8)
+                proved = 0
+                for offset, path in enumerate(self._member_paths):
+                    pinned = session.entries[path]
+                    if (pinned["codec"] == "gzip-single-member" and pinned["state_commit"] == key[1]
+                            and pinned["manifest_sha256"] == key[2]):
+                        expected = {field: pinned[field] for field in _MEMBER_FIELDS}
+                        # Equality includes the complete exact five-field shape;
+                        # pinned catalog validation binds the four routing fields.
+                        if index.get(path) == expected:
+                            bits[offset // 8] |= 1 << (offset % 8)
+                            proved += 1
+                self._member_cache[key] = (bytes(bits), charge, proved)
+            except BaseException:
+                self._member_cache.pop(key, None)
+                self._member_cached_bytes -= charge
+                raise
+            self._member_peak_entries = max(self._member_peak_entries, len(self._member_cache))
+
+    def member_cache_metrics(self):
+        """Bounded counters only; safe during an internal close under _blob."""
+        with self._lock:
+            return {"current_bytes": self._member_cached_bytes, "current_entries": len(self._member_cache),
+                    "peak_bytes": self._member_peak_bytes, "peak_entries": self._member_peak_entries,
+                    "hits": self._member_hits, "misses": self._member_misses, "evictions": self._member_evictions,
+                    "budget_bytes": self.member_cache_budget_bytes, "total_cache_bytes": self.total_cache_bytes,
+                    "blob_cache_bytes": self.cache_bytes, "budget_generation": self.cache_budget_generation,
+                    "indexed_paths": len(self._member_paths) if self._member_paths is not None else 0,
+                    "current_proved_members": sum(value[2] for value in self._member_cache.values()),
+                    "index_charge_bytes": self._member_index_charge,
+                    "proof_charge_bytes": self._member_cached_bytes - self._member_index_charge,
+                    "max_paths": MEMBER_CACHE_MAX_PATHS, "max_sources": MEMBER_CACHE_MAX_SOURCES}
 
     def _blob(self, commit, relative, *, missing=False):
         if any(ord(c) < 32 for c in relative):
@@ -145,7 +311,8 @@ class FixedStateReader:
                 terminator = process.stdout.read(1)
                 if expired.is_set() or len(raw) != size or terminator != b"\n":
                     raise StorageError("固定历史对象长度不符或读取超时，已停止。")
-                if size <= self.cache_bytes:
+                # Parsed manifests have their own unchanged validation cache.
+                if relative != "state_storage.json" and size <= self.cache_bytes:
                     while self._cache and self._cached_bytes + size > self.cache_bytes:
                         _, previous = self._cache.popitem(last=False)
                         self._cached_bytes -= len(previous)
@@ -184,15 +351,19 @@ class FixedStateReader:
             _READER_SCOPE.reset(token)
 
     def close(self):
-        process, self._process = self._process, None
-        if process is not None:
-            try:
-                process.kill()
-            except ProcessLookupError:
-                pass
-            process.communicate()
-        self._cache.clear()
-        self._cached_bytes = 0
+        with self._lock:
+            process, self._process = self._process, None
+            if process is not None:
+                try:
+                    process.kill()
+                except ProcessLookupError:
+                    pass
+                process.communicate()
+            self._cache.clear()
+            self._cached_bytes = 0
+            # _blob also closes before its first process starts. Keep an active
+            # scope's reservation; only scope exit returns the full blob budget.
+            self._clear_members()
 
     def __enter__(self):
         return self
@@ -288,7 +459,7 @@ def _decode_catalog(raw, read_member):
     return entries
 
 
-def _catalog(runtime):
+def _catalog_unscoped(runtime, *, use_cache=True):
     runtime = _safe_path(runtime)
     path = runtime / CATALOG_RELATIVE
     if not path.exists():
@@ -305,7 +476,7 @@ def _catalog(runtime):
             offline_identity = (str(access), a.st_mtime_ns, a.st_ctime_ns, a.st_size)
             break
     key = (str(path), stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size, offline_identity)
-    cached = _CATALOG_CACHE.get(key)
+    cached = _CATALOG_CACHE.get(key) if use_cache else None
     if cached is not None:
         entries, signatures = cached
         if all((runtime / name).is_file() and not (runtime / name).is_symlink()
@@ -340,7 +511,200 @@ def _catalog(runtime):
     return result
 
 
+def _file_identity(path):
+    """Identity of mutable local input; do not follow a replaced symlink."""
+    _safe_path(path)
+    try:
+        value = path.stat()
+    except FileNotFoundError:
+        return None
+    return (value.st_dev, value.st_ino, value.st_mode, value.st_size,
+            value.st_mtime_ns, value.st_ctime_ns)
+
+
+class _VerifiedCatalogReadSession:
+    """One fixed catalog view, revalidated before it can return success.
+
+    This caches only the fully decoded routing index. Original byte, transport,
+    time and capacity checks still run on every original read/write. Local
+    connector sources remain mutable inputs and are pinned separately.
+    """
+    def __init__(self, runtime):
+        self.runtime = _safe_path(runtime)
+        self.entries = None
+        self.files = {}
+        self.directories = {}
+        self.git_markers = {}
+        self.offline_repo = None
+        self.source_repo = None
+        self.failure = None
+        self.member_readers = set()
+
+    def clear_members(self):
+        for reader in tuple(self.member_readers):
+            reader._release_members(self)
+        self.member_readers.clear()
+
+    def fail(self, reason):
+        self.failure = self.failure or reason
+        self.clear_members()
+        raise StorageError(reason)
+
+    def pin(self, path, raw=None, *, limit=MAX_FILE_BYTES):
+        return self._pin_with_digest(path, raw, limit=limit)[0]
+
+    def _pin_with_digest(self, path, raw=None, *, limit=MAX_FILE_BYTES):
+        path = _safe_path(path)
+        before = _file_identity(path)
+        if before is not None:
+            if not stat_module.S_ISREG(before[2]) or before[3] > limit:
+                self.fail("verified_catalog_session_invalid_file")
+            raw = path.read_bytes() if raw is None else raw
+            if _file_identity(path) != before or len(raw) != before[3]:
+                self.fail("verified_catalog_session_input_changed")
+        elif raw is not None:
+            self.fail("verified_catalog_session_input_changed")
+        record = (before, _sha(raw) if raw is not None else None)
+        if path in self.files and self.files[path] != record:
+            self.fail("verified_catalog_session_input_changed")
+        self.files[path] = record
+        return raw, record[1]
+
+    def pin_offline(self, repo, path, raw=None):
+        if _safe_path(repo) != self.offline_repo:
+            self.fail("verified_catalog_session_cross_runtime")
+        return self.pin(path, raw)
+
+    def check_repo_binding(self, repo):
+        if repo != self.source_repo:
+            self.fail("verified_catalog_session_cross_runtime")
+        git = repo / ".git"
+        current = _file_identity(git)
+        if (current[:3] if current is not None else None) != self.git_markers[git]:
+            self.fail("verified_catalog_session_binding_changed")
+        if git in self.files and current != self.files[git][0]:
+            self.fail("verified_catalog_session_binding_changed")
+        access = repo / "model_access_manifest.json"
+        if _file_identity(access) != self.files[access][0]:
+            self.fail("verified_catalog_session_binding_changed")
+
+    def verify(self, *, contents):
+        if self.failure:
+            raise StorageError(self.failure)
+        for path, identity in self.directories.items():
+            current = _file_identity(path)
+            if current is None or current[:3] != identity:
+                self.fail("verified_catalog_session_root_changed")
+        for path, identity in self.git_markers.items():
+            current = _file_identity(path)
+            # Git's object store may grow, but the binding cannot move/appear.
+            current = current[:3] if current is not None else None
+            if current != identity:
+                self.fail("verified_catalog_session_binding_changed")
+        for path, (identity, digest) in self.files.items():
+            if _file_identity(path) != identity:
+                self.fail("verified_catalog_session_input_changed")
+            if contents and identity is not None:
+                raw = path.read_bytes()
+                if _sha(raw) != digest or _file_identity(path) != identity:
+                    self.fail("verified_catalog_session_input_changed")
+
+    def start(self):
+        for parent in (self.runtime, *self.runtime.parents):
+            identity = _file_identity(parent)
+            if identity is None or not stat_module.S_ISDIR(identity[2]):
+                self.fail("verified_catalog_session_invalid_runtime")
+            self.directories[parent] = identity[:3]
+            git = parent / ".git"
+            marker = _file_identity(git)
+            self.git_markers[git] = marker[:3] if marker is not None else None
+            if marker is not None and stat_module.S_ISREG(marker[2]):
+                self.pin(git)
+            access = parent / "model_access_manifest.json"
+            raw = self.pin(access)
+            if self.source_repo is None and (raw is not None or (marker is not None and
+                    (stat_module.S_ISDIR(marker[2]) or stat_module.S_ISREG(marker[2])))):
+                self.source_repo = parent
+            if self.offline_repo is None and raw is not None and marker is None:
+                self.offline_repo = parent
+        raw = self.pin(self.runtime / CATALOG_RELATIVE)
+        if raw is not None:
+            value = _manifest_json(raw)
+            if isinstance(value, dict) and value.get("schema_version") == INDEX_SCHEMA_VERSION:
+                if not isinstance(value.get("chunks"), list):
+                    self.fail("verified_catalog_session_invalid_chunk")
+                for ref in value.get("chunks", []):
+                    if (not isinstance(ref, dict) or not isinstance(ref.get("sha256"), str)
+                            or not _SHA.fullmatch(ref["sha256"])
+                            or ref.get("path") != CATALOG_CHUNK_PREFIX + ref["sha256"] + ".json"):
+                        self.fail("verified_catalog_session_invalid_chunk")
+                    self.pin(self.runtime / ref["path"], limit=CATALOG_CHUNK_BYTES)
+        # Always decode all entries/chunks and validate offline source binding,
+        # even if another caller previously populated the process-wide cache.
+        entries = _catalog_unscoped(self.runtime, use_cache=False)
+        self.entries = MappingProxyType({name: MappingProxyType(dict(entry))
+                                         for name, entry in entries.items()})
+        self.verify(contents=False)
+
+    def finish(self):
+        self.verify(contents=True)
+        entries = _catalog_unscoped(self.runtime, use_cache=False)
+        if entries != self.entries:
+            self.fail("verified_catalog_session_catalog_changed")
+        self.verify(contents=False)
+
+    def lookup(self, runtime):
+        if self.failure:
+            raise StorageError(self.failure)
+        if _safe_path(runtime) != self.runtime or self.entries is None:
+            self.fail("verified_catalog_session_cross_runtime")
+        return self.entries
+
+
+@contextmanager
+def verified_catalog_read_session(runtime):
+    """Pin one complete catalog for a read operation, with no nested scopes.
+
+    A changed catalog, chunk, root or read offline original rejects the entire
+    operation at exit. Catalog writes and cross-runtime reads are forbidden,
+    including when their immediate exception is caught inside the scope.
+    No cache survives this context, and original reads are never cached here.
+    """
+    previous = _CATALOG_SCOPE.get()
+    if previous is not None:
+        previous.fail("verified_catalog_session_nested")
+    session = _VerifiedCatalogReadSession(runtime)
+    token = _CATALOG_SCOPE.set(session)
+    try:
+        session.start()
+        try:
+            yield session
+        except BaseException as exc:
+            try:
+                session.finish()
+            except Exception as verification:
+                # Preserve the actual business failure, while retaining the
+                # separate failed final-integrity check for its caller.
+                exc.add_note("catalog_session_final_check_failed: " + type(verification).__name__)
+            raise
+        else:
+            session.finish()
+    finally:
+        try:
+            session.clear_members()
+        finally:
+            _CATALOG_SCOPE.reset(token)
+
+
+def _catalog(runtime):
+    session = _CATALOG_SCOPE.get()
+    return session.lookup(runtime) if session is not None else _catalog_unscoped(runtime)
+
+
 def _write_catalog(runtime, entries):
+    session = _CATALOG_SCOPE.get()
+    if session is not None:
+        session.fail("verified_catalog_session_write_forbidden")
     runtime = _safe_path(runtime)
     value = {"schema_version": SCHEMA_VERSION,
              "entries": [entries[name] for name in sorted(entries)]}
@@ -417,6 +781,10 @@ def _write_catalog(runtime, entries):
 
 def _find_runtime(path, runtime=None):
     path = _safe_path(path)
+    session = _CATALOG_SCOPE.get()
+    if session is not None and (not path.is_relative_to(session.runtime)
+            or (runtime is not None and _safe_path(runtime) != session.runtime)):
+        session.fail("verified_catalog_session_cross_runtime")
     if runtime is not None:
         root = _safe_path(runtime)
         if not path.is_relative_to(root):
@@ -523,11 +891,17 @@ def _ensure_commit(repo, commit):
 def _git_bytes(repo, commit, relative, *, missing=False):
     _relative(relative)
     repo = _safe_path(repo)
+    session = _CATALOG_SCOPE.get()
+    if session is not None:
+        session.check_repo_binding(repo)
     access = repo / "model_access_manifest.json"
     if access.is_file() and not (repo / ".git").exists():
         # A selected connector bundle carries separately bound ancestor source
         # files. Never contact the network or invent Git membership offline.
-        document = _manifest_json(access.read_bytes())
+        access_raw = access.read_bytes()
+        if session is not None:
+            session.pin_offline(repo, access, access_raw)
+        document = _manifest_json(access_raw)
         if (document.get("status") != "files_materialized_not_model_verified"
                 or not isinstance(document.get("files"), list)):
             raise StorageError("历史原件离线接入清单无效，已停止。")
@@ -550,6 +924,8 @@ def _git_bytes(repo, commit, relative, *, missing=False):
         if (len(raw) != record.get("bytes") or _sha(raw) != record.get("sha256")
                 or git_blob != record.get("git_blob_sha")):
             raise StorageError("历史离线原件来源指纹不符，已停止。")
+        if session is not None:
+            session.pin_offline(repo, path, raw)
         return raw
     _ensure_commit(repo, commit)
     return _reader(repo, commit)._blob(commit, relative, missing=missing)
@@ -557,6 +933,9 @@ def _git_bytes(repo, commit, relative, *, missing=False):
 
 def _manifest_index(repo, commit, expected_sha=None):
     repo = _safe_path(repo)
+    session = _CATALOG_SCOPE.get()
+    if session is not None:
+        session.check_repo_binding(repo)
     identity = None
     access = repo / "model_access_manifest.json"
     if access.is_file() and not (repo / ".git").exists():
@@ -565,6 +944,10 @@ def _manifest_index(repo, commit, expected_sha=None):
         # cache identity to both access records and the actual source manifest.
         source = repo / ("state_storage.json" if _manifest_json(access.read_bytes()).get("state_commit") == commit
                          else "history_sources/" + commit + "/state_storage.json")
+        session = _CATALOG_SCOPE.get()
+        if session is not None:
+            session.pin_offline(repo, access)
+            session.pin_offline(repo, source)
         s = source.stat() if source.is_file() else None
         identity = (a.st_mtime_ns, a.st_ctime_ns, a.st_size,
                     (s.st_mtime_ns, s.st_ctime_ns, s.st_size) if s else None)
@@ -617,24 +1000,58 @@ def _state_catalog(repo, commit):
     return _STATE_CATALOG_CACHE[key]
 
 
-def _entry_body(repo, entry, seen):
+def _manifest_member(repo, entry):
+    """Check one member, reusing only successful immutable scoped projections."""
+    expected = {key: entry[key] for key in _MEMBER_FIELDS}
+    session = _CATALOG_SCOPE.get()
+    reader = cache_key = None
+    if session is not None:
+        repo = _safe_path(repo)
+        session.check_repo_binding(repo)
+        if session.failure:
+            raise StorageError(session.failure)
+        pinned = session.entries.get(entry["path"])
+        git_marker = session.git_markers.get(repo / ".git")
+        if (session.offline_repo is None and git_marker is not None and pinned == entry
+                and entry["codec"] == "gzip-single-member"):
+            reader = _reader(repo, entry["state_commit"])
+            if reader._reserve_members(session):
+                cache_key = (str(repo), entry["state_commit"], entry["manifest_sha256"])
+                if reader._member(session, cache_key, entry["path"]):
+                    if tuple(pinned[key] for key in _MEMBER_FIELDS) != tuple(expected[key] for key in _MEMBER_FIELDS):
+                        raise StorageError("历史原件与固定来源清单不符，已停止。")
+                    return None
+    _, index = _manifest_index(repo, entry["state_commit"], entry["manifest_sha256"])
+    if index.get(entry["path"]) != expected:
+        raise StorageError("历史原件与固定来源清单不符，已停止。")
+    if cache_key is not None:
+        return reader, session, cache_key, index
+    return None
+
+
+def _entry_body(repo, entry, seen, *, with_digest=False):
     commit = entry["state_commit"]
+    member = None
     if entry["codec"] == "gzip-single-member":
-        _, index = _manifest_index(repo, commit, entry["manifest_sha256"])
-        expected = {key: entry[key] for key in ("path", "raw_sha256", "raw_bytes", "blob_sha256", "compressed_bytes")}
-        if index.get(entry["path"]) != expected:
-            raise StorageError("历史原件与固定来源清单不符，已停止。")
+        member = _manifest_member(repo, entry)
         blob = _git_bytes(repo, commit, entry["transport_path"])
         if len(blob) != entry["compressed_bytes"] or _sha(blob) != entry["blob_sha256"]:
             raise StorageError("历史压缩原件长度或指纹不符，已停止。")
         raw = _expand(blob, entry["raw_bytes"])
     else:
         raw = _read_state_bytes(repo, commit, entry["path"], seen)
-    if len(raw) != entry["raw_bytes"] or _sha(raw) != entry["raw_sha256"]:
+    if len(raw) != entry["raw_bytes"]:
+        raise StorageError("历史恢复原件长度或指纹不符，已停止。")
+    raw_digest = _sha(raw)
+    if raw_digest != entry["raw_sha256"]:
         raise StorageError("历史恢复原件长度或指纹不符，已停止。")
     _manifest_json(raw)
     _scan_secret(raw)
-    return raw
+    if member is not None:
+        reader, session, key, index = member
+        session.check_repo_binding(_safe_path(repo))
+        reader._remember_members(session, key, index)
+    return (raw, raw_digest) if with_digest else raw
 
 
 def _read_state_bytes(repo, commit, logical_path, seen):
@@ -668,16 +1085,45 @@ def read_state_bytes(repo, state_commit, logical_path):
 
 
 def read_bytes(path, *, runtime=None):
+    return _read_bytes(path, runtime=runtime, with_digest=False)
+
+
+def read_bytes_with_digest(path, *, runtime=None):
+    """Return immutable bytes and their actual SHA from this validated read.
+
+    The digest is computed anew for every read, never taken from a catalog or
+    retained across edges. Transport, expansion, JSON and secret checks are
+    identical to read_bytes; callers may also compare this digest to a ref.
+    """
+    return _read_bytes(path, runtime=runtime, with_digest=True)
+
+
+def _read_bytes(path, *, runtime, with_digest):
     path = _safe_path(path)
     root = _find_runtime(path, runtime)
     entry = _catalog(root).get(path.relative_to(root).as_posix()) if root is not None else None
     if path.is_file():
-        raw = path.read_bytes()
-        if entry is not None and (_sha(raw) != entry["raw_sha256"] or len(raw) != entry["raw_bytes"]):
+        session = _CATALOG_SCOPE.get()
+        # Hot inputs remain mutable even when routing is pinned. Read and
+        # register the same bytes atomically with respect to file identity;
+        # scope exit rejects any later change, including a change then revert.
+        if session is not None and with_digest:
+            raw, raw_digest = session._pin_with_digest(path)
+            if raw is None:
+                # pin() uses None for absent metadata. An original that
+                # disappears here still cannot acquire a valid byte digest.
+                raw_digest = _sha(raw)
+        else:
+            raw = session.pin(path) if session is not None else path.read_bytes()
+            raw_digest = _sha(raw) if with_digest else None
+        if entry is not None and ((raw_digest if with_digest else _sha(raw)) != entry["raw_sha256"]
+                                  or len(raw) != entry["raw_bytes"]):
             raise StorageError("活动原件与冻结历史目录冲突，已停止。")
-        return raw
+        return (raw, raw_digest) if with_digest else raw
     if entry is None:
         raise FileNotFoundError(path)
+    if with_digest:
+        return _entry_body(_repo(root), entry, set(), with_digest=True)
     return _entry_body(_repo(root), entry, set())
 
 

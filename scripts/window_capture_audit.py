@@ -2,7 +2,9 @@
 
 The writer uses the unmodified native CLI. This helper only records actual
 outcomes, then independently checks the saved fixed-tree target in a read job.
-It is outside the existing 50-file research implementation identity.
+It is outside the research implementation identity. The live entry point is
+locked to the reviewed execution version; this is not a compatibility map for
+historical cards, which still pass their native exact-identity checks.
 """
 from __future__ import annotations
 import argparse
@@ -15,7 +17,7 @@ import re
 import subprocess
 import sys
 
-EXPECTED_IMPLEMENTATION = '1e311689b3405f64c6ad9636732d2defb7ad67e26b4bc7e04b01a5b1b2b2d6ac'
+EXPECTED_IMPLEMENTATION = '041d304f087669467c66ea0f3d67c710411098d95dbd670b7f7531673239a96d'
 ALLOWED_LEAGUES = ('epl',)
 SCHEDULE_DATE = '2026-10-17'
 SCHEDULE_START = datetime(2026, 10, 17, 10, 0, tzinfo=timezone.utc)

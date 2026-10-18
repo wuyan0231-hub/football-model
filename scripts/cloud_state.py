@@ -416,10 +416,10 @@ def load_state(repo: Path, runtime: Path = Path("runtime")) -> str | None:
         _git(repo, "fetch", "--depth=1", "--no-tags", "origin", STATE_REF)
         oid = _git(repo, "rev-parse", "FETCH_HEAD").stdout.strip()
         with _worktree(repo, oid) as tree:
-            stats = _validate_tree(tree)
-            restore_resources = _restore_disk_budget(tree, stats)
-            print("MODEL_STATE_RESTORE_PREFLIGHT=" + json.dumps(restore_resources, ensure_ascii=False, sort_keys=True))
-            _ensure_disk_space(repo, restore_resources["additional_bytes"])
+            def before_restore(stats):
+                restore_resources = _restore_disk_budget(tree, stats)
+                print("MODEL_STATE_RESTORE_PREFLIGHT=" + json.dumps(restore_resources, ensure_ascii=False, sort_keys=True))
+                _ensure_disk_space(repo, restore_resources["additional_bytes"])
             # Validation precedes all destination writes. A partial local copy
             # still has no marker and therefore cannot be pushed by save.
             # Copy the whole tree: restoring only models/reports would lose
@@ -427,7 +427,8 @@ def load_state(repo: Path, runtime: Path = Path("runtime")) -> str | None:
             state_storage.restore_runtime(tree, runtime, max_file_bytes=_MAX_FILE_BYTES,
                                           max_physical_bytes=_MAX_TOTAL_BYTES,
                                           max_logical_bytes=_MAX_LOGICAL_BYTES,
-                                          cold_state_commit=oid, cold_repo=repo)
+                                          cold_state_commit=oid, cold_repo=repo,
+                                          before_restore=before_restore)
     else:
         runtime.mkdir(exist_ok=True)
     source_sha = _git(repo, "rev-parse", "HEAD").stdout.strip()

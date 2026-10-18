@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -55,6 +56,173 @@ class StateStorageTests(unittest.TestCase):
         storage.restore_runtime(self.tree, restored)
         self.assertEqual(original, {p.relative_to(restored).as_posix(): p.read_bytes() for p in restored.rglob("*") if p.is_file()})
         self.assertEqual(original, {p.relative_to(self.runtime).as_posix(): p.read_bytes() for p in self.runtime.rglob("*") if p.is_file()})
+
+    def test_restore_resource_preflight_uses_one_full_validation_and_readonly_stats(self):
+        archived = self.write("quotes/raw/1/old.json", b'{ "exact" : [1,2,3] }\n')
+        inline = self.write("models/epl.json", b'{"model_id":"epl-example"}\n')
+        self.pack()
+        destination = self.root / "restored"
+        observed = []
+        def preflight(stats):
+            self.assertFalse(destination.exists())
+            self.assertEqual(stats["entries"][0]["path"], archived.relative_to(self.runtime).as_posix())
+            with self.assertRaises(TypeError):
+                stats["logical_bytes"] = 0
+            with self.assertRaises(TypeError):
+                stats["entries"][0]["raw_bytes"] = 0
+            with self.assertRaises(TypeError):
+                stats["entries"] = ()
+            observed.append(stats["logical_bytes"])
+        with patch.object(storage, "validate_storage_tree", wraps=storage.validate_storage_tree) as validate:
+            actual = storage.restore_runtime(self.tree, destination, before_restore=preflight)
+        self.assertEqual(validate.call_count, 1)
+        self.assertEqual(observed, [actual["logical_bytes"]])
+        for source in (archived, inline):
+            self.assertEqual((destination / source.relative_to(self.runtime)).read_bytes(), source.read_bytes())
+
+    def test_restore_preflight_failures_and_deadlines_precede_all_destination_writes(self):
+        self.write("quotes/raw/1/old.json")
+        self.pack()
+        class Deadline(BaseException):
+            pass
+        for index, failure in enumerate((RuntimeError("resource unavailable"), Deadline("deadline"))):
+            destination = self.root / f"blocked-{index}"
+            def preflight(_stats):
+                raise failure
+            with self.assertRaises(type(failure)) as caught:
+                storage.restore_runtime(self.tree, destination, before_restore=preflight)
+            self.assertIs(caught.exception, failure)
+            self.assertFalse(destination.exists())
+
+    def test_restore_corruption_is_fully_rejected_before_resource_callback(self):
+        self.write("quotes/raw/1/old.json")
+        self.pack()
+        blob = next((self.tree / storage.ARCHIVE_DIR).iterdir())
+        blob.write_bytes(b"x" * blob.stat().st_size)
+        callback = unittest.mock.Mock()
+        destination = self.root / "corrupt-restored"
+        with self.assertRaisesRegex(storage.StorageError, "指纹"):
+            storage.restore_runtime(self.tree, destination, before_restore=callback)
+        callback.assert_not_called()
+        self.assertFalse(destination.exists())
+
+    def test_restore_detects_source_mutations_during_preflight_without_partial_restore(self):
+        self.write("quotes/raw/1/old.json")
+        self.write("models/epl.json", b'{"version":1}')
+        self.pack()
+        def content_write(tree):
+            path = tree / "runtime/models/epl.json"
+            old = path.stat()
+            path.write_bytes(b'{"version":2}')
+            os.utime(path, ns=(old.st_atime_ns, old.st_mtime_ns))
+        def same_content_write(tree):
+            path = tree / "runtime/models/epl.json"
+            old = path.stat()
+            path.write_bytes(path.read_bytes())
+            os.utime(path, ns=(old.st_atime_ns, old.st_mtime_ns))
+        def blob_write(tree):
+            path = next((tree / storage.ARCHIVE_DIR).iterdir())
+            path.write_bytes(b"x" * path.stat().st_size)
+        def new_file(tree):
+            (tree / "runtime/added.json").write_bytes(b"{}")
+        def remove_file(tree):
+            (tree / "runtime/models/epl.json").unlink()
+        def replace_with_symlink(tree):
+            path = tree / "runtime/models/epl.json"
+            path.unlink()
+            path.symlink_to(self.runtime / "models/epl.json")
+        def manifest_write(tree):
+            path = tree / storage.MANIFEST_NAME
+            old = path.stat()
+            path.write_bytes(path.read_bytes())
+            os.utime(path, ns=(old.st_atime_ns, old.st_mtime_ns))
+        def rename_file(tree):
+            path = tree / "runtime/models/epl.json"
+            path.rename(path.with_name("moved.json"))
+        def rename_directory(tree):
+            (tree / "runtime/models").rename(tree / "runtime/renamed-models")
+        def replace_directory_with_symlink(tree):
+            path = tree / "runtime/models"
+            path.rename(tree / "runtime/renamed-models")
+            path.symlink_to(self.runtime / "models", target_is_directory=True)
+        def replace_root_with_symlink(tree):
+            moved = tree.with_name(tree.name + "-original")
+            tree.rename(moved)
+            tree.symlink_to(moved, target_is_directory=True)
+        for index, mutate in enumerate((content_write, same_content_write, blob_write,
+                new_file, remove_file, replace_with_symlink, manifest_write,
+                rename_file, rename_directory, replace_directory_with_symlink,
+                replace_root_with_symlink)):
+            with self.subTest(mutation=mutate.__name__):
+                source = self.root / f"source-{index}"
+                shutil.copytree(self.tree, source)
+                destination = self.root / f"changed-{index}"
+                with self.assertRaisesRegex(storage.StorageError, "资源检查期间改变"):
+                    storage.restore_runtime(source, destination, before_restore=lambda _stats: mutate(source))
+                self.assertFalse(destination.exists())
+
+    def test_restore_identity_never_opens_git_or_unexpected_top_level_entries(self):
+        self.write("models/epl.json", b"{}")
+        self.pack()
+        administrative = self.tree / ".git"
+        administrative.mkdir()
+        (administrative / "private.json").write_bytes(b"synthetic administrative sentinel")
+        original_open = os.open
+        opened = []
+        def checked_open(path, *args, **kwargs):
+            opened.append(str(path))
+            self.assertNotEqual(str(path), ".git")
+            self.assertNotEqual(str(path), "unexpected")
+            return original_open(path, *args, **kwargs)
+        with patch.object(storage.os, "open", side_effect=checked_open):
+            storage._restore_tree_identity(self.tree)
+        self.assertTrue(opened)
+        (self.tree / "unexpected").mkdir()
+        with patch.object(storage.os, "open", side_effect=checked_open):
+            storage._restore_tree_identity(self.tree)
+        with self.assertRaisesRegex(storage.StorageError, "预期之外"):
+            storage.restore_runtime(self.tree, self.root / "invalid-top", before_restore=lambda _stats: None)
+
+    def test_restore_identity_closes_directory_descriptors_when_deadline_interrupts(self):
+        self.write("models/epl.json", b"{}")
+        self.pack()
+        class Deadline(BaseException):
+            pass
+        failure = Deadline("interrupted identity")
+        opened, closed = [], []
+        original_open, original_close = os.open, os.close
+        def track_open(*args, **kwargs):
+            descriptor = original_open(*args, **kwargs)
+            opened.append(descriptor)
+            return descriptor
+        def track_close(descriptor):
+            closed.append(descriptor)
+            return original_close(descriptor)
+        with patch.object(storage.os, "open", side_effect=track_open), \
+                patch.object(storage.os, "close", side_effect=track_close), \
+                patch.object(storage.os, "listdir", side_effect=failure):
+            with self.assertRaises(Deadline) as caught:
+                storage._restore_tree_identity(self.tree)
+        self.assertIs(caught.exception, failure)
+        self.assertEqual(opened, closed)
+
+    def test_restore_fallback_retains_original_second_full_validation(self):
+        self.write("quotes/raw/1/old.json")
+        self.pack()
+        destination = self.root / "fallback-restored"
+        with patch.object(storage, "_can_pin_restore_tree", return_value=False), \
+                patch.object(storage, "validate_storage_tree", wraps=storage.validate_storage_tree) as validate:
+            storage.restore_runtime(self.tree, destination, before_restore=lambda _stats: None)
+        self.assertEqual(validate.call_count, 2)
+        self.assertEqual((destination / "quotes/raw/1/old.json").read_bytes(), b'{"items":[]}\n')
+        def corrupt(_stats):
+            path = next((self.tree / storage.ARCHIVE_DIR).iterdir())
+            path.write_bytes(b"x" * path.stat().st_size)
+        blocked = self.root / "fallback-corrupt"
+        with patch.object(storage, "_can_pin_restore_tree", return_value=False):
+            with self.assertRaisesRegex(storage.StorageError, "指纹"):
+                storage.restore_runtime(self.tree, blocked, before_restore=corrupt)
+        self.assertFalse(blocked.exists())
 
     def test_total_shrink_cold_evidence_restores_exact_original_bytes(self):
         content = b'{  "freeze" : "' + b"x" * 12000 + b'" }\n'

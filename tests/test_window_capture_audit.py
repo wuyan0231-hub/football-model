@@ -154,7 +154,8 @@ class ReceiptTests(unittest.TestCase):
 class WorkflowTests(unittest.TestCase):
     def test_bounded_writer_then_separate_readonly_service_verification(self):
         text = (HERE / '.github/workflows/window-capture.yml').read_text()
-        self.assertIn("- cron: '0 10 17 10 *'", text)
+        self.assertNotIn('  schedule:', text)
+        self.assertNotIn("- cron: '0 10 17 10 *'", text)
         self.assertIn("needs.validate.outputs.proceed == 'true'", text)
         self.assertNotIn('push:', text)
         self.assertIn('group: football-model-state\n      cancel-in-progress: false\n      queue: max', text)
@@ -170,10 +171,18 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn('--match-id "$WINDOW_MATCH_ID"', text)
         self.assertNotIn('--as-of', text)
 
-    def test_existing_fifty_file_identity_unchanged(self):
+    def test_reviewed_live_execution_identity_is_exact(self):
         result = module.check_implementation()
         self.assertEqual(result['sha256'], module.EXPECTED_IMPLEMENTATION)
         self.assertEqual(len(result['files']), 50)
+
+    def test_old_saved_research_identity_is_not_a_live_execution_alias(self):
+        from football_model.advanced_research import implementation_fingerprint
+        stale = {**implementation_fingerprint(),
+                 'sha256': '1e311689b3405f64c6ad9636732d2defb7ad67e26b4bc7e04b01a5b1b2b2d6ac'}
+        with patch('football_model.advanced_research.implementation_fingerprint', return_value=stale):
+            with self.assertRaisesRegex(ValueError, 'research_implementation_changed'):
+                module.check_implementation()
 
 
 class NativeServiceBindingTests(unittest.TestCase):
