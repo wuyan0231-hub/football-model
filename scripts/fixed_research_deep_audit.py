@@ -45,6 +45,10 @@ LIMITATIONS = [
     'No API collection, production state write, current-card relabelling, promotion, or R08 activation.'
 ]
 THRESHOLD_ORIGIN = 'Pre-registered conservative audit thresholds; not production gates or optimizer error bounds.'
+# Engineering-only Git mappings/cache; numerical policy and RLIMIT_AS stay fixed.
+GIT_READER_CONFIG = {'core.packedGitWindowSize': 32*1024**2,
+                     'core.packedGitLimit': 128*1024**2,
+                     'core.deltaBaseCacheLimit': 32*1024**2}
 AUDIT_ERROR_CODES = frozenset({
     'API_client_forbidden', 'G0_G1_training_pool_mismatch', 'R_cutoff_mismatch',
     'R_feature_names_mismatch', 'R_refit_error_set_mismatch', 'R_refit_fit_contract_mismatch',
@@ -66,6 +70,7 @@ AUDIT_ERROR_CODES = frozenset({
     'source_hash_mismatch', 'source_sha_invalid', 'source_total_limit', 'symlink_path',
     'unavailable_targets_mismatch', 'unexpected_materialized_original', 'unexpected_probe_count',
     'unsafe_path', 'unsupported_materialized_member',
+    'reader_git_config_mismatch',
 })
 
 class DeepAuditError(ValueError):
@@ -198,6 +203,74 @@ def cold_storage_preflight(runtime, reader, receipt, resolve_repo):
             'routing_override_used': False}
 
 
+def reader_git_config_preflight(reader):
+    observed = {}
+    for key, expected in GIT_READER_CONFIG.items():
+        values = {}
+        for scope, flags in [('local', ['--local', '--get-all']), ('effective', ['--get'])]:
+            result = subprocess.run(['git', '-C', str(reader), 'config', '--type=int',
+                *flags, key], capture_output=True, text=True, timeout=10, check=False)
+            require(result.returncode == 0 and result.stdout.strip() == str(expected),
+                    'reader_git_config_mismatch')
+            values[scope+'_bytes'] = int(result.stdout.strip())
+        observed[key] = values
+    return {'scope': 'reader_repository_local', 'unit': 'bytes', 'values': observed,
+            'production_or_global_config_written': False}
+
+
+def process_memory_snapshot(pid='self'):
+    """Linux numeric counters only; unavailable counters remain unknown."""
+    result = {'available': False, 'unit': 'bytes'}
+    try:
+        lines = Path('/proc', str(pid), 'status').read_text().splitlines()
+        for line in lines:
+            fields = line.split()
+            if len(fields) == 3 and fields[0] in ('VmPeak:', 'VmSize:', 'VmHWM:', 'VmRSS:') \
+                    and fields[1].isascii() and fields[1].isdigit() and fields[2] == 'kB':
+                result[fields[0][:-1]] = int(fields[1])*1024
+        result['available'] = len(result) > 2
+    except (OSError, ValueError):
+        pass
+    return result
+
+
+def diagnostic_identity(value, *, path=False):
+    """Only fixed hexadecimal IDs or canonical internal relative paths escape."""
+    if not isinstance(value, str):
+        return None
+    if not path and len(value) in (40, 64) and all(c in '0123456789abcdef' for c in value):
+        return value
+    prefixes = ('advanced_models/', 'advanced_features/', 'fundamentals/', 'feature_models/', 'data/', 'runtime/')
+    if path and 0 < len(value) <= 512 and (value == 'state_storage.json' or value.startswith(prefixes)) \
+            and all(c.isascii() and (c.isalnum() or c in '._-/') for c in value) \
+            and all(part not in ('', '.', '..') for part in value.split('/')):
+        return value
+    return {'sha256': digest(value.encode()), 'raw_identity_included': False}
+
+
+def cold_failure_diagnostics(frame, numeric):
+    """Inspect only allowlisted locals from the exact old reader's failed frame."""
+    if Path(frame.f_code.co_filename).resolve() != numeric/'football_model/history_archive.py' \
+            or frame.f_code.co_name != '_blob':
+        return None
+    local = frame.f_locals
+    value = {'state_commit': diagnostic_identity(local.get('commit')),
+             'transport_path': diagnostic_identity(local.get('relative'), path=True),
+             'header_raw_included': False, 'stderr_included': False}
+    header = local.get('header')
+    if isinstance(header, bytes) and len(header) <= 8192:
+        value.update(header_bytes=len(header), header_sha256=digest(header),
+                     header_empty=not header, header_ends_newline=header.endswith(b'\n'))
+    process = local.get('process')
+    if isinstance(process, subprocess.Popen):
+        value['returncode_at_diagnostic'] = process.poll()
+        value['git_process_memory'] = process_memory_snapshot(process.pid)
+    expired = local.get('expired')
+    if type(expired).__module__ == 'threading' and type(expired).__name__ == 'Event':
+        value['read_timer_expired'] = expired.is_set()
+    return value
+
+
 def safe_exception_details(exc, numeric):
     """Emit fixed error codes and source locations, never arbitrary error text."""
     storage_codes = {
@@ -209,6 +282,12 @@ def safe_exception_details(exc, numeric):
         '历史原件来源清单指纹不符，已停止。': 'cold_source_manifest_hash_mismatch',
         '历史原件与固定来源清单不符，已停止。': 'cold_source_manifest_entry_mismatch',
         '历史恢复原件长度或指纹不符，已停止。': 'cold_original_hash_or_size_mismatch',
+        '固定历史对象类型无效，已停止。': 'cold_batch_header_invalid',
+        '固定历史对象长度无效，已停止。': 'cold_batch_length_invalid',
+        '固定历史原件超过单文件安全上限，已停止。': 'cold_original_file_limit',
+        '固定历史对象长度不符或读取超时，已停止。': 'cold_batch_body_incomplete_or_timeout',
+        '固定历史对象读取超时，已停止。': 'cold_batch_timeout',
+        '固定历史对象读取失败，已停止。': 'cold_batch_pipe_failure',
     }
     code = 'unclassified_audit_error'
     if isinstance(exc, DeepAuditError):
@@ -219,7 +298,7 @@ def safe_exception_details(exc, numeric):
         code = 'worker_memory_limit'
     elif type(exc).__name__ == 'StorageError':
         code = storage_codes.get(str(exc), 'unclassified_storage_error')
-    frames = []
+    frames = []; cold_failure = None; source_cursor = None
     tb = exc.__traceback__
     numeric = Path(numeric).resolve()
     auditor = Path(__file__).resolve()
@@ -227,8 +306,20 @@ def safe_exception_details(exc, numeric):
         path = Path(tb.tb_frame.f_code.co_filename).resolve()
         if path == auditor:
             name = 'auditor/' + auditor.name
+            if tb.tb_frame.f_code.co_name == 'materialize_inputs':
+                local = tb.tb_frame.f_locals
+                ref = local.get('ref')
+                if isinstance(ref, dict) and type(local.get('ref_index')) is int:
+                    source_cursor = {'ref_index_zero_based': local['ref_index'],
+                        'unique_sources_completed': len(local.get('by_original', {})),
+                        'verified_unique_source_bytes': local.get('total'),
+                        'frozen_path': diagnostic_identity(ref.get('path'), path=True),
+                        'runtime_relative_path': diagnostic_identity(ref.get('runtime_relative_path', ref.get('path')), path=True),
+                        'original_path': diagnostic_identity(ref.get('original_path'), path=True),
+                        'expected_sha256': diagnostic_identity(ref.get('sha256'))}
         elif path.is_relative_to(numeric):
             name = 'original-numeric/' + path.relative_to(numeric).as_posix()
+            cold_failure = cold_failure_diagnostics(tb.tb_frame, numeric) or cold_failure
         else:
             name = 'external_frame'
         frames.append({'file': name, 'line': tb.tb_lineno})
@@ -237,6 +328,11 @@ def safe_exception_details(exc, numeric):
                'safe_traceback': frames[-12:], 'exception_text_included': False}
     if isinstance(exc,DeepAuditError) and exc.comparison is not None:
         details['comparison_failure'] = exc.comparison
+    if cold_failure is not None:
+        details['cold_batch_failure'] = cold_failure
+    if source_cursor is not None:
+        details['frozen_source_cursor'] = source_cursor
+    details['worker_process_memory'] = process_memory_snapshot()
     return details
 
 
@@ -278,7 +374,7 @@ def materialize_inputs(report, runtime, destination, reader):
     by_original = {}; manifest=[]; total=0
     descriptor=root_fd(destination)
     try:
-        for ref in refs:
+        for ref_index, ref in enumerate(refs):
             relative = ref['original_path']
             safe_path(destination, relative)
             original = safe_path(runtime,ref.get('runtime_relative_path',ref['path']))
@@ -485,6 +581,7 @@ def main(argv=None):
     began=time.monotonic()
     def checkpoint(stage):
         out['stage']=stage;out['elapsed_seconds']=round(time.monotonic()-began,3)
+        out['worker_process_memory']=process_memory_snapshot()
         save(output/'audit-summary.json',out,LIMITS['summary_bytes'])
         print(json.dumps({'audit_stage':stage,'elapsed_seconds':out['elapsed_seconds']}),flush=True)
     previous=signal.signal(signal.SIGALRM,lambda *_: (_ for _ in ()).throw(DeepAuditDeadline()))
@@ -520,6 +617,7 @@ def main(argv=None):
         out['cold_storage_route']=cold_storage_preflight(runtime,reader,receipt,native_cold_repo)
         reader_head=subprocess.run(['git','rev-parse','HEAD'],cwd=reader,text=True,capture_output=True,check=True).stdout.strip()
         exact(reader_head,receipt.get('reader_commit'),'restore_reader_commit_mismatch')
+        out['reader_git_config']=reader_git_config_preflight(reader)
         reader_top=subprocess.run(['git','rev-parse','--show-toplevel'],cwd=reader,text=True,capture_output=True,check=True).stdout.strip()
         exact(Path(reader_top).resolve().as_posix(),reader.as_posix(),'reader_is_not_checkout_root')
         subprocess.run(['git','cat-file','-e',STATE+'^{commit}'],cwd=reader,

@@ -102,6 +102,89 @@ class DeepAuditTests(unittest.TestCase):
         self.assertIn('--reader-repo reader --runtime reader/fixed-runtime',text)
         self.assertIn("'reader_repository':str(repo)",text)
         self.assertIn('R02_NUMERIC_FIXTURE_REPO="$GITHUB_WORKSPACE/original-numeric"',text)
+        for key, value in [('core.packedGitWindowSize','32m'), ('core.packedGitLimit','128m'),
+                           ('core.deltaBaseCacheLimit','32m')]:
+            self.assertIn('git -C reader config --local '+key+' '+value,text)
+        self.assertNotIn('config --global',text)
+        self.assertNotIn('git -C original-numeric config',text)
+        self.assertIn("'reader_git_config_bytes':module.GIT_READER_CONFIG",text)
+
+    def test_git_config_requires_exact_local_and_effective_bytes(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temporary:
+            repo=Path(temporary)
+            def git(*args):
+                return subprocess.run(['git','-C',str(repo),*args],check=True,capture_output=True)
+            git('init','-q')
+            with self.assertRaisesRegex(audit.DeepAuditError,'reader_git_config_mismatch'):
+                audit.reader_git_config_preflight(repo)
+            for key, value in [('core.packedGitWindowSize','32m'), ('core.packedGitLimit','128m'),
+                               ('core.deltaBaseCacheLimit','32m')]:
+                git('config','--local',key,value)
+            result=audit.reader_git_config_preflight(repo)
+            self.assertEqual(result['scope'],'reader_repository_local')
+            for key, value in audit.GIT_READER_CONFIG.items():
+                self.assertEqual(result['values'][key],{'local_bytes':value,'effective_bytes':value})
+            with patch.dict(os.environ,{'GIT_CONFIG_COUNT':'1','GIT_CONFIG_KEY_0':'core.packedGitLimit',
+                                        'GIT_CONFIG_VALUE_0':'256m'}):
+                with self.assertRaisesRegex(audit.DeepAuditError,'reader_git_config_mismatch'):
+                    audit.reader_git_config_preflight(repo)
+            git('config','--local','--add','core.packedGitLimit','128m')
+            with self.assertRaisesRegex(audit.DeepAuditError,'reader_git_config_mismatch'):
+                audit.reader_git_config_preflight(repo)
+
+    def test_safe_cold_failure_has_header_hash_process_and_fixed_object_identity(self):
+        import threading
+        from football_model.state_storage import StorageError
+        # Simulated old-reader frame, not a real frozen input or an R fit.
+        source='''def _blob(header,process,expired):
+    commit = "a"*40
+    relative = "state_storage.json"
+    raise StorageError("固定历史对象类型无效，已停止。")
+'''
+        namespace={'StorageError':StorageError}
+        exec(compile(source,str(ROOT/'football_model/history_archive.py'),'exec'),namespace)
+        with subprocess.Popen([sys.executable,'-c','raise SystemExit(128)'],
+                              stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL) as process:
+            process.wait(timeout=5)
+            for header in (b'',b'PRIVATE_API_PAYLOAD_DO_NOT_OUTPUT\n'):
+                try:namespace['_blob'](header,process,threading.Event())
+                except StorageError as exc:result=audit.safe_exception_details(exc,ROOT)
+                self.assertEqual(result['error_code'],'cold_batch_header_invalid')
+                cold=result['cold_batch_failure']
+                self.assertEqual(cold['header_bytes'],len(header))
+                self.assertEqual(cold['header_sha256'],audit.digest(header))
+                self.assertEqual(cold['header_empty'],not header)
+                self.assertEqual(cold['returncode_at_diagnostic'],128)
+                self.assertEqual(cold['state_commit'],'a'*40)
+                self.assertEqual(cold['transport_path'],'state_storage.json')
+                self.assertFalse(cold['read_timer_expired'])
+                self.assertNotIn('PRIVATE_API_PAYLOAD',json.dumps(result))
+                self.assertFalse(cold['stderr_included'])
+                self.assertIn('worker_process_memory',result)
+
+    def test_failed_materialization_preserves_exact_frozen_ref_cursor(self):
+        from football_model.state_storage import StorageError
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary);runtime=root/'runtime';runtime.mkdir()
+            refs=[{'path':'advanced_models/inputs/'+str(i)*64+'.json',
+                   'original_path':'data/'+str(i)+'.json','sha256':audit.digest(b'{}')} for i in (1,2)]
+            calls=[]
+            def reader(path,**_):
+                calls.append(path)
+                if len(calls)==2:raise StorageError('PRIVATE_EXCEPTION_DO_NOT_OUTPUT')
+                return b'{}'
+            try:audit.materialize_inputs({'source_refs':refs},runtime,root/'copy',reader)
+            except StorageError as exc:result=audit.safe_exception_details(exc,ROOT)
+            cursor=result['frozen_source_cursor']
+            self.assertEqual(cursor['ref_index_zero_based'],1)
+            self.assertEqual(cursor['unique_sources_completed'],1)
+            self.assertEqual(cursor['verified_unique_source_bytes'],2)
+            self.assertEqual(cursor['frozen_path'],refs[1]['path'])
+            self.assertEqual(cursor['original_path'],refs[1]['original_path'])
+            self.assertEqual(cursor['expected_sha256'],refs[1]['sha256'])
+            self.assertNotIn('PRIVATE_EXCEPTION',json.dumps(result))
+            self.assertNotIn('PRIVATE/../PATH',json.dumps(audit.diagnostic_identity('PRIVATE/../PATH',path=True)))
 
     def test_cold_route_preflight_rejects_wrong_parent_and_receipt(self):
         with tempfile.TemporaryDirectory() as temporary:
