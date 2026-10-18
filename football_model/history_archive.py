@@ -149,7 +149,8 @@ class FixedStateReader:
                 terminator = process.stdout.read(1)
                 if expired.is_set() or len(raw) != size or terminator != b"\n":
                     raise StorageError("固定历史对象长度不符或读取超时，已停止。")
-                if size <= self.cache_bytes:
+                # Parsed manifests have their own unchanged validation cache.
+                if relative != "state_storage.json" and size <= self.cache_bytes:
                     while self._cache and self._cached_bytes + size > self.cache_bytes:
                         _, previous = self._cache.popitem(last=False)
                         self._cached_bytes -= len(previous)

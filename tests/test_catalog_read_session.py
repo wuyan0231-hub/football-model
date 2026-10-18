@@ -57,6 +57,66 @@ class CatalogReadSessionTests(unittest.TestCase):
         return subprocess.run(["git", "-C", str(self.repo), *args], check=True,
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout
 
+    def test_manifest_reads_do_not_evict_transport_or_change_git_bytes(self):
+        manifest_raw = (self.repo / "state_storage.json").read_bytes()
+        transport = "state_archives/" + self.manifest["entries"][0]["blob_sha256"] + ".json.gz"
+        compressed = (self.repo / transport).read_bytes()
+        self.assertGreater(len(manifest_raw), len(compressed))
+        with history.FixedStateReader(self.repo, self.oid, cache_bytes=len(manifest_raw)) as reader:
+            first = reader._blob(self.oid, transport)
+            self.assertEqual(first, compressed)
+            output = reader._process.stdout
+            class CountOutput:
+                def __init__(self): self.headers = 0
+                def readline(self, *args):
+                    self.headers += 1
+                    return output.readline(*args)
+                def __getattr__(self, name): return getattr(output, name)
+            counter = CountOutput(); reader._process.stdout = counter
+            for _ in range(2):
+                self.assertEqual(reader._blob(self.oid, "state_storage.json"), manifest_raw)
+                self.assertIs(reader._blob(self.oid, transport), first)
+            self.assertEqual(counter.headers, 2)
+            self.assertNotIn((self.oid, "state_storage.json"), reader._cache)
+            self.assertEqual(reader._cached_bytes, len(compressed))
+            self.assertEqual(reader.cache_bytes, len(manifest_raw))
+
+    def test_manifest_admission_rule_preserves_each_cold_edge_validation(self):
+        with history.FixedStateReader(self.repo, self.oid) as reader:
+            token = history._READER_SCOPE.set(reader)
+            try:
+                with patch.object(history, "_expand", wraps=history._expand) as expand, \
+                        patch.object(history, "_manifest_index", wraps=history._manifest_index) as manifest:
+                    with history.verified_catalog_read_session(self.runtime):
+                        for _ in range(3):
+                            self.assertEqual(history.read_bytes(self.runtime / self.name), self.raw)
+                    self.assertEqual(expand.call_count, 3)
+                    self.assertEqual(manifest.call_count, 3)
+                self.assertEqual(reader.cache_bytes, 64 * 1024 * 1024)
+                self.assertNotIn((self.oid, "state_storage.json"), reader._cache)
+            finally:
+                history._READER_SCOPE.reset(token)
+
+    def test_manifest_missing_and_invalid_errors_are_preserved(self):
+        (self.repo / "state_storage.json").unlink()
+        self.git("add", "state_storage.json"); self.git("commit", "-qm", "manifest absent")
+        missing_commit = self.git("rev-parse", "HEAD").decode().strip()
+        with history.FixedStateReader(self.repo, missing_commit) as reader:
+            self.assertIsNone(reader._blob(missing_commit, "state_storage.json", missing=True))
+            with self.assertRaisesRegex(StorageError, "固定历史对象未保存"):
+                reader._blob(missing_commit, "state_storage.json")
+        (self.repo / "state_storage.json").write_bytes(b'{"invalid_manifest":true}')
+        self.git("add", "state_storage.json"); self.git("commit", "-qm", "manifest invalid")
+        bad_commit = self.git("rev-parse", "HEAD").decode().strip()
+        with history.FixedStateReader(self.repo, bad_commit) as reader:
+            token = history._READER_SCOPE.set(reader)
+            try:
+                with self.assertRaisesRegex(StorageError, "来源清单无效"):
+                    history._manifest_index(self.repo, bad_commit)
+                self.assertNotIn((bad_commit, "state_storage.json"), reader._cache)
+            finally:
+                history._READER_SCOPE.reset(token)
+
     def chunks(self, count=3):
         original = dict(next(iter(history._catalog(self.runtime).values())))
         refs = []

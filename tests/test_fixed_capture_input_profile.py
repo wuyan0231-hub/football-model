@@ -7,6 +7,7 @@ import io
 import json
 from pathlib import Path
 import sys
+import subprocess
 import tempfile
 import types
 import unittest
@@ -106,6 +107,59 @@ class ReaderObservationTests(unittest.TestCase):
             self.assertEqual(reader.calls, 8)
             self.assertEqual(reader.cache_bytes, 12)
             self.assertLessEqual(reader._cached_bytes, 12)
+        finally: observation.stop()
+
+    def test_candidate_real_git_native_matches_skip_policy_not_prior_baseline(self):
+        from football_model import history_archive as history
+        from football_model.state_storage import pack_runtime
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); repo = root / 'repo'; repo.mkdir()
+            def git(*args):
+                return subprocess.check_output(['git', '-C', str(repo), *args], stderr=subprocess.DEVNULL)
+            git('init', '-q'); git('config', 'user.email', 'test@example.invalid'); git('config', 'user.name', 'Test')
+            source = root / 'source'
+            path = source / ('advanced_models/inputs/' + 'a' * 64 + '.json')
+            path.parent.mkdir(parents=True); path.write_bytes(b'{"immutable":1}\n')
+            pack_runtime(source, repo); git('add', '.'); git('commit', '-qm', 'fixed transport')
+            commit = git('rev-parse', 'HEAD').decode().strip()
+            manifest = (repo / 'state_storage.json').read_bytes()
+            transport = 'state_archives/' + json.loads(manifest)['entries'][0]['blob_sha256'] + '.json.gz'
+            with history.FixedStateReader(repo, commit, cache_bytes=len(manifest)) as reader:
+                observation = profile.ReaderCacheObservation(history.FixedStateReader, native_policy='skip_manifest')
+                observation.start()
+                try:
+                    first = reader._blob(commit, transport)
+                    for _ in range(2):
+                        self.assertEqual(reader._blob(commit, 'state_storage.json'), manifest)
+                        self.assertIs(reader._blob(commit, transport), first)
+                    result = observation.snapshot(trace=True)
+                    summary = result['reader_summaries'][0]
+                    self.assertEqual(summary['actual_vs_skip_manifest_hit_mismatches'], 0)
+                    self.assertGreater(summary['actual_vs_original_hit_mismatches'], 0)
+                    self.assertEqual(result['native_replay_match_counter'], 'actual_vs_skip_manifest_hit_mismatches')
+                    self.assertEqual(result['policy_labels']['original'], 'prior_cache_all_baseline')
+                finally: observation.stop()
+
+    def test_minute_log_rows_are_short_and_preserve_full_checkpoint_snapshot(self):
+        kind = self.reader_type(); reader = kind()
+        observation = profile.ReaderCacheObservation(kind, native_policy='original'); observation.start()
+        try:
+            reader._blob('c', 'state_storage.json'); reader._blob('c', 'state_archives/private')
+            snapshot = observation.snapshot(trace=True)
+            lines = observation.minute_lines(snapshot)
+            self.assertEqual(len(lines), 5)
+            self.assertLess(len(lines[0]), 400)
+            for line in lines[1:4]: self.assertLess(len(line), 350)
+            self.assertLess(len(lines[4]), 800)
+            self.assertIn('prior_all_baseline', lines[4])
+            self.assertIn('skip_manifest', lines[4])
+            self.assertIn('keys', snapshot)
+            self.assertNotIn('state_archives/private', '\n'.join(lines))
+            observation.categories['manifest']['returned_bytes'] = 10 ** 900
+            bounded = observation.minute_lines()
+            self.assertTrue(all(len(line) < 800 for line in bounded))
+            self.assertTrue(any('profile_cache_log_bound' in line for line in bounded))
+            self.assertEqual(observation.snapshot()['categories']['manifest']['returned_bytes'], 10 ** 900)
         finally: observation.stop()
 
 

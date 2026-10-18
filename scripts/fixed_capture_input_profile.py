@@ -38,8 +38,9 @@ class ReaderCacheObservation:
     MAX_KEYS = 4096
     MAX_READERS = 8
 
-    def __init__(self, reader_type):
+    def __init__(self, reader_type, *, native_policy='unspecified'):
         self.reader_type = reader_type
+        self.native_policy = native_policy
         self.lock = threading.RLock()
         self.readers = {}
         self.keys = []
@@ -87,7 +88,8 @@ class ReaderCacheObservation:
                 'original_bytes': 0, 'skip_manifest_bytes': 0,
                 'original_hits': 0, 'original_misses': 0, 'skip_manifest_hits': 0, 'skip_manifest_misses': 0,
                 'original_transport_hits': 0, 'skip_manifest_transport_hits': 0,
-                'actual_vs_original_hit_mismatches': 0, 'close_calls': 0,
+                'actual_vs_original_hit_mismatches': 0, 'actual_vs_skip_manifest_hit_mismatches': 0,
+                'close_calls': 0,
                 'close_with_process': 0, 'close_cached_bytes': 0,
                 'peak_actual_cached_bytes': reader._cached_bytes}
             self.readers[identity] = state
@@ -121,8 +123,8 @@ class ReaderCacheObservation:
                 state[policy + '_bytes'] -= previous
             cache[index] = size
             state[policy + '_bytes'] += size
-        if policy == 'original' and hit != actual_hit:
-            state['actual_vs_original_hit_mismatches'] += 1
+        if hit != actual_hit:
+            state['actual_vs_' + policy + '_hit_mismatches'] += 1
 
     def start(self):
         if self.reader_type is None: return
@@ -210,6 +212,10 @@ class ReaderCacheObservation:
                 'reader_summaries': readers, 'trace_complete': self.complete, 'trace_truncation': self.truncation,
                 'traced_events': len(self.events), 'traced_resets': len(self.resets), 'traced_keys': len(self.keys),
                 'limits': {'events_including_resets': self.MAX_EVENTS, 'keys': self.MAX_KEYS, 'readers': self.MAX_READERS},
+                'native_policy': self.native_policy,
+                'policy_labels': {'original': 'prior_cache_all_baseline', 'skip_manifest': 'exclude_manifest_admission'},
+                'native_replay_match_counter': ('actual_vs_' + self.native_policy + '_hit_mismatches'
+                    if self.native_policy in ('original', 'skip_manifest') else None),
                 'replay_scope': 'Exact recorded prefix, seeded from observed native cache; alternative is request-count simulation only',
                 'native_cache_or_return_values_changed': False}
             if trace:
@@ -217,6 +223,38 @@ class ReaderCacheObservation:
                     event_columns=['key_index', 'actual_hit'], keys=list(self.keys), events=list(self.events),
                     resets=list(self.resets), initial_cache_key_indices=list(self.initial))
             return result
+
+    def minute_lines(self, snapshot=None):
+        """Keep each browser-visible log row below its truncation boundary."""
+        snapshot = self.snapshot() if snapshot is None else snapshot
+        def line(name, value, limit):
+            encoded = json.dumps({name: value}, separators=(',', ':'), ensure_ascii=True)
+            return encoded if len(encoded) < limit else json.dumps(
+                {'profile_cache_log_bound': {'section': name, 'full_snapshot_saved': True}}, separators=(',', ':'))
+        lines = [line('profile_cache_brief', {'calls': snapshot['calls'], 'exceptions': snapshot['exceptions'],
+            'missing': snapshot['missing_returns'], 'process_new': snapshot['process_replacements'],
+            'native': snapshot['native_policy'], 'trace_complete': snapshot['trace_complete'],
+            'truncation': snapshot['trace_truncation'], 'events': snapshot['traced_events'], 'keys': snapshot['traced_keys']}, 400)]
+        for category, counters in snapshot['categories'].items():
+            lines.append(line('profile_cache_category', {'kind': category, 'calls': counters['calls'],
+                'hits': counters['hits'], 'misses': counters['misses'], 'positive': counters['positive_calls'],
+                'returned_bytes': counters['returned_bytes'], 'miss_bytes': counters['miss_bytes'],
+                'max_bytes': counters['max_blob_bytes'], 'distinct': counters['traced_distinct_keys'],
+                'distinct_bytes': counters['traced_distinct_bytes']}, 350))
+        for reader in snapshot['reader_summaries']:
+            policies = {}
+            for policy, label in (('original', 'prior_all_baseline'), ('skip_manifest', 'skip_manifest')):
+                counts = reader[policy + '_cached_bytes_by_category']
+                policies[label] = {'hits': reader[policy + '_hits'], 'misses': reader[policy + '_misses'],
+                    'transport_hits': reader[policy + '_transport_hits'],
+                    'native_hit_diffs': reader['actual_vs_' + policy + '_hit_mismatches'],
+                    'prefix_bytes': reader[policy + '_bytes'], 'manifest_bytes': counts['manifest'],
+                    'transport_bytes': counts['transport']}
+            lines.append(line('profile_cache_reader', {'id': reader['number'], 'native': snapshot['native_policy'],
+                'budget': reader['budget'], 'close': reader['close_calls'],
+                'close_with_process': reader['close_with_process'], 'replay_prefix_only': not snapshot['trace_complete'],
+                **policies}, 800))
+        return lines
 
 
 def require(condition, code):
@@ -424,7 +462,7 @@ def main(argv=None):
     main_ident = threading.get_ident()
     expired = False
     profiler = cProfile.Profile()
-    cache_observation = ReaderCacheObservation(getattr(history_observed, 'FixedStateReader', None))
+    cache_observation = ReaderCacheObservation(getattr(history_observed, 'FixedStateReader', None), native_policy='skip_manifest')
 
     def flush():
         with lock:
@@ -448,7 +486,8 @@ def main(argv=None):
                                                 'stage': out['active_stage']['stage'], 'frames': frames})
                 checkpoint_output(output, out)
             print(json.dumps({'profile_stack': frames}), flush=True)
-            print(json.dumps({'profile_reader_cache': cache_snapshot}), flush=True)
+            for cache_line in cache_observation.minute_lines(cache_snapshot):
+                print(cache_line, flush=True)
 
     def alarm(_signum, _frame):
         nonlocal expired
