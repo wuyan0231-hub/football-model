@@ -13,6 +13,7 @@ from bisect import bisect_left
 from collections import OrderedDict
 from contextlib import contextmanager
 from contextvars import ContextVar
+import errno
 import hashlib
 import json
 import os
@@ -52,6 +53,8 @@ MEMBER_CACHE_BYTES = 8 * 1024 * 1024
 MEMBER_CACHE_MAX_PATHS = 250000
 MEMBER_CACHE_MAX_SOURCES = 128
 _MEMBER_FIELDS = ("path", "raw_sha256", "raw_bytes", "blob_sha256", "compressed_bytes")
+_PATH_IGNORED_ERRNOS = (errno.ENOENT, errno.ENOTDIR, errno.EBADF, errno.ELOOP)
+_PATH_IGNORED_WINERRORS = (21, 123, 1921)
 
 # A depth-1 fetch has no blob filter: a missing source may require the whole
 # immutable transport snapshot, not merely the selected logical original.
@@ -81,10 +84,32 @@ def select_cold_path(name):
     return bool(re.fullmatch(r"advanced_models/(?:objects|inputs)/[0-9a-f]{64}\.json", name))
 
 
+def _path_stat_error_ignored(exc):
+    """Python 3.12 is_symlink policy, without private stdlib imports."""
+    return (getattr(exc, "errno", None) in _PATH_IGNORED_ERRNOS
+            or getattr(exc, "winerror", None) in _PATH_IGNORED_WINERRORS)
+
+
 def _safe_path(path):
     path = Path(path).absolute()
-    if any(p.is_symlink() for p in (path, *path.parents)):
-        raise StorageError("历史原件路径含符号链接，已停止。")
+    current = os.fspath(path)
+    while True:
+        # Match Python 3.12 Path.is_symlink's syscall and error policy while
+        # checking the same leaf-to-root sequence without ancestor Path objects.
+        try:
+            linked = stat_module.S_ISLNK(os.stat(current, follow_symlinks=False).st_mode)
+        except OSError as exc:
+            if not _path_stat_error_ignored(exc):
+                raise
+        except ValueError:
+            pass
+        else:
+            if linked:
+                raise StorageError("历史原件路径含符号链接，已停止。")
+        parent = os.path.dirname(current)
+        if parent == current:
+            break
+        current = parent
     return path
 
 

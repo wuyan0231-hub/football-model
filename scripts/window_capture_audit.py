@@ -17,7 +17,7 @@ import re
 import subprocess
 import sys
 
-EXPECTED_IMPLEMENTATION = '88ff91b01ad09d0d56e43aaa52c4a88c605555b3bb42519abb6b5b77f086b572'
+EXPECTED_IMPLEMENTATION = 'b443defab7ced799e16354126fdfed42cda43f5ac09518a24b9b5711002fe6f4'
 ALLOWED_LEAGUES = ('epl',)
 SCHEDULE_DATE = '2026-10-17'
 SCHEDULE_START = datetime(2026, 10, 17, 10, 0, tzinfo=timezone.utc)

@@ -1,8 +1,10 @@
 """A catalog scope saves metadata I/O, never original integrity checks."""
 from contextlib import nullcontext
 from datetime import datetime, timezone
+import errno
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -25,6 +27,137 @@ def digest(raw):
 
 def encoded(value):
     return (json.dumps(value, ensure_ascii=False, separators=(",", ":")) + "\n").encode()
+
+
+class SafePathTraversalTests(unittest.TestCase):
+    @staticmethod
+    def reference(path):
+        path = Path(path).absolute()
+        if any(p.is_symlink() for p in (path, *path.parents)):
+            raise StorageError("历史原件路径含符号链接，已停止。")
+        return path
+
+    def observed(self, function, path):
+        original_stat = os.stat
+        calls = []
+        def forwarded(value, *args, **kwargs):
+            self.assertIs(kwargs.get("follow_symlinks"), False)
+            calls.append(os.fspath(value))
+            return original_stat(value, *args, **kwargs)
+        with patch.object(os, "stat", side_effect=forwarded):
+            try:
+                result = function(path)
+                value = ("returned", type(result), result)
+            except Exception as exc:
+                value = ("raised", type(exc), getattr(exc, "errno", None), str(exc))
+        return value, calls
+
+    def test_real_paths_match_original_results_order_and_each_actual_stat(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory); parent = base / "a" / "b"; parent.mkdir(parents=True)
+            leaf = parent / "file"; leaf.write_bytes(b"{}")
+            link = base / "link"; link.symlink_to(parent, target_is_directory=True)
+            broken = base / "broken"; broken.symlink_to(base / "absent")
+            loop = base / "loop"; loop.symlink_to(loop)
+            paths = [parent, leaf, parent / "missing", parent / "missing" / "child", leaf / "child",
+                     Path("/"), Path("//"), Path("///"), Path("."), Path(".."), "",
+                     "/" + str(leaf), str(parent) + "/../b/file", str(parent) + "/./file/", str(parent) + "/nul\0name",
+                     str(parent) + "/bad\ud800name", link, link / "file", broken, broken / "child", loop / "child"]
+            for path in paths:
+                with self.subTest(path=repr(path)):
+                    expected, original_calls = self.observed(self.reference, path)
+                    actual, calls = self.observed(history._safe_path, path)
+                    self.assertEqual(actual, expected)
+                    self.assertEqual(calls, original_calls)
+                    self.assertGreaterEqual(len(calls), 1)
+            for bad in (None, 123, object()):
+                for function in (self.reference, history._safe_path):
+                    with self.assertRaises(TypeError): function(bad)
+
+    def test_error_policy_matches_original_and_preserves_propagated_objects(self):
+        errors = [FileNotFoundError(errno.ENOENT, "missing"), NotADirectoryError(errno.ENOTDIR, "notdir"),
+                  OSError(errno.EBADF, "badfd"), OSError(errno.ELOOP, "loop"), ValueError("encoding"),
+                  PermissionError(errno.EACCES, "denied"), PermissionError(errno.EPERM, "denied"), OSError(errno.EIO, "io")]
+        for number in (21, 123, 1921, 5):
+            error = OSError("synthetic Windows error"); error.winerror = number; errors.append(error)
+        mixed = OSError(errno.EIO, "ignored Windows error overrides errno")
+        mixed.winerror = 123; errors.append(mixed)
+        path = Path("/missing/child")
+        for error in errors:
+            results, orders = [], []
+            for function in (self.reference, history._safe_path):
+                calls = []
+                def fail(value, **kwargs):
+                    self.assertIs(kwargs.get("follow_symlinks"), False)
+                    calls.append(os.fspath(value)); raise error
+                with patch.object(os, "stat", side_effect=fail):
+                    try:
+                        self.assertEqual(function(path), path); results.append("returned")
+                    except (OSError, ValueError) as exc:
+                        self.assertIs(exc, error); results.append(type(exc))
+                orders.append(calls)
+            self.assertEqual(results[0], results[1])
+            self.assertEqual(orders[0], orders[1])
+            if (getattr(error, "errno", None) in (errno.EACCES, errno.EPERM, errno.EIO)
+                    and getattr(error, "winerror", None) not in (21, 123, 1921)):
+                self.assertEqual(results, [type(error), type(error)])
+
+    def test_first_propagated_ancestor_error_stops_at_the_original_position(self):
+        path = Path("/alpha/beta/missing")
+        denied = PermissionError(errno.EACCES, "ancestor denied")
+        for function in (self.reference, history._safe_path):
+            calls = []
+            def fail(value, **kwargs):
+                value = os.fspath(value); calls.append(value)
+                if value == str(path): raise FileNotFoundError(errno.ENOENT, "missing leaf")
+                if value == "/alpha/beta": raise denied
+                self.fail("traversal passed the first propagated error")
+            with patch.object(os, "stat", side_effect=fail):
+                with self.assertRaises(PermissionError) as raised: function(path)
+                self.assertIs(raised.exception, denied)
+                self.assertEqual(calls, [str(path), "/alpha/beta"])
+
+    def test_baseexception_deadline_is_never_swallowed(self):
+        from scripts.fixed_capture_input_profile import ProfileDeadline
+        for function in (self.reference, history._safe_path):
+            deadline = ProfileDeadline("bounded_diagnostic_deadline")
+            with patch.object(os, "stat", side_effect=deadline) as observed:
+                with self.assertRaises(ProfileDeadline) as raised:
+                    function("/missing/child")
+                self.assertIs(raised.exception, deadline)
+                self.assertEqual(observed.call_count, 1)
+
+    def test_every_call_rechecks_replaced_ancestor_and_restored_symlink(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory); parent = base / "parent"; parent.mkdir()
+            leaf = parent / "file"; leaf.write_bytes(b"{}")
+            moved = base / "moved"
+            for function in (self.reference, history._safe_path):
+                for _ in range(2):
+                    self.assertEqual(function(leaf), leaf)
+                    parent.rename(moved); parent.symlink_to(moved, target_is_directory=True)
+                    for _ in range(2):
+                        with self.assertRaisesRegex(StorageError, "符号链接"):
+                            function(leaf)
+                    parent.unlink(); moved.rename(parent)
+                    self.assertEqual(function(leaf), leaf)
+
+    def test_file_identity_and_scope_change_revert_gate_are_unchanged(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory); leaf = base / "file"; target = base / "target"; target.write_bytes(b"{}")
+            for function in (self.reference, history._safe_path):
+                leaf.write_bytes(b"original")
+                with patch.object(history, "_safe_path", function):
+                    actual = leaf.stat()
+                    self.assertEqual(history._file_identity(leaf), (actual.st_dev, actual.st_ino, actual.st_mode,
+                        actual.st_size, actual.st_mtime_ns, actual.st_ctime_ns))
+                    session = history._VerifiedCatalogReadSession(base); session.pin(leaf)
+                    leaf.unlink(); leaf.symlink_to(target)
+                    with self.assertRaises(StorageError): history._file_identity(leaf)
+                    leaf.unlink(); leaf.write_bytes(b"original")
+                    with self.assertRaisesRegex(StorageError, "input_changed"):
+                        session.verify(contents=True)
+                leaf.unlink()
 
 
 class CatalogReadSessionTests(unittest.TestCase):
