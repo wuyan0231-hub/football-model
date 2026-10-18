@@ -1,9 +1,11 @@
 """Synthetic adversarial contracts; real K1 originals are separately verified."""
+import ast
 import copy
 import gzip
 import hashlib
 import io
 import json
+import re
 from pathlib import Path
 import sys
 import tarfile
@@ -184,10 +186,59 @@ class ContractTests(unittest.TestCase):
             self.assertEqual(result['results'][0]['error_code'],'downloaded_output_hash')
     def test_workflow_is_readonly_fixed_source_and_bounded(self):
         text=(Path(__file__).resolve().parents[1]/'.github/workflows/research-attempt2-followup.yml').read_text()
-        for token in ('workflow_run:','contents: read','actions: read','max-parallel: 2','timeout-minutes: 60','3300',a.SOURCE,str(a.RUN)):
+        for token in ('workflow_run:','workflow_dispatch: {}','contents: read','actions: read','max-parallel: 2','timeout-minutes: 60','3300',a.SOURCE,str(a.RUN)):
             self.assertIn(token,text)
-        for token in ('secrets.FOOTBALL_API_KEY','cloud_state.py save','--auto-activate','workflow_dispatch:'):
+        for token in ('secrets.FOOTBALL_API_KEY','cloud_state.py save','--auto-activate'):
             self.assertNotIn(token,text)
+
+    def test_manual_replay_has_no_inputs_or_other_triggers(self):
+        text=(Path(__file__).resolve().parents[1]/'.github/workflows/research-attempt2-followup.yml').read_text()
+        triggers=text.split('\non:\n',1)[1].split('\npermissions:',1)[0]
+        self.assertEqual(re.findall(r'^  ([a-z_]+):',triggers,re.M),['workflow_run','workflow_dispatch'])
+        self.assertIn('  workflow_dispatch: {}',triggers)
+        self.assertNotIn('inputs:',triggers)
+        self.assertNotRegex(triggers,r'(?m)^\s*(push|schedule|pull_request|repository_dispatch):')
+
+    def test_entrypoint_guard_keeps_main_replay_and_exact_upstream(self):
+        text=(Path(__file__).resolve().parents[1]/'.github/workflows/research-attempt2-followup.yml').read_text()
+        expression=text.split('    if: >-\n',1)[1].split('    strategy:',1)[0]
+        expression=' '.join(expression.split()).replace('&&',' and ').replace('||',' or ')
+        tree=ast.parse(expression,mode='eval')
+        def admit(github):
+            def read(node):
+                if isinstance(node,ast.Constant):return node.value
+                if isinstance(node,ast.Name):
+                    self.assertEqual(node.id,'github');return github
+                if isinstance(node,ast.Attribute):
+                    parent=read(node.value);return parent.get(node.attr) if isinstance(parent,dict) else None
+                if isinstance(node,ast.BoolOp):
+                    self.assertIsInstance(node.op,(ast.And,ast.Or))
+                    return all(read(v) for v in node.values) if isinstance(node.op,ast.And) else any(read(v) for v in node.values)
+                if isinstance(node,ast.Compare):
+                    self.assertEqual(len(node.ops),1);self.assertIsInstance(node.ops[0],ast.Eq)
+                    return read(node.left)==read(node.comparators[0])
+                self.fail('unsupported workflow guard syntax: '+type(node).__name__)
+            return bool(read(tree.body))
+        manual={'repository':a.REPO,'ref':'refs/heads/main','event_name':'workflow_dispatch',
+            'event':{'repository':{'id':a.REPO_ID}}}
+        self.assertTrue(admit(manual))
+        for ref in ('refs/heads/other','refs/tags/main','refs/tags/v1',''):
+            bad=copy.deepcopy(manual);bad['ref']=ref;self.assertFalse(admit(bad),ref)
+        for kind in ('push','schedule','pull_request','repository_dispatch','workflow_run'):
+            bad=copy.deepcopy(manual);bad['event_name']=kind;self.assertFalse(admit(bad),kind)
+        upstream={'id':a.RUN,'run_attempt':a.ATTEMPT,'head_sha':a.SOURCE,'head_branch':'main',
+            'event':'workflow_dispatch','path':'.github/workflows/advanced-models.yml',
+            'head_repository':{'id':a.REPO_ID}}
+        automatic=copy.deepcopy(manual);automatic['event_name']='workflow_run'
+        automatic['event']['workflow_run']=upstream
+        self.assertTrue(admit(automatic))
+        for key,value in (('id',a.RUN+1),('run_attempt',1),('head_sha','0'*40),('head_branch','other'),
+                ('event','push'),('path','.github/workflows/other.yml'),('head_repository',{'id':a.REPO_ID+1})):
+            bad=copy.deepcopy(automatic);bad['event']['workflow_run'][key]=value
+            self.assertFalse(admit(bad),key)
+        for original in (manual,automatic):
+            bad=copy.deepcopy(original);bad['repository']='other/repository';self.assertFalse(admit(bad))
+            bad=copy.deepcopy(original);bad['event']['repository']['id']=a.REPO_ID+1;self.assertFalse(admit(bad))
 
 
 if __name__=='__main__':unittest.main()
