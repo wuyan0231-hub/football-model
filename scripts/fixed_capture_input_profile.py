@@ -6,6 +6,7 @@ state write. Local diagnostic copies are disposable; this is NOT an EARLY replay
 from __future__ import annotations
 import argparse
 import cProfile
+from collections import OrderedDict
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -24,6 +25,198 @@ class ProfileError(ValueError):
 
 class ProfileDeadline(OSError):
     pass
+
+
+class ReaderCacheObservation:
+    """Read-only bounded telemetry; native methods still run exactly once.
+
+    Trace keys are hashes, never source paths or provider bytes. The two cache
+    simulations retain sizes only and stop when their exact trace is bounded.
+    They predict cache requests, not runtime or a validated production speedup.
+    """
+    MAX_EVENTS = 50000
+    MAX_KEYS = 4096
+    MAX_READERS = 8
+
+    def __init__(self, reader_type):
+        self.reader_type = reader_type
+        self.lock = threading.RLock()
+        self.readers = {}
+        self.keys = []
+        self.key_ids = {}
+        self.events = []
+        self.resets = []
+        self.initial = []
+        self.complete = True
+        self.truncation = None
+        self.calls = self.exceptions = self.missing = self.process_replacements = 0
+        self.categories = {name: {'calls': 0, 'hits': 0, 'misses': 0,
+            'positive_calls': 0, 'returned_bytes': 0, 'miss_bytes': 0,
+            'max_blob_bytes': 0, 'size_bins': [0] * 6} for name in ('manifest', 'transport', 'other')}
+
+    def truncate(self, reason):
+        self.complete = False
+        self.truncation = self.truncation or reason
+
+    @staticmethod
+    def category(relative):
+        return 'manifest' if relative == 'state_storage.json' else ('transport' if relative.startswith('state_archives/') else 'other')
+
+    def key(self, state, commit, relative, size):
+        value = hashlib.sha256(json.dumps([state['number'], commit, relative], separators=(',', ':')).encode()).hexdigest()
+        if value not in self.key_ids:
+            if len(self.keys) >= self.MAX_KEYS:
+                self.truncate('key_limit')
+                return None
+            self.key_ids[value] = len(self.keys)
+            self.keys.append([value, state['number'], self.category(relative), size])
+        index = self.key_ids[value]
+        if self.keys[index][3] != size:
+            self.truncate('immutable_key_size_changed')
+            return None
+        return index
+
+    def reader(self, reader):
+        identity = reader
+        if identity not in self.readers:
+            if len(self.readers) >= self.MAX_READERS:
+                self.truncate('reader_limit')
+                return None
+            state = {'number': len(self.readers), 'budget': reader.cache_bytes,
+                'original': OrderedDict(), 'skip_manifest': OrderedDict(),
+                'original_bytes': 0, 'skip_manifest_bytes': 0,
+                'original_hits': 0, 'original_misses': 0, 'skip_manifest_hits': 0, 'skip_manifest_misses': 0,
+                'original_transport_hits': 0, 'skip_manifest_transport_hits': 0,
+                'actual_vs_original_hit_mismatches': 0, 'close_calls': 0,
+                'close_with_process': 0, 'close_cached_bytes': 0,
+                'peak_actual_cached_bytes': reader._cached_bytes}
+            self.readers[identity] = state
+            if self.complete:
+                if len(reader._cache) > self.MAX_KEYS:
+                    self.truncate('initial_cache_key_limit')
+                else:
+                    for (commit, relative), raw in reader._cache.items():
+                        if not isinstance(raw, bytes):
+                            self.truncate('unexpected_native_cache_value'); break
+                        index = self.key(state, commit, relative, len(raw))
+                        if index is None: break
+                        self.initial.append(index)
+                        for policy in ('original', 'skip_manifest'):
+                            state[policy][index] = len(raw)
+                            state[policy + '_bytes'] += len(raw)
+        return self.readers[identity]
+
+    def replay(self, state, policy, index, actual_hit):
+        cache = state[policy]
+        size = self.keys[index][3]
+        category = self.keys[index][2]
+        hit = index in cache
+        state[policy + ('_hits' if hit else '_misses')] += 1
+        if hit:
+            cache.move_to_end(index)
+            if category == 'transport': state[policy + '_transport_hits'] += 1
+        elif size <= state['budget'] and not (policy == 'skip_manifest' and category == 'manifest'):
+            while cache and state[policy + '_bytes'] + size > state['budget']:
+                _, previous = cache.popitem(last=False)
+                state[policy + '_bytes'] -= previous
+            cache[index] = size
+            state[policy + '_bytes'] += size
+        if policy == 'original' and hit != actual_hit:
+            state['actual_vs_original_hit_mismatches'] += 1
+
+    def start(self):
+        if self.reader_type is None: return
+        self.original_blob = self.reader_type._blob
+        self.original_close = self.reader_type.close
+        observation = self
+        def blob(reader, commit, relative, *, missing=False):
+            with observation.lock:
+                state = observation.reader(reader)
+                category = observation.category(relative)
+                counters = observation.categories[category]
+                hit = (commit, relative) in reader._cache
+                counters['calls'] += 1
+                counters['hits' if hit else 'misses'] += 1
+                observation.calls += 1
+                before_process = reader._process
+            try:
+                raw = observation.original_blob(reader, commit, relative, missing=missing)
+            except BaseException:
+                with observation.lock: observation.exceptions += 1
+                raise
+            with observation.lock:
+                if reader._process is not None and reader._process is not before_process:
+                    observation.process_replacements += 1
+                if state is not None:
+                    state['peak_actual_cached_bytes'] = max(state['peak_actual_cached_bytes'], reader._cached_bytes)
+                if raw is None:
+                    observation.missing += 1
+                elif isinstance(raw, bytes):
+                    size = len(raw)
+                    counters['positive_calls'] += 1
+                    counters['returned_bytes'] += size
+                    if not hit: counters['miss_bytes'] += size
+                    counters['max_blob_bytes'] = max(counters['max_blob_bytes'], size)
+                    bounds = (4096, 65536, 1048576, 8388608, 33554432)
+                    counters['size_bins'][next((i for i, bound in enumerate(bounds) if size <= bound), 5)] += 1
+                    if observation.complete and state is not None:
+                        if len(observation.events) + len(observation.resets) >= observation.MAX_EVENTS:
+                            observation.truncate('event_limit')
+                        else:
+                            index = observation.key(state, commit, relative, size)
+                            if index is not None:
+                                observation.events.append([index, int(hit)])
+                                observation.replay(state, 'original', index, hit)
+                                observation.replay(state, 'skip_manifest', index, hit)
+                return raw
+        def close(reader):
+            with observation.lock:
+                state = observation.readers.get(reader)
+                if state is not None:
+                    state['close_calls'] += 1
+                    state['close_with_process'] += int(reader._process is not None)
+                    state['close_cached_bytes'] += reader._cached_bytes
+                    if observation.complete:
+                        if len(observation.events) + len(observation.resets) >= observation.MAX_EVENTS:
+                            observation.truncate('event_limit')
+                        else:
+                            observation.resets.append([len(observation.events), state['number']])
+                            for policy in ('original', 'skip_manifest'):
+                                state[policy].clear(); state[policy + '_bytes'] = 0
+            return observation.original_close(reader)
+        self.reader_type._blob, self.reader_type.close = blob, close
+
+    def stop(self):
+        if self.reader_type is not None:
+            self.reader_type._blob, self.reader_type.close = self.original_blob, self.original_close
+
+    def snapshot(self, *, trace=False):
+        with self.lock:
+            readers = []
+            for state in self.readers.values():
+                summary = {key: value for key, value in state.items() if not isinstance(value, OrderedDict)}
+                for policy in ('original', 'skip_manifest'):
+                    summary[policy + '_cached_bytes_by_category'] = {category:
+                        sum(size for index, size in state[policy].items() if self.keys[index][2] == category)
+                        for category in self.categories}
+                readers.append(summary)
+            categories = json.loads(json.dumps(self.categories))
+            for category, counters in categories.items():
+                observed = [key[3] for key in self.keys if key[2] == category]
+                counters['traced_distinct_keys'] = len(observed)
+                counters['traced_distinct_bytes'] = sum(observed)
+            result = {'calls': self.calls, 'exceptions': self.exceptions, 'missing_returns': self.missing,
+                'process_replacements': self.process_replacements, 'categories': categories,
+                'reader_summaries': readers, 'trace_complete': self.complete, 'trace_truncation': self.truncation,
+                'traced_events': len(self.events), 'traced_resets': len(self.resets), 'traced_keys': len(self.keys),
+                'limits': {'events_including_resets': self.MAX_EVENTS, 'keys': self.MAX_KEYS, 'readers': self.MAX_READERS},
+                'replay_scope': 'Exact recorded prefix, seeded from observed native cache; alternative is request-count simulation only',
+                'native_cache_or_return_values_changed': False}
+            if trace:
+                result.update(key_columns=['sha256_of_exact_reader_commit_path', 'reader', 'category', 'bytes'],
+                    event_columns=['key_index', 'actual_hit'], keys=list(self.keys), events=list(self.events),
+                    resets=list(self.resets), initial_cache_key_indices=list(self.initial))
+            return result
 
 
 def require(condition, code):
@@ -209,6 +402,7 @@ def main(argv=None):
     require(not runtime.exists() and not runtime.is_symlink(), 'diagnostic_runtime_must_be_new')
     sys.path.insert(0, str(repo))
     import cloud_state as cloud
+    from football_model import history_archive as history_observed
     from football_model.history_archive import read_bytes, _close_readers
     from football_model.advanced_snapshots import freeze_inputs
     from football_model.advanced_capacity import CapacityGuard
@@ -230,6 +424,7 @@ def main(argv=None):
     main_ident = threading.get_ident()
     expired = False
     profiler = cProfile.Profile()
+    cache_observation = ReaderCacheObservation(getattr(history_observed, 'FixedStateReader', None))
 
     def flush():
         with lock:
@@ -245,12 +440,15 @@ def main(argv=None):
     def sample():
         while not stop.wait(60):
             frames = safe_stack(sys._current_frames().get(main_ident))
+            cache_snapshot = cache_observation.snapshot()
             with lock:
+                out['reader_cache_observation'] = cache_snapshot
                 if len(out['stack_samples']) < 30:
                     out['stack_samples'].append({'elapsed_seconds': round(time.monotonic()-started, 3),
                                                 'stage': out['active_stage']['stage'], 'frames': frames})
                 checkpoint_output(output, out)
             print(json.dumps({'profile_stack': frames}), flush=True)
+            print(json.dumps({'profile_reader_cache': cache_snapshot}), flush=True)
 
     def alarm(_signum, _frame):
         nonlocal expired
@@ -260,6 +458,7 @@ def main(argv=None):
     previous = signal.signal(signal.SIGALRM, alarm)
     signal.alarm(args.deadline_seconds)
     thread = threading.Thread(target=sample, daemon=True)
+    cache_observation.start()
     try:
         progress('restore_exact_fixed_state')
         thread.start()
@@ -316,7 +515,11 @@ def main(argv=None):
         stop.set()
         if thread.is_alive():
             thread.join(timeout=2)
-        _close_readers()
+        try:
+            _close_readers()
+        finally:
+            cache_observation.stop()
+            out['reader_cache_observation'] = cache_observation.snapshot(trace=True)
         out['profile_functions'] = profile_rows(profiler)
         out['ended_at'] = datetime.now(timezone.utc).isoformat()
         out['elapsed_seconds'] = round(time.monotonic()-started, 3)

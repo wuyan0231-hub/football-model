@@ -1,4 +1,5 @@
 import cProfile
+from collections import OrderedDict
 import contextlib
 import hashlib
 import importlib.util
@@ -19,6 +20,93 @@ spec = importlib.util.spec_from_file_location('fixed_capture_input_profile', SOU
 profile = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(profile)
 IMPL = '1' * 64
+
+
+class ReaderObservationTests(unittest.TestCase):
+    def reader_type(self):
+        class Reader:
+            def __init__(self):
+                self.cache_bytes = 12
+                self._cache = OrderedDict()
+                self._cached_bytes = 0
+                self._process = object()
+                self.calls = 0
+                self.failure = ValueError('same-native-exception')
+            def _blob(self, commit, relative, *, missing=False):
+                self.calls += 1
+                if relative == 'raises': raise self.failure
+                key = (commit, relative)
+                if key in self._cache:
+                    self._cache.move_to_end(key); return self._cache[key]
+                if relative == 'absent': return None
+                raw = b'MANIFEST' if relative == 'state_storage.json' else b'raw'
+                while self._cache and self._cached_bytes + len(raw) > self.cache_bytes:
+                    _, previous = self._cache.popitem(last=False); self._cached_bytes -= len(previous)
+                self._cache[key] = raw; self._cached_bytes += len(raw)
+                return raw
+            def close(self):
+                self._cache.clear(); self._cached_bytes = 0; self._process = None
+        return Reader
+
+    def test_native_return_and_exception_identity_preserved_once_per_call(self):
+        kind = self.reader_type(); reader = kind()
+        original_blob, original_close = kind._blob, kind.close
+        observation = profile.ReaderCacheObservation(kind); observation.start()
+        try:
+            value = reader._blob('c', 'state_archives/value')
+            self.assertIs(reader._blob('c', 'state_archives/value'), value)
+            self.assertIsNone(reader._blob('c', 'absent', missing=True))
+            with self.assertRaises(ValueError) as raised: reader._blob('c', 'raises')
+            self.assertIs(raised.exception, reader.failure)
+            self.assertEqual(reader.calls, 4)
+            result = observation.snapshot(trace=True)
+            self.assertEqual(result['calls'], 4)
+            self.assertEqual(result['exceptions'], 1)
+            self.assertEqual(result['missing_returns'], 1)
+            self.assertEqual(result['reader_summaries'][0]['actual_vs_original_hit_mismatches'], 0)
+            self.assertNotIn('state_archives/value', json.dumps(result))
+            self.assertNotIn('MANIFEST', json.dumps(result))
+        finally: observation.stop()
+        self.assertIs(kind._blob, original_blob); self.assertIs(kind.close, original_close)
+
+    def test_seeded_lru_and_reset_match_native_and_alternative_is_simulation(self):
+        kind = self.reader_type(); reader = kind()
+        reader._blob('seed', 'state_archives/a')
+        observation = profile.ReaderCacheObservation(kind); observation.start()
+        try:
+            reader._blob('seed', 'state_archives/a')
+            for commit in ('one', 'two', 'three', 'four'):
+                reader._blob(commit, 'state_storage.json')
+                for key in ('a', 'b', 'c'): reader._blob('seed', 'state_archives/' + key)
+            reader.close()
+            reader._blob('seed', 'state_archives/a')
+            result = observation.snapshot(trace=True)
+            summary = result['reader_summaries'][0]
+            self.assertEqual(summary['actual_vs_original_hit_mismatches'], 0)
+            self.assertGreater(summary['skip_manifest_transport_hits'], summary['original_transport_hits'])
+            self.assertEqual(len(result['initial_cache_key_indices']), 1)
+            self.assertEqual(summary['close_calls'], 1)
+            self.assertEqual(len(result['resets']), 1)
+            self.assertIn('simulation only', result['replay_scope'])
+        finally: observation.stop()
+
+    def test_trace_limit_never_changes_native_execution_or_budget(self):
+        kind = self.reader_type(); reader = kind()
+        observation = profile.ReaderCacheObservation(kind)
+        observation.MAX_KEYS = 2; observation.MAX_EVENTS = 3
+        observation.start()
+        try:
+            for index in range(8): self.assertEqual(reader._blob('c', 'state_archives/' + str(index)), b'raw')
+            result = observation.snapshot(trace=True)
+            self.assertFalse(result['trace_complete'])
+            self.assertEqual(result['trace_truncation'], 'key_limit')
+            self.assertLessEqual(result['traced_keys'], 2)
+            self.assertLessEqual(result['traced_events'] + result['traced_resets'], 3)
+            self.assertEqual(result['calls'], 8)
+            self.assertEqual(reader.calls, 8)
+            self.assertEqual(reader.cache_bytes, 12)
+            self.assertLessEqual(reader._cached_bytes, 12)
+        finally: observation.stop()
 
 
 def summary():
