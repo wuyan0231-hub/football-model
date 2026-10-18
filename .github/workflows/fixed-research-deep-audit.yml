@@ -30,6 +30,11 @@ jobs:
           path: original-numeric
           ref: 4ae6764f2502c8892bb892c3a08bf0a34d604b1a
           persist-credentials: false
+      - name: 仅收紧reader本地Git映射及缓存（原2GiB进程上限不变）
+        run: |
+          git -C reader config --local core.packedGitWindowSize 32m
+          git -C reader config --local core.packedGitLimit 128m
+          git -C reader config --local core.deltaBaseCacheLimit 32m
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
@@ -52,6 +57,7 @@ jobs:
           value={'state':module.STATE,'source':module.SOURCE,'implementation':module.IMPLEMENTATION,
             'report':module.REPORT_REF,'candidates':module.CANDIDATES,'tolerances':module.TOLERANCES,
             'limits':module.LIMITS,'limitations':module.LIMITATIONS,
+            'reader_git_config_bytes':module.GIT_READER_CONFIG,
             'threshold_origin':'Pre-registered conservative audit thresholds; not production gates or optimizer error bounds.',
             'script_sha256':hashlib.sha256(source.read_bytes()).hexdigest()}
           raw=module.encode(value)
