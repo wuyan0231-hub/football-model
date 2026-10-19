@@ -1,0 +1,1864 @@
+{
+  "schema_version": 1,
+  "status": "noncomparable_diagnostic",
+  "sources": {
+    "old": {
+      "competition": "epl",
+      "target_scope": "regulation_time_90_plus_stoppage",
+      "model_id": "epl-20261013T013925921509Z",
+      "path": "runtime/validation/epl/20261013T013925921509Z.json"
+    },
+    "new": {
+      "competition": "epl",
+      "target_scope": "regulation_time_90_plus_stoppage",
+      "model_id": "epl-20261019T061814805568Z",
+      "path": "runtime/validation/epl/20261019T061814805568Z.json"
+    }
+  },
+  "target": "regulation_time_1x2",
+  "evaluation_context": {
+    "old": {
+      "evaluation_data_cutoff": "2026-10-13T01:39:25.921509Z",
+      "split": {
+        "method": "chronological_fixed_model_holdout",
+        "grouped_by": "kickoff_utc_calendar_date",
+        "train_cutoff": "2026-03-01T00:00:00Z",
+        "train_last_kickoff": "2026-02-28T17:30:00Z",
+        "test_start": "2026-03-01T14:00:00Z",
+        "test_end": "2026-10-12T19:00:00Z",
+        "training_count": 657,
+        "testing_count": 163,
+        "result_availability_delay_hours": 4,
+        "embargoed_count": 0,
+        "embargoed_match_ids": []
+      }
+    },
+    "new": {
+      "evaluation_data_cutoff": "2026-10-19T06:18:14.805568Z",
+      "split": {
+        "method": "chronological_fixed_model_holdout",
+        "grouped_by": "kickoff_utc_calendar_date",
+        "train_cutoff": "2026-03-04T00:00:00Z",
+        "train_last_kickoff": "2026-03-03T19:30:00Z",
+        "test_start": "2026-03-04T19:30:00Z",
+        "test_end": "2026-10-18T15:30:00Z",
+        "training_count": 664,
+        "testing_count": 164,
+        "result_availability_delay_hours": 4,
+        "embargoed_count": 1,
+        "embargoed_match_ids": [
+          1379258
+        ]
+      }
+    }
+  },
+  "comparison_eligibility": {
+    "same_evaluation_conditions": false,
+    "reasons": [
+      "different_or_unknown_evaluation_data_cutoff",
+      "different_or_unknown_split_train_cutoff",
+      "different_or_unknown_split_test_start",
+      "different_or_unknown_split_test_end",
+      "unpaired_common_matches"
+    ],
+    "pure_repair_effect_validated": false,
+    "note": "共同样本配对评分仅为描述性检查；因果增量还需固定修复外的资料、实现和验证条件。"
+  },
+  "counts": {
+    "old_total": 163,
+    "new_total": 164,
+    "old_scored": 152,
+    "new_scored": 152,
+    "common_scored": 144,
+    "paired_common_scored": 0,
+    "new_only_scored": 8,
+    "removed_scored": 8,
+    "unpaired_common_scored": 144,
+    "old_excluded": 11,
+    "new_excluded": 12
+  },
+  "groups": {
+    "common": {
+      "n": 0,
+      "old": {
+        "n": 0,
+        "match_ids": [],
+        "model_metrics": null,
+        "baseline_metrics": null,
+        "baseline_status": "unavailable_or_incomplete"
+      },
+      "new": {
+        "n": 0,
+        "match_ids": [],
+        "model_metrics": null,
+        "baseline_metrics": null,
+        "baseline_status": "unavailable_or_incomplete"
+      },
+      "paired_diagnostic_delta": null,
+      "controlled_comparison_eligible": false
+    },
+    "new_only": {
+      "n": 8,
+      "match_ids": [
+        "1557427",
+        "1557428",
+        "1557429",
+        "1557430",
+        "1557432",
+        "1557433",
+        "1557434",
+        "1557435"
+      ],
+      "model_metrics": {
+        "n": 8,
+        "log_loss": 0.8136061630679315,
+        "brier_score": 0.4660755375189285
+      },
+      "baseline_metrics": {
+        "n": 8,
+        "log_loss": 1.048226318780239,
+        "brier_score": 0.6371889655438404
+      },
+      "baseline_status": "complete_same_rows",
+      "transitions": [
+        {
+          "match_id": "1557427",
+          "other_status": "absent_from_validation",
+          "other_reason": "未出现在另一份验证逐场记录；可能是清洗排除或评价窗口变化，不能猜具体原因。"
+        },
+        {
+          "match_id": "1557428",
+          "other_status": "absent_from_validation",
+          "other_reason": "未出现在另一份验证逐场记录；可能是清洗排除或评价窗口变化，不能猜具体原因。"
+        },
+        {
+          "match_id": "1557429",
+          "other_status": "absent_from_validation",
+          "other_reason": "未出现在另一份验证逐场记录；可能是清洗排除或评价窗口变化，不能猜具体原因。"
+        },
+        {
+          "match_id": "1557430",
+          "other_status": "absent_from_validation",
+          "other_reason": "未出现在另一份验证逐场记录；可能是清洗排除或评价窗口变化，不能猜具体原因。"
+        },
+        {
+          "match_id": "1557432",
+          "other_status": "absent_from_validation",
+          "other_reason": "未出现在另一份验证逐场记录；可能是清洗排除或评价窗口变化，不能猜具体原因。"
+        },
+        {
+          "match_id": "1557433",
+          "other_status": "absent_from_validation",
+          "other_reason": "未出现在另一份验证逐场记录；可能是清洗排除或评价窗口变化，不能猜具体原因。"
+        },
+        {
+          "match_id": "1557434",
+          "other_status": "absent_from_validation",
+          "other_reason": "未出现在另一份验证逐场记录；可能是清洗排除或评价窗口变化，不能猜具体原因。"
+        },
+        {
+          "match_id": "1557435",
+          "other_status": "absent_from_validation",
+          "other_reason": "未出现在另一份验证逐场记录；可能是清洗排除或评价窗口变化，不能猜具体原因。"
+        }
+      ],
+      "classification": "newly_scored_in_supplied_validation_only"
+    },
+    "removed": {
+      "n": 8,
+      "match_ids": [
+        "1379239",
+        "1379241",
+        "1379243",
+        "1379246",
+        "1379250",
+        "1379252",
+        "1379254",
+        "1379258"
+      ],
+      "model_metrics": {
+        "n": 8,
+        "log_loss": 0.9611900733734982,
+        "brier_score": 0.5596461892051693
+      },
+      "baseline_metrics": {
+        "n": 8,
+        "log_loss": 0.9721997817772372,
+        "brier_score": 0.5803107840104436
+      },
+      "baseline_status": "complete_same_rows",
+      "transitions": [
+        {
+          "match_id": "1379239",
+          "other_status": "absent_from_validation",
+          "other_reason": "未出现在另一份验证逐场记录；可能是清洗排除或评价窗口变化，不能猜具体原因。"
+        },
+        {
+          "match_id": "1379241",
+          "other_status": "absent_from_validation",
+          "other_reason": "未出现在另一份验证逐场记录；可能是清洗排除或评价窗口变化，不能猜具体原因。"
+        },
+        {
+          "match_id": "1379243",
+          "other_status": "absent_from_validation",
+          "other_reason": "未出现在另一份验证逐场记录；可能是清洗排除或评价窗口变化，不能猜具体原因。"
+        },
+        {
+          "match_id": "1379246",
+          "other_status": "absent_from_validation",
+          "other_reason": "未出现在另一份验证逐场记录；可能是清洗排除或评价窗口变化，不能猜具体原因。"
+        },
+        {
+          "match_id": "1379250",
+          "other_status": "absent_from_validation",
+          "other_reason": "未出现在另一份验证逐场记录；可能是清洗排除或评价窗口变化，不能猜具体原因。"
+        },
+        {
+          "match_id": "1379252",
+          "other_status": "absent_from_validation",
+          "other_reason": "未出现在另一份验证逐场记录；可能是清洗排除或评价窗口变化，不能猜具体原因。"
+        },
+        {
+          "match_id": "1379254",
+          "other_status": "absent_from_validation",
+          "other_reason": "未出现在另一份验证逐场记录；可能是清洗排除或评价窗口变化，不能猜具体原因。"
+        },
+        {
+          "match_id": "1379258",
+          "other_status": "absent_from_validation",
+          "other_reason": "未出现在另一份验证逐场记录；可能是清洗排除或评价窗口变化，不能猜具体原因。"
+        }
+      ]
+    },
+    "unpaired_common": {
+      "n": 144,
+      "matches": [
+        {
+          "match_id": "1379249",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379251",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379253",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379255",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379256",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379257",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379259",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379260",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379261",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379262",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379263",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379264",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379265",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379266",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379267",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379268",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379269",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379270",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379271",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379272",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379273",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379274",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379275",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379276",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379277",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379279",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379280",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379281",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379282",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379283",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379284",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379285",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379286",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379287",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379288",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379289",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379290",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379291",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379292",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379293",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379294",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379295",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379296",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379297",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379298",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379299",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379300",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379301",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379302",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379303",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379304",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379305",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379306",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379307",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379308",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379309",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379310",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379311",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379312",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379313",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379314",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379315",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379316",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379317",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379318",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379319",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379320",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379321",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379322",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379323",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379324",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379325",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379326",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379327",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379328",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379329",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379330",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379331",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379332",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379333",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379334",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379335",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379336",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379337",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379338",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379339",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379340",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379341",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379342",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379343",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379344",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379345",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379346",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379347",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1379348",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557369",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557370",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557371",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557372",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557373",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557374",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557375",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557376",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557377",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557378",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557379",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557381",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557382",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557383",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557384",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557385",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557386",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557387",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557388",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557389",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557390",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557391",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557393",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557395",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557396",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557397",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557398",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557401",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557402",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557403",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557404",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557405",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557406",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557407",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557408",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557409",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557410",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557411",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557412",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557413",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557416",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557417",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557418",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557419",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557421",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557423",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557424",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557425",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        },
+        {
+          "match_id": "1557426",
+          "reasons": [
+            "different_forecast_training_cutoff"
+          ]
+        }
+      ],
+      "old": {
+        "n": 144,
+        "match_ids": [
+          "1379249",
+          "1379251",
+          "1379253",
+          "1379255",
+          "1379256",
+          "1379257",
+          "1379259",
+          "1379260",
+          "1379261",
+          "1379262",
+          "1379263",
+          "1379264",
+          "1379265",
+          "1379266",
+          "1379267",
+          "1379268",
+          "1379269",
+          "1379270",
+          "1379271",
+          "1379272",
+          "1379273",
+          "1379274",
+          "1379275",
+          "1379276",
+          "1379277",
+          "1379279",
+          "1379280",
+          "1379281",
+          "1379282",
+          "1379283",
+          "1379284",
+          "1379285",
+          "1379286",
+          "1379287",
+          "1379288",
+          "1379289",
+          "1379290",
+          "1379291",
+          "1379292",
+          "1379293",
+          "1379294",
+          "1379295",
+          "1379296",
+          "1379297",
+          "1379298",
+          "1379299",
+          "1379300",
+          "1379301",
+          "1379302",
+          "1379303",
+          "1379304",
+          "1379305",
+          "1379306",
+          "1379307",
+          "1379308",
+          "1379309",
+          "1379310",
+          "1379311",
+          "1379312",
+          "1379313",
+          "1379314",
+          "1379315",
+          "1379316",
+          "1379317",
+          "1379318",
+          "1379319",
+          "1379320",
+          "1379321",
+          "1379322",
+          "1379323",
+          "1379324",
+          "1379325",
+          "1379326",
+          "1379327",
+          "1379328",
+          "1379329",
+          "1379330",
+          "1379331",
+          "1379332",
+          "1379333",
+          "1379334",
+          "1379335",
+          "1379336",
+          "1379337",
+          "1379338",
+          "1379339",
+          "1379340",
+          "1379341",
+          "1379342",
+          "1379343",
+          "1379344",
+          "1379345",
+          "1379346",
+          "1379347",
+          "1379348",
+          "1557369",
+          "1557370",
+          "1557371",
+          "1557372",
+          "1557373",
+          "1557374",
+          "1557375",
+          "1557376",
+          "1557377",
+          "1557378",
+          "1557379",
+          "1557381",
+          "1557382",
+          "1557383",
+          "1557384",
+          "1557385",
+          "1557386",
+          "1557387",
+          "1557388",
+          "1557389",
+          "1557390",
+          "1557391",
+          "1557393",
+          "1557395",
+          "1557396",
+          "1557397",
+          "1557398",
+          "1557401",
+          "1557402",
+          "1557403",
+          "1557404",
+          "1557405",
+          "1557406",
+          "1557407",
+          "1557408",
+          "1557409",
+          "1557410",
+          "1557411",
+          "1557412",
+          "1557413",
+          "1557416",
+          "1557417",
+          "1557418",
+          "1557419",
+          "1557421",
+          "1557423",
+          "1557424",
+          "1557425",
+          "1557426"
+        ],
+        "model_metrics": {
+          "n": 144,
+          "log_loss": 1.0501036562753603,
+          "brier_score": 0.6298567460187369
+        },
+        "baseline_metrics": {
+          "n": 144,
+          "log_loss": 1.0997465659941863,
+          "brier_score": 0.6661636830270521
+        },
+        "baseline_status": "complete_same_rows"
+      },
+      "new": {
+        "n": 144,
+        "match_ids": [
+          "1379249",
+          "1379251",
+          "1379253",
+          "1379255",
+          "1379256",
+          "1379257",
+          "1379259",
+          "1379260",
+          "1379261",
+          "1379262",
+          "1379263",
+          "1379264",
+          "1379265",
+          "1379266",
+          "1379267",
+          "1379268",
+          "1379269",
+          "1379270",
+          "1379271",
+          "1379272",
+          "1379273",
+          "1379274",
+          "1379275",
+          "1379276",
+          "1379277",
+          "1379279",
+          "1379280",
+          "1379281",
+          "1379282",
+          "1379283",
+          "1379284",
+          "1379285",
+          "1379286",
+          "1379287",
+          "1379288",
+          "1379289",
+          "1379290",
+          "1379291",
+          "1379292",
+          "1379293",
+          "1379294",
+          "1379295",
+          "1379296",
+          "1379297",
+          "1379298",
+          "1379299",
+          "1379300",
+          "1379301",
+          "1379302",
+          "1379303",
+          "1379304",
+          "1379305",
+          "1379306",
+          "1379307",
+          "1379308",
+          "1379309",
+          "1379310",
+          "1379311",
+          "1379312",
+          "1379313",
+          "1379314",
+          "1379315",
+          "1379316",
+          "1379317",
+          "1379318",
+          "1379319",
+          "1379320",
+          "1379321",
+          "1379322",
+          "1379323",
+          "1379324",
+          "1379325",
+          "1379326",
+          "1379327",
+          "1379328",
+          "1379329",
+          "1379330",
+          "1379331",
+          "1379332",
+          "1379333",
+          "1379334",
+          "1379335",
+          "1379336",
+          "1379337",
+          "1379338",
+          "1379339",
+          "1379340",
+          "1379341",
+          "1379342",
+          "1379343",
+          "1379344",
+          "1379345",
+          "1379346",
+          "1379347",
+          "1379348",
+          "1557369",
+          "1557370",
+          "1557371",
+          "1557372",
+          "1557373",
+          "1557374",
+          "1557375",
+          "1557376",
+          "1557377",
+          "1557378",
+          "1557379",
+          "1557381",
+          "1557382",
+          "1557383",
+          "1557384",
+          "1557385",
+          "1557386",
+          "1557387",
+          "1557388",
+          "1557389",
+          "1557390",
+          "1557391",
+          "1557393",
+          "1557395",
+          "1557396",
+          "1557397",
+          "1557398",
+          "1557401",
+          "1557402",
+          "1557403",
+          "1557404",
+          "1557405",
+          "1557406",
+          "1557407",
+          "1557408",
+          "1557409",
+          "1557410",
+          "1557411",
+          "1557412",
+          "1557413",
+          "1557416",
+          "1557417",
+          "1557418",
+          "1557419",
+          "1557421",
+          "1557423",
+          "1557424",
+          "1557425",
+          "1557426"
+        ],
+        "model_metrics": {
+          "n": 144,
+          "log_loss": 1.0480153314551863,
+          "brier_score": 0.6288730062166709
+        },
+        "baseline_metrics": {
+          "n": 144,
+          "log_loss": 1.099464555105797,
+          "brier_score": 0.6659924268499555
+        },
+        "baseline_status": "complete_same_rows"
+      },
+      "controlled_comparison_eligible": false,
+      "note": "同ID但身份、赛果或训练条件不一致；各侧诊断评分不能视为相同条件的配对增量。"
+    },
+    "current_all": {
+      "n": 152,
+      "match_ids": [
+        "1379249",
+        "1379251",
+        "1379253",
+        "1379255",
+        "1379256",
+        "1379257",
+        "1379261",
+        "1379267",
+        "1379259",
+        "1379262",
+        "1379268",
+        "1379263",
+        "1379265",
+        "1379266",
+        "1379264",
+        "1379260",
+        "1379270",
+        "1379271",
+        "1379273",
+        "1379272",
+        "1379274",
+        "1379276",
+        "1379269",
+        "1379277",
+        "1379288",
+        "1379279",
+        "1379280",
+        "1379281",
+        "1379284",
+        "1379283",
+        "1379286",
+        "1379287",
+        "1379282",
+        "1379285",
+        "1379290",
+        "1379294",
+        "1379296",
+        "1379298",
+        "1379291",
+        "1379289",
+        "1379293",
+        "1379297",
+        "1379295",
+        "1379292",
+        "1379301",
+        "1379300",
+        "1379302",
+        "1379306",
+        "1379303",
+        "1379304",
+        "1379307",
+        "1379308",
+        "1379299",
+        "1379305",
+        "1379315",
+        "1379312",
+        "1379317",
+        "1379318",
+        "1379309",
+        "1379311",
+        "1379316",
+        "1379310",
+        "1379313",
+        "1379314",
+        "1379323",
+        "1379319",
+        "1379322",
+        "1379326",
+        "1379324",
+        "1379320",
+        "1379321",
+        "1379325",
+        "1379328",
+        "1379327",
+        "1379275",
+        "1379330",
+        "1379336",
+        "1379332",
+        "1379334",
+        "1379335",
+        "1379338",
+        "1379337",
+        "1379329",
+        "1379331",
+        "1379333",
+        "1379339",
+        "1379340",
+        "1379341",
+        "1379342",
+        "1379343",
+        "1379344",
+        "1379345",
+        "1379346",
+        "1379347",
+        "1379348",
+        "1557369",
+        "1557370",
+        "1557371",
+        "1557372",
+        "1557373",
+        "1557374",
+        "1557375",
+        "1557376",
+        "1557381",
+        "1557383",
+        "1557378",
+        "1557386",
+        "1557379",
+        "1557382",
+        "1557385",
+        "1557384",
+        "1557377",
+        "1557393",
+        "1557395",
+        "1557388",
+        "1557389",
+        "1557391",
+        "1557396",
+        "1557390",
+        "1557387",
+        "1557397",
+        "1557398",
+        "1557401",
+        "1557403",
+        "1557406",
+        "1557405",
+        "1557404",
+        "1557402",
+        "1557408",
+        "1557416",
+        "1557409",
+        "1557410",
+        "1557407",
+        "1557412",
+        "1557413",
+        "1557411",
+        "1557417",
+        "1557418",
+        "1557419",
+        "1557423",
+        "1557426",
+        "1557425",
+        "1557421",
+        "1557424",
+        "1557430",
+        "1557428",
+        "1557433",
+        "1557434",
+        "1557427",
+        "1557429",
+        "1557432",
+        "1557435"
+      ],
+      "model_metrics": {
+        "n": 152,
+        "log_loss": 1.0356780068032254,
+        "brier_score": 0.620304718390474
+      },
+      "baseline_metrics": {
+        "n": 152,
+        "log_loss": 1.0967678058255046,
+        "brier_score": 0.6644764552022653
+      },
+      "baseline_status": "complete_same_rows"
+    }
+  },
+  "exclusions": {
+    "old": [
+      {
+        "match_id": "1557367",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[1346]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557368",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[64]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557380",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[1346, 64]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557394",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[1346]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557392",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[64]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557399",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[64]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557400",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[1346]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557414",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[64]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557415",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[1346]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557422",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[64]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557420",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[1346]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      }
+    ],
+    "new": [
+      {
+        "match_id": "1557367",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[1346]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557368",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[64]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557380",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[1346, 64]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557394",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[1346]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557392",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[64]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557399",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[64]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557400",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[1346]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557414",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[64]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557415",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[1346]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557422",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[64]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557420",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[1346]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      },
+      {
+        "match_id": "1557431",
+        "status": "excluded_unknown_team",
+        "reason": "未知球队 ID：[64]；缺少训练数据，当前模型不支持。",
+        "data_errors": []
+      }
+    ]
+  },
+  "data_errors": {
+    "old": [],
+    "new": []
+  },
+  "temporal_evidence": {
+    "old": {
+      "n": 152,
+      "mode": "unknown",
+      "provided_eligibility_counts": {
+        "eligible": 0,
+        "ineligible": 0,
+        "unknown": 152
+      },
+      "missing_or_invalid_time_counts": {
+        "known_at": 152,
+        "valid_at": 152,
+        "valid_from": 152,
+        "valid_to": 152,
+        "evidence_available_at": 152
+      },
+      "reason_counts": {
+        "missing_or_duplicate_temporal_record": 152
+      },
+      "historical_point_in_time_validated": false,
+      "note": "只汇总传入证据。当前回填资格不证明历史训练截点已可知；未知时间不补造，开放有效区间的null也不推定有界。"
+    },
+    "new": {
+      "n": 152,
+      "mode": "unknown",
+      "provided_eligibility_counts": {
+        "eligible": 0,
+        "ineligible": 0,
+        "unknown": 152
+      },
+      "missing_or_invalid_time_counts": {
+        "known_at": 152,
+        "valid_at": 152,
+        "valid_from": 152,
+        "valid_to": 152,
+        "evidence_available_at": 152
+      },
+      "reason_counts": {
+        "missing_or_duplicate_temporal_record": 152
+      },
+      "historical_point_in_time_validated": false,
+      "note": "只汇总传入证据。当前回填资格不证明历史训练截点已可知；未知时间不补造，开放有效区间的null也不推定有界。"
+    },
+    "common_old": {
+      "n": 0,
+      "mode": "unknown",
+      "provided_eligibility_counts": {
+        "eligible": 0,
+        "ineligible": 0,
+        "unknown": 0
+      },
+      "missing_or_invalid_time_counts": {
+        "known_at": 0,
+        "valid_at": 0,
+        "valid_from": 0,
+        "valid_to": 0,
+        "evidence_available_at": 0
+      },
+      "reason_counts": {},
+      "historical_point_in_time_validated": false,
+      "note": "只汇总传入证据。当前回填资格不证明历史训练截点已可知；未知时间不补造，开放有效区间的null也不推定有界。"
+    },
+    "common_new": {
+      "n": 0,
+      "mode": "unknown",
+      "provided_eligibility_counts": {
+        "eligible": 0,
+        "ineligible": 0,
+        "unknown": 0
+      },
+      "missing_or_invalid_time_counts": {
+        "known_at": 0,
+        "valid_at": 0,
+        "valid_from": 0,
+        "valid_to": 0,
+        "evidence_available_at": 0
+      },
+      "reason_counts": {},
+      "historical_point_in_time_validated": false,
+      "note": "只汇总传入证据。当前回填资格不证明历史训练截点已可知；未知时间不补造，开放有效区间的null也不推定有界。"
+    },
+    "new_only": {
+      "n": 8,
+      "mode": "unknown",
+      "provided_eligibility_counts": {
+        "eligible": 0,
+        "ineligible": 0,
+        "unknown": 8
+      },
+      "missing_or_invalid_time_counts": {
+        "known_at": 8,
+        "valid_at": 8,
+        "valid_from": 8,
+        "valid_to": 8,
+        "evidence_available_at": 8
+      },
+      "reason_counts": {
+        "missing_or_duplicate_temporal_record": 8
+      },
+      "historical_point_in_time_validated": false,
+      "note": "只汇总传入证据。当前回填资格不证明历史训练截点已可知；未知时间不补造，开放有效区间的null也不推定有界。"
+    }
+  },
+  "metric_definitions": {
+    "outcome_order": [
+      "home_win",
+      "draw",
+      "away_win"
+    ],
+    "lower_is_better": true,
+    "brier": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+    "log_loss_probability_floor": 1e-15
+  },
+  "prospective_increment_validated": false,
+  "deep_handicap_validated": false,
+  "betting_return_validated": false,
+  "deployment_approved": false,
+  "limitations": [
+    "本报告不改变固定留出、训练参数、比分目标或原始逐场记录。",
+    "验证中新增出现的样本可能来自评价窗口或历史回填，不能称为前瞻新增覆盖。",
+    "原预处理就排除的比赛若不在验证JSON中，不在本报告分母；须同时保留国家队场地审计分母。",
+    "概率评分、覆盖数量及代码测试不等于深盘、实际投注收益或模型质量验收。"
+  ]
+}

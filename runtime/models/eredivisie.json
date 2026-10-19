@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
   "time_semantics": "observed_wall_clock_v1",
-  "run_started_at": "2026-10-17T06:32:51.061639Z",
-  "training_cutoff": "2026-10-17T06:32:51.061639Z",
-  "data_observed_at": "2026-10-17T06:33:24.896880Z",
-  "model_fitted_at": "2026-10-17T06:33:25.069458Z",
+  "run_started_at": "2026-10-19T06:18:14.805568Z",
+  "training_cutoff": "2026-10-19T06:18:14.805568Z",
+  "data_observed_at": "2026-10-19T06:19:19.137183Z",
+  "model_fitted_at": "2026-10-19T06:19:19.317467Z",
   "program_version": "0.1.0",
-  "model_id": "eredivisie-20261017T063251061639Z",
+  "model_id": "eredivisie-20261019T061814805568Z",
   "competition": {
     "key": "eredivisie",
     "label": "荷甲",
@@ -14,8 +14,8 @@
     "country": "Netherlands",
     "mode": "domestic_baseline"
   },
-  "data_fingerprint": "632364de5b8796e7b06882dfd4cbc9ecf8ef702055d2f6d67cec26b626461fdd",
-  "trained_at": "2026-10-17T06:32:51.061639Z",
+  "data_fingerprint": "eef566857c2401f42366c7e0162f9fe05627707f280fba314ab8e5e369b72d14",
+  "trained_at": "2026-10-19T06:18:14.805568Z",
   "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
   "maturity": "exploratory_baseline",
   "lineup_effects": "未量化",
@@ -26,10 +26,10 @@
     "fit_status": "converged",
     "trained": true,
     "validated_for_production": false,
-    "training_cutoff": "2026-10-17T06:32:51.061639Z",
-    "last_match_kickoff": "2026-10-16T18:00:00Z",
-    "last_result_assumed_available_at": "2026-10-16T22:00:00Z",
-    "n_matches": 703,
+    "training_cutoff": "2026-10-19T06:18:14.805568Z",
+    "last_match_kickoff": "2026-10-18T18:00:00Z",
+    "last_result_assumed_available_at": "2026-10-18T22:00:00Z",
+    "n_matches": 711,
     "n_teams": 26,
     "min_team_matches": 2,
     "low_sample_team_threshold": 5,
@@ -39,180 +39,180 @@
       421
     ],
     "excluded_after_cutoff_or_availability_delay": 0,
-    "training_data_sha256": "5b8b5fab14cc8de5b9582e51c368d0f9611f82948ebd4a83e613543b80199aed",
+    "training_data_sha256": "bbddf81d7e9c3102d21c545c0730342730d02d3a7fe8a5472dd80d76351ff00a",
     "half_life_days": 180.0,
     "ridge": 3.0,
-    "effective_sample_size": 400.9515920088731,
-    "intercept": 0.3375998398282112,
-    "home_advantage": 0.1298221707976873,
+    "effective_sample_size": 400.89952744160837,
+    "intercept": 0.35024812615905504,
+    "home_advantage": 0.13636614453178822,
     "team_parameters": {
       "193": {
         "name": "PEC Zwolle",
-        "attack": -0.2219718120191324,
-        "defence": -0.23213093290275127,
-        "training_matches": 76
+        "attack": -0.15918850795404668,
+        "defence": -0.20119486807366982,
+        "training_matches": 77
       },
       "194": {
         "name": "Ajax",
-        "attack": 0.2798408071227199,
-        "defence": 0.34828281828364666,
-        "training_matches": 78
+        "attack": 0.32137904674890894,
+        "defence": 0.3313033016448547,
+        "training_matches": 79
       },
       "195": {
         "name": "Willem II",
-        "attack": -0.3315803751240565,
-        "defence": -0.34834241393412974,
-        "training_matches": 46
+        "attack": -0.28984808408461876,
+        "defence": -0.37053289269836076,
+        "training_matches": 47
       },
       "196": {
         "name": "Excelsior",
-        "attack": 0.03382360111697471,
-        "defence": -0.05600249623437915,
+        "attack": 0.011670477848178151,
+        "defence": -0.044699926537325574,
         "training_matches": 43
       },
       "197": {
         "name": "PSV Eindhoven",
-        "attack": 0.7118867990048262,
-        "defence": 0.20138569975853285,
-        "training_matches": 76
+        "attack": 0.6580888994957765,
+        "defence": 0.1866181565500322,
+        "training_matches": 77
       },
       "198": {
         "name": "ADO Den Haag",
-        "attack": -0.17975738073607697,
-        "defence": -0.24548770583386553,
-        "training_matches": 10
+        "attack": -0.13649585099445247,
+        "defence": -0.11113677737097138,
+        "training_matches": 11
       },
       "199": {
         "name": "De Graafschap",
-        "attack": -0.11689417897142002,
-        "defence": 0.03474558891190311,
+        "attack": -0.1171402335827222,
+        "defence": 0.0355581037184833,
         "training_matches": 2
       },
       "201": {
         "name": "AZ Alkmaar",
-        "attack": 0.19402941317941513,
-        "defence": 0.2269163262466442,
-        "training_matches": 78
+        "attack": 0.17072949308639102,
+        "defence": 0.21557221449637434,
+        "training_matches": 79
       },
       "202": {
         "name": "Groningen",
-        "attack": 0.14230712048208866,
-        "defence": 0.11182110142296661,
-        "training_matches": 77
+        "attack": 0.14652941822141743,
+        "defence": 0.03525902449467471,
+        "training_matches": 78
       },
       "203": {
         "name": "NAC Breda",
-        "attack": -0.2974998720786073,
-        "defence": -0.019492028570074083,
+        "attack": -0.31722958415684194,
+        "defence": -0.011334227151712391,
         "training_matches": 68
       },
       "205": {
         "name": "Fortuna Sittard",
-        "attack": -0.005024720787548883,
-        "defence": -0.07709755285883299,
-        "training_matches": 76
+        "attack": -0.0032778060241030397,
+        "defence": -0.06442313898941782,
+        "training_matches": 77
       },
       "206": {
         "name": "Heracles",
-        "attack": -0.3139710511657832,
-        "defence": -0.2954935672653277,
+        "attack": -0.33504747797354273,
+        "defence": -0.28692136097981247,
         "training_matches": 68
       },
       "207": {
         "name": "Utrecht",
-        "attack": 0.13888637144026306,
-        "defence": -0.02725200570803443,
-        "training_matches": 78
+        "attack": 0.1292324637099713,
+        "defence": 0.0012392160993624963,
+        "training_matches": 79
       },
       "209": {
         "name": "Feyenoord",
-        "attack": 0.4440504463495749,
-        "defence": 0.3228033127436227,
-        "training_matches": 76
+        "attack": 0.46392697105636943,
+        "defence": 0.26806438990062104,
+        "training_matches": 77
       },
       "210": {
         "name": "Heerenveen",
-        "attack": 0.09165387388402976,
-        "defence": 0.1243351369109955,
+        "attack": 0.07036051818637869,
+        "defence": 0.13353363825223866,
         "training_matches": 79
       },
       "409": {
         "name": "Dordrecht",
-        "attack": -0.03864207988711528,
-        "defence": 0.027846512062991706,
+        "attack": -0.04544934031877926,
+        "defence": 0.03390349461419863,
         "training_matches": 4
       },
       "410": {
         "name": "GO Ahead Eagles",
-        "attack": 0.19778096452243107,
-        "defence": -0.04021538619524915,
-        "training_matches": 76
+        "attack": 0.15522927668672337,
+        "defence": -0.0896589763599403,
+        "training_matches": 77
       },
       "413": {
         "name": "NEC Nijmegen",
-        "attack": 0.2146355824929644,
-        "defence": 0.04768527441478181,
-        "training_matches": 77
+        "attack": 0.18753863694976824,
+        "defence": 0.04766218711978321,
+        "training_matches": 78
       },
       "415": {
         "name": "Twente",
-        "attack": 0.19539561911997355,
-        "defence": 0.30214342003268485,
-        "training_matches": 78
+        "attack": 0.15904803201035328,
+        "defence": 0.2873990210078052,
+        "training_matches": 79
       },
       "416": {
         "name": "FC Volendam",
-        "attack": -0.3113444755121195,
-        "defence": 0.06241873367017479,
+        "attack": -0.33119780642083374,
+        "defence": 0.06930018544765298,
         "training_matches": 34
       },
       "417": {
         "name": "Waalwijk",
-        "attack": -0.044441437312030915,
-        "defence": -0.1732951920902959,
+        "attack": -0.05821719259230451,
+        "defence": -0.16735387234545201,
         "training_matches": 34
       },
       "419": {
         "name": "Almere City FC",
-        "attack": -0.3377739265609896,
-        "defence": -0.03762607028683548,
+        "attack": -0.3485597955954672,
+        "defence": -0.032702563114006794,
         "training_matches": 34
       },
       "420": {
         "name": "Cambuur",
-        "attack": -0.07563085655040475,
-        "defence": -0.28244762480229263,
-        "training_matches": 10
+        "attack": -0.020055707563354036,
+        "defence": -0.2505158369759391,
+        "training_matches": 11
       },
       "421": {
         "name": "Den Bosch",
-        "attack": -0.1723951893235065,
-        "defence": 0.12725811233201018,
+        "attack": -0.17467363607075007,
+        "defence": 0.13950301901557507,
         "training_matches": 4
       },
       "426": {
         "name": "Sparta Rotterdam",
-        "attack": -0.08448556137572662,
-        "defence": -0.13192265932621192,
-        "training_matches": 76
+        "attack": -0.07930312570064155,
+        "defence": -0.1430379681410219,
+        "training_matches": 77
       },
       "427": {
         "name": "Telstar",
-        "attack": -0.11287768131074276,
-        "defence": 0.029163599217325156,
-        "training_matches": 48
+        "attack": -0.058049084967778046,
+        "defence": -0.011403543624026248,
+        "training_matches": 49
       }
     },
     "graph_connected": true,
     "constraints": {
-      "attack_sum": 1.1102230246251565e-16,
-      "defence_sum": 2.0816681711721685e-16
+      "attack_sum": 1.457167719820518e-16,
+      "defence_sum": 1.5612511283791264e-17
     },
     "optimizer": {
       "success": true,
       "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
-      "iterations": 38,
-      "objective": 595.3009321799904,
+      "iterations": 37,
+      "objective": 620.464831178264,
       "parameter_at_bound": false
     },
     "warnings": [
@@ -228,51 +228,51 @@
     "is_rolling_backtest": false,
     "minimum_test_matches": 40,
     "meets_minimum_supported_test_matches": true,
-    "evaluation_data_cutoff": "2026-10-17T06:32:51.061639Z",
+    "evaluation_data_cutoff": "2026-10-19T06:18:14.805568Z",
     "split": {
       "method": "chronological_fixed_model_holdout",
       "grouped_by": "kickoff_utc_calendar_date",
-      "train_cutoff": "2026-03-20T00:00:00Z",
-      "train_last_kickoff": "2026-03-15T15:45:00Z",
-      "test_start": "2026-03-20T19:00:00Z",
-      "test_end": "2026-10-16T18:00:00Z",
-      "training_count": 564,
-      "testing_count": 139,
+      "train_cutoff": "2026-03-22T00:00:00Z",
+      "train_last_kickoff": "2026-03-21T20:00:00Z",
+      "test_start": "2026-03-22T11:15:00Z",
+      "test_end": "2026-10-18T18:00:00Z",
+      "training_count": 568,
+      "testing_count": 143,
       "result_availability_delay_hours": 4,
       "embargoed_count": 0,
       "embargoed_match_ids": []
     },
     "coverage": {
-      "total": 139,
-      "scored": 139,
+      "total": 143,
+      "scored": 143,
       "excluded": 0,
       "ratio": 1.0,
       "exclusions": []
     },
     "model_metrics": {
-      "n": 139,
-      "log_loss": 0.9976231146484162,
-      "brier_score": 0.5942217433288042,
+      "n": 143,
+      "log_loss": 1.0129818487515867,
+      "brier_score": 0.6054199332816403,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
     "baseline_metrics": {
-      "n": 139,
-      "log_loss": 1.1134211053020406,
-      "brier_score": 0.6774328492363197,
+      "n": 143,
+      "log_loss": 1.1147510616688399,
+      "brier_score": 0.6785084783427826,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
     "baseline": {
       "name": "training_league_home_away_mean_poisson",
-      "home_rate": 1.7369353410097432,
-      "away_rate": 1.3365810451727191,
+      "home_rate": 1.735268249780123,
+      "away_rate": 1.334212840809147,
       "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
       "same_scored_matches_as_model": true
     },
     "comparison": {
-      "model_minus_baseline_log_loss": -0.1157979906536244,
-      "model_minus_baseline_brier_score": -0.08321110590751557,
+      "model_minus_baseline_log_loss": -0.10176921291725316,
+      "model_minus_baseline_brier_score": -0.07308854506114226,
       "lower_is_better": true
     },
     "warnings": [
@@ -302,12 +302,12 @@
         "odds": true
       },
       "fixtures": 306,
-      "fetched_at": "2026-10-17T06:33:24.855432Z",
-      "received_at": "2026-10-17T06:33:24.866629Z",
+      "fetched_at": "2026-10-19T06:19:19.094747Z",
+      "received_at": "2026-10-19T06:19:19.106036Z",
       "from_cache": false,
       "status_counts": {
-        "FT": 73,
-        "NS": 233
+        "FT": 81,
+        "NS": 225
       }
     },
     {
@@ -330,7 +330,7 @@
       },
       "fixtures": 309,
       "fetched_at": "2026-10-16T01:50:37.903393Z",
-      "received_at": "2026-10-17T06:33:24.878124Z",
+      "received_at": "2026-10-19T06:19:19.117786Z",
       "from_cache": true,
       "status_counts": {
         "FT": 308,
@@ -357,7 +357,7 @@
       },
       "fixtures": 321,
       "fetched_at": "2026-10-16T01:50:38.157159Z",
-      "received_at": "2026-10-17T06:33:24.890963Z",
+      "received_at": "2026-10-19T06:19:19.130831Z",
       "from_cache": true,
       "status_counts": {
         "FT": 317,
