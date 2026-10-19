@@ -53,7 +53,7 @@ def input_inventory(runtime):
     """
     runtime = Path(runtime).resolve()
     prefixes = ("fundamentals/", "advanced_features/evidence/", "advanced_features/contexts/",
-        "advanced_features/snapshots/", "advanced_features/player_load/", "feature_models/schedules/")
+        "advanced_features/snapshots/", "feature_models/schedules/")
     entries = {}
     for path in iter_paths(runtime):
         relative = path.relative_to(runtime).as_posix()

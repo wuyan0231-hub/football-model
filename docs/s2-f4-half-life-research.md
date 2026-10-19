@@ -14,7 +14,7 @@ python -m football_model.quality_half_life --matches FIXED_DATA.json \
   --protocol NEW_PROTOCOL.json --output NEW_RESULTS.json
 ```
 
-开始/结束日期须在检查效果前确定。示例不是保证该联赛有足够数据。欧国联必须先用相应固定登记快照及原`validate_nations_forecast`核查全部输入的举办地区、身份和`neutral`；该模块不代替赛事与常规比分准入，不自行重分类场地。
+开始/结束日期须在检查效果前确定。示例不是保证该联赛有足够数据。
 
 ## 固定对照
 

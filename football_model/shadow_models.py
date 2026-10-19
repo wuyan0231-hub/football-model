@@ -20,6 +20,7 @@ import re
 import numpy as np
 import scipy
 
+from .competition_scope import require_competition, select_competitions
 from .data import normalize_fixtures
 from .model import (RESULT_AVAILABILITY_DELAY, fit_model, score_distribution,
                     _iso, _timestamp, _validated_matches)
@@ -251,25 +252,8 @@ def _source_files(runtime, root, config, key, index, cutoff):
 
 
 def _neutral(runtime, root, competition, row, cutoff):
-    if competition["mode"] != "national_baseline":
-        return False, None
-    if competition["key"] != "unl":
-        raise ValueError("unsupported_national_competition")
-    from .nations import validate_nations_forecast, venue_temporal_audit
-    from .venue_registry import load_forecast_registry
-    if not row.get("registry_snapshot"):
-        raise ValueError("national_registry_snapshot_missing")
-    registry = load_forecast_registry(runtime, row)
-    neutral = validate_nations_forecast(row, registry)
-    temporal = venue_temporal_audit(row, registry, cutoff=_iso(cutoff), strict=False)
-    # Unknown historical validity is retained, not made a new blanket exclusion.
-    for field in ("known_at", "evidence_available_at"):
-        if temporal.get(field) and _timestamp(temporal[field], field) > cutoff:
-            raise ValueError("venue_evidence_after_input_cutoff")
-    registry_id = _snapshot(root, "national_registry", registry, hashlib.sha256(
-        _path(runtime, row["registry_snapshot"]).read_bytes()).hexdigest())
-    return neutral, {"registry_source": registry_id, "temporal_audit": temporal,
-        "venue_evidence": row["venue_evidence"]}
+    require_competition(competition)
+    return False, None
 
 
 def _check_schedule(runtime, root, competition, row, parents, cutoff):
@@ -332,7 +316,7 @@ def _capture(runtime, config, *, source_commit, state_commit=None, league="all",
         index_id = _snapshot(root, "integration_index", index, index_sha)
         config_id = _snapshot(root, "config", config, _digest(config))
         implementations = {name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
-                           for name in ("shadow_models.py", "model.py", "nations.py", "venue_registry.py")}
+                           for name in ("shadow_models.py", "model.py", "competition_scope.py")}
         report = {"version": VERSION, "started_at": _iso(started), "protocol_id": protocol_id,
             "source_commit": source_commit, "state_commit": state_commit,
             "numerical_environment": _numerical_environment(),
@@ -341,8 +325,7 @@ def _capture(runtime, config, *, source_commit, state_commit=None, league="all",
             "schedule_scope": "saved_daily_schedule_checked_against_available_quote_fixture_responses_not_live_official_confirmation",
             "production_models_changed": False, "accuracy_improvement_verified": False,
             "competitions": [], "errors": []}
-        competitions = [c for c in config["competitions"] if c["mode"] != "audit_only" and
-                        (league == "all" or c["key"] == league)]
+        competitions = select_competitions(config, league, models_only=True)
         if not competitions:
             raise ValueError("unknown_or_audit_only_competition")
         for competition in competitions:
@@ -380,12 +363,6 @@ def _capture(runtime, config, *, source_commit, state_commit=None, league="all",
                 if not candidates:
                     entry["status"] = "no_eligible_future_matches"
                     continue
-                if competition["mode"] == "national_baseline":
-                    from .nations import validate_nations_forecast
-                    from .venue_registry import load_forecast_registry
-                    registry = load_forecast_registry(runtime, candidates[0][0])
-                    for training_row in data["matches"]:
-                        validate_nations_forecast(training_row, registry)
                 previous = cutoff
                 for arm, half_life in ARMS:
                     arm_entry = {"arm": arm, "half_life_days": half_life, "forecasts": []}
@@ -564,14 +541,8 @@ def _saved_forecast_valid(root, forecast, now):
     if len(schedule) != 1 or schedule[0]["competition"] != forecast["competition"]:
         raise ValueError("shadow_schedule_identity_mismatch")
     competition = next(c for c in config["content"]["competitions"] if c["key"] == forecast["competition"])
+    require_competition(competition)
     neutral = False
-    if competition["mode"] == "national_baseline":
-        from .nations import validate_nations_forecast
-        venue_source = forecast["venue"]["venue"]["registry_source"]
-        registry, _ = _read(root, "sources", _name(venue_source) + ".json")
-        if _digest(registry) != venue_source or registry["kind"] != "national_registry":
-            raise ValueError("shadow_national_registry_source_mismatch")
-        neutral = validate_nations_forecast(schedule[0], registry["content"])
     p = forecast["prediction"]
     if not _same_identity({"match_id": forecast["match_id"], **p}, forecast):
         raise ValueError("shadow_prediction_identity_mismatch")

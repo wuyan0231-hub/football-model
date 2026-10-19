@@ -300,8 +300,8 @@ class CheckedStateTests(unittest.TestCase):
                 checked.execute("run", repo=self.repo, runtime=self.runtime, receipt_path=receipt_path)
 
     def test_unsafe_or_duplicate_study_arguments_are_not_executed(self):
-        protocol = self.repo / "advanced-models-v1.json"
-        protocol.write_bytes((Path(checked.__file__).resolve().parents[1] / "advanced-models-v1.json").read_bytes())
+        protocol = self.repo / "advanced-models-domestic-v1.json"
+        protocol.write_bytes((Path(checked.__file__).resolve().parents[1] / "advanced-models-domestic-v1.json").read_bytes())
         valid = [sys.executable, "-m", "football_model.advanced_research", "study", "--runtime", str(self.runtime),
             "--league", "championship", "--source-commit", self.source, "--checkpoint-state",
             "--protocol", str(protocol), "--repo", str(self.repo)]

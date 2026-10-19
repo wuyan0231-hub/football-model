@@ -19,7 +19,7 @@ class ShortOnlyWorkflowTests(unittest.TestCase):
         value = context(short_only=True, **kwargs)
         for name in ("verify", "pre_study_capture"):
             value["needs"][name]["result"] = "skipped"
-        for identity in (*PREPARATION[:4], "research"):
+        for identity in (*PREPARATION[:3], "research"):
             value["steps"][identity]["outcome"] = "skipped"
         return value
 
@@ -39,10 +39,10 @@ class ShortOnlyWorkflowTests(unittest.TestCase):
         self.assertEqual(value["env"]["LEGACY_SHORT_RUN"], "true")
         self.assertEqual(value["env"]["RESEARCH_ONLY"], "false")
         body = job("advanced")
-        for identity in PREPARATION[:4]:
+        for identity in PREPARATION[:3]:
             self.assertFalse(evaluate(condition(step(body, identity)), value), identity)
         self.assertFalse(evaluate(condition(step(body, "research")), value))
-        for identity in ("restore", "durable", *PREPARATION[4:], *LEGACY, "check", "persist", "export"):
+        for identity in ("restore", "durable", *PREPARATION[3:], *LEGACY, "check", "persist", "export"):
             self.assertTrue(evaluate(condition(step(body, identity)), value), identity)
         timeout = re.search(r"(?m)^    timeout-minutes: (.+)$", body).group(1)
         timeout = timeout.removeprefix("${{").removesuffix("}}").strip()
@@ -51,7 +51,7 @@ class ShortOnlyWorkflowTests(unittest.TestCase):
         # restore/save, fixture collector, or altered protocol is introduced.
         self.assertEqual(body.count('python scripts/cloud_state.py load --runtime runtime'), 1)
         self.assertEqual(body.count('python scripts/cloud_state_save_once.py --runtime runtime'), 1)
-        for identity in (*PREPARATION[4:], *LEGACY):
+        for identity in (*PREPARATION[3:], *LEGACY):
             self.assertIn('continue-on-error: true', step(body, identity))
 
     def test_conflicting_flags_are_rejected_before_any_state_writer(self):
@@ -94,7 +94,7 @@ class ShortOnlyWorkflowTests(unittest.TestCase):
         gate = condition(step(body, name='工程失败保持失败'))
         value = self.short_context()
         self.assertFalse(evaluate(gate, value))
-        for identity in ('restore', 'durable', *PREPARATION[4:], *LEGACY, 'check', 'persist'):
+        for identity in ('restore', 'durable', *PREPARATION[3:], *LEGACY, 'check', 'persist'):
             for outcome in ('failure', 'skipped'):
                 with self.subTest(identity=identity, outcome=outcome):
                     value['steps'][identity]['outcome'] = outcome

@@ -5,7 +5,7 @@ import unittest
 from football_model.coverage_audit import TARGET_SCOPE, compare_validation_coverage
 
 
-SOURCE = {"competition": "unl", "target_scope": TARGET_SCOPE}
+SOURCE = {"competition": "epl", "target_scope": TARGET_SCOPE}
 CUTOFF = "2026-01-01T00:00:00Z"
 
 

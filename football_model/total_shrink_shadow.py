@@ -18,6 +18,7 @@ import re
 
 import numpy as np
 
+from .competition_scope import require_competition, select_competitions
 from . import shadow_models as sm
 from .data import normalize_fixtures
 from .model import _distribution_from_rates, _iso, _timestamp, score_distribution
@@ -457,19 +458,7 @@ def _saved_forecast_valid(root, forecast, now, *, validate_selection=True):
             or indexed[0]["latest_successful_forecast"]["run_id"] != parent["forecast"]["run_id"]):
         raise ValueError("total_shrink_current_index_parent_run_mismatch")
     competition = next(c for c in config_source["content"]["competitions"] if c["key"] == forecast["competition"])
-    if competition["mode"] == "national_baseline":
-        from .nations import validate_nations_forecast, venue_temporal_audit
-        registry = _load_object(root, "sources", forecast["venue"]["venue"]["registry_source"])
-        if registry["kind"] != "national_registry":
-            raise ValueError("total_shrink_national_registry_kind_mismatch")
-        native_row = parent["forecast"]["forecast"]
-        neutral = validate_nations_forecast(native_row, registry["content"])
-        if neutral != baseline["neutral"]:
-            raise ValueError("total_shrink_native_neutral_registry_mismatch")
-        temporal = venue_temporal_audit(native_row, registry["content"], cutoff=_iso(cutoff), strict=False)
-        for field in ("known_at", "evidence_available_at"):
-            if temporal.get(field) and _timestamp(temporal[field], field) > cutoff:
-                raise ValueError("total_shrink_venue_evidence_after_input_cutoff")
+    require_competition(competition)
     schedule = forecast["venue"]["schedule"]
     if schedule.get("source_id"):
         fixture = _load_object(root, "sources", schedule["source_id"])
@@ -520,8 +509,7 @@ def _capture(runtime, config, *, source_commit, state_commit=None, league="all",
             "numerical_environment": sm._numerical_environment(), "new_fits": 0, "new_api_calls": 0,
             "production_models_changed": False, "confirmation_eligible": False,
             "accuracy_improvement_verified": False, "competitions": [], "errors": []}
-        competitions = [c for c in config["competitions"] if c["mode"] != "audit_only"
-                        and (league == "all" or c["key"] == league)]
+        competitions = select_competitions(config, league, models_only=True)
         if not competitions:
             raise ValueError("unknown_or_audit_only_competition")
         production = _path(runtime, "prospective")

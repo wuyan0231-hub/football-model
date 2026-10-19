@@ -15,6 +15,7 @@ import math
 import os
 from pathlib import Path
 
+from .competition_scope import is_retired, require_competition
 from .cli import atomic_json, safe_error
 from .data import APIClient, APIError, RequestBudgetError, normalize_fixtures
 from .model import RESULT_AVAILABILITY_DELAY, _timestamp, _iso, _integer
@@ -44,7 +45,9 @@ def _provider_league(root: Path, records: list[dict], config: dict) -> int:
             ids.add(_integer(item["provider_id"], "provider_id", 1))
     if len(ids) != 1:
         raise ValueError("provider_league_identity_missing_or_conflicting")
-    return next(iter(ids))
+    provider_id = next(iter(ids))
+    require_competition({"key": records[0]["competition"]}, provider_id)
+    return provider_id
 
 
 def _shadow_targets(runtime: Path, now: datetime) -> tuple[list, list, list]:
@@ -84,6 +87,8 @@ def _shadow_targets(runtime: Path, now: datetime) -> tuple[list, list, list]:
 def _targets(root: Path, forecasts: list[dict], now: datetime, recheck_days: int) -> tuple[list, list]:
     groups = defaultdict(list)
     for row in forecasts:
+        if is_retired(row.get("competition")):
+            continue
         if row.get("forecast", {}).get("research_replay"):
             raise ValueError("research_forecast_in_prospective_ledger")
         groups[(row["competition"], row["match_id"])].append(row)

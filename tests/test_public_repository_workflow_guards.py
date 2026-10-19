@@ -18,7 +18,6 @@ GUARDED = {
     "football-total-shrink.yml": ("total-shrink-shadow",),
     "football.yml": ("football",),
     "fundamentals.yml": ("fundamentals",),
-    "unl-probability-repair-verification.yml": ("verify",),
 }
 
 
@@ -36,8 +35,6 @@ def job_condition(name, identity):
 
 def allowed_context(name, private=True, repository=OWNER_REPOSITORY):
     value = context(private=private, repository=repository)
-    if name == "unl-probability-repair-verification.yml":
-        value["github"]["ref"] = "refs/heads/codex/recovery-20261014"
     return value
 
 
@@ -64,7 +61,6 @@ class PublicRepositoryWorkflowGuardTests(unittest.TestCase):
     def test_existing_branch_and_manual_guards_remain_effective(self):
         for name, identity, required_ref in (
             ("fixture-recovery.yml", "recover", "refs/heads/main"),
-            ("unl-probability-repair-verification.yml", "verify", "refs/heads/codex/recovery-20261014"),
             ("advanced-models.yml", "pre_study_capture", "refs/heads/main"),
         ):
             value = allowed_context(name, private=False)

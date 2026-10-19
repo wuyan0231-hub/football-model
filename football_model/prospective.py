@@ -20,6 +20,7 @@ from typing import Any
 
 import numpy as np
 
+from .competition_scope import is_retired, require_league
 from .model import (RESULT_AVAILABILITY_DELAY, _distribution_from_rates, _integer,
                     _iso, _timestamp, _validated_matches)
 from .quality import _categorical_metrics as _floored_categorical_metrics
@@ -309,6 +310,8 @@ def capture_current(runtime: Path, root: Path, report: dict, report_sha: str,
         raise ValueError("invalid requested competitions")
     items = {item["key"]: item for item in report.get("competitions", [])}
     for key in requested:
+        if is_retired(key):
+            continue
         key = _name(key)
         item = items.get(key, {})
         filename = _path(runtime, "predictions", run_id, key + ".json")
@@ -463,7 +466,8 @@ def collect_results(runtime: Path, root: Path, forecasts: list[dict], clock) -> 
     errors = []
     by_competition = defaultdict(list)
     for forecast in forecasts:
-        by_competition[forecast["competition"]].append(forecast)
+        if not is_retired(forecast["competition"]):
+            by_competition[forecast["competition"]].append(forecast)
     for key, records in by_competition.items():
         try:
             data, data_sha = _read(runtime, "data", _name(key) + ".json")

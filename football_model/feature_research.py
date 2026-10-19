@@ -12,6 +12,7 @@ import platform
 
 import numpy as np
 
+from .competition_scope import require_league
 from .feature_correction import fit_correction, predict_correction, _training_rows
 from .feature_dataset import build_replay, coverage_report, feature_values
 from .model import ModelDataError, RESULT_AVAILABILITY_DELAY, _iso, _timestamp
@@ -193,6 +194,7 @@ def choose_alpha(rows, protocol, cutoff):
 
 
 def study(runtime, league, protocol, *, source_commit, state_commit=None, run_goalmodel=False, clock=None):
+    require_league(league)
     clock = clock or (lambda: datetime.now(timezone.utc))
     started = clock()
     design = protocol.get("research_design_version", "feature-research-v1")

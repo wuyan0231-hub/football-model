@@ -13,6 +13,7 @@ import json
 import math
 from pathlib import Path
 
+from .competition_scope import select_competitions
 from .data import APIClient, APIError, DataError, RequestBudgetError, _integer, _iso, _utc
 from .fundamentals import (build_features, collect_fixture_evidence,
                            failure_diagnostic, quantitative_scope, save_snapshot)
@@ -118,7 +119,7 @@ def _history_rows(runtime, league, fixture, now, count):
 
 def _candidates(runtime, config, league, match_id, start, horizon):
     candidates, issues = [], []
-    chosen = [c for c in config["competitions"] if league == "all" or c["key"] == league]
+    chosen = select_competitions(config, league)
     if not chosen:
         raise DataError("league_not_configured")
     for competition in chosen:

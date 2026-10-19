@@ -21,6 +21,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request
 
+from .competition_scope import select_competitions
 from .collect_fundamentals import _canonical, _identity, _immutable, _read
 from .data import (APIClient, APIError, BASE_URL, DataError, RequestBudgetError,
                    _integer, _iso, _utc, normalize_upcoming)
@@ -102,7 +103,7 @@ class OddsClient(APIClient):
 
 def _candidates(runtime, config, league, match_id, now, horizon):
     """Use saved provider schedules, independently of model training success."""
-    competitions = [c for c in config["competitions"] if league == "all" or c["key"] == league]
+    competitions = select_competitions(config, league)
     if not competitions:
         raise DataError("league_not_configured")
     sources, issues = {}, []

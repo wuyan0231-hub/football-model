@@ -116,14 +116,16 @@ class SummaryIdentityTests(unittest.TestCase):
 
 
 class FullFamilySummaryIdentityTests(unittest.TestCase):
-    def test_all_380_registered_trials_remain_with_no_stale_graph_loads(self):
+    def test_retired_trials_are_excluded_without_lowering_original_380_penalty(self):
         root = Path(__file__).resolve().parents[1]
         protocol = json.loads((root / "advanced-models-v1.json").read_text())
         design = json.loads((root / "advanced-confirmation-v1.json").read_text())
+        from football_model.competition_scope import is_retired
+        active_leagues = [key for key in design["registered_leagues"] if not is_retired(key)]
         stale = stale_fingerprint(implementation_fingerprint())
         with tempfile.TemporaryDirectory() as directory:
             runtime = Path(directory)
-            for league in design["registered_leagues"]:
+            for league in active_leagues:
                 path = runtime / "advanced_models" / league / confirmation.digest(protocol) / "reports/latest.json"
                 path.parent.mkdir(parents=True)
                 path.write_text(json.dumps({"schema_version": "advanced-research-v1", "league": league,
@@ -134,10 +136,10 @@ class FullFamilySummaryIdentityTests(unittest.TestCase):
                 reports = [confirmation.run(runtime, league, protocol, design, auto_activate=True,
                     clock=lambda: datetime(2026, 10, 16, tzinfo=timezone.utc),
                     row_loader=lambda _: self.fail("inactive trials must not read future scores"))
-                    for league in design["registered_leagues"]]
+                    for league in active_leagues]
             loader.assert_not_called()
-            self.assertEqual(len(reports), 19)
-            self.assertEqual(sum(len(report["trials"]) for report in reports), 380)
+            self.assertEqual(len(reports), 18)
+            self.assertEqual(sum(len(report["trials"]) for report in reports), 360)
             self.assertEqual({report["family_size"] for report in reports}, {380})
             self.assertTrue(all(not trial["confirmation_active"] for report in reports for trial in report["trials"]))
             self.assertTrue(all(trial["gate"]["full_report_verification"] == "not_performed_identity_rejected"

@@ -200,11 +200,10 @@ class ShadowModelTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'hash mismatch'):
             score(self.runtime, clock=self.clock)
 
-    def test_national_without_registry_is_rejected(self):
+    def test_retired_national_config_cannot_start_a_shadow_capture(self):
         self.config['competitions'][0]['mode'] = 'national_baseline'
-        _, report = self.run_capture()
-        self.assertEqual(report['captured_forecasts'], 0)
-        self.assertIn('national_competition', report['competitions'][0]['coverage'][0]['reason'])
+        with self.assertRaisesRegex(ValueError, 'unknown_or_audit_only_competition'):
+            self.run_capture()
 
     def test_newer_known_reschedule_is_retained_and_rejected(self):
         row = self.rows[0]

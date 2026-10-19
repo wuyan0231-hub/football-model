@@ -14,6 +14,7 @@ import numpy as np
 
 from .cli import atomic_json, iso, parse_date, safe_error, TIME_SEMANTICS, forecast_availability, availability_summary
 from .model import score_distribution
+from .competition_scope import require_competition, require_league, select_competitions
 
 UTC = timezone.utc
 
@@ -143,9 +144,6 @@ def _temporal_provenance(runtime, row, bundle, attempt, now, *, historical):
         if not (model_started <= model_observed <= fitted <= generated and cutoff <= fitted):
             raise IntegrationError("训练来源或拟合完成晚于预测，存在前视信息。")
         _source_times(bundle.get("source_seasons"), model_observed, require_received=True)
-        venue_available = bundle.get("national_audit", {}).get("venue_temporal", {}).get("max_evidence_available_at")
-        if venue_available and _time(venue_available, "训练场地证据可用时间") > model_observed:
-            raise IntegrationError("训练使用的场地证据晚于模型的数据观测时间。")
     else:
         _source_times(bundle.get("source_seasons"), now)
     return {
@@ -166,7 +164,7 @@ def build_index(runtime, config, current_report=None, *, write=True):
     it never silently exposes an earlier success as a current usable forecast.
     """
     runtime = Path(runtime)
-    competitions = { _token(c["key"], "competition key"): c for c in config["competitions"] }
+    competitions = { _token(c["key"], "competition key"): c for c in select_competitions(config) }
     reports = {}
     for path in sorted((runtime / "reports" / "history").glob("*.json")):
         report = _read(path)
@@ -304,7 +302,7 @@ def _entry_for_match(runtime, config, league):
     at one fixed state commit. Any additional local report is also scanned, so
     an available newer failure cannot be hidden by a stale saved index.
     """
-    chosen = [c for c in config["competitions"] if c["key"] == league]
+    chosen = select_competitions(config, league)
     if len(chosen) != 1:
         raise IntegrationError("联赛未配置。")
     saved_path = runtime / "integration" / "index.json"
@@ -358,6 +356,7 @@ def _same(actual, expected, path="prediction"):
 
 def match_packet(runtime, config, league, match_id, as_of=None, state_commit=None, *, decision_input=None):
     """Read, validate and reproduce a saved forecast without fitting parameters."""
+    require_league(league)
     runtime = Path(runtime)
     if any((base / "RESEARCH_REPLAY.json").exists() for base in (runtime, runtime.parent)):
         raise IntegrationError("研究回放目录不能作为真实保存的赛前预测接入。")
@@ -395,11 +394,8 @@ def match_packet(runtime, config, league, match_id, as_of=None, state_commit=Non
     model_path = runtime / "models" / f"{league}.json"
     bundle = _read(model_path)
     competition = next(c for c in config["competitions"] if c["key"] == league)
-    if bundle.get("competition") != competition or competition["mode"] not in {"domestic_baseline", "national_baseline"} or row.get("competition") != league:
+    if bundle.get("competition") != competition or competition["mode"] != "domestic_baseline" or row.get("competition") != league:
         raise IntegrationError("联赛模型、配置或预测目标不一致。")
-    national = competition["mode"] == "national_baseline"
-    if national and league != "unl":
-        raise IntegrationError("国家队适配尚未覆盖该赛事。")
     if row.get("model_id") != bundle.get("model_id") or row.get("model_id") != attempt["model_id"]:
         raise IntegrationError("预测与当前模型ID不一致。")
     model = bundle["model"]
@@ -424,39 +420,11 @@ def match_packet(runtime, config, league, match_id, as_of=None, state_commit=Non
     if home_id == away_id or any(not isinstance(row.get(k), str) or not row[k].strip() for k in ("home_name", "away_name")):
         raise IntegrationError("主客队身份无效。")
     prediction = row.get("prediction")
-    venue_registry_provenance = {}
-    if national:
-        from .nations import validate_nations_forecast, venue_temporal_audit
-        from .venue_registry import load_forecast_registry
-        try:
-            registry = load_forecast_registry(runtime, row)
-            validate_nations_forecast(row, registry=registry)
-            temporal = venue_temporal_audit(row, registry, cutoff=iso(now),
-                valid_at=row["kickoff"], strict=as_of is not None)
-            available = temporal.get("evidence_available_at")
-            if available and _time(available, "场地证据实际可用时间") > now:
-                raise IntegrationError("场地证据晚于分析截点，不能回填历史预测。")
-            if row.get("time_semantics") == TIME_SEMANTICS and available and (
-                    _time(available, "场地证据实际可用时间") > _time(row["data_observed_at"], "数据观测时间")):
-                raise IntegrationError("场地证据晚于预测的数据取得时间。")
-            venue_registry_provenance["venue_temporal_audit"] = temporal
-            if registry is not None:
-                registry_path = runtime / "registries" / "nations_venues" / (
-                    row["venue_evidence"]["registry_sha256"] + ".json")
-                venue_registry_provenance.update({
-                    "venue_registry_snapshot": row["registry_snapshot"],
-                    "venue_registry_file_sha256": _sha(registry_path),
-                    "venue_registry_digest": row["venue_evidence"]["registry_sha256"],
-                })
-        except (ValueError, KeyError, TypeError, OSError) as exc:
-            raise IntegrationError("欧国联场地证据无效或与当前登记表不一致。") from exc
-        if not isinstance(prediction, dict) or prediction.get("neutral") is not row["neutral"]:
-            raise IntegrationError("欧国联场地标记与预测不一致。")
-    elif not isinstance(prediction, dict) or prediction.get("neutral") is not False:
+    require_competition(competition, attempt.get("provider_league_id"))
+    if not isinstance(prediction, dict) or prediction.get("neutral") is not False:
         raise IntegrationError("当前已保存预测应为名义主客基线；中立场须另核验后产生新记录。")
     try:
-        recomputed = score_distribution(model, home_id, away_id, row["kickoff"],
-                                        **({"neutral": row["neutral"]} if national else {}))
+        recomputed = score_distribution(model, home_id, away_id, row["kickoff"])
         matrix = np.asarray(prediction.get("score_matrix"), dtype=float)
     except (ValueError, KeyError, TypeError, OverflowError) as exc:
         raise IntegrationError("原函数无法复算本场，或比分矩阵无效。") from exc
@@ -479,8 +447,7 @@ def match_packet(runtime, config, league, match_id, as_of=None, state_commit=Non
         "schema_version": 1, "packet_type": "saved_exploratory_forecast_for_framework",
         "created_at": iso(datetime.now(UTC)), "analysis_as_of": iso(now),
         "status": "baseline_verified_external_checks_pending", "competition": competition,
-        "fixture": {k: row[k] for k in ("match_id", "kickoff", "home_id", "away_id", "home_name", "away_name") +
-                    (("neutral", "venue_evidence") if national else ())},
+        "fixture": {k: row[k] for k in ("match_id", "kickoff", "home_id", "away_id", "home_name", "away_name")},
         "provenance": {"model_id": bundle["model_id"], "model_file": f"runtime/models/{league}.json",
                        "model_file_sha256": _sha(model_path), "prediction_file": attempt["prediction_file"],
                        "prediction_file_sha256": _sha(prediction_path), "report_file": attempt["report_file"],
@@ -491,7 +458,7 @@ def match_packet(runtime, config, league, match_id, as_of=None, state_commit=Non
                        "data_observed_at": row["data_observed_at"], "forecast_generated_at": row["generated_at"],
                        "read_and_recomputed": True, "fit_performed": False,
                        **time_provenance,
-                       **venue_registry_provenance},
+                       },
         "latest_league_attempt": latest,
         "prediction": prediction, "validation": validation,
         "f5c_comparison": f5c_comparison,

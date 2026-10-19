@@ -15,6 +15,7 @@ import json
 from pathlib import Path
 import re
 
+from .competition_scope import require_league
 from .data import APIClient, APIError, DataError, _iso, _utc, normalize_fixtures
 from .feature_research import _mean_metrics, score_forecast
 from .feature_snapshots import HORIZONS, SnapshotError, _digest, _read, verify_capture
@@ -330,6 +331,7 @@ def _retained_score_view(saved, payload, baseline, candidate, result):
 
 def _score_queue_run(runtime, league, *, config, protocol, source_commit, clock, client_factory):
     """v2: independent results for first legal frozen M0 and explicit fallback."""
+    require_league(league)
     started = _utc(clock())
     protocol_hash = _digest(protocol)
     root = runtime / "feature_models" / "scoring" / protocol_hash
@@ -567,6 +569,7 @@ def score_run(runtime, league="serie_a", *, config, protocol, source_commit,
     actual later checks are bounded to every 24h during the first seven days;
     the first score stays unchanged and result revisions are separate records.
     """
+    require_league(league)
     if not isinstance(league, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", league):
         raise SnapshotError("unsafe_scoring_league")
     if not isinstance(source_commit, str) or not re.fullmatch(r"[0-9a-fA-F]{40,64}", source_commit):

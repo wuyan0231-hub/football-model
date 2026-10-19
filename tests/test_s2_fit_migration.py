@@ -12,7 +12,6 @@ from football_model import cli, prospective
 from football_model.model import evaluate_time_holdout, fit_model
 from football_model.production_replay import replay_bundle
 from test_cli import BASE_CONFIG, FakeClient, NOW
-from test_nations_pipeline import CONFIG as NATIONAL_CONFIG, NOW as NATIONAL_NOW, NationalClient
 
 
 class FitTimeMigrationTests(unittest.TestCase):
@@ -215,18 +214,6 @@ class FitTimeMigrationTests(unittest.TestCase):
         self.assertEqual(captured["forecast_versions"], len(seed_ids) + len(current))
         self.assertTrue(seed_ids <= {r["object_id"] for r in all_forecasts})
 
-    def test_shared_national_path_migrates_without_loosening_venue_gate(self):
-        self.seed_legacy(config=NATIONAL_CONFIG, client=NationalClient(), now=NATIONAL_NOW, league="unl")
-        later = NATIONAL_NOW + timedelta(hours=2)
-        code, report = self.invoke(later=later, config=NATIONAL_CONFIG,
-                                   client=NationalClient(later), league="unl")
-        self.assertEqual(code, 0, report)
-        item = report["competitions"][0]
-        self.assertEqual(item["model_refresh"]["reasons"], ["missing_model_fitted_at"])
-        self.assertEqual((item["forecast_count"], item["unsupported_forecasts"]), (2, 1))
-        rows = self.read("predictions/" + report["run_id"] + "/unl.json")
-        self.assertEqual(next(r for r in rows if r["match_id"] == 2002)["status"], "unsupported")
-        self.assertTrue(next(r for r in rows if r["match_id"] == 2001)["prediction"]["neutral"])
 
     def test_migration_research_output_still_cannot_enter_prospective_ledger(self):
         self.seed_legacy()

@@ -12,7 +12,7 @@ on:
         type: choice
         required: true
         default: ligue_2
-        options: [epl, championship, laliga, bundesliga, serie_a, ligue_1, bundesliga_2, ligue_2, allsvenskan, eredivisie, primeira, brazil_a, j1, k1, mls, unl, liga_mx, segunda, argentina_a]
+        options: [epl, championship, laliga, bundesliga, serie_a, ligue_1, bundesliga_2, ligue_2, allsvenskan, eredivisie, primeira, brazil_a, j1, k1, mls, liga_mx, segunda, argentina_a]
       state_commit:
         description: 已核实的精确40位model-state提交SHA（不允许移动分支）
         type: string
@@ -39,7 +39,7 @@ jobs:
         run: |
           python - <<'VALIDATE_FIXED_AUDIT'
           import os, re
-          allowed = {'epl', 'championship', 'laliga', 'bundesliga', 'serie_a', 'ligue_1', 'bundesliga_2', 'ligue_2', 'allsvenskan', 'eredivisie', 'primeira', 'brazil_a', 'j1', 'k1', 'mls', 'unl', 'liga_mx', 'segunda', 'argentina_a'}
+          allowed = {'epl', 'championship', 'laliga', 'bundesliga', 'serie_a', 'ligue_1', 'bundesliga_2', 'ligue_2', 'allsvenskan', 'eredivisie', 'primeira', 'brazil_a', 'j1', 'k1', 'mls', 'liga_mx', 'segunda', 'argentina_a'}
           if os.environ.get('AUDIT_LEAGUE') not in allowed:
               raise SystemExit('invalid_single_audit_league')
           if not re.fullmatch(r'[0-9a-f]{40}', os.environ.get('AUDIT_STATE_COMMIT', '')):

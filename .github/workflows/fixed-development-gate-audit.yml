@@ -42,7 +42,7 @@ jobs:
           import os, re
           state = os.environ.get('AUDIT_STATE_COMMIT', '')
           leagues = os.environ.get('AUDIT_LEAGUES', '').split(',')
-          allowed = {'epl','championship','laliga','bundesliga','serie_a','ligue_1','bundesliga_2','ligue_2','allsvenskan','eredivisie','primeira','brazil_a','j1','k1','mls','unl','liga_mx','segunda','argentina_a'}
+          allowed = {'epl','championship','laliga','bundesliga','serie_a','ligue_1','bundesliga_2','ligue_2','allsvenskan','eredivisie','primeira','brazil_a','j1','k1','mls','liga_mx','segunda','argentina_a'}
           if not re.fullmatch(r'[a-f0-9]{40}', state):
               raise SystemExit('exact_fixed_state_sha_required')
           if not leagues or len(leagues) != len(set(leagues)) or any(l not in allowed for l in leagues):
