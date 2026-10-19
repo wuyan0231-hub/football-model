@@ -37,6 +37,36 @@ class VerifyShadowStateTests(unittest.TestCase):
         self.parent = self.runtime.parent
         self.now = fixtures.NOW + timedelta(hours=2)
 
+    def retired_copy(self):
+        """Synthetic ownership clone; never a real historical UNL forecast."""
+        root = self.runtime / 'shadow_models'
+        path = sorted((root / 'forecasts').glob('*.json'))[0]
+        value = json.loads(path.read_bytes())
+        value['competition'] = 'unl'
+        value['parents']['provider_league_id'] = 5
+        config = json.loads((root / 'sources' / (value['config_source'] + '.json')).read_bytes())
+        config['content']['competitions'] = [{'key': 'unl', 'name': 'UEFA Nations League',
+            'country': 'World', 'mode': 'national_baseline'}]
+        value['config_source'] = _append(root, 'sources', config)
+        schedule_id = value['parents']['schedule_source']
+        schedule = json.loads((root / 'sources' / (schedule_id + '.json')).read_bytes())
+        for item in schedule['content']:
+            item['competition'] = 'unl'
+        value['parents']['schedule_source'] = _append(root, 'sources', schedule)
+        training = json.loads((root / 'inputs' / (value['input_id'] + '.json')).read_bytes())
+        model = json.loads((root / 'models' / (value['model_id'] + '.json')).read_bytes())
+        for obj in (training, model):
+            for field in ('competition', 'parents', 'config_source'):
+                obj[field] = copy.deepcopy(value[field])
+        value['input_id'] = _append(root, 'inputs', training)
+        model['input_id'] = value['input_id']
+        value['model_id'] = _append(root, 'models', model)
+        payload = {k: v for k, v in value.items() if k not in (
+            'payload_id', 'storage_completed_at', 'captured_at', 'live_before_kickoff', 'object_id')}
+        value['payload_id'] = _append(root, 'forecast_payloads', payload)
+        identity = _append(root, 'forecasts', value)
+        return root / 'forecasts' / (identity + '.json'), value
+
     def test_every_saved_forecast_is_checked_without_writes_fit_or_network(self):
         before = hashes(self.runtime)
         forbidden = AssertionError("diagnostic must not mutate, fit or request")
@@ -59,6 +89,64 @@ class VerifyShadowStateTests(unittest.TestCase):
         self.assertEqual((report["forecast_count"], report["passed_count"], report["failed_count"]), (3, 2, 1))
         self.assertEqual(report["failures"][0]["error"], "immutable_forecast_hash_mismatch")
         self.assertNotIn("secret name", json.dumps(report))
+
+    def test_exact_retired_ownership_is_withdrawn_and_never_counted_passed(self):
+        self.retired_copy()
+        before = hashes(self.runtime)
+        report = diagnostic.verify(self.runtime, now=self.now)
+        self.assertEqual(report['status'], 'passed')
+        self.assertEqual((report['forecast_count'], report['passed_count'], report['failed_count'],
+                          report['withdrawn_retired_count']), (4, 3, 0, 1))
+        self.assertEqual(report['withdrawn_retired_by_competition'], {'unl': 1})
+        self.assertFalse(report['all_saved_forecasts_numerically_verified'])
+        self.assertEqual(hashes(self.runtime), before)
+
+    def test_retired_name_never_hides_corrupt_forecast_or_parent_bytes(self):
+        path, value = self.retired_copy()
+        original = path.read_bytes()
+        path.write_bytes(original + b' ')
+        # Whitespace preserves JSON semantics and the semantic object hash;
+        # mutate an actual field to test the immutable payload identity gate.
+        bad = copy.deepcopy(value); bad['prediction']['home_name'] = 'tampered'
+        path.write_text(json.dumps(bad))
+        report = diagnostic.verify(self.runtime, now=self.now)
+        self.assertEqual((report['failed_count'], report['withdrawn_retired_count']), (1, 0))
+        self.assertEqual(report['failures'][0]['error'], 'immutable_forecast_hash_mismatch')
+        path.write_bytes(original)
+        parent = self.runtime / 'shadow_models/models' / (value['model_id'] + '.json')
+        model = json.loads(parent.read_bytes()); model['arm'] = 'changed'
+        parent.write_text(json.dumps(model))
+        report = diagnostic.verify(self.runtime, now=self.now)
+        self.assertEqual((report['failed_count'], report['withdrawn_retired_count']), (1, 0))
+        self.assertEqual(report['failures'][0]['error'], 'shadow_parent_hash_mismatch')
+
+    def test_retirement_rejection_cannot_skip_domestic_or_unbound_retired_identity(self):
+        self.retired_copy()
+        def reject(*_args):
+            raise ValueError('competition_removed_by_user')
+        with patch.object(diagnostic, '_saved_forecast_valid', side_effect=reject):
+            report = diagnostic.verify(self.runtime, now=self.now)
+        self.assertEqual((report['passed_count'], report['failed_count'], report['withdrawn_retired_count']), (0, 3, 1))
+        self.assertEqual(report['status'], 'failed')
+        # Even if a future native guard rejects early, the exact frozen config
+        # binding is independently checked before classifying a withdrawal.
+        path = next(p for p in (self.runtime / 'shadow_models/forecasts').glob('*.json')
+                    if json.loads(p.read_bytes()).get('competition') == 'unl')
+        value = json.loads(path.read_bytes())
+        config = self.runtime / 'shadow_models/sources' / (value['config_source'] + '.json')
+        body = json.loads(config.read_bytes()); body['kind'] = 'invalid'
+        config.write_text(json.dumps(body))
+        with patch.object(diagnostic, '_saved_forecast_valid', side_effect=reject):
+            report = diagnostic.verify(self.runtime, now=self.now)
+        self.assertEqual(report['withdrawn_retired_count'], 0)
+        self.assertEqual(report['failed_count'], 4)
+
+    def test_generic_validation_error_on_retired_record_is_still_failure(self):
+        self.retired_copy()
+        with patch.object(diagnostic, '_saved_forecast_valid', side_effect=ValueError('arbitrary failure')):
+            report = diagnostic.verify(self.runtime, now=self.now)
+        self.assertEqual((report['failed_count'], report['withdrawn_retired_count']), (4, 0))
+        self.assertEqual(report['status'], 'failed')
 
     def test_replay_failure_identifies_numeric_field_and_redacts_strings(self):
         def altered(*args, **kwargs):

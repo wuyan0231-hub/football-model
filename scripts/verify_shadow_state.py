@@ -53,6 +53,7 @@ _SAFE_ERRORS = frozenset({
     "shadow_training_input_fingerprint_mismatch", "shadow_schedule_identity_mismatch",
     "shadow_national_registry_source_mismatch", "shadow_prediction_identity_mismatch",
     "shadow_neutral_does_not_match_source",
+    "competition_removed_by_user", "retired_forecast_identity_mismatch",
 })
 
 
@@ -159,6 +160,33 @@ def _marker_context(marker, now):
             "loaded_at": value["loaded_at"]}
 
 
+def _withdrawn_retired_identity(root, forecast):
+    """Bind the one withdrawn competition to its exact saved config identity.
+
+    This is an ownership check, not a numerical or complete parent-chain pass.
+    Call only for the native validator's explicit retirement rejection, after
+    the caller has verified the immutable forecast object's own hash.
+    """
+    if forecast.get("competition") != "unl":
+        return False
+    parents = forecast.get("parents")
+    if (not isinstance(parents, dict) or type(parents.get("provider_league_id")) is not int
+            or parents["provider_league_id"] != 5):
+        raise ValueError("retired_forecast_identity_mismatch")
+    config_id = _name(forecast["config_source"])
+    config, _ = _read(root, "sources", config_id + ".json")
+    if _digest(config) != config_id or config.get("kind") != "config":
+        raise ValueError("shadow_config_source_hash_mismatch")
+    competitions = config.get("content", {}).get("competitions", [])
+    registered = [value for value in competitions if isinstance(value, dict) and value.get("key") == "unl"]
+    if (len(registered) != 1 or registered[0].get("mode") != "national_baseline"
+            or registered[0].get("name") != "UEFA Nations League"
+            or registered[0].get("country") != "World"
+            or str(registered[0].get("provider_id", "5")) != "5"):
+        raise ValueError("retired_forecast_identity_mismatch")
+    return True
+
+
 def verify(runtime, *, state_marker=None, now=None):
     """Read every saved forecast, retaining failures rather than stopping at one."""
     now = now or datetime.now(timezone.utc)
@@ -174,6 +202,8 @@ def verify(runtime, *, state_marker=None, now=None):
               "numeric_replay_probability_abs_tol": NUMERIC_REPLAY_PROBABILITY_ABS_TOL,
               "fit_attempts": 0, "api_requests": 0, "state_writes": 0,
               "forecast_count": 0, "passed_count": 0, "failed_count": 0,
+              "withdrawn_retired_count": 0, "withdrawn_retired_by_competition": {},
+              "withdrawn_retired_scope": "Exact saved ownership only; excluded from current numerical verification, never counted as passed.",
               "failure_detail_limit": DETAIL_LIMIT, "failures": [], "failure_counts": {},
               "accuracy_improvement_verified": False, "profit_evaluation": False}
     counts = Counter()
@@ -196,7 +226,18 @@ def verify(runtime, *, state_marker=None, now=None):
                 if path.stem != _digest(value):
                     raise ValueError("immutable_forecast_hash_mismatch")
                 forecast = {**value, "object_id": path.stem}
-                _saved_forecast_valid(root, forecast, now)
+                try:
+                    _saved_forecast_valid(root, forecast, now)
+                except ValueError as exc:
+                    # Do not waive corruption, numerical differences or other
+                    # validation errors merely because a record mentions UNL.
+                    if (str(exc) == "competition_removed_by_user"
+                            and _withdrawn_retired_identity(root, forecast)):
+                        report["withdrawn_retired_count"] += 1
+                        retired = report["withdrawn_retired_by_competition"]
+                        retired["unl"] = retired.get("unl", 0) + 1
+                        continue
+                    raise
                 report["passed_count"] += 1
             except Exception as exc:
                 report["failed_count"] += 1
@@ -219,6 +260,9 @@ def verify(runtime, *, state_marker=None, now=None):
         counts[report["setup_failure"]["error"]] += 1
     report["failure_counts"] = dict(sorted(counts.items()))
     report["omitted_failure_details"] = max(0, report["failed_count"] - len(report["failures"]))
+    report["all_saved_forecasts_numerically_verified"] = (
+        report["failed_count"] == 0 and report["withdrawn_retired_count"] == 0
+        and "setup_failure" not in report)
     report["status"] = "passed" if not counts else "failed"
     report["completed_at"] = _iso(datetime.now(timezone.utc))
     return report
