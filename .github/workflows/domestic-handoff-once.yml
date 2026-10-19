@@ -1,0 +1,142 @@
+name: 国内18联赛一次性真实短轮交接
+
+# A narrow one-time handoff. This never enables the disabled general workflow.
+on:
+  create:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  handoff:
+    if: >-
+      github.repository == 'wuyan0231-hub/football-model' &&
+      github.event.repository.id == 1380205666 &&
+      github.event_name == 'create' && github.event.ref_type == 'branch' &&
+      github.event.ref == 'codex/domestic-handoff-20261019' &&
+      github.ref == 'refs/heads/codex/domestic-handoff-20261019' && github.run_attempt == 1
+    concurrency:
+      group: football-model-state
+      cancel-in-progress: false
+      queue: max
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    env:
+      FOOTBALL_API_KEY: ''
+      PYTHONUNBUFFERED: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: true
+      - name: 仅执行已合并main的精确源码
+        run: |
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse FETCH_HEAD)"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: 安装原Python依赖（不安装R，不训练）
+        run: python -m pip install -r requirements.txt
+      - name: 恢复共享锁内的最新完整状态
+        id: restore
+        run: python scripts/cloud_state.py load --runtime runtime
+      - name: 固定18国内范围、真实源码、父状态与原报告指纹
+        id: scope
+        run: python scripts/domestic_handoff_once.py prepare
+      - name: 核已保存原件真实持久证据
+        id: durable
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' && steps.scope.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/domestic_handoff_once.py stage --stage durable
+      - name: 采集全部国内未来11小时真实基本面
+        id: facts
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' && steps.scope.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python scripts/domestic_handoff_once.py stage --stage facts
+      - name: 检查确认准入（无激活请求）
+        id: confirmation
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' && steps.scope.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/domestic_handoff_once.py stage --stage confirmation
+      - name: 冻结现行国内双时点候选
+        id: capture
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' && steps.scope.outcome == 'success' }}
+        continue-on-error: true
+        run: python scripts/domestic_handoff_once.py stage --stage capture
+      - name: 独立原v1意甲捕获
+        id: legacy_capture_v1
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' && steps.scope.outcome == 'success' }}
+        continue-on-error: true
+        run: python scripts/domestic_handoff_once.py stage --stage legacy_capture_v1
+      - name: 独立原v2意甲捕获
+        id: legacy_capture_v2
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' && steps.scope.outcome == 'success' }}
+        continue-on-error: true
+        run: python scripts/domestic_handoff_once.py stage --stage legacy_capture_v2
+      - name: 全部国内独立赛果与候选评分
+        id: scoring
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' && steps.scope.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python scripts/domestic_handoff_once.py stage --stage scoring
+      - name: 原v1意甲独立评分
+        id: legacy_scoring_v1
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' && steps.scope.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python scripts/domestic_handoff_once.py stage --stage legacy_scoring_v1
+      - name: 原v2意甲独立评分
+        id: legacy_scoring_v2
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' && steps.scope.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python scripts/domestic_handoff_once.py stage --stage legacy_scoring_v2
+      - name: 原容量及完整性检查
+        id: check
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' && steps.scope.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python scripts/domestic_handoff_once.py stage --stage check
+      - name: 原CAS保存并留真实回执
+        id: persist
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' && steps.scope.outcome == 'success' && steps.check.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python scripts/domestic_handoff_once.py stage --stage persist
+      - name: 逐步骤终局回执与有界报告路由
+        id: receipt
+        if: ${{ !cancelled() && steps.scope.outcome == 'success' }}
+        continue-on-error: true
+        run: python scripts/domestic_handoff_once.py finalize
+      - name: 上传薄回执（不含原始输入或完整历史闭包）
+        if: ${{ !cancelled() && steps.scope.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: domestic-handoff-${{ github.run_id }}-${{ github.run_attempt }}
+          path: handoff-output/
+          if-no-files-found: error
+          retention-days: 14
+          include-hidden-files: false
+      - name: 未执行、失败、未保存或意外激活保持失败
+        if: >-
+          !cancelled() && (steps.restore.outcome != 'success' || steps.scope.outcome != 'success' ||
+          steps.receipt.outcome != 'success')
+        run: exit 1
