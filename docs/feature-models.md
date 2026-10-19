@@ -1,6 +1,6 @@
 # 特征修正与goalmodel独立对照：实施入口
 
-当前框架：v1.7修订批次十三。本页保留批次九／十的v1／v2赛程工程与原字节协议；高级特征、未来独立模型及同价决定入口见`docs/advanced-models.md`，本轮完整目标及待云端验收状态见`docs/s3-r13-execution-handoff.md`。新工程由用户2026-10-12明确授权自主实施、测试和发布，无阶段审批要求。panna主动暂缓。本期数据、程序与影子资格按各自原件报告，不承诺准确率或盈利。
+当前框架：v1.7修订批次十四。本页保留批次九／十的v1／v2赛程工程与原字节协议；高级特征、未来独立模型及同价决定入口见`docs/advanced-models.md`，本轮现行范围及验收边界见`docs/s3-r14-scope-and-acceptance.md`；旧批次十三交接仅解释当时状态。新工程由用户2026-10-12明确授权自主实施、测试和发布，无阶段审批要求。panna主动暂缓。本期数据、程序与影子资格按各自原件报告，不承诺准确率或盈利。
 
 ## 实际命令
 
@@ -77,4 +77,4 @@ v2在研究、快照与评分命令中显式选择协议。协议hash及设计�
 
 旧v1／v2每日研究与发布入口继续运行，只有定时未来短轮迁移到高级工作流。旧协议正文hash、数值模型、命名空间与评分分母不改，不把一次共同采集计为多次API调用或独立比赛。共同回执须逐项列出legacy capture／score和最后保存状态，不能以高级分支成功代替旧分支成功；原协议缺件或错过仍保留。新容量和推送门禁只按本次实际源码、push及状态回读验收，不由文档承诺长期空间。
 
-高级每日研究另使用`python -m football_model.feature_schedule --runtime runtime --config config.json --league all --source-commit ACTUAL_SHA --max-run-seconds 600 --reserve-requests 1500 --current-cache-seconds 21600`续采配置中的18个国内联赛；该入口共享真实预算和截止，6小时缓存保留原取得时间，未完优先并持久轮转。旧意甲单联赛命令默认行为不变。批入口报告在`feature_models/schedules/collection/latest.json`及不可变runs中，每联赛原目录和原件身份不变；真实完成、失败和延期分别核验，不能把all或正常退出当全俱乐部覆盖齐全。欧国联与仅审计欧冠不纳入这一俱乐部批次。
+高级每日研究另使用`python -m football_model.feature_schedule --runtime runtime --config config.json --league all --source-commit ACTUAL_SHA --max-run-seconds 600 --reserve-requests 1500 --current-cache-seconds 21600`续采配置中的18个国内联赛；该入口共享真实预算和截止，6小时缓存保留原取得时间，未完优先并持久轮转。旧意甲单联赛命令默认行为不变。批入口报告在`feature_models/schedules/collection/latest.json`及不可变runs中，每联赛原目录和原件身份不变；真实完成、失败和延期分别核验，不能把all或正常退出当全俱乐部覆盖齐全。仅审计欧冠不纳入这一俱乐部批次。

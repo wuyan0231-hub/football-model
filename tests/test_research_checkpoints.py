@@ -245,7 +245,7 @@ class CheckpointRunDenominatorTests(unittest.TestCase):
             instance.persist.return_value = save_result
             instance.persist.side_effect = save_error
             code = main(["study", "--runtime", str(runtime), "--config", str(config),
-                "--protocol", str(ROOT / "advanced-models-v1.json"), "--source-commit", "source",
+                "--protocol", str(ROOT / "advanced-models-domestic-v1.json"), "--source-commit", "source",
                 "--checkpoint-state", "--repo", str(ROOT), *( ["--resume-only"] if resume_only else [])])
         summary = json.loads((runtime / "advanced_models/study_runs/latest.json").read_text())
         return code, summary, study.call_count

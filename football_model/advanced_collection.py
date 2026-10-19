@@ -15,6 +15,7 @@ import hashlib
 import json
 from pathlib import Path
 
+from .competition_scope import select_competitions
 from .advanced_features import (canonical, embedded_snapshot, make_players_snapshot, read_json,
     source_ref, validate_evidence, _identity)
 from .advanced_capacity import CapacityGuard, guarded_cache_writes
@@ -228,7 +229,7 @@ def collect_run(config, runtime, league="all", *, client=None, clock=None, max_s
         value=_utc(clock())
         if value<started: raise DataError("clock_moved_backwards")
         return value
-    chosen=[c for c in config["competitions"] if league=="all" or c["key"]==league]
+    chosen=select_competitions(config, league)
     if not chosen: raise DataError("unknown_league")
     report={"schema_version":"advanced-collection-v1","started_at":_iso(started),"league_selection":league,
         "historical_download_not_point_in_time":True,"production_reservation_requests":reserve_requests,

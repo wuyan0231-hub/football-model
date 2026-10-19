@@ -1,0 +1,208 @@
+name: 撤销赛事后一次性清理与国内库存验收
+
+# Create this exact branch at the already reviewed main commit once. No manual
+# inputs, timetable, fitting, model promotion, or general-purpose command input.
+on:
+  create:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: football-model-state
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  retire:
+    if: >-
+      github.repository == 'wuyan0231-hub/football-model' &&
+      github.event.repository.id == 1380205666 &&
+      github.event_name == 'create' &&
+      github.event.ref_type == 'branch' &&
+      github.event.ref == 'codex/retire-unl-20261019' &&
+      github.ref == 'refs/heads/codex/retire-unl-20261019' &&
+      github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      FOOTBALL_API_KEY: ''
+      PYTHONUNBUFFERED: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: true
+      - name: 仅运行已合并main的精确源码
+        run: |
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse FETCH_HEAD)"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: 安装原依赖
+        run: python -m pip install -r requirements.txt
+      - name: 严格恢复完整原状态
+        id: restore
+        run: python scripts/cloud_state.py load --runtime runtime
+      - name: 撤销指定赛事活动原件与重建现行索引
+        id: retire
+        run: >-
+          python scripts/retire_competition.py --state-dir runtime
+          --competition unl --apply --receipt competition-retirement.json
+      - name: 国内18联赛库存核对（不拟合，不宣称新鲜研究）
+        id: inventory
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          from datetime import datetime, timezone
+          import hashlib, json, os
+          from pathlib import Path
+          config = json.loads(Path('config.json').read_bytes())
+          selected = [c['key'] for c in config['competitions'] if c.get('mode') != 'audit_only']
+          if len(selected) != 18 or len(set(selected)) != 18 or 'unl' in selected:
+              raise SystemExit('active_domestic_scope_mismatch')
+          raw = Path('runtime/integration/index.json').read_bytes()
+          index = json.loads(raw)
+          rows = [r for r in index['competitions'] if r.get('key') in selected]
+          if {r['key'] for r in rows} != set(selected) or len(rows) != 18:
+              raise SystemExit('post_retirement_index_scope_mismatch')
+          originals = []
+          for row in rows:
+              path = Path('runtime/models') / (row['key'] + '.json')
+              originals.append({'league': row['key'], 'index_status': row.get('status'),
+                  'model_id': row.get('current_model_id'),
+                  'saved_model_exists': path.is_file(),
+                  'saved_model_sha256': hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None,
+                  'saved_prediction_count': row.get('forecast_count'),
+                  'unsupported_prediction_count': row.get('unsupported_forecasts'),
+                  'latest_train_attempt': row.get('latest_train_attempt')})
+          # Small current pointers and queue metadata only. No historical score
+          # body, model card, deep source reconstruction, or capture is run.
+          from football_model.advanced_confirmation import _read_ref
+          runtime = Path('runtime').resolve()
+          activation_paths = sorted(runtime.glob('advanced_models/*/*/confirmation/*/*/*/activation.json'))
+          activations, activation_errors = [], []
+          now = datetime.now(timezone.utc)
+          for path in activation_paths:
+              try:
+                  if path.stat().st_size > 64 * 1024:
+                      raise ValueError('activation_pointer_not_small')
+                  pointer = json.loads(path.read_bytes())
+                  activation = _read_ref(runtime, pointer)
+                  start = datetime.fromisoformat(activation['future_start'].replace('Z', '+00:00'))
+                  end = datetime.fromisoformat(activation['last_kickoff'].replace('Z', '+00:00'))
+                  activations.append({'path': path.relative_to(runtime).as_posix(),
+                      'league': activation['league'], 'candidate_id': activation['candidate_id'],
+                      'horizon': activation['horizon'], 'future_start': activation['future_start'],
+                      'last_kickoff': activation['last_kickoff'],
+                      'window_state': 'before_future_start' if now < start else
+                          'within_kickoff_window' if now <= end else 'past_last_kickoff',
+                      'terminal_saved': (path.parent / 'terminal.json').is_file()})
+              except (OSError, ValueError, TypeError, KeyError):
+                  activation_errors.append(path.relative_to(runtime).as_posix())
+          queue_paths = sorted(runtime.glob('advanced_snapshots/*/queue/history/*.json'))
+          queue_statuses, queue_leagues, queue_errors = Counter(), Counter(), []
+          for path in queue_paths:
+              try:
+                  if path.stat().st_size > 64 * 1024:
+                      raise ValueError('queue_metadata_not_small')
+                  item = json.loads(path.read_bytes())
+                  queue_statuses[str(item.get('status', 'not_present'))] += 1
+                  queue_leagues[str(item.get('league', 'not_present'))] += 1
+              except (OSError, ValueError, TypeError, KeyError):
+                  queue_errors.append(path.relative_to(runtime).as_posix())
+          epl = next(row for row in rows if row['key'] == 'epl')
+          prediction_name = (epl.get('latest_successful_forecast') or {}).get('prediction_file')
+          m0_paths = ['runtime/models/epl.json'] + ([prediction_name] if prediction_name else [])
+          m0_originals = []
+          for name in m0_paths:
+              path = Path(name).resolve()
+              if not path.is_relative_to(runtime) or not path.is_file():
+                  raise SystemExit('m0_handoff_original_missing_or_unsafe')
+              m0_originals.append({'path': name, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()})
+          result = {'schema_version': 'domestic-retirement-inventory-v1',
+              'generated_at': datetime.now(timezone.utc).isoformat(),
+              'source_commit': os.environ['GITHUB_SHA'],
+              'github_run_id': os.environ['GITHUB_RUN_ID'],
+              'github_run_attempt': os.environ['GITHUB_RUN_ATTEMPT'],
+              'configured_domestic_leagues': selected, 'domestic_count': 18,
+              'index_sha256': hashlib.sha256(raw).hexdigest(),
+              'index_original_source_commit': index.get('source_commit'),
+              'saved_model_count': sum(r['saved_model_exists'] for r in originals),
+              'index_status_counts': dict(Counter(r['index_status'] for r in originals)),
+              'confirmation_pointer_count': len(activation_paths),
+              'activation_inventory_complete': not activation_errors,
+              'activation_inventory_errors': activation_errors,
+              'activation_windows': activations,
+              'queue_record_file_count': len(queue_paths),
+              'queue_inventory_complete': not queue_errors,
+              'queue_inventory_errors': queue_errors,
+              'queue_status_counts': dict(queue_statuses),
+              'queue_league_counts': dict(queue_leagues),
+              'm0_handoff_originals_before_save': m0_originals,
+              'results': originals, 'fits': 0, 'football_api_requests': 0,
+              'production_promoted': False, 'advanced_current_freshness_verified': False,
+              'prediction_improvement_verified': False,
+              'scope': 'Existing saved production inventory only; original historical source identities and experiment family remain unchanged.'}
+          Path('domestic-inventory.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n')
+          PY
+      - name: 原容量与CAS保存并核真实状态提交
+        id: persist
+        run: >-
+          python scripts/cloud_state_save_once.py --runtime runtime
+          --receipt retirement-state-save-receipt.json
+      - name: 用真实已保存状态调用现有M0单场预测并验原件未变
+        id: m0_handoff
+        run: |
+          python - <<'PY'
+          import hashlib, json, re, subprocess, sys
+          from pathlib import Path
+          receipt = json.loads(Path('retirement-state-save-receipt.json').read_bytes())
+          saved = receipt.get('save', {})
+          commit = saved.get('reported_commit', '')
+          if saved.get('status') != 'saved_and_marker_verified' or not re.fullmatch('[0-9a-f]{40}', commit):
+              raise SystemExit('actual_saved_state_commit_required')
+          originals = json.loads(Path('domestic-inventory.json').read_bytes())['m0_handoff_originals_before_save']
+          status = {'schema_version': 'retirement-m0-handoff-v1', 'saved_state_commit': commit,
+              'league': 'epl', 'match_id': 1557436, 'fits': 0, 'football_api_requests': 0,
+              'current_facts_complete': False, 'all18_short_cycle_completed': False,
+              'status': 'not_verified'}
+          try:
+              subprocess.run([sys.executable, '-m', 'football_model.integration', 'match',
+                  '--runtime', 'runtime', '--league', 'epl', '--match-id', '1557436',
+                  '--state-commit', commit, '--output', 'm0-handoff.json'], check=True, timeout=300)
+              packet = json.loads(Path('m0-handoff.json').read_bytes())
+              if packet['provenance'].get('read_and_recomputed') is not True or packet['provenance'].get('fit_performed') is not False:
+                  raise ValueError('m0_packet_not_read_and_recomputed')
+              status['status'] = 'existing_saved_prediction_read_and_recomputed'
+          except (OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
+              status['error_class'] = type(exc).__name__
+              raise
+          finally:
+              unchanged = all(hashlib.sha256(Path(row['path']).read_bytes()).hexdigest() == row['sha256'] for row in originals)
+              status['production_originals_unchanged_across_save_and_call'] = unchanged
+              Path('m0-handoff-status.json').write_text(json.dumps(status, ensure_ascii=False, indent=2) + '\n')
+              if not unchanged:
+                  raise SystemExit('m0_original_changed_across_save_or_call')
+          PY
+      - name: 上传当轮清理、库存与真实保存回执
+        if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: domestic-retirement-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            competition-retirement.json
+            competition-retirement-originals.jsonl.gz
+            domestic-inventory.json
+            retirement-state-save-receipt.json
+            m0-handoff.json
+            m0-handoff-status.json
+          if-no-files-found: error
+          retention-days: 14
+          include-hidden-files: false

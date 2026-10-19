@@ -39,10 +39,11 @@ class RuleVersionTests(unittest.TestCase):
             self.assertIn(requirement, f5c)
         self.assertIn("整个协议周期的容量及持久恢复", self.framework)
 
-    def test_r13_parent_rules_are_frozen_and_every_nonempty_unit_is_accounted_for(self):
-        record = json.loads((ROOT / "docs/evidence/advanced-models-rule-inheritance-r13-20261016.json").read_text())
+    def test_r14_parent_rules_are_frozen_and_every_nonempty_unit_is_accounted_for(self):
+        record = json.loads((ROOT / "docs/evidence/advanced-models-rule-inheritance-r14-20261019.json").read_text())
         self.assertEqual(record["framework_version"], "football-analysis-v1.7-r" + self.revision)
-        self.assertEqual(record["direct_parent_framework_version"], "football-analysis-v1.7-r12")
+        self.assertEqual(record["direct_parent_framework_version"], "football-analysis-v1.7-r13")
+        self.assertEqual(record["direct_parent_source_commit"], "00e36c8c684a63d74ebd6264c4eb020d3bc15c8b")
         self.assertEqual(record["unaccounted_deleted_units"], 0)
         parents = {}
         for entry in record["parent_documents"]:
@@ -70,15 +71,40 @@ class RuleVersionTests(unittest.TestCase):
                     self.assertTrue(item["reason"].strip())
 
     def test_current_document_fingerprints_and_original_protocols_match_manifest(self):
-        record = json.loads((ROOT / "docs/evidence/advanced-models-rule-inheritance-r13-20261016.json").read_text())
+        record = json.loads((ROOT / "docs/evidence/advanced-models-rule-inheritance-r14-20261019.json").read_text())
         entries = record["current_documents"] + list(record["unchanged_protocols"].values())
         entries += [record["goal_matrix"], record["handoff"], record["unchanged_independent_odds"]["repository_file"]]
         for entry in entries:
             self.assertEqual(hashlib.sha256((ROOT / entry["path"]).read_bytes()).hexdigest(), entry["sha256"], entry["path"])
         self.assertFalse(record["unchanged_independent_odds"]["modified_by_this_revision"])
-        previous = json.loads((ROOT / "docs/evidence/advanced-models-rule-inheritance-r12-20261013.json").read_text())
+        previous = json.loads((ROOT / "docs/evidence/advanced-models-rule-inheritance-r13-20261016.json").read_text())
         for path, entry in record["unchanged_protocols"].items():
             self.assertEqual(entry["sha256"], previous["unchanged_protocols"][path]["sha256"], path)
+
+    def test_r13_historical_receipt_still_matches_its_frozen_parent_and_child(self):
+        previous = json.loads((ROOT / "docs/evidence/advanced-models-rule-inheritance-r13-20261016.json").read_text())
+        current = json.loads((ROOT / "docs/evidence/advanced-models-rule-inheritance-r14-20261019.json").read_text())
+        self.assertEqual(previous["framework_version"], "football-analysis-v1.7-r13")
+        self.assertEqual(previous["direct_parent_framework_version"], "football-analysis-v1.7-r12")
+        child_snapshots = {entry["path"]: entry for entry in current["parent_documents"]}
+        for entry in previous["parent_documents"]:
+            self.assertEqual(hashlib.sha256((ROOT / entry["frozen_path"]).read_bytes()).hexdigest(), entry["sha256"])
+        for entry in previous["current_documents"]:
+            frozen = child_snapshots[entry["path"]]
+            self.assertEqual(entry["sha256"], frozen["sha256"])
+            self.assertEqual(hashlib.sha256((ROOT / frozen["frozen_path"]).read_bytes()).hexdigest(), entry["sha256"])
+
+    def test_r14_scope_does_not_relabel_old_rejection_as_adoption(self):
+        scope = (ROOT / "docs/s3-r14-scope-and-acceptance.md").read_text()
+        self.assertIn("18个国内联赛", scope)
+        self.assertIn("324", scope)
+        self.assertIn("360项开发门均未达到采用条件", scope)
+        self.assertIn("生产保留M0", scope)
+        self.assertIn("正式未来确认未激活", scope)
+        self.assertIn("advanced-models-domestic-v1.json", scope)
+        record = json.loads((ROOT / "docs/evidence/advanced-models-rule-inheritance-r14-20261019.json").read_text())
+        for name in record["deleted_dedicated_files"]:
+            self.assertFalse((ROOT / name).exists(), name)
 
     def test_full_goals_and_unfinished_personnel_scope_are_not_downgraded(self):
         matrix = json.loads((ROOT / "docs/evidence/s3-r13-goal-status-20261016.json").read_text())

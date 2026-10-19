@@ -1,6 +1,6 @@
 # 模型读取：授权通道、固定版本与本地复算
 
-版本：2026-10-16；配套完整框架 v1.7 修订批次13；有图调用项目唯一现行《赔率截图读取规范》，不绑定其版本。本页说明授权取件、固定活动／历史原件、校验落地和实际复算；本轮实现待云端验收，文件落地、历史读取或文档同步不等于调用、发布或效果通过。
+版本：2026-10-16；配套完整框架 v1.7 修订批次14；有图调用项目唯一现行《赔率截图读取规范》，不绑定其版本。本页说明授权取件、固定活动／历史原件、校验落地和实际复算；本轮实现待云端验收，文件落地、历史读取或文档同步不等于调用、发布或效果通过。
 
 ## 为什么网页或 git 失败，连接器仍可能成功
 
@@ -43,8 +43,8 @@ await tools.mcp__codex_apps__github_fetch_file({
 
 | 来源 | 必取原件与选择规则 |
 |---|---|
-| `source_commit` | `AGENTS.md`、本页、`docs/model-integration.md`、当次完整框架/图规；`config.json`、`requirements.txt`；该提交 `football_model/` 下全部 Python 源码及其数据资源（当前包括 `__init__.py`、`cli.py`、`data.py`、`model.py`、`integration.py`、`nations.py`、`venue_registry.py`、`match_locations.py`、`coverage_audit.py`、`nations_venues.json`、`nations_venue_city_aliases.json`、`nations_match_locations.json`）。按固定提交目录实际内容核清，不能只下载 `integration.py`。helper 从同一源码提交取得。 |
-| `state_commit` | 原 `runtime/integration/index.json`；目标联赛索引列出的模型、预测、对应最近尝试/训练运行报告和完整逐场验证；欧国联另取本条预测 `registry_snapshot` 指向的冻结文件。若原索引或较新已知记录引用相关失败，保留相应证据，不能漏掉后称全部通过。 |
+| `source_commit` | `AGENTS.md`、本页、`docs/model-integration.md`、当次完整框架/图规；`config.json`、`requirements.txt`；该提交 `football_model/` 下全部 Python 源码及其数据资源（包括 `__init__.py`、`cli.py`、`data.py`、`model.py`、`integration.py`、`coverage_audit.py`及实际导入的其他依赖；完整清单以该固定提交为准）。按固定提交目录实际内容核清，不能只下载 `integration.py`。helper 从同一源码提交取得。 |
+| `state_commit` | 原 `runtime/integration/index.json`；目标联赛索引列出的模型、预测、对应最近尝试/训练运行报告和完整逐场验证。若原索引或较新已知记录引用相关失败，保留相应证据，不能漏掉后称全部通过。 |
 | 当次执行 | 连接器原响应、访问尝试、Actions 核查记录、helper 清单、真实 match 命令/退出状态/输出。无需为只读复算下载历史 API 缓存或调用训练；新增依赖按实际 import/文件引用补齐。 |
 
 `integration.py` 会经 `cli.py` 导入其他模块，只拿它和模型 JSON 不足以运行。已有运行环境须核依赖版本；缺依赖时依据同提交 `requirements.txt` 准备环境，无法准备则标“已读取、未复算”，不能复制结果填通过。保留原目录结构，不在单场/单联赛部分下载目录执行 `integration index` 重建“最新”索引。
@@ -90,7 +90,7 @@ helper 不联网、不读取认证、不训练、不修模型；核对固定仓�
 ```bash
 python -m football_model.integration match \
   --runtime runtime --config config.json \
-  --league unl --match-id <真实比赛ID> \
+  --league epl --match-id <真实比赛ID> \
   --state-commit <实际状态40位SHA> \
   --output <本次复核JSON路径>
 ```

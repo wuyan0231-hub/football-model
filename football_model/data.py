@@ -361,6 +361,11 @@ class APIClient:
 
     def _cached_request(self, endpoint: str, params: dict, *, force: bool,
                         max_age_seconds: float | None) -> dict:
+        from .competition_scope import require_competition
+        if "league" in params:
+            require_competition({}, params["league"])
+        if endpoint == "/leagues":
+            require_competition({"name": params.get("name", "")}, params.get("id"))
         if max_age_seconds is not None and max_age_seconds < 0:
             raise ValueError("max_age_seconds 不能为负数")
         identity = json.dumps([endpoint, params], sort_keys=True).encode("utf-8")
@@ -422,6 +427,8 @@ class APIClient:
 
     def resolve_league(self, config: dict, force: bool = False) -> dict:
         """Exact name AND country; zero/multiple matches require manual correction."""
+        from .competition_scope import require_competition
+        require_competition(config)
         name, country = config.get("name"), config.get("country")
         if not isinstance(name, str) or not name.strip() or not isinstance(country, str) or not country.strip():
             raise APIError("赛事配置必须包含非空 name 和 country")
@@ -433,6 +440,7 @@ class APIClient:
         if len(matches) != 1:
             raise APIError(f"赛事名称与国家必须精确匹配一项，当前匹配 {len(matches)} 项；请检查配置")
         item = copy.deepcopy(matches[0])
+        require_competition(config, item["league"].get("id"))
         try:
             _integer(item["league"].get("id"), "league.id", 1)
             seasons = item["seasons"]
@@ -457,6 +465,8 @@ class APIClient:
         Default: refresh current season; reuse an old season for at most 7 days.
         An explicit max_age_seconds enables caller-controlled current cache reuse.
         """
+        from .competition_scope import require_competition
+        require_competition({}, league_id)
         _integer(league_id, "league_id", 1)
         _integer(season, "season", 1900)
         if type(current) is not bool:

@@ -130,9 +130,9 @@ class ProspectiveTests(unittest.TestCase):
 
     def test_unsupported_and_missing_league_are_kept_not_replaced_by_old_predictions(self):
         self.row.update(status="unsupported", reason="expired")
-        self.report["requested_competitions"].append("unl")
+        self.report["requested_competitions"].append("laliga")
         self.save_inputs()
-        self.write("predictions/old/unl.json", [self.row])
+        self.write("predictions/old/laliga.json", [self.row])
         code, summary = self.invoke()
         self.assertEqual(code, 0)
         self.assertEqual(summary["coverage_status_counts"], {"unsupported": 1, "no_current_prediction_file": 1})

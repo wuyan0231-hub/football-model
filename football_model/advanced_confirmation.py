@@ -6,6 +6,8 @@ monitoring nor a favorable result promotes a model to production.
 """
 from __future__ import annotations
 
+from .competition_scope import require_league
+
 import argparse
 from collections import Counter
 from datetime import datetime, timedelta, timezone
@@ -415,6 +417,7 @@ def verify_development(runtime, report, card, *, protocol, league, candidate_id,
 def activate(runtime, root, *, design, advanced_protocol, league, candidate_id, horizon,
              development_ref, card_ref, family_size, now):
     """Only this gate can write an activation; no historical trial backdating."""
+    require_league(league)
     now = _time(now)
     report = _read_development_artifact(runtime, development_ref)
     card = _read_development_artifact(runtime, card_ref)
@@ -693,6 +696,8 @@ def _candidate_specs(protocol):
 
 def run(runtime, league, advanced_protocol, design, *, auto_activate=False, clock=None, row_loader=None):
     """Continuous orchestration entry point; blocked trials still produce receipts."""
+    from .competition_scope import require_league
+    require_league(league)
     validate_design(design)
     from .advanced_research import implementation_fingerprint
     current_implementation = implementation_fingerprint()
@@ -728,7 +733,14 @@ def run(runtime, league, advanced_protocol, design, *, auto_activate=False, cloc
     leagues = design["registered_leagues"]
     if league not in leagues:
         raise ConfirmationError("league_not_in_frozen_confirmation_family")
-    family_size = len(specs) * len(leagues)
+    # Withdrawal does not lower the original multiplicity penalty. Keep the
+    # floor in code as well as the new protocol's explicit metadata.
+    minimum_family = advanced_protocol.get("original_family_size_minimum", 0)
+    if advanced_protocol.get("protocol_id") in {
+            "s3-opportunity-personnel-development-20261013-v1",
+            "s3-opportunity-personnel-domestic-retirement-20261019-v1"}:
+        minimum_family = max(minimum_family, 380)
+    family_size = max(len(specs) * len(leagues), minimum_family)
     observations = None
     results = []
     for candidate_id, horizon in specs:
@@ -799,12 +811,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runtime", default="runtime")
     parser.add_argument("--league", required=True)
-    parser.add_argument("--advanced-protocol", default="advanced-models-v1.json")
+    parser.add_argument("--advanced-protocol", default="advanced-models-domestic-v1.json")
     parser.add_argument("--protocol", default="advanced-confirmation-v1.json")
     parser.add_argument("--auto-activate", action="store_true")
     args = parser.parse_args()
     design, protocol = _read(args.protocol), _read(args.advanced_protocol)
-    leagues = design["registered_leagues"] if args.league == "all" else [args.league]
+    from .competition_scope import is_retired, require_league
+    require_league(args.league)
+    leagues = [v for v in design["registered_leagues"] if not is_retired(v)] if args.league == "all" else [args.league]
     reports = [run(args.runtime, league, protocol, design, auto_activate=args.auto_activate) for league in leagues]
     report = reports[0] if args.league != "all" else {"schema_version": VERSION, "leagues": reports, "production_promotion": False}
     print(json.dumps(report, ensure_ascii=False, indent=2))

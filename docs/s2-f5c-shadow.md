@@ -14,7 +14,7 @@
 
 捕获从当前`integration/index.json`逐赛事定位真实成功run，并由现有生产源门禁阻断`blocked_latest_failure`。请求全集是这一run的完整预测行；不支持、已开赛、窗口外、缺原生产录制、原件损坏等各自保留coverage。已知较新的报价赛程响应若改期或不再NS，将拒绝本轮资格；原有旧版本仍保留。
 
-完整production forecast及其prediction、run report、model、training data父件全部内容寻址保存。共享sources按原source ID及原字节SHA去重，production_parents只引用它们。模型用原`score_distribution`实际复算；联赛均值用原`prospective._baseline`从同训练指纹复算。data、schedule、report、index与生产父记录交叉绑定，欧国联另核冻结登记表、举办地区、neutral和证据时点。
+完整production forecast及其prediction、run report、model、training data父件全部内容寻址保存。共享sources按原source ID及原字节SHA去重，production_parents只引用它们。模型用原`score_distribution`实际复算；联赛均值用原`prospective._baseline`从同训练指纹复算。data、schedule、report、index与生产父记录交叉绑定。
 
 候选完整五档payload先写入并`fsync`，再读取真实时钟。保存跨开赛的payload留下且被隔离，不能录成合法未来receipt。receipt所表示的是本次执行环境的落盘完成；`remote_persistence_status=pending_state_commit_verification`仍需另核真实state commit保存时间。文件本身不是远端持久保存证明。
 
@@ -24,7 +24,7 @@
 
 结果的实际可用时间为`max(observed_at,captured_at)`。同身份首个合格独立结果的这个时间+48小时必须不晚于本次输入截止；所用最新修订版本自己的观测与保存也必须已经发生。开赛+48小时不能替代这一条件。历史资格和排除原因全部保存；选参引用冻结结果修订和原配对，后来结果修订不回写原α。
 
-生产ridge与min_train亦属于冻结协议，改变配置另建协议；原父模型不符合这两个注册字段时拒绝，不用新配置暗中重训。满40场按未截断泊松总球Log loss最小选择α，1e−12内同损失选最小α；不足40场回退0。五档均保存使未来选参有真实同基线、同均值证据。欧国联选参稀疏启动、MLS自动力度不稳定仍是专项未解决问题，本版本不因这两个赛事修改原网格、窗口或门槛。
+生产ridge与min_train亦属于冻结协议，改变配置另建协议；原父模型不符合这两个注册字段时拒绝，不用新配置暗中重训。满40场按未截断泊松总球Log loss最小选择α，1e−12内同损失选最小α；不足40场回退0。五档均保存使未来选参有真实同基线、同均值证据。MLS自动力度不稳定仍是专项未解决问题，本版本不因此修改原网格、窗口或门槛。
 
 ## 评分与完整性
 

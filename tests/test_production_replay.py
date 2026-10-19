@@ -14,7 +14,6 @@ from football_model.data import APIError, RequestBudgetError
 from football_model.model import fit_model
 from football_model.production_replay import replay_bundle, read_bundle, compare_outcomes, COMPARISON_POLICY, ReplayError, _outcome
 from test_cli import BASE_CONFIG, BudgetClient, FakeClient, NOW, fixture
-from test_nations_pipeline import CONFIG as NATIONAL_CONFIG, NOW as NATIONAL_NOW, NationalClient
 
 
 class ProductionReplayTests(unittest.TestCase):
@@ -132,25 +131,6 @@ class ProductionReplayTests(unittest.TestCase):
             self.assertEqual(report["competitions"][0]["forecast_count"], 0)
             self.assertEqual(report["competitions"][0]["forecast_availability"]["status"], "unavailable")
 
-    def test_nations_unknown_and_failed_venue_lookup_reproduce(self):
-        client = NationalClient()
-        client.fixtures[-1]["fixture"]["venue"] = {"id": 99999, "name": "Unknown", "city": "Unknown"}
-        client.fetch_venues = lambda **kwargs: (_ for _ in ()).throw(APIError("venue unavailable"))
-        client.daily_remaining = 10
-        client.max_requests = 100
-        @contextmanager
-        def reserve(count):
-            yield
-        client.reserve_requests = reserve
-        with tempfile.TemporaryDirectory() as tmp:
-            _, report, bundle, _ = self.record_and_replay(tmp, config=NATIONAL_CONFIG,
-                now=NATIONAL_NOW, client=client, league="unl")
-            item = report["competitions"][0]
-            self.assertEqual(item["forecast_count"], 2)
-            self.assertEqual(item["unsupported_forecasts"], 1)
-            events = read_bundle(bundle)["payload"]["events"]
-            self.assertTrue(any(e.get("name") == "fetch_venues" and "error" in e for e in events))
-            self.assertTrue(any(e["op"] == "context_enter" for e in events))
 
     def test_default_off_and_recording_failure_preserves_predictions(self):
         with tempfile.TemporaryDirectory() as tmp:

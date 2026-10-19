@@ -12,6 +12,7 @@ import re
 import tempfile
 import zipfile
 
+from .competition_scope import require_league
 from . import total_shrink_shadow as ts
 from .cli import atomic_json, safe_error
 from .prospective import _digest, _identity, _same_identity, _timestamp
@@ -254,6 +255,7 @@ def _verified_score(originals, forecast, now):
 
 
 def comparison(runtime, league, match_id, *, row=None, now=None, forecast_id=None, state_tree=None):
+    require_league(league)
     now = now or datetime.now(timezone.utc)
     result = {"status": "not_captured", "competition": league, "match_id": match_id,
         "read_at": ts._iso(datetime.now(timezone.utc)), "validation_cutoff": ts._iso(now),

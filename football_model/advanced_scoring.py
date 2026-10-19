@@ -12,6 +12,7 @@ import fcntl
 import json
 from pathlib import Path
 
+from .competition_scope import require_league, select_competitions
 from .data import APIClient, APIError, _iso, _utc
 from .feature_research import score_forecast, _mean_metrics
 from .feature_scoring import (RESULT_DELAY, RESULT_REFRESH, RESULT_RECHECK_WINDOW,
@@ -97,6 +98,7 @@ def _summary(records, candidate):
 
 
 def score_run(runtime, league="serie_a", *, config, protocol, source_commit, state_commit=None, clock=None, client_factory=None):
+    require_league(league)
     runtime = Path(runtime).resolve(); _commit(source_commit); _commit(state_commit, optional=True)
     clock = clock or (lambda: datetime.now(timezone.utc)); started = _utc(clock())
     root = _root(runtime, protocol); root.mkdir(parents=True, exist_ok=True)
@@ -228,6 +230,7 @@ def verified_confirmation_rows(runtime, league, advanced_protocol, *, include_sc
     Every candidate receives every queue opportunity. Enrollment therefore cannot
     depend on eventual prediction success, result availability or a good score.
     """
+    require_league(league)
     runtime = Path(runtime).resolve(); now = _utc(now or datetime.now(timezone.utc)); output=[]
     config = config or _read(Path(__file__).resolve().parents[1] / "config.json")
     competition = next(v for v in config["competitions"] if v["key"]==league)
@@ -266,9 +269,9 @@ def verified_confirmation_rows(runtime, league, advanced_protocol, *, include_sc
 def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__);s=p.add_subparsers(dest="command",required=True);r=s.add_parser("score")
     r.add_argument("--runtime",default="runtime");r.add_argument("--league",default="all");r.add_argument("--config",default="config.json")
-    r.add_argument("--protocol",default="advanced-models-v1.json");r.add_argument("--source-commit",required=True);r.add_argument("--state-commit")
+    r.add_argument("--protocol",default="advanced-models-domestic-v1.json");r.add_argument("--source-commit",required=True);r.add_argument("--state-commit")
     a=p.parse_args(argv);config=_read(a.config);protocol=_read(a.protocol);code=0
-    leagues=[v["key"] for v in config["competitions"] if v.get("enabled",True)] if a.league=="all" else [a.league]
+    leagues=[v["key"] for v in select_competitions(config, a.league) if v.get("enabled",True)]
     for league in leagues:
         status,report=score_run(a.runtime,league,config=config,protocol=protocol,source_commit=a.source_commit,state_commit=a.state_commit)
         code=max(code,status);print(json.dumps({k:report[k] for k in ("league","status","requested_horizon_records","scored_horizon_records","api_requests","report_ref")},ensure_ascii=False))

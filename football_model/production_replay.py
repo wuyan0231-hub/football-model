@@ -20,6 +20,7 @@ import re
 import sys
 from unittest.mock import patch
 
+from .competition_scope import require_competition, select_competitions
 from .data import APIError, DataError, RequestBudgetError, RequestDeadlineError
 
 SCHEMA = "production_pipeline_replay_v1"
@@ -31,9 +32,8 @@ BUDGET_FIELDS = {"configured_daily_limit", "provider_daily_limit", "provider_dai
 CONFIG_FIELDS = {"schema_version", "history_seasons", "max_requests_per_run", "api_daily_limit", "api_max_run_seconds",
     "half_life_days", "ridge", "min_train", "min_test", "forecast_days", "max_model_age_days", "competitions", "prospective"}
 COMPETITION_FIELDS = {"key", "label", "name", "country", "mode", "provider_id"}
-SOURCE_FILES = ("__init__.py", "cli.py", "model.py", "data.py", "nations.py", "venue_registry.py",
-    "match_locations.py", "coverage_audit.py", "production_replay.py", "settlement.py", "nations_venues.json",
-    "nations_match_locations.json", "nations_venue_city_aliases.json")
+SOURCE_FILES = ("__init__.py", "cli.py", "model.py", "data.py", "competition_scope.py",
+    "coverage_audit.py", "production_replay.py", "settlement.py")
 ERRORS = {cls.__name__: cls for cls in (APIError, DataError, RequestBudgetError, RequestDeadlineError,
     ValueError, KeyError, TypeError, RuntimeError, OSError, AttributeError)}
 
@@ -85,6 +85,7 @@ def _safe_config(config):
                     raise ReplayError("prospective contract含未审核字段")
                 contract(value)
     for competition in result.get("competitions", []):
+        require_competition(competition)
         unknown = set(competition) - COMPETITION_FIELDS
         if unknown:
             raise ReplayError("回放赛事配置存在未审核字段：" + ", ".join(sorted(unknown)))
@@ -94,10 +95,6 @@ def _safe_config(config):
 
 
 def _state_allowed(relative, keys):
-    if relative in {"registries/nations_venues.json", "registries/nations_venue_retry.json"}:
-        return "unl" in keys
-    if re.fullmatch(r"registries/nations_venues/[a-f0-9]{64}\.json", relative):
-        return "unl" in keys
     for key in keys:
         if relative == f"models/{key}.json" or re.fullmatch(rf"validation/{re.escape(key)}/[A-Za-z0-9_-]+\.json", relative):
             return True
@@ -122,13 +119,6 @@ def _initial_state(runtime, keys):
                 validation = root / "validation" / key / f"{old_run}.json"
                 if validation.exists():
                     selected.append(validation)
-        snapshot = bundle.get("national_audit", {}).get("registry_snapshot")
-        if isinstance(snapshot, str) and _state_allowed(snapshot, keys):
-            path = root / snapshot
-            if path.exists():
-                selected.append(path)
-    if "unl" in keys:
-        selected.extend(path for path in (root / "registries/nations_venues.json", root / "registries/nations_venue_retry.json") if path.exists())
     result = {}
     for path in selected:
         relative = path.relative_to(root).as_posix()

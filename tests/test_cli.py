@@ -91,12 +91,8 @@ class PipelineTests(unittest.TestCase):
                 existing.parent.mkdir()
                 original = b'{"sentinel":"existing La Liga model"}'
                 existing.write_bytes(original)
-                with patch("football_model.nations.prepare_nations",
-                           side_effect=AssertionError("国内联赛不能调用国家队适配")), patch(
-                        "football_model.venue_registry.resolve_venues",
-                        side_effect=AssertionError("国内联赛不能调用欧国联场地登记")):
-                    code, report = run_pipeline(config, tmp, "train", league=key,
-                                                now=NOW, clock=lambda: NOW, client=FakeClient())
+                code, report = run_pipeline(config, tmp, "train", league=key,
+                                            now=NOW, clock=lambda: NOW, client=FakeClient())
                 self.assertEqual(code, 0, report)
                 self.assertEqual(report["requested_competitions"], [key])
                 self.assertEqual(report["competitions"][0]["forecast_count"], 1)

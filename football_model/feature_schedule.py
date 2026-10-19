@@ -19,6 +19,7 @@ from pathlib import Path
 import re
 from contextlib import nullcontext
 
+from .competition_scope import require_league, require_competition, select_competitions
 from .data import (APIClient, APIError, DataError, RequestBudgetError, RequestDeadlineError,
                    _fixture_identity, _integer, _iso, _utc, normalize_fixtures)
 
@@ -52,6 +53,7 @@ def _read(path):
 
 
 def _root(runtime, league):
+    require_league(league)
     if not isinstance(league, str) or not re.fullmatch(r"[a-z][a-z0-9_]*", league):
         raise ValueError("invalid_league_key")
     return Path(runtime) / "feature_models" / "schedules" / league
@@ -64,6 +66,7 @@ def load_schedule(runtime, league):
     ``workload_events``: finished formal fixtures usable for rest/density only,
     even when regulation scores could not be established. No score is filled.
     """
+    require_league(league)
     payload = _read(_root(runtime, league) / "latest.json")
     if payload.get("version") != VERSION or payload.get("league") != league:
         raise DataError("schedule_output_identity_mismatch")
@@ -153,6 +156,7 @@ def _diagnostic_code(exc):
 
 
 def _metadata(client, league_id, season, clock, root, runtime, guard=None):
+    require_competition({}, league_id)
     params = {"id": league_id, "season": season}
     envelope = client._cached_request("/leagues", params, force=False, max_age_seconds=7 * 86400)
     # The provider's fetched_at is stamped after request completion. Compare to
@@ -199,6 +203,7 @@ def collect_schedule(config, runtime="runtime", league="serie_a", *, source_comm
                      current_max_age_seconds=None, pending_first=False,
                      check_account=True, capacity_guard=None):
     """Persist a finite club×season collection and all failures; no model fitting."""
+    require_league(league)
     runtime = Path(runtime)
     requests_before = getattr(client, "requests_made", 0)
     root = _root(runtime, league)
@@ -526,7 +531,7 @@ def collect_all_schedules(config, runtime="runtime", *, source_commit=None, clie
         raise ValueError("invalid_current_cache_age")
     if source_commit is not None and not re.fullmatch(r"[a-f0-9]{40}", source_commit):
         raise ValueError("invalid_source_commit")
-    domestic = [x["key"] for x in config.get("competitions", []) if x.get("mode") == "domestic_baseline"]
+    domestic = [x["key"] for x in select_competitions(config) if x.get("mode") == "domestic_baseline"]
     if not domestic or len(set(domestic)) != len(domestic):
         raise ValueError("domestic_competition_set_invalid")
     for key in domestic:

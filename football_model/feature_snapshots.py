@@ -18,6 +18,7 @@ import os
 from pathlib import Path
 import re
 
+from .competition_scope import require_league
 from .data import DataError, _integer, _iso, _utc
 from .fundamentals import _fixture, _validate_snapshot, build_features
 from .integration import _entry_for_match, match_packet
@@ -799,6 +800,7 @@ def capture_run(runtime, league="serie_a", *, source_commit, protocol, state_com
     including not-due, late, unsupported and ineligible cases. Versions append;
     the first legal capture is immutable and independent counts use match IDs.
     """
+    require_league(league)
     if not isinstance(source_commit, str) or not re.fullmatch(r"[0-9a-fA-F]{40,64}", source_commit):
         raise SnapshotError("source_commit_full_sha_required")
     if state_commit is not None and not re.fullmatch(r"[0-9a-fA-F]{40,64}", state_commit):

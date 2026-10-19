@@ -29,8 +29,8 @@ class ReleaseLeagueTests(unittest.TestCase):
                 self.assertEqual(summary_main(['begin', '--context', str(path)]), 0)
             self.assertEqual(json.loads(path.read_text())['league'], 'championship')
 
-    def test_later_releases_keep_existing_unl_check(self):
-        self.assertEqual(select_league(self.current, self.current), "unl")
+    def test_later_releases_do_not_trigger_training(self):
+        self.assertEqual(select_league(self.current, self.current), "none")
 
     def test_explicit_request_can_retry_an_already_configured_league(self):
         request = {'schema_version': 1, 'mode': 'train', 'league': 'championship'}
@@ -67,7 +67,7 @@ class ReleaseLeagueTests(unittest.TestCase):
     def test_existing_competition_edit_does_not_trigger_championship_training(self):
         edited = copy.deepcopy(self.current)
         edited["competitions"][0]["label"] = "changed label"
-        self.assertEqual(select_league(self.current, edited), "unl")
+        self.assertEqual(select_league(self.current, edited), "none")
 
     def test_multiple_or_non_domestic_additions_require_explicit_selection(self):
         for additions in ([{"key": "extra", "mode": "domestic_baseline"}], []):

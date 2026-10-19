@@ -5,8 +5,7 @@ the existing checkout's origin credentials; neither prints credentials nor
 embeds them in a URL. A remote state change after load causes save to fail.
 
 The complete runtime tree is persisted, including the mutable venue registry
-at ``registries/nations_venues.json``, its content-addressed JSON snapshots under
-``registries/nations_venues/``, and unknown-venue audits under ``audits/unl/``.
+under ``registries/``, its content-addressed JSON snapshots and per-league audits.
 Snapshot integrity is checked by the registry resolver and forecast reader;
 these files receive the same path, type, size and credential checks as models.
 """

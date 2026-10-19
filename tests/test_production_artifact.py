@@ -126,8 +126,9 @@ def condition_of_named_step(name):
     return re.search(r'if: \$\{\{ (.+) \}\}', block).group(1)
 
 
-def evaluate(expression, *, cancelled=False, **outcomes):
+def evaluate(expression, *, cancelled=False, league='epl', **outcomes):
     expression = expression.replace('!cancelled()', repr(not cancelled)).replace('&&', ' and ').replace('||', ' or ')
+    expression = expression.replace('env.LEAGUE', repr(league))
     for key in set(re.findall(r'steps\.([a-z_]+)\.outcome', expression)):
         expression = expression.replace('steps.' + key + '.outcome', repr(outcomes.get(key, 'success')))
     return eval(expression, {'__builtins__': {}}, {})
@@ -145,7 +146,7 @@ class ProductionArtifactWorkflowTests(unittest.TestCase):
         body = WORKFLOW.split('          name: football-report-${{ github.run_id }}-${{ github.run_attempt }}', 1)[1].split('      - name:', 1)[0]
         paths = body.split('          path: |\n', 1)[1].split('          if-no-files-found:', 1)[0].split()
         self.assertEqual(paths, ['runtime/reports/', 'runtime/predictions/', 'runtime/models/', 'runtime/registries/',
-                                'runtime/audits/unl/', 'runtime/fundamentals/', 'runtime/prospective/', 'runtime/result_sync/',
+                                'runtime/audits/', 'runtime/fundamentals/', 'runtime/prospective/', 'runtime/result_sync/',
                                 'runtime/quotes/', 'runtime/shadow_models/', 'runtime/total_shrink_shadow/', 'runtime/replay/'])
         self.assertIn('retention-days: 14', body)
 
@@ -155,6 +156,7 @@ class ProductionArtifactWorkflowTests(unittest.TestCase):
         self.assertTrue(evaluate(expression, persist='success', thin_evidence='failure'))
         self.assertTrue(evaluate(expression, persist='success', thin_evidence='skipped'))
         self.assertTrue(evaluate(expression, persist='failure', thin_evidence='skipped'))
+        self.assertFalse(evaluate(expression, league='none', persist='failure', thin_evidence='skipped'))
 
     def test_schedule_real_save_and_public_layered_summary_contract_unchanged(self):
         self.assertEqual(re.findall(r"cron: '([^']+)'", WORKFLOW), ['17 1 * * *'])

@@ -20,8 +20,8 @@ class F5CWorkflowTests(unittest.TestCase):
             self.assertIn("'" + name + "'", shadow_push)
         for name in ('football_model/total_shrink_shadow.py', '.github/workflows/football-total-shrink.yml'):
             self.assertIn("'" + name + "'", shadow_push)
-        # Original train/data/venue releases preserve their route.
-        for name in ('football_model/cli.py', 'football_model/data.py', 'football_model/venue_registry.py', 'config.json'):
+        # Domestic configuration and explicit training requests retain selection.
+        for name in ('football_model/cli.py', 'football_model/data.py', 'config.json'):
             self.assertIn("'" + name + "'", daily_push)
 
     def test_same_state_lock_and_no_added_schedule(self):

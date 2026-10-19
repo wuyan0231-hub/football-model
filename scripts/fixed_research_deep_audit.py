@@ -450,8 +450,7 @@ def reconstruct_features(report, root):
         hours=protocol['horizon_hours'] if horizon=='EARLY' else protocol.get('lineup_horizon_hours',.75)
         rebuilt=build_feature_rows(root,'primeira',matches=matches,horizon=horizon,horizon_hours=hours,
             mode='historical',recent_matches=protocol['advanced_feature_recent_matches'],
-            min_history=protocol['advanced_feature_min_history'],
-            national_load_lookback_days=protocol.get('national_load_lookback_days',14))
+            min_history=protocol['advanced_feature_min_history'])
         rows={r['match_id']:r for r in rebuilt['rows']}
         require(len(rows)==len(rebuilt['rows']),'duplicate_rebuilt_feature_target')
         for m in matches:

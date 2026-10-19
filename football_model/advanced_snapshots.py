@@ -21,6 +21,7 @@ import re
 import stat
 import tempfile
 
+from .competition_scope import require_league, select_competitions
 from .data import _iso, _utc
 from .advanced_capacity import CapacityGuard, CapacityDeferred
 from .fundamentals import _fixture, build_features
@@ -411,8 +412,7 @@ def _live(runtime, league, protocol, baseline, values, cutoff, fixture):
 def _features(runtime, league, fixture, cutoff, horizon, protocol):
     from .advanced_features import feature_values
     value = feature_values(runtime, league, fixture, _iso(cutoff), horizon=horizon, mode="prospective",
-        recent_matches=protocol.get("advanced_feature_recent_matches", 5), min_history=protocol.get("advanced_feature_min_history", 3),
-        national_load_lookback_days=protocol.get("national_load_lookback_days", 14))
+        recent_matches=protocol.get("advanced_feature_recent_matches", 5), min_history=protocol.get("advanced_feature_min_history", 3))
     from .feature_dataset import feature_values as schedule_values
     runtime = Path(runtime)
     history = _read(runtime / "data" / (league + ".json"))["matches"]
@@ -544,6 +544,7 @@ def _baseline(runtime, root, league, row, protocol, state_commit, started, clock
 
 
 def capture_run(runtime, league="serie_a", *, source_commit, protocol, state_commit=None, config=None, clock=None, capacity_guard=None):
+    require_league(league)
     runtime = Path(runtime).resolve()
     with _capture_storage(runtime, protocol, capacity_guard) as guard:
         return _capture_run_locked(runtime, league, source_commit=source_commit, protocol=protocol,
@@ -551,6 +552,7 @@ def capture_run(runtime, league="serie_a", *, source_commit, protocol, state_com
 
 
 def _capture_run_locked(runtime, league="serie_a", *, source_commit, protocol, state_commit=None, config=None, clock=None, guard):
+    require_league(league)
     runtime = Path(runtime).resolve()
     _commit(source_commit); _commit(state_commit, optional=True)
     candidate_ids(protocol)
@@ -891,8 +893,9 @@ def queue_members(runtime, league, protocol, now=None):
 
 
 def load_verified_comparison(runtime, league, fixture_id, horizon, protocol=None, *, row=None, now=None, _queue_index=None):
+    require_league(league)
     runtime = Path(runtime).resolve(); now = _utc(now or datetime.now(timezone.utc))
-    protocol = protocol or _read(Path(__file__).resolve().parents[1] / "advanced-models-v1.json")
+    protocol = protocol or _read(Path(__file__).resolve().parents[1] / "advanced-models-domestic-v1.json")
     anchor = _root(runtime, protocol) / "captures" / league / str(fixture_id) / horizon / "first.json"
     output = {"status": "unavailable", "match_id": fixture_id, "horizon": horizon, "research_only": True,
         "candidates": {}, "evidence": [], "protocol_sha256": _digest(protocol)}
@@ -957,10 +960,10 @@ def comparison(runtime, league, match_id, *, row=None, now=None, horizon="EARLY"
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__); sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("capture"); p.add_argument("--runtime", default="runtime"); p.add_argument("--config", default="config.json")
-    p.add_argument("--league", default="all"); p.add_argument("--protocol", default="advanced-models-v1.json")
+    p.add_argument("--league", default="all"); p.add_argument("--protocol", default="advanced-models-domestic-v1.json")
     p.add_argument("--source-commit", required=True); p.add_argument("--state-commit")
     args = parser.parse_args(argv); protocol = _read(args.protocol); config = _read(args.config)
-    leagues = [x["key"] for x in config["competitions"] if x.get("enabled", True)] if args.league == "all" else [args.league]
+    leagues = [x["key"] for x in select_competitions(config, args.league) if x.get("enabled", True)]
     code = 0
     # One guarded sequential session measures the complete runtime only once,
     # with the same lock protecting both the estimate and all league writes.

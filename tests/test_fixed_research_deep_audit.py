@@ -310,7 +310,7 @@ print(json.dumps({'old_or_current_native_cold_read_verified':True,'wrong_layout_
                 fixture['status']='FT'
                 for kind in ('statistics','lineups'):
                     save_snapshot(runtime/'fundamentals/snapshots',make_snapshot(kind,envelope(kind,fixture),fixture))
-            protocol=json.loads((ROOT/'advanced-models-v1.json').read_text())
+            protocol=json.loads((ROOT/'advanced-models-domestic-v1.json').read_text())
             report=study(runtime,'primeira',protocol,source_commit='engineering-test-only',
                 clock=lambda:datetime(2024,3,1,tzinfo=timezone.utc))
             manifest=audit.materialize_inputs(report,runtime,base/'copy',lambda p,**_:p.read_bytes())

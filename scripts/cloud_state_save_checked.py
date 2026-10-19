@@ -94,7 +94,7 @@ def _study_args(command, repo, runtime, source):
     parser.add_argument("--runtime", default="runtime")
     parser.add_argument("--league", required=True)
     parser.add_argument("--config", default="config.json")
-    parser.add_argument("--protocol", default="advanced-models-v1.json")
+    parser.add_argument("--protocol", default="advanced-models-domestic-v1.json")
     parser.add_argument("--source-commit", required=True)
     parser.add_argument("--state-commit")
     parser.add_argument("--run-goalmodel", action="store_true")

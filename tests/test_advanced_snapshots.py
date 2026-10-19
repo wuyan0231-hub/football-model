@@ -283,7 +283,7 @@ class AdvancedSnapshotTests(unittest.TestCase):
 
     def test_actual_saved_correction_card_capture_without_predictor_mock(self):
         from football_model.advanced_research import study
-        protocol=_read(Path(__file__).resolve().parents[1]/'advanced-models-v1.json')
+        protocol=_read(Path(__file__).resolve().parents[1]/'advanced-models-domestic-v1.json')
         protocol.update(candidates={'M_schedule':protocol['candidates']['M_schedule']},goalmodel_candidates=[],
             goalmodel_feature_candidate='M_schedule',family_increment_comparisons=[],baseline_min_train=60,
             correction_min_matches=10,correction_alpha_grid=[1.0])

@@ -10,6 +10,7 @@ from __future__ import annotations
 from datetime import timedelta
 from pathlib import Path
 
+from .competition_scope import require_league
 from .advanced_features import (_identity, _select, canonical, load_sources, read_json,
                                 source_ref, RESULT_DELAY)
 from .data import DataError, _iso, _utc
@@ -109,6 +110,7 @@ def personnel_features(runtime, league, fixture, cutoff_at, *, horizon="EARLY", 
     cutoff.  Empty reports, doubtful status, unknown coverage and incomplete
     past minutes are missing, not numerical absence of injuries.
     """
+    require_league(league)
     if horizon not in ("EARLY", "LINEUP") or mode not in ("historical", "prospective"):
         raise DataError("invalid_personnel_mode_or_horizon")
     if (type(recent_matches) is not int or type(min_history) is not int

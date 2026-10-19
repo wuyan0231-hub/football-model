@@ -22,6 +22,19 @@ PROTOCOL = json.loads((ROOT / "advanced-models-v1.json").read_text())
 DESIGN = json.loads((ROOT / "advanced-confirmation-v1.json").read_text())
 
 
+def synthetic_historical_fingerprint():
+    """Synthetic 50-entry scaffold; numerical files bind actual current bytes.
+
+    These stand-ins exercise the immutable old reader contract. They are not
+    evidence that current source has the historical 50-file identity.
+    """
+    value = audit.implementation_fingerprint()
+    for index in range(50 - len(value["files"])):
+        value["files"][f"synthetic-historical-only/dependency-{index}"] = "a" * 64
+    value["sha256"] = audit.confirmation.digest(value["files"])
+    return value
+
+
 def score(value=2.0):
     return dict(scoreline_nll=value, one_x_two_brier=.4, total_goal_nll=1.4,
         home_tail_brier=.1, away_tail_brier=.2)
@@ -169,10 +182,10 @@ class IdentityOutputTests(unittest.TestCase):
         report = research(3)
         report.update(purpose="historical_development_only", protocol=PROTOCOL,
             protocol_hash=audit.confirmation.digest(PROTOCOL), league=league, source_commit="a" * 40,
-            implementation_fingerprint=audit.implementation_fingerprint())
+            implementation_fingerprint=synthetic_historical_fingerprint())
         return report
 
-    def test_real_numeric_code_binding_and_saved_identity_tamper(self):
+    def test_synthetic_historical_closure_binds_real_numeric_code_and_rejects_tamper(self):
         report = self.full_report()
         summary = copy.deepcopy(report)
         fingerprint = report["implementation_fingerprint"]["sha256"]
@@ -181,6 +194,14 @@ class IdentityOutputTests(unittest.TestCase):
         report["implementation_fingerprint"]["files"]["football_model/advanced_confirmation.py"] = "0" * 64
         with self.assertRaisesRegex(audit.AuditError, "saved_implementation_mismatch"):
             audit.validate_identity(report, summary, fingerprint, PROTOCOL, ROOT)
+
+    def test_current_47_file_implementation_cannot_impersonate_old_fifty(self):
+        report = self.full_report()
+        current = audit.implementation_fingerprint()
+        self.assertNotEqual(len(current["files"]), 50)
+        report["implementation_fingerprint"] = current
+        with self.assertRaisesRegex(audit.AuditError, "saved_implementation_mismatch"):
+            audit.validate_identity(report, copy.deepcopy(report), current["sha256"], PROTOCOL, ROOT)
 
     def test_valid_self_digest_but_different_numeric_source_rejected(self):
         report = self.full_report()
@@ -226,7 +247,8 @@ class IdentityOutputTests(unittest.TestCase):
         sys.path.insert(0, str(ROOT / "scripts"))
         import cloud_state
         import fixed_fixture_validation_audit
-        before = audit.implementation_fingerprint()
+        current_before = audit.implementation_fingerprint()
+        before = synthetic_historical_fingerprint()
         def fake_restore(repo, runtime, state, cloud):
             for league in ("epl", "championship"):
                 report = self.full_report(league)
@@ -260,7 +282,7 @@ class IdentityOutputTests(unittest.TestCase):
             self.assertTrue((output / "epl-gates.json").exists())
             self.assertEqual(final["results"][1]["failed_stage"], "recompute_all_twenty_original_gates")
             self.assertFalse(final["activation_performed"])
-        self.assertEqual(audit.implementation_fingerprint(), before)
+        self.assertEqual(audit.implementation_fingerprint(), current_before)
 
 
 class WorkflowTests(unittest.TestCase):
@@ -276,9 +298,9 @@ class WorkflowTests(unittest.TestCase):
             env={"AUDIT_STATE_COMMIT": state, "AUDIT_LEAGUES": leagues}, capture_output=True, timeout=5)
 
     def test_batch_identity_gate_before_network(self):
-        self.assertEqual(self.run_gate("a" * 40, ",".join(DESIGN["registered_leagues"])).returncode, 0)
+        self.assertEqual(self.run_gate("a" * 40, ",".join(key for key in DESIGN["registered_leagues"] if key != "unl")).returncode, 0)
         for state, leagues in (("main", "epl"), ("a" * 40, "epl,epl"), ("a" * 40, "epl;echo x"),
-                ("a" * 40 + "\n", "epl"), ("a" * 40, "epl, unknown")):
+                ("a" * 40 + "\n", "epl"), ("a" * 40, "epl, unknown"), ("a" * 40, "unl")):
             with self.subTest(state=state, leagues=leagues):
                 self.assertNotEqual(self.run_gate(state, leagues).returncode, 0)
 
@@ -299,7 +321,8 @@ class BudgetRecoveryTests(unittest.TestCase):
         sys.path.insert(0, str(ROOT / "scripts"))
         import cloud_state
         import fixed_fixture_validation_audit
-        before = audit.implementation_fingerprint()
+        current_before = audit.implementation_fingerprint()
+        before = synthetic_historical_fingerprint()
         def fake_restore(repo, runtime, state, cloud):
             for league in ("epl", "championship"):
                 report = research(n)
@@ -324,7 +347,7 @@ class BudgetRecoveryTests(unittest.TestCase):
             status = audit.main(["--repo", str(ROOT), "--state-commit", "a" * 40,
                 "--implementation", before["sha256"], "--leagues", "epl,championship", "--output", str(output)])
         self.assertEqual(restore.call_count, 1)
-        self.assertEqual(audit.implementation_fingerprint(), before)
+        self.assertEqual(audit.implementation_fingerprint(), current_before)
         return status, json.loads((output / "run-final.json").read_text())
 
     def assert_manifest_actual_bytes(self, output):

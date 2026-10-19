@@ -19,7 +19,7 @@ ROOT = Path(__file__).parents[1]
 WORKFLOW = (ROOT / ".github/workflows/advanced-models.yml").read_text()
 PREPARATION = (
     "club_schedule_collection", "pilot_collection", "collection",
-    "player_load_collection", "facts", "confirmation", "capture", "scoring",
+    "facts", "confirmation", "capture", "scoring",
 )
 LEGACY = (
     "legacy_capture_v1", "legacy_capture_v2", "legacy_scoring_v1", "legacy_scoring_v2",
@@ -114,9 +114,9 @@ class ResearchOnlyWorkflowTests(unittest.TestCase):
             with self.subTest(event=event, research_only=flag, main=main, schedule=schedule):
                 value = context(event, research_only=flag, main=main, schedule=schedule)
                 self.assertEqual(evaluate(condition(job("pre_study_capture"), "    "), value), expected_pre)
-                for identity in PREPARATION[:4]:
+                for identity in PREPARATION[:3]:
                     self.assertEqual(evaluate(condition(step(job("advanced"), identity)), value), expected_collect)
-                for identity in PREPARATION[4:]:
+                for identity in PREPARATION[3:]:
                     self.assertEqual(evaluate(condition(step(job("advanced"), identity)), value), expected_facts)
                 for identity in LEGACY:
                     self.assertEqual(evaluate(condition(step(job("advanced"), identity)), value), expected_legacy)

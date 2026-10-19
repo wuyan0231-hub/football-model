@@ -17,6 +17,7 @@ from pathlib import Path
 import numpy as np
 from scipy.stats import poisson
 
+from .competition_scope import require_league, select_competitions
 from .feature_correction import fit_correction, predict_correction
 from .feature_dataset import FEATURE_NAMES, build_replay, feature_values
 from .feature_research import (choose_alpha, digest, save_immutable, score_forecast,
@@ -38,10 +39,7 @@ FEATURE_GROUPS = {
     "lineup_rating": ["confirmed_xi_prior_rating_delta", "opponent_confirmed_xi_prior_rating_delta"],
     "personnel_early": ["reported_absence_recent_minutes_share", "reported_absence_previous_xi_share",
         "opponent_reported_absence_recent_minutes_share", "opponent_reported_absence_previous_xi_share"],
-    "restricted_observed_national_load": ["restricted_observed_national_minutes_per_matched_xi",
-        "restricted_observed_national_xi_match_count", "restricted_observed_national_xi_match_fraction",
-        "opponent_restricted_observed_national_minutes_per_matched_xi",
-        "opponent_restricted_observed_national_xi_match_count", "opponent_restricted_observed_national_xi_match_fraction"],
+
 }
 
 
@@ -56,16 +54,16 @@ def implementation_fingerprint():
     # regression requires newly imported local modules to be added here too.
     modules = (
         "__init__", "advanced_capacity", "advanced_confirmation", "advanced_durability",
-        "advanced_features", "advanced_personnel", "advanced_player_load", "advanced_research", "advanced_scoring",
+        "advanced_features", "advanced_personnel", "advanced_research", "advanced_scoring",
         "advanced_snapshots", "advanced_storage", "cli", "cold_start",
         "coverage_audit", "data", "decision_audit", "decision_quotes", "decision_record",
         "evidence", "f5c_access",
         "feature_correction", "feature_dataset", "feature_decisions",
         "feature_research", "feature_schedule", "feature_scoring",
         "feature_snapshots", "fundamentals", "goalmodel_adapter", "integration",
-        "history_archive", "research_checkpoints", "match_locations", "model", "nations", "production_replay", "prospective", "quality",
+        "history_archive", "research_checkpoints", "competition_scope", "model", "production_replay", "prospective", "quality",
         "settlement", "shadow_grading", "shadow_models", "state_storage", "storage_policy",
-        "total_shrink_shadow", "venue_registry",
+        "total_shrink_shadow",
     )
     paths = tuple("football_model/" + name + ".py" for name in modules) + (
         "requirements.txt", "scripts/goalmodel_bridge.R", "scripts/cloud_state.py",
@@ -154,11 +152,6 @@ def validate_protocol(protocol):
             raise ModelDataError("confirmed lineup cannot enter EARLY model")
         if "personnel_early" in groups and spec["horizon"] != "EARLY":
             raise ModelDataError("reported absence cannot duplicate confirmed lineup adjustment")
-    if any("restricted_observed_national_load" in spec["groups"] for spec in protocol["candidates"].values()):
-        if (protocol.get("national_load_scope") != "uefa_nations_league_only"
-                or type(protocol.get("national_load_lookback_days")) is not int
-                or not 1 <= protocol["national_load_lookback_days"] <= 30):
-            raise ModelDataError("restricted national workload scope or window invalid")
     return protocol
 
 
@@ -308,6 +301,7 @@ def _validate_card_identity(card, candidate, league, protocol):
 
 
 def load_cards(runtime, league, protocol):
+    require_league(league)
     validate_protocol(protocol)
     root = Path(runtime).resolve()
     directory = root / "advanced_models" / league / digest(protocol) / "models"
@@ -328,6 +322,7 @@ def build_live_predictions(runtime, league, protocol, baseline_prediction, featu
     The snapshot caller must independently rebuild baseline and feature inputs
     from frozen raw evidence. This function checks every model source hash.
     """
+    require_league(league)
     root = Path(runtime).resolve()
     validate_protocol(protocol)
     predictions, failures, refs, used_cards = {}, {}, {}, {}
@@ -391,6 +386,7 @@ def build_live_predictions(runtime, league, protocol, baseline_prediction, featu
 
 
 def study(runtime, league, protocol, *, source_commit, state_commit=None, run_goalmodel=False, clock=None, capacity_guard=None):
+    require_league(league)
     validate_protocol(protocol)
     from .advanced_features import build_feature_rows
     from .goalmodel_adapter import fit_predict_goalmodel
@@ -419,8 +415,7 @@ def study(runtime, league, protocol, *, source_commit, state_commit=None, run_go
             ridge=protocol["baseline_ridge"], schedule_events=schedule_events)
         dataset = build_feature_rows(root, league, matches=matches, horizon=horizon,
             horizon_hours=hours, mode="historical", recent_matches=protocol["advanced_feature_recent_matches"],
-            min_history=protocol["advanced_feature_min_history"],
-            national_load_lookback_days=protocol.get("national_load_lookback_days", 14))
+            min_history=protocol["advanced_feature_min_history"])
         features = {r["match_id"]: r for r in dataset["rows"]}
         for m in matches:
             cutoff = _iso(_timestamp(m["kickoff"], "kickoff") - timedelta(hours=hours))
@@ -747,7 +742,7 @@ def main(argv=None):
     parser.add_argument("--runtime", default="runtime")
     parser.add_argument("--league", default="all")
     parser.add_argument("--config", default="config.json")
-    parser.add_argument("--protocol", default="advanced-models-v1.json")
+    parser.add_argument("--protocol", default="advanced-models-domestic-v1.json")
     parser.add_argument("--source-commit", required=True)
     parser.add_argument("--state-commit")
     parser.add_argument("--run-goalmodel", action="store_true")
@@ -761,7 +756,7 @@ def main(argv=None):
         parser.error("--resume-only requires --checkpoint-state")
     runtime = Path(args.runtime).resolve()
     protocol = validate_protocol(_read(args.protocol))
-    leagues = [c["key"] for c in _read(args.config)["competitions"] if c.get("mode") != "audit_only"] if args.league == "all" else [args.league]
+    leagues = [c["key"] for c in select_competitions(_read(args.config), args.league, models_only=True)]
     results = []
     from .advanced_capacity import CapacityGuard, CapacityDeferred
     guard = CapacityGuard(runtime)

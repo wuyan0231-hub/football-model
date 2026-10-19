@@ -1,7 +1,7 @@
 """Choose the single new domestic league for a release's first training run.
 
 An explicit newly added training-request file can retry a configured league.
-Normal code releases keep the existing unl/train check. Scheduled and manual
+Normal code releases without a newly requested league return none (no training). Scheduled and manual
 runs do not call this script. It reads local files only; no API or fitting.
 """
 from __future__ import annotations
@@ -42,7 +42,7 @@ def select_league(before, current, request=None):
             raise ValueError('new competition and training request targets conflict')
         return key
     if not added:
-        return "unl"
+        return "none"
     if len(added) != 1 or new[added[0]].get("mode") != "domestic_baseline":
         raise ValueError("release first training requires exactly one new domestic league")
     return added[0]

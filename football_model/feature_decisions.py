@@ -15,6 +15,7 @@ import math
 from pathlib import Path
 import re
 
+from .competition_scope import require_league
 from .decision_quotes import adapt_quote_row
 from .evidence import _quote_interval, _time, select_quotes
 from .settlement import STATES, probabilities, matrix_array, unit_return
@@ -141,6 +142,7 @@ def _file_ref(runtime, path):
 
 def schedule_comparisons(runtime, league, match_id, *, row, now):
     """Read every v2 protocol's immutable first legal capture, keeping failures."""
+    require_league(league)
     from .feature_snapshots import verify_baseline_capture, verify_capture
     results = []
     pattern = f"*/captures/{league}/{match_id}/*/first.json"
@@ -482,6 +484,7 @@ def _decision_record_link(runtime, value, result, row, now):
 def comparison(runtime, league, match_id, *, row, now, baseline_refs=(),
                f5c=None, decision_input=None):
     """Build the actual immutable numeric-record link for integration.match."""
+    require_league(league)
     if not re.fullmatch(r"[A-Za-z0-9_-]+", str(league)) or isinstance(match_id, bool) or int(match_id) <= 0:
         raise ValueError("decision_invalid_fixture_identity")
     now = _time(now) if isinstance(now, str) else now

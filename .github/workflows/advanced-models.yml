@@ -2,7 +2,7 @@ name: 足球全面特征：补采、训练、未来对照与确认
 
 on:
   push:
-    branches: [main, codex/s3-r11-complete]
+    branches: [codex/s3-r11-complete]
     paths:
       - 'football_model/advanced_*.py'
       - 'football_model/cold_start.py'
@@ -14,7 +14,7 @@ on:
       - 'scripts/cloud_state.py'
       - 'scripts/export_advanced_evidence.py'
       - 'scripts/advanced_study_window.py'
-      - 'advanced-models-v1.json'
+      - 'advanced-models-domestic-v1.json'
       - 'advanced-confirmation-v1.json'
       - 'tests/test_advanced*.py'
       - '.github/workflows/advanced-models.yml'
@@ -31,7 +31,7 @@ on:
         type: boolean
         default: false
       research_leagues:
-        description: '仅main研究续跑可选剩余17联赛；最终仍核全部19联赛原件'
+        description: '仅main研究续跑可选剩余16联赛；最终核全部18个现行国内联赛原件'
         required: false
         type: choice
         default: all
@@ -169,11 +169,11 @@ jobs:
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python -m football_model.advanced_confirmation --runtime runtime --league all --advanced-protocol advanced-models-v1.json --protocol advanced-confirmation-v1.json --auto-activate
+        run: python -m football_model.advanced_confirmation --runtime runtime --league all --advanced-protocol advanced-models-domestic-v1.json --protocol advanced-confirmation-v1.json --auto-activate
       - name: 长任务前捕获现有合法候选
         id: capture
         continue-on-error: true
-        run: python -m football_model.advanced_snapshots capture --runtime runtime --league all --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE"
+        run: python -m football_model.advanced_snapshots capture --runtime runtime --league all --protocol advanced-models-domestic-v1.json --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE"
       - name: 立即保存赛前原件并结束独立短任务
         id: persist
         if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
@@ -271,13 +271,6 @@ jobs:
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
         run: python -m football_model.advanced_collection --runtime runtime --league all --max-seconds 600 --reserve-requests 500
-      - name: 限定欧国联个人出场负荷断点续采
-        id: player_load_collection
-        if: env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true' && env.RESEARCH_ONLY != 'true'
-        continue-on-error: true
-        env:
-          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
-        run: python -m football_model.advanced_player_load --runtime runtime --config config.json --national-league unl --max-seconds 300 --reserve-requests 400
       - name: 工程分支安装真实R
         if: env.STUDY_RUN == 'true' && env.IS_RELEASE != 'true'
         run: |
@@ -288,7 +281,7 @@ jobs:
         id: research
         if: env.STUDY_RUN == 'true' && env.IS_RELEASE != 'true'
         continue-on-error: true
-        run: python scripts/advanced_study_window.py --selection all -- python -m football_model.advanced_research study --runtime runtime --league all --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE" --run-goalmodel
+        run: python scripts/advanced_study_window.py --selection all -- python -m football_model.advanced_research study --runtime runtime --league all --protocol advanced-models-domestic-v1.json --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE" --run-goalmodel
       - name: 同步全部联赛未来11小时的真实信息
         id: facts
         if: env.IS_RELEASE == 'true' && env.RESEARCH_ONLY != 'true'
@@ -302,12 +295,12 @@ jobs:
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python -m football_model.advanced_confirmation --runtime runtime --league all --advanced-protocol advanced-models-v1.json --protocol advanced-confirmation-v1.json --auto-activate
+        run: python -m football_model.advanced_confirmation --runtime runtime --league all --advanced-protocol advanced-models-domestic-v1.json --protocol advanced-confirmation-v1.json --auto-activate
       - name: 捕获真实双时点全部候选
         id: capture
         if: env.IS_RELEASE == 'true' && env.RESEARCH_ONLY != 'true'
         continue-on-error: true
-        run: python -m football_model.advanced_snapshots capture --runtime runtime --league all --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE"
+        run: python -m football_model.advanced_snapshots capture --runtime runtime --league all --protocol advanced-models-domestic-v1.json --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE"
       # Reuse the all-league facts above and the same loaded parent state. The
       # legacy protocols retain their own namespaces, first outputs and failures.
       - name: 同轮冻结原v1真实双时点
@@ -326,7 +319,7 @@ jobs:
         continue-on-error: true
         env:
           FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
-        run: python -m football_model.advanced_scoring score --runtime runtime --league all --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA"
+        run: python -m football_model.advanced_scoring score --runtime runtime --league all --protocol advanced-models-domestic-v1.json --source-commit "$GITHUB_SHA"
       - name: 同轮原v1独立赛果与候选评分
         id: legacy_scoring_v1
         if: env.IS_RELEASE == 'true' && env.LEGACY_SHORT_RUN == 'true'
@@ -371,7 +364,6 @@ jobs:
           CLUB_SCHEDULE_COLLECTION: ${{ steps.club_schedule_collection.outcome }}
           PILOT_COLLECTION: ${{ steps.pilot_collection.outcome }}
           COLLECTION: ${{ steps.collection.outcome }}
-          PLAYER_LOAD_COLLECTION: ${{ steps.player_load_collection.outcome }}
           RESEARCH: ${{ steps.research.outcome }}
           FACTS: ${{ steps.facts.outcome }}
           CONFIRMATION: ${{ steps.confirmation.outcome }}
@@ -387,7 +379,7 @@ jobs:
           python - <<'PY'
           import json,os
           from pathlib import Path
-          keys=['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','ADVANCED_PARENT_STATE','IS_RELEASE','STUDY_RUN','LEGACY_SHORT_RUN','RESEARCH_ONLY','SHORT_ONLY','RESTORE','DURABLE','PRE_STUDY_CAPTURE','PRE_RESTORE','PRE_PERSIST','PRE_DURABLE','PRE_FACTS','PRE_CONFIRMATION','PRE_CAPTURE','CLUB_SCHEDULE_COLLECTION','PILOT_COLLECTION','COLLECTION','PLAYER_LOAD_COLLECTION','RESEARCH','FACTS','CONFIRMATION','CAPTURE','SCORING','LEGACY_CAPTURE_V1','LEGACY_CAPTURE_V2','LEGACY_SCORING_V1','LEGACY_SCORING_V2','CHECK','PERSIST']
+          keys=['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','ADVANCED_PARENT_STATE','IS_RELEASE','STUDY_RUN','LEGACY_SHORT_RUN','RESEARCH_ONLY','SHORT_ONLY','RESTORE','DURABLE','PRE_STUDY_CAPTURE','PRE_RESTORE','PRE_PERSIST','PRE_DURABLE','PRE_FACTS','PRE_CONFIRMATION','PRE_CAPTURE','CLUB_SCHEDULE_COLLECTION','PILOT_COLLECTION','COLLECTION','RESEARCH','FACTS','CONFIRMATION','CAPTURE','SCORING','LEGACY_CAPTURE_V1','LEGACY_CAPTURE_V2','LEGACY_SCORING_V1','LEGACY_SCORING_V2','CHECK','PERSIST']
           receipt={k:os.environ.get(k) for k in keys}
           if receipt['IS_RELEASE']=='true' and receipt['LEGACY_SHORT_RUN']=='true':
               legacy={k:receipt[k] for k in ['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','IS_RELEASE','STUDY_RUN']}
@@ -498,7 +490,7 @@ jobs:
           steps.check.outcome != 'success' ||
           (env.STUDY_RUN == 'true' && env.IS_RELEASE != 'true' && steps.research.outcome != 'success') ||
           (env.IS_RELEASE == 'true' && env.STUDY_RUN == 'true' && env.RESEARCH_ONLY != 'true' &&
-          (steps.club_schedule_collection.outcome != 'success' || steps.pilot_collection.outcome != 'success' || steps.collection.outcome != 'success' || steps.player_load_collection.outcome != 'success')) ||
+          (steps.club_schedule_collection.outcome != 'success' || steps.pilot_collection.outcome != 'success' || steps.collection.outcome != 'success')) ||
           (env.IS_RELEASE == 'true' && (steps.persist.outcome != 'success' ||
           (env.RESEARCH_ONLY != 'true' && (steps.facts.outcome != 'success' || steps.confirmation.outcome != 'success' ||
           steps.capture.outcome != 'success' || steps.scoring.outcome != 'success')))))
@@ -525,8 +517,8 @@ jobs:
       max-parallel: 1
       matrix:
         # A manual continuation never rewrites the all-league denominator.
-        # Finalize below still verifies all 19 saved checkpoints, without fits.
-        league: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.research_only == true && inputs.research_leagues == 'remaining_after_epl_championship' && '["laliga","bundesliga","serie_a","ligue_1","bundesliga_2","ligue_2","allsvenskan","eredivisie","primeira","brazil_a","j1","k1","mls","unl","liga_mx","segunda","argentina_a"]' || '["epl","championship","laliga","bundesliga","serie_a","ligue_1","bundesliga_2","ligue_2","allsvenskan","eredivisie","primeira","brazil_a","j1","k1","mls","unl","liga_mx","segunda","argentina_a"]') }}
+        # Finalize below still verifies all 18 active domestic saved checkpoints, without fits.
+        league: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.research_only == true && inputs.research_leagues == 'remaining_after_epl_championship' && '["laliga","bundesliga","serie_a","ligue_1","bundesliga_2","ligue_2","allsvenskan","eredivisie","primeira","brazil_a","j1","k1","mls","liga_mx","segunda","argentina_a"]' || '["epl","championship","laliga","bundesliga","serie_a","ligue_1","bundesliga_2","ligue_2","allsvenskan","eredivisie","primeira","brazil_a","j1","k1","mls","liga_mx","segunda","argentina_a"]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 100
     env:
@@ -602,7 +594,7 @@ jobs:
         id: research
         if: steps.preflight.outcome == 'success'
         continue-on-error: true
-        run: python scripts/advanced_study_window.py --selection "$STUDY_LEAGUE" -- python scripts/cloud_state_save_checked.py run --repo . --runtime runtime --receipt advanced-checkpoint-checked-save.json -- python -m football_model.advanced_research study --runtime runtime --league "$STUDY_LEAGUE" --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE" --run-goalmodel --checkpoint-state --repo .
+        run: python scripts/advanced_study_window.py --selection "$STUDY_LEAGUE" -- python scripts/cloud_state_save_checked.py run --repo . --runtime runtime --receipt advanced-checkpoint-checked-save.json -- python -m football_model.advanced_research study --runtime runtime --league "$STUDY_LEAGUE" --protocol advanced-models-domestic-v1.json --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE" --run-goalmodel --checkpoint-state --repo .
       - name: 分列原命令失败与精确远端保存恢复
         id: recovery_record
         if: ${{ !cancelled() && steps.research.outcome != 'skipped' }}
@@ -642,7 +634,7 @@ jobs:
         continue-on-error: true
         env:
           RECOVERED_STATE: ${{ steps.recovery_record.outputs.state }}
-        run: python scripts/advanced_study_window.py --selection "$STUDY_LEAGUE" -- python -m football_model.advanced_research study --runtime runtime --league "$STUDY_LEAGUE" --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA" --state-commit "$RECOVERED_STATE" --run-goalmodel --checkpoint-state --repo . --resume-only
+        run: python scripts/advanced_study_window.py --selection "$STUDY_LEAGUE" -- python -m football_model.advanced_research study --runtime runtime --league "$STUDY_LEAGUE" --protocol advanced-models-domestic-v1.json --source-commit "$GITHUB_SHA" --state-commit "$RECOVERED_STATE" --run-goalmodel --checkpoint-state --repo . --resume-only
       - name: 核实际检查点重验语义并保留延期失败
         id: resume_check
         if: ${{ !cancelled() && steps.recovery_record.outputs.recovered == 'true' }}
@@ -811,13 +803,13 @@ jobs:
       - name: 核验全部已保存检查点而不重新拟合
         id: finalize
         continue-on-error: true
-        run: python scripts/advanced_study_window.py --selection all -- python -m football_model.advanced_research study --runtime runtime --league all --protocol advanced-models-v1.json --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE" --run-goalmodel --checkpoint-state --repo . --resume-only
+        run: python scripts/advanced_study_window.py --selection all -- python -m football_model.advanced_research study --runtime runtime --league all --protocol advanced-models-domestic-v1.json --source-commit "$GITHUB_SHA" --state-commit "$ADVANCED_PARENT_STATE" --run-goalmodel --checkpoint-state --repo . --resume-only
       - name: 核验真正当前资料的确认门禁
         id: confirmation
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python -m football_model.advanced_confirmation --runtime runtime --league all --advanced-protocol advanced-models-v1.json --protocol advanced-confirmation-v1.json --auto-activate
+        run: python -m football_model.advanced_confirmation --runtime runtime --league all --advanced-protocol advanced-models-domestic-v1.json --protocol advanced-confirmation-v1.json --auto-activate
       - name: 保存最终核验与未完成分母
         id: persist
         if: ${{ !cancelled() && steps.restore.outcome == 'success' }}

@@ -26,17 +26,17 @@ class FixedWorkflowInputTests(unittest.TestCase):
             env={'AUDIT_LEAGUE': league, 'AUDIT_STATE_COMMIT': state},
             text=True, capture_output=True, timeout=5)
 
-    def test_all_nineteen_exact_single_leagues(self):
+    def test_all_eighteen_active_exact_single_leagues(self):
         choices = re.search(r'options: \[([^\]]+)\]', self.text).group(1).split(', ')
-        self.assertEqual(len(choices), 19)
-        self.assertEqual(len(set(choices)), 19)
+        self.assertEqual(len(choices), 18)
+        self.assertEqual(len(set(choices)), 18)
         for league in choices:
             with self.subTest(league=league):
                 result = self.run_gate(league)
                 self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_multiple_unknown_paths_and_control_keys_rejected(self):
-        for league in ('ligue_2,epl', 'epl,epl', '', 'all', 'ucl', '../epl', 'epl/other', 'EPL', 'ligue_2\n', 'epl;echo x'):
+        for league in ('unl', 'ligue_2,epl', 'epl,epl', '', 'all', 'ucl', '../epl', 'epl/other', 'EPL', 'ligue_2\n', 'epl;echo x'):
             with self.subTest(league=league):
                 result = self.run_gate(league)
                 self.assertNotEqual(result.returncode, 0)

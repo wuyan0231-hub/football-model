@@ -12,6 +12,7 @@ import sys
 import tempfile
 
 from . import __version__
+from .competition_scope import require_competition, select_competitions
 from .data import APIClient, APIError, normalize_fixtures, normalize_upcoming
 from .model import fit_model, evaluate_time_holdout, score_distribution
 
@@ -117,11 +118,6 @@ def input_fingerprint(matches: list, settings: dict, competition: dict) -> str:
     source = hashlib.sha256(Path(__file__).with_name("model.py").read_bytes()).hexdigest()
     payload = {"version": __version__, "source": source, "competition": competition,
                "settings": settings, "matches": matches}
-    if competition.get("mode") == "national_baseline":
-        # Isolate the new normalization policy; domestic fingerprints are unchanged.
-        payload["national_sources"] = {
-            name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
-            for name in ("nations.py", "nations_venues.json", "venue_registry.py", "match_locations.py")}
     return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
@@ -193,7 +189,7 @@ def markdown_report(report: dict) -> str:
                  "- 训练窗口、半衰期、正则强度采用预先固定默认值，尚未调优；不能据反复查看同一留出集声称独立验收。",
                  "- 历史数据可能包含事后修订；无原始发布时间快照，历史检查不是严格还原当时供应商资料。",
                  "- 正式预测文件保存数据截点、模型版本和未覆盖因素；阵容影响未量化，EV未量化。",
-                 "- 国内联赛仍按名义主客生成条件基线；欧国联按精确场地登记表分类，未知场地不出数值。实际场地和特殊赛制仍须核实。",
+                 "- 国内联赛按名义主客生成条件基线；实际场地和特殊赛制仍须核实。",
                  "- 新队或与训练队伍缺少连接的队伍不出数值；陈旧模型不自动发布新预测。",
                  "- 单项失败会保留旧模型文件，但本次不会把旧文件伪装为新训练，也不会用失败的数据生成预测。", ""])
     if report.get("fatal_error"):
@@ -224,7 +220,9 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
     clock = clock or (lambda: datetime.now(UTC))
     run_started = run_started or observed_time(clock, now)
     key = competition["key"]
-    national = competition.get("mode") == "national_baseline"
+    require_competition(competition)
+    if competition.get("mode") not in {"domestic_baseline", "audit_only"}:
+        raise ValueError("unsupported_competition_mode")
     result = {"key": key, "label": competition["label"], "status": "待检查", "seasons": [],
               "configured": True, "model_change": "未训练", "lineup_model": "未实现",
               "xg_model": "未实现", "return_advantage": "未经验证", "ev": "未量化",
@@ -237,6 +235,7 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
         metadata_received = observed_time(clock, now, run_started)
         result["metadata_received_at"] = iso(metadata_received)
         league = metadata["league"]
+        require_competition(competition, league["id"])
         result["provider_league_id"] = league["id"]
         selected = select_seasons(metadata, now, settings["history_seasons"])
         raw = []
@@ -270,32 +269,12 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
                 entry["error"] = safe_error(exc)
                 failed_seasons.append(season["year"])
             result["seasons"].append(entry)
-        if national:
-            if key != "unl" or league["id"] != 5:
-                raise ValueError("国家队适配仅适用于已核实的欧国联赛事ID 5。")
-            from .nations import prepare_nations
-            from .venue_registry import resolve_venues
-            venue_registry, venue_registration = resolve_venues(
-                raw, client, runtime, iso(now), days=settings["forecast_days"],
-                reserve_requests=venue_reserve_requests, clock=clock)
-            result["venue_registration"] = venue_registration
-            atomic_json(runtime / "audits" / key / f"{run_id}-venues.json", venue_registration)
-            matches, national_upcoming, national_audit = prepare_nations(
-                raw, iso(now), days=settings["forecast_days"], registry=venue_registry)
-            national_audit["registry_snapshot"] = venue_registration["registry_snapshot"]
-            result["national_audit"] = national_audit
-            atomic_json(runtime / "audits" / key / f"{run_id}.json", national_audit)
-        else:
-            matches = normalize_fixtures(raw, iso(now))
+        matches = normalize_fixtures(raw, iso(now))
         result["eligible_matches"] = len(matches)
         result["missing_seasons"] = failed_seasons
         result["last_match_kickoff"] = max((x["kickoff"] for x in matches), default=None)
         data_observed = observed_time(clock, now, metadata_received,
             *(parse_date(s["received_at"]) for s in result["seasons"] if "received_at" in s))
-        if national:
-            venue_available = national_audit.get("venue_temporal", {}).get("max_evidence_available_at")
-            if venue_available and parse_date(venue_available) > data_observed:
-                raise ValueError("场地证据实际可用时间晚于数据观测；不能发布倒填预测。")
         result["observed_at"] = result["data_observed_at"] = iso(data_observed)
         atomic_json(runtime / "data" / f"{key}.json", {"schema_version": 2,
                                                        "time_semantics": TIME_SEMANTICS,
@@ -313,7 +292,7 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
             result.update(status="已取得数据", detail="已检查接口与基本字段；尚未执行训练或准确性验证。")
             return result
 
-        upcoming = national_upcoming if national else normalize_upcoming(newest_raw, iso(now), days=settings["forecast_days"])
+        upcoming = normalize_upcoming(newest_raw, iso(now), days=settings["forecast_days"])
         result["forecast_availability"]["upcoming_count"] = len(upcoming)
         knobs = {k: settings[k] for k in ["half_life_days", "ridge", "min_train", "min_test"]}
         fingerprint = input_fingerprint(matches, knobs, competition)
@@ -393,16 +372,12 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
                     "prior_model_evidence": migration["prior_model_evidence"],
                     "new_model_fitted_at": iso(fitted_at)}
                 migration["stage"] = "save_model_and_validation"
-            if national:
-                bundle["national_audit"] = national_audit
-                bundle["venue_policy"] = "Verified host football association using provider or match-bound official evidence; country-only scope; third-association neutral; unknown/conflict/away-host excluded."
             from .coverage_audit import compare_validation_coverage
             coverage = compare_validation_coverage(previous_validation, evaluation,
                 old_source=previous_source,
                 new_source={"competition": key, "target_scope": "regulation_time_90_plus_stoppage",
                             "model_id": bundle["model_id"], "path": f"runtime/validation/{key}/{run_id}.json"},
-                old_temporal_audit=(old or {}).get("national_audit", {}).get("venue_temporal"),
-                new_temporal_audit=national_audit.get("venue_temporal") if national else None)
+                old_temporal_audit=None, new_temporal_audit=None)
             coverage_path = f"runtime/audits/{key}/{run_id}-coverage.json"
             atomic_json(runtime / "audits" / key / f"{run_id}-coverage.json", coverage)
             result["coverage_audit"] = {"path": coverage_path, "status": coverage["status"],
@@ -457,19 +432,10 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
                    "lineup_adjustment": "未量化", "ev": "未量化", "venue_status": "名义主客；实际场地未核实",
                    "usage": "探索性条件基线；不能据此宣称已纳入本场全部信息"}
             try:
-                if national:
-                    row["venue_status"] = "按已核举办国家/足协地区分类；国家级准入不表示精确球场已核实；本场仍须核对最新场地"
-                    row["registry_snapshot"] = venue_registration["registry_snapshot"]
-                    if fixture.get("venue_error"):
-                        raise ValueError(fixture["venue_error"])
                 if (parse_date(fixture["kickoff"]) - parse_date(bundle["trained_at"])).total_seconds() / 86400 > settings["max_model_age_days"]:
                     raise ValueError("预计开赛时模型将超过配置的有效天数；须在真实新截点重新拟合，不能仅刷新时间戳。")
-                if national:
-                    row["prediction"] = score_distribution(bundle["model"], fixture["home_id"],
-                        fixture["away_id"], fixture["kickoff"], neutral=fixture["neutral"])
-                else:
-                    row["prediction"] = score_distribution(bundle["model"], fixture["home_id"],
-                                                             fixture["away_id"], fixture["kickoff"])
+                row["prediction"] = score_distribution(bundle["model"], fixture["home_id"],
+                                                         fixture["away_id"], fixture["kickoff"])
                 row["status"] = "exploratory_baseline"
             except (ValueError, KeyError, TypeError) as exc:
                 row.update(status="unsupported", reason=safe_error(exc))
@@ -487,10 +453,6 @@ def process_competition(client, competition, settings, runtime, now, mode, run_i
         result["forecast_count"] = sum(row["status"] == "exploratory_baseline" for row in forecasts)
         result["unsupported_forecasts"] = sum(row["status"] == "unsupported" for row in forecasts)
         result["forecast_availability"] = forecast_availability(forecasts)
-        if national:
-            result["detail"] += (f" 场地筛选：{national_audit['eligible_regulation']}场常规赛果中"
-                f"纳入{national_audit['admitted']}场、排除{national_audit['excluded']}场；"
-                f"未来{settings['forecast_days']}天可用预测{result['forecast_count']}场，不支持{result['unsupported_forecasts']}场。")
         atomic_json(runtime / "predictions" / run_id / f"{key}.json", forecasts)
     except (APIError, ValueError, KeyError, TypeError, RuntimeError, OSError) as exc:
         result.update(status="未完成", detail=safe_error(exc))
@@ -525,7 +487,7 @@ def run_pipeline(config, runtime, mode="audit", league="epl", now=None, client=N
             or (runtime / "predictions" / run_id).exists()
             or any((runtime / "model_history").glob(f"*/{run_id}.json"))):
         raise ValueError("运行ID已存在；旧运行及预测不可覆盖，请使用新的实际运行截点。")
-    chosen = [c for c in config["competitions"] if league == "all" or c["key"] == league]
+    chosen = select_competitions(config, league)
     if not chosen:
         raise ValueError(f"未配置赛事：{league}")
     if mode not in {"audit", "train"}:

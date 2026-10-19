@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def spec():
-    result = json.loads((ROOT / "advanced-models-v1.json").read_text())
+    result = json.loads((ROOT / "advanced-models-domestic-v1.json").read_text())
     result.update(baseline_min_train=6, correction_min_matches=4, block_days=7,
                   correction_alpha_grid=[1.0], advanced_feature_min_history=2)
     result["candidates"] = {k: result["candidates"][k] for k in ("M_schedule", "M_shots", "M_xg")}
@@ -209,7 +209,7 @@ class AdvancedResearchTests(unittest.TestCase):
         with patch("football_model.advanced_research.study", side_effect=CapacityDeferred({"reason": "test_actual_limit"})) as run, \
                 patch("sys.stdout", new_callable=io.StringIO):
             code = main(["study", "--runtime", str(root), "--league", "all", "--config", str(config),
-                         "--protocol", str(ROOT / "advanced-models-v1.json"), "--source-commit", "test-source"])
+                         "--protocol", str(ROOT / "advanced-models-domestic-v1.json"), "--source-commit", "test-source"])
         self.assertEqual(code, 0)
         self.assertEqual(run.call_count, 1)
         summary = json.loads((root / "advanced_models/study_runs/latest.json").read_text())
@@ -239,7 +239,7 @@ class AdvancedResearchTests(unittest.TestCase):
         with patch("football_model.advanced_research.study", side_effect=limited_study) as run, \
                 patch("sys.stdout", new_callable=io.StringIO) as output:
             code = main(["study", "--runtime", str(root.relative_to(Path.cwd())), "--league", "all",
-                         "--config", str(config), "--protocol", str(ROOT / "advanced-models-v1.json"),
+                         "--config", str(config), "--protocol", str(ROOT / "advanced-models-domestic-v1.json"),
                          "--source-commit", "test-source"])
         self.assertEqual(code, 0)  # Expected deferral is explicitly partial, not an engineering crash.
         self.assertEqual(run.call_count, 2)
@@ -253,7 +253,7 @@ class AdvancedResearchTests(unittest.TestCase):
         self.assertEqual(load_artifact(root, summary["full_report_ref"]),
                          {k:v for k,v in summary.items() if k != "full_report_ref"})
         for league in ("epl", "laliga"):
-            attempted = json.loads((root / "advanced_models" / league / digest(json.loads((ROOT / "advanced-models-v1.json").read_text())) /
+            attempted = json.loads((root / "advanced_models" / league / digest(json.loads((ROOT / "advanced-models-domestic-v1.json").read_text())) /
                                    "reports/latest_attempt.json").read_text())
             self.assertEqual(attempted["requested_history_matches"], 10)
             self.assertEqual(load_artifact(root, attempted["failure_ref"]),
