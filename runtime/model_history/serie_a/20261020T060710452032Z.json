@@ -1,0 +1,378 @@
+{
+  "schema_version": 2,
+  "time_semantics": "observed_wall_clock_v1",
+  "run_started_at": "2026-10-20T06:07:10.452032Z",
+  "training_cutoff": "2026-10-20T06:07:10.452032Z",
+  "data_observed_at": "2026-10-20T06:07:25.562199Z",
+  "model_fitted_at": "2026-10-20T06:07:25.756697Z",
+  "program_version": "0.1.0",
+  "model_id": "serie_a-20261020T060710452032Z",
+  "competition": {
+    "key": "serie_a",
+    "label": "意甲",
+    "name": "Serie A",
+    "country": "Italy",
+    "mode": "domestic_baseline"
+  },
+  "data_fingerprint": "33079646baf16f334dbeeee8c2b8a9cb90ece0a29e21a7344352956a13329be7",
+  "trained_at": "2026-10-20T06:07:10.452032Z",
+  "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
+  "maturity": "exploratory_baseline",
+  "lineup_effects": "未量化",
+  "ev": "未量化",
+  "model": {
+    "model_version": "independent_poisson_time_decay_l2_v1",
+    "model_scope": "baseline_unadjusted_lineup",
+    "fit_status": "converged",
+    "trained": true,
+    "validated_for_production": false,
+    "training_cutoff": "2026-10-20T06:07:10.452032Z",
+    "last_match_kickoff": "2026-10-19T18:45:00Z",
+    "last_result_assumed_available_at": "2026-10-19T22:45:00Z",
+    "n_matches": 830,
+    "n_teams": 24,
+    "min_team_matches": 7,
+    "low_sample_team_threshold": 5,
+    "low_sample_team_ids": [],
+    "excluded_after_cutoff_or_availability_delay": 0,
+    "training_data_sha256": "a46bc6098c30a9b596aaa7d3c58b15b7b1f94a6c8251ead2e13b4b4f05e94cee",
+    "half_life_days": 180.0,
+    "ridge": 3.0,
+    "effective_sample_size": 477.1026282453654,
+    "intercept": 0.16855311230362352,
+    "home_advantage": 0.10048889978256116,
+    "team_parameters": {
+      "487": {
+        "name": "Lazio",
+        "attack": 0.0974683209630499,
+        "defence": 0.2359631247875595,
+        "training_matches": 83
+      },
+      "488": {
+        "name": "Sassuolo",
+        "attack": 0.10106459250051734,
+        "defence": -0.12875383819704045,
+        "training_matches": 45
+      },
+      "489": {
+        "name": "AC Milan",
+        "attack": 0.2055628492787866,
+        "defence": 0.20329069070707909,
+        "training_matches": 83
+      },
+      "490": {
+        "name": "Cagliari",
+        "attack": -0.18616039635919715,
+        "defence": 0.01876656694629694,
+        "training_matches": 83
+      },
+      "492": {
+        "name": "Napoli",
+        "attack": 0.16621255203417543,
+        "defence": 0.3223835362123585,
+        "training_matches": 83
+      },
+      "494": {
+        "name": "Udinese",
+        "attack": -0.023842264180107778,
+        "defence": -0.12254015670077778,
+        "training_matches": 83
+      },
+      "495": {
+        "name": "Genoa",
+        "attack": -0.17758858264989422,
+        "defence": -0.061207222665467444,
+        "training_matches": 83
+      },
+      "496": {
+        "name": "Juventus",
+        "attack": 0.1755149066060866,
+        "defence": 0.23860659797887177,
+        "training_matches": 83
+      },
+      "497": {
+        "name": "AS Roma",
+        "attack": 0.35354992195092305,
+        "defence": 0.48835112738539815,
+        "training_matches": 83
+      },
+      "499": {
+        "name": "Atalanta",
+        "attack": 0.16774217822119053,
+        "defence": 0.13235680806368336,
+        "training_matches": 83
+      },
+      "500": {
+        "name": "Bologna",
+        "attack": -0.01011944140578783,
+        "defence": 0.03081629288442767,
+        "training_matches": 83
+      },
+      "502": {
+        "name": "Fiorentina",
+        "attack": -0.025493104837352183,
+        "defence": -0.13134214679424563,
+        "training_matches": 83
+      },
+      "503": {
+        "name": "Torino",
+        "attack": 0.02334976700603479,
+        "defence": -0.11270874970337189,
+        "training_matches": 83
+      },
+      "504": {
+        "name": "Hellas Verona",
+        "attack": -0.4783480226761602,
+        "defence": -0.14026400267421935,
+        "training_matches": 76
+      },
+      "505": {
+        "name": "Inter",
+        "attack": 0.6647581471518796,
+        "defence": 0.1721644584855556,
+        "training_matches": 83
+      },
+      "511": {
+        "name": "Empoli",
+        "attack": -0.1691055455938787,
+        "defence": -0.14047313030775377,
+        "training_matches": 38
+      },
+      "512": {
+        "name": "Frosinone",
+        "attack": 0.32439916380215783,
+        "defence": -0.008130336440797414,
+        "training_matches": 7
+      },
+      "517": {
+        "name": "Venezia",
+        "attack": -0.22400602086011973,
+        "defence": -0.31362568543609814,
+        "training_matches": 45
+      },
+      "520": {
+        "name": "Cremonese",
+        "attack": -0.31314324509218905,
+        "defence": -0.1593214564690767,
+        "training_matches": 38
+      },
+      "523": {
+        "name": "Parma",
+        "attack": -0.4137989867209212,
+        "defence": -0.02733527909498834,
+        "training_matches": 83
+      },
+      "801": {
+        "name": "Pisa",
+        "attack": -0.450035155167776,
+        "defence": -0.3706066310513486,
+        "training_matches": 38
+      },
+      "867": {
+        "name": "Lecce",
+        "attack": -0.26654375461334257,
+        "defence": -0.07003336031532206,
+        "training_matches": 83
+      },
+      "895": {
+        "name": "Como",
+        "attack": 0.30071134198364946,
+        "defence": 0.3216340521512899,
+        "training_matches": 83
+      },
+      "1579": {
+        "name": "Monza",
+        "attack": 0.15785077865827554,
+        "defence": -0.37799125975201275,
+        "training_matches": 45
+      }
+    },
+    "graph_connected": true,
+    "constraints": {
+      "attack_sum": 1.1102230246251565e-16,
+      "defence_sum": 1.1102230246251565e-16
+    },
+    "optimizer": {
+      "success": true,
+      "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+      "iterations": 30,
+      "objective": 627.8238905056382,
+      "parameter_at_bound": false
+    },
+    "warnings": [
+      "仅为球队比分基线，未量化伤停、预计阵容、球员、xG、天气及赛程因素。",
+      "已拟合不代表已通过有效性验证；参数须通过实际运行程序才能更新。",
+      "输入须由上游核准为常规时间终场比分，不能包含加时或点球大战。"
+    ]
+  },
+  "validation": {
+    "validation_status": "exploratory_single_fixed_holdout",
+    "deployment_approved": false,
+    "is_rolling_backtest": false,
+    "minimum_test_matches": 40,
+    "meets_minimum_supported_test_matches": true,
+    "evaluation_data_cutoff": "2026-10-20T06:07:10.452032Z",
+    "split": {
+      "method": "chronological_fixed_model_holdout",
+      "grouped_by": "kickoff_utc_calendar_date",
+      "train_cutoff": "2026-03-15T00:00:00Z",
+      "train_last_kickoff": "2026-03-14T19:45:00Z",
+      "test_start": "2026-03-15T11:30:00Z",
+      "test_end": "2026-10-19T18:45:00Z",
+      "training_count": 664,
+      "testing_count": 166,
+      "result_availability_delay_hours": 4,
+      "embargoed_count": 0,
+      "embargoed_match_ids": []
+    },
+    "coverage": {
+      "total": 166,
+      "scored": 159,
+      "excluded": 7,
+      "ratio": 0.9578313253012049,
+      "exclusions": [
+        {
+          "match_id": 1550090,
+          "reason": "未知球队 ID：[512]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1550100,
+          "reason": "未知球队 ID：[512]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1550111,
+          "reason": "未知球队 ID：[512]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1550119,
+          "reason": "未知球队 ID：[512]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1550131,
+          "reason": "未知球队 ID：[512]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1550144,
+          "reason": "未知球队 ID：[512]；缺少训练数据，当前模型不支持。"
+        },
+        {
+          "match_id": 1550151,
+          "reason": "未知球队 ID：[512]；缺少训练数据，当前模型不支持。"
+        }
+      ]
+    },
+    "model_metrics": {
+      "n": 159,
+      "log_loss": 0.9691079128135133,
+      "brier_score": 0.575077595961561,
+      "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+      "log_loss_probability_floor": 1e-15
+    },
+    "baseline_metrics": {
+      "n": 159,
+      "log_loss": 1.0709063365266251,
+      "brier_score": 0.649012246112739,
+      "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
+      "log_loss_probability_floor": 1e-15
+    },
+    "baseline": {
+      "name": "training_league_home_away_mean_poisson",
+      "home_rate": 1.3235515425131679,
+      "away_rate": 1.1866064710308504,
+      "smoothing": "(sum_goals + 0.5) / (n_matches + 0.5)",
+      "same_scored_matches_as_model": true
+    },
+    "comparison": {
+      "model_minus_baseline_log_loss": -0.10179842371311187,
+      "model_minus_baseline_brier_score": -0.07393465015117795,
+      "lower_is_better": true
+    },
+    "warnings": [
+      "单次固定模型留出验证仅为探索性检查，不是滚动回测，也不构成上线或盈利证明。",
+      "不含赔率、投注收益、阵容修正或提前十小时伤停历史快照验证。",
+      "超参数为显式默认值，不能根据本留出期反复挑选参数后再声称独立验证。",
+      "未知球队比赛单独列为未覆盖，指标只针对 model_metrics.n 场已覆盖比赛。"
+    ]
+  },
+  "source_seasons": [
+    {
+      "year": 2026,
+      "coverage_flags": {
+        "fixtures": {
+          "events": true,
+          "lineups": true,
+          "statistics_fixtures": true,
+          "statistics_players": true
+        },
+        "standings": true,
+        "players": true,
+        "top_scorers": true,
+        "top_assists": true,
+        "top_cards": true,
+        "injuries": true,
+        "predictions": true,
+        "odds": true
+      },
+      "fixtures": 380,
+      "fetched_at": "2026-10-20T06:07:25.512989Z",
+      "received_at": "2026-10-20T06:07:25.526880Z",
+      "from_cache": false,
+      "status_counts": {
+        "FT": 70,
+        "NS": 310
+      }
+    },
+    {
+      "year": 2025,
+      "coverage_flags": {
+        "fixtures": {
+          "events": true,
+          "lineups": true,
+          "statistics_fixtures": true,
+          "statistics_players": true
+        },
+        "standings": true,
+        "players": true,
+        "top_scorers": true,
+        "top_assists": true,
+        "top_cards": true,
+        "injuries": true,
+        "predictions": true,
+        "odds": false
+      },
+      "fixtures": 380,
+      "fetched_at": "2026-10-15T15:41:17.174097Z",
+      "received_at": "2026-10-20T06:07:25.540197Z",
+      "from_cache": true,
+      "status_counts": {
+        "FT": 380
+      }
+    },
+    {
+      "year": 2024,
+      "coverage_flags": {
+        "fixtures": {
+          "events": true,
+          "lineups": true,
+          "statistics_fixtures": true,
+          "statistics_players": true
+        },
+        "standings": true,
+        "players": true,
+        "top_scorers": true,
+        "top_assists": true,
+        "top_cards": true,
+        "injuries": true,
+        "predictions": true,
+        "odds": false
+      },
+      "fixtures": 380,
+      "fetched_at": "2026-10-15T15:41:17.404874Z",
+      "received_at": "2026-10-20T06:07:25.555279Z",
+      "from_cache": true,
+      "status_counts": {
+        "FT": 380
+      }
+    }
+  ]
+}

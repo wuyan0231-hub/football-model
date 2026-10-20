@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
   "time_semantics": "observed_wall_clock_v1",
-  "run_started_at": "2026-10-19T06:18:14.805568Z",
-  "training_cutoff": "2026-10-19T06:18:14.805568Z",
-  "data_observed_at": "2026-10-19T06:19:15.433070Z",
-  "model_fitted_at": "2026-10-19T06:19:15.599485Z",
+  "run_started_at": "2026-10-20T06:07:10.452032Z",
+  "training_cutoff": "2026-10-20T06:07:10.452032Z",
+  "data_observed_at": "2026-10-20T06:07:43.614274Z",
+  "model_fitted_at": "2026-10-20T06:07:43.785571Z",
   "program_version": "0.1.0",
-  "model_id": "allsvenskan-20261019T061814805568Z",
+  "model_id": "allsvenskan-20261020T060710452032Z",
   "competition": {
     "key": "allsvenskan",
     "label": "瑞典超",
@@ -14,8 +14,8 @@
     "country": "Sweden",
     "mode": "domestic_baseline"
   },
-  "data_fingerprint": "4f52ba2d2d6e4833b606e183a1f5fa7a8230bde86741a7c40b56cee72ad029a3",
-  "trained_at": "2026-10-19T06:18:14.805568Z",
+  "data_fingerprint": "1aae557192cd2cddb1efa2c1df2046690e3d4fbfc51e214fb51d63e22d824213",
+  "trained_at": "2026-10-20T06:07:10.452032Z",
   "source": "API-Football FT/AET/PEN score.fulltime (regulation time incl. stoppage time)",
   "maturity": "exploratory_baseline",
   "lineup_effects": "未量化",
@@ -26,10 +26,10 @@
     "fit_status": "converged",
     "trained": true,
     "validated_for_production": false,
-    "training_cutoff": "2026-10-19T06:18:14.805568Z",
-    "last_match_kickoff": "2026-10-18T14:30:00Z",
-    "last_result_assumed_available_at": "2026-10-18T18:30:00Z",
-    "n_matches": 675,
+    "training_cutoff": "2026-10-20T06:07:10.452032Z",
+    "last_match_kickoff": "2026-10-19T17:00:00Z",
+    "last_result_assumed_available_at": "2026-10-19T21:00:00Z",
+    "n_matches": 676,
     "n_teams": 20,
     "min_team_matches": 2,
     "low_sample_team_threshold": 5,
@@ -37,144 +37,144 @@
       2176
     ],
     "excluded_after_cutoff_or_availability_delay": 0,
-    "training_data_sha256": "2be69a7c0b036d3ef180e460aecd183af839ffeaf95ae796c75d7eb4190ffd42",
+    "training_data_sha256": "3a668e3d19cc0be948b568b989c48e0d96353c8a8719c4450911e496f7106052",
     "half_life_days": 180.0,
     "ridge": 3.0,
-    "effective_sample_size": 328.35129323782803,
-    "intercept": 0.22417117618111504,
-    "home_advantage": 0.17389056685239268,
+    "effective_sample_size": 328.73512235705795,
+    "intercept": 0.22948554899330867,
+    "home_advantage": 0.1692307040824254,
     "team_parameters": {
       "363": {
         "name": "Hammarby FF",
-        "attack": 0.3353706055578484,
-        "defence": 0.4116846864974134,
+        "attack": 0.3316919858372214,
+        "defence": 0.4137047823248426,
         "training_matches": 84
       },
       "364": {
         "name": "Djurgardens IF",
-        "attack": 0.36485431531099727,
-        "defence": 0.4287471113350449,
+        "attack": 0.3622980057081211,
+        "defence": 0.4304408956874922,
         "training_matches": 84
       },
       "366": {
         "name": "IFK Goteborg",
-        "attack": 0.018797666365860794,
-        "defence": -0.06806971047550398,
+        "attack": 0.015583818922203271,
+        "defence": -0.06615311315920974,
         "training_matches": 84
       },
       "367": {
         "name": "BK Hacken",
-        "attack": 0.19288995767637013,
-        "defence": 0.08376839646993972,
+        "attack": 0.1908842289138307,
+        "defence": 0.08628548620582635,
         "training_matches": 84
       },
       "370": {
         "name": "Sirius",
-        "attack": 0.39900574580817,
-        "defence": 0.017175953707252247,
+        "attack": 0.39565540801816185,
+        "defence": 0.01793574354489807,
         "training_matches": 84
       },
       "371": {
         "name": "IF Brommapojkarna",
-        "attack": 0.09979760668636921,
-        "defence": -0.17501124327193662,
+        "attack": 0.09641569589611931,
+        "defence": -0.17416318145279647,
         "training_matches": 84
       },
       "372": {
         "name": "IF Elfsborg",
-        "attack": 0.12047380892406057,
-        "defence": 0.15632108249618143,
+        "attack": 0.11727936980382508,
+        "defence": 0.15813897779963973,
         "training_matches": 84
       },
       "374": {
         "name": "Kalmar FF",
-        "attack": -0.33397733164316146,
-        "defence": -0.08465780635418156,
-        "training_matches": 53
+        "attack": -0.28216489877839684,
+        "defence": -0.08016956070475689,
+        "training_matches": 54
       },
       "375": {
         "name": "Malmo FF",
-        "attack": 0.1007689880110233,
-        "defence": 0.11059775923463835,
+        "attack": 0.09779710225381529,
+        "defence": 0.11325602547796235,
         "training_matches": 84
       },
       "377": {
         "name": "AIK Stockholm",
-        "attack": 0.14150623573073057,
-        "defence": -0.13404295537537567,
+        "attack": 0.13950525973763508,
+        "defence": -0.13323347598880061,
         "training_matches": 84
       },
       "378": {
         "name": "IFK Norrkoping",
-        "attack": -0.15723254621746363,
-        "defence": -0.18518636768792401,
+        "attack": -0.15905871290199244,
+        "defence": -0.1847851580593659,
         "training_matches": 62
       },
       "766": {
         "name": "Halmstad",
-        "attack": -0.5542448403331368,
-        "defence": -0.16718870829457294,
+        "attack": -0.5567909901804846,
+        "defence": -0.16515978432910375,
         "training_matches": 84
       },
       "2163": {
         "name": "IFK Varnamo",
-        "attack": -0.06788660116622075,
-        "defence": -0.32548773043058615,
+        "attack": -0.06996889479231258,
+        "defence": -0.32501373679090656,
         "training_matches": 62
       },
       "2166": {
         "name": "Orgryte IS",
-        "attack": -0.043419229526714676,
-        "defence": -0.3416117640592834,
+        "attack": -0.04535145180461854,
+        "defence": -0.3400574667068279,
         "training_matches": 26
       },
       "2170": {
         "name": "Gais",
-        "attack": -0.04628836338688963,
-        "defence": 0.30297600975851974,
+        "attack": -0.04842320955648847,
+        "defence": 0.30354731832336235,
         "training_matches": 84
       },
       "2172": {
         "name": "Degerfors IF",
-        "attack": -0.3376656435089308,
-        "defence": -0.014993072850703684,
-        "training_matches": 53
+        "attack": -0.34506629171263703,
+        "defence": -0.043051009393041,
+        "training_matches": 54
       },
       "2174": {
         "name": "Osters IF",
-        "attack": -0.18916928483102452,
-        "defence": -0.10724085130729055,
+        "attack": -0.19137440223829538,
+        "defence": -0.10729159581260977,
         "training_matches": 30
       },
       "2176": {
         "name": "Landskrona BoIS",
-        "attack": -0.03811405942997769,
-        "defence": -0.009381635466446514,
+        "attack": -0.038154423442760876,
+        "defence": -0.009307266897652815,
         "training_matches": 2
       },
       "2240": {
         "name": "Mjallby AIF",
-        "attack": -0.03112480671868117,
-        "defence": 0.031758000875294456,
+        "attack": -0.03442113258379654,
+        "defence": 0.03293517816535104,
         "training_matches": 84
       },
       "2241": {
         "name": "Vasteras SK FK",
-        "attack": 0.025657776690770958,
-        "defence": 0.06984284519952096,
+        "attack": 0.023663532900850142,
+        "defence": 0.0721409417656966,
         "training_matches": 54
       }
     },
     "graph_connected": true,
     "constraints": {
-      "attack_sum": 1.1796119636642288e-16,
-      "defence_sum": 4.163336342344337e-17
+      "attack_sum": -7.979727989493313e-17,
+      "defence_sum": -5.551115123125783e-17
     },
     "optimizer": {
       "success": true,
       "message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
-      "iterations": 31,
-      "objective": 547.7658107332367,
+      "iterations": 33,
+      "objective": 548.4377022071692,
       "parameter_at_bound": false
     },
     "warnings": [
@@ -190,38 +190,38 @@
     "is_rolling_backtest": false,
     "minimum_test_matches": 40,
     "meets_minimum_supported_test_matches": true,
-    "evaluation_data_cutoff": "2026-10-19T06:18:14.805568Z",
+    "evaluation_data_cutoff": "2026-10-20T06:07:10.452032Z",
     "split": {
       "method": "chronological_fixed_model_holdout",
       "grouped_by": "kickoff_utc_calendar_date",
       "train_cutoff": "2026-05-16T00:00:00Z",
       "train_last_kickoff": "2026-05-11T17:00:00Z",
       "test_start": "2026-05-16T13:00:00Z",
-      "test_end": "2026-10-18T14:30:00Z",
+      "test_end": "2026-10-19T17:00:00Z",
       "training_count": 540,
-      "testing_count": 135,
+      "testing_count": 136,
       "result_availability_delay_hours": 4,
       "embargoed_count": 0,
       "embargoed_match_ids": []
     },
     "coverage": {
-      "total": 135,
-      "scored": 135,
+      "total": 136,
+      "scored": 136,
       "excluded": 0,
       "ratio": 1.0,
       "exclusions": []
     },
     "model_metrics": {
-      "n": 135,
-      "log_loss": 1.0578941873223044,
-      "brier_score": 0.6373116173497085,
+      "n": 136,
+      "log_loss": 1.0573457996000375,
+      "brier_score": 0.6369826012805714,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
     "baseline_metrics": {
-      "n": 135,
-      "log_loss": 1.0689849085158853,
-      "brier_score": 0.6480452059996614,
+      "n": 136,
+      "log_loss": 1.0694118851243726,
+      "brier_score": 0.6484390798924918,
       "brier_definition": "mean(sum_over_3_outcomes((probability - outcome_indicator)^2))",
       "log_loss_probability_floor": 1e-15
     },
@@ -233,8 +233,8 @@
       "same_scored_matches_as_model": true
     },
     "comparison": {
-      "model_minus_baseline_log_loss": -0.0110907211935809,
-      "model_minus_baseline_brier_score": -0.010733588649952885,
+      "model_minus_baseline_log_loss": -0.01206608552433508,
+      "model_minus_baseline_brier_score": -0.011456478611920451,
       "lower_is_better": true
     },
     "warnings": [
@@ -264,12 +264,12 @@
         "odds": true
       },
       "fixtures": 240,
-      "fetched_at": "2026-10-19T06:19:15.398986Z",
-      "received_at": "2026-10-19T06:19:15.407803Z",
+      "fetched_at": "2026-10-20T06:07:43.580372Z",
+      "received_at": "2026-10-20T06:07:43.589703Z",
       "from_cache": false,
       "status_counts": {
-        "FT": 191,
-        "NS": 49
+        "FT": 192,
+        "NS": 48
       }
     },
     {
@@ -292,7 +292,7 @@
       },
       "fixtures": 242,
       "fetched_at": "2026-10-16T01:50:35.511915Z",
-      "received_at": "2026-10-19T06:19:15.416986Z",
+      "received_at": "2026-10-20T06:07:43.598793Z",
       "from_cache": true,
       "status_counts": {
         "FT": 242
@@ -318,7 +318,7 @@
       },
       "fixtures": 242,
       "fetched_at": "2026-10-16T01:50:35.739417Z",
-      "received_at": "2026-10-19T06:19:15.426620Z",
+      "received_at": "2026-10-20T06:07:43.607778Z",
       "from_cache": true,
       "status_counts": {
         "FT": 242
