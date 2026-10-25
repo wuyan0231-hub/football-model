@@ -1,9 +1,9 @@
 {
   "schema_version": 2,
   "time_semantics": "observed_wall_clock_v1",
-  "run_started_at": "2026-10-24T05:59:00.350724Z",
-  "training_cutoff": "2026-10-24T05:59:00.350724Z",
-  "run_id": "20261024T055900350724Z",
+  "run_started_at": "2026-10-25T06:13:16.275926Z",
+  "training_cutoff": "2026-10-25T06:13:16.275926Z",
+  "run_id": "20261025T061316275926Z",
   "mode": "train",
   "program_version": "0.1.0",
   "source_commit": "a15f5f92f3b4c56a41e6aee98dfdb3868c94cc5a",
@@ -94,7 +94,7 @@
           },
           "fixtures": 380,
           "fetched_at": "2026-10-23T06:07:41.074513Z",
-          "received_at": "2026-10-24T05:59:12.543650Z",
+          "received_at": "2026-10-25T06:13:34.483887Z",
           "from_cache": true,
           "status_counts": {
             "FT": 380
@@ -108,7 +108,7 @@
       "return_advantage": "未经验证",
       "ev": "未量化",
       "time_semantics": "observed_wall_clock_v1",
-      "run_started_at": "2026-10-24T05:59:00.350724Z",
+      "run_started_at": "2026-10-25T06:13:16.275926Z",
       "forecast_availability": {
         "status": "failed",
         "upcoming_count": null,
@@ -119,7 +119,7 @@
       "model_freshness": {
         "status": "not_checked"
       },
-      "metadata_received_at": "2026-10-24T05:59:00.771363Z",
+      "metadata_received_at": "2026-10-25T06:13:22.690371Z",
       "provider_league_id": 39,
       "eligible_matches": 380,
       "missing_seasons": [
@@ -127,8 +127,8 @@
         2025
       ],
       "last_match_kickoff": "2025-05-25T15:00:00Z",
-      "observed_at": "2026-10-24T05:59:12.545635Z",
-      "data_observed_at": "2026-10-24T05:59:12.545635Z",
+      "observed_at": "2026-10-25T06:13:34.486178Z",
+      "data_observed_at": "2026-10-25T06:13:34.486178Z",
       "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
     },
     {
@@ -174,15 +174,7 @@
             "predictions": true,
             "odds": false
           },
-          "fixtures": 558,
-          "fetched_at": "2026-10-17T06:32:54.827443Z",
-          "received_at": "2026-10-24T05:59:18.565174Z",
-          "from_cache": true,
-          "status_counts": {
-            "CANC": 1,
-            "FT": 556,
-            "AET": 1
-          }
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
         },
         {
           "year": 2024,
@@ -203,9 +195,9 @@
             "odds": false
           },
           "fixtures": 557,
-          "fetched_at": "2026-10-17T06:32:55.048786Z",
-          "received_at": "2026-10-24T05:59:18.575812Z",
-          "from_cache": true,
+          "fetched_at": "2026-10-25T06:13:58.565482Z",
+          "received_at": "2026-10-25T06:13:58.582270Z",
+          "from_cache": false,
           "status_counts": {
             "FT": 556,
             "AET": 1
@@ -219,7 +211,7 @@
       "return_advantage": "未经验证",
       "ev": "未量化",
       "time_semantics": "observed_wall_clock_v1",
-      "run_started_at": "2026-10-24T05:59:00.350724Z",
+      "run_started_at": "2026-10-25T06:13:16.275926Z",
       "forecast_availability": {
         "status": "failed",
         "upcoming_count": null,
@@ -230,16 +222,17 @@
       "model_freshness": {
         "status": "not_checked"
       },
-      "metadata_received_at": "2026-10-24T05:59:14.638138Z",
+      "metadata_received_at": "2026-10-25T06:13:40.486672Z",
       "provider_league_id": 40,
-      "eligible_matches": 1114,
+      "eligible_matches": 557,
       "missing_seasons": [
-        2026
+        2026,
+        2025
       ],
-      "last_match_kickoff": "2026-05-23T14:30:00Z",
-      "observed_at": "2026-10-24T05:59:18.611068Z",
-      "data_observed_at": "2026-10-24T05:59:18.611068Z",
-      "detail": "这些已请求赛季未完整取得：[2026]。本次不训练；核对套餐或明确缩短训练窗口。"
+      "last_match_kickoff": "2025-05-24T14:01:00Z",
+      "observed_at": "2026-10-25T06:13:58.585498Z",
+      "data_observed_at": "2026-10-25T06:13:58.585498Z",
+      "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
     },
     {
       "key": "laliga",
@@ -306,7 +299,7 @@
           },
           "fixtures": 380,
           "fetched_at": "2026-10-23T06:08:17.136636Z",
-          "received_at": "2026-10-24T05:59:30.580900Z",
+          "received_at": "2026-10-25T06:14:16.555264Z",
           "from_cache": true,
           "status_counts": {
             "FT": 380
@@ -320,7 +313,7 @@
       "return_advantage": "未经验证",
       "ev": "未量化",
       "time_semantics": "observed_wall_clock_v1",
-      "run_started_at": "2026-10-24T05:59:00.350724Z",
+      "run_started_at": "2026-10-25T06:13:16.275926Z",
       "forecast_availability": {
         "status": "failed",
         "upcoming_count": null,
@@ -331,7 +324,7 @@
       "model_freshness": {
         "status": "not_checked"
       },
-      "metadata_received_at": "2026-10-24T05:59:20.639318Z",
+      "metadata_received_at": "2026-10-25T06:14:04.526714Z",
       "provider_league_id": 140,
       "eligible_matches": 380,
       "missing_seasons": [
@@ -339,8 +332,8 @@
         2025
       ],
       "last_match_kickoff": "2025-05-25T19:00:00Z",
-      "observed_at": "2026-10-24T05:59:30.582736Z",
-      "data_observed_at": "2026-10-24T05:59:30.582736Z",
+      "observed_at": "2026-10-25T06:14:16.557274Z",
+      "data_observed_at": "2026-10-25T06:14:16.557274Z",
       "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
     },
     {
@@ -408,7 +401,7 @@
           },
           "fixtures": 308,
           "fetched_at": "2026-10-23T06:08:41.165446Z",
-          "received_at": "2026-10-24T05:59:42.598251Z",
+          "received_at": "2026-10-25T06:14:34.581431Z",
           "from_cache": true,
           "status_counts": {
             "FT": 308
@@ -422,7 +415,7 @@
       "return_advantage": "未经验证",
       "ev": "未量化",
       "time_semantics": "observed_wall_clock_v1",
-      "run_started_at": "2026-10-24T05:59:00.350724Z",
+      "run_started_at": "2026-10-25T06:13:16.275926Z",
       "forecast_availability": {
         "status": "failed",
         "upcoming_count": null,
@@ -433,7 +426,7 @@
       "model_freshness": {
         "status": "not_checked"
       },
-      "metadata_received_at": "2026-10-24T05:59:32.656863Z",
+      "metadata_received_at": "2026-10-25T06:14:22.558935Z",
       "provider_league_id": 78,
       "eligible_matches": 308,
       "missing_seasons": [
@@ -441,8 +434,8 @@
         2025
       ],
       "last_match_kickoff": "2025-05-26T18:30:00Z",
-      "observed_at": "2026-10-24T05:59:42.599793Z",
-      "data_observed_at": "2026-10-24T05:59:42.599793Z",
+      "observed_at": "2026-10-25T06:14:34.583692Z",
+      "data_observed_at": "2026-10-25T06:14:34.583692Z",
       "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
     },
     {
@@ -510,7 +503,7 @@
           },
           "fixtures": 380,
           "fetched_at": "2026-10-23T06:09:05.213268Z",
-          "received_at": "2026-10-24T05:59:54.621097Z",
+          "received_at": "2026-10-25T06:14:52.618868Z",
           "from_cache": true,
           "status_counts": {
             "FT": 380
@@ -524,7 +517,7 @@
       "return_advantage": "未经验证",
       "ev": "未量化",
       "time_semantics": "observed_wall_clock_v1",
-      "run_started_at": "2026-10-24T05:59:00.350724Z",
+      "run_started_at": "2026-10-25T06:13:16.275926Z",
       "forecast_availability": {
         "status": "failed",
         "upcoming_count": null,
@@ -535,7 +528,7 @@
       "model_freshness": {
         "status": "not_checked"
       },
-      "metadata_received_at": "2026-10-24T05:59:44.687379Z",
+      "metadata_received_at": "2026-10-25T06:14:40.583038Z",
       "provider_league_id": 135,
       "eligible_matches": 380,
       "missing_seasons": [
@@ -543,8 +536,8 @@
         2025
       ],
       "last_match_kickoff": "2025-05-25T18:45:00Z",
-      "observed_at": "2026-10-24T05:59:54.622923Z",
-      "data_observed_at": "2026-10-24T05:59:54.622923Z",
+      "observed_at": "2026-10-25T06:14:52.620887Z",
+      "data_observed_at": "2026-10-25T06:14:52.620887Z",
       "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
     },
     {
@@ -612,7 +605,7 @@
           },
           "fixtures": 308,
           "fetched_at": "2026-10-23T06:09:29.245455Z",
-          "received_at": "2026-10-24T06:00:09.012967Z",
+          "received_at": "2026-10-25T06:15:10.640830Z",
           "from_cache": true,
           "status_counts": {
             "FT": 307,
@@ -627,7 +620,7 @@
       "return_advantage": "未经验证",
       "ev": "未量化",
       "time_semantics": "observed_wall_clock_v1",
-      "run_started_at": "2026-10-24T05:59:00.350724Z",
+      "run_started_at": "2026-10-25T06:13:16.275926Z",
       "forecast_availability": {
         "status": "failed",
         "upcoming_count": null,
@@ -638,7 +631,7 @@
       "model_freshness": {
         "status": "not_checked"
       },
-      "metadata_received_at": "2026-10-24T05:59:56.633910Z",
+      "metadata_received_at": "2026-10-25T06:14:58.619117Z",
       "provider_league_id": 61,
       "eligible_matches": 308,
       "missing_seasons": [
@@ -646,8 +639,8 @@
         2025
       ],
       "last_match_kickoff": "2025-05-29T18:30:00Z",
-      "observed_at": "2026-10-24T06:00:09.014508Z",
-      "data_observed_at": "2026-10-24T06:00:09.014508Z",
+      "observed_at": "2026-10-25T06:15:10.642594Z",
+      "data_observed_at": "2026-10-25T06:15:10.642594Z",
       "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
     },
     {
@@ -715,7 +708,7 @@
           },
           "fixtures": 308,
           "fetched_at": "2026-10-23T06:09:53.291516Z",
-          "received_at": "2026-10-24T06:00:20.417288Z",
+          "received_at": "2026-10-25T06:15:28.675493Z",
           "from_cache": true,
           "status_counts": {
             "FT": 307,
@@ -730,7 +723,7 @@
       "return_advantage": "未经验证",
       "ev": "未量化",
       "time_semantics": "observed_wall_clock_v1",
-      "run_started_at": "2026-10-24T05:59:00.350724Z",
+      "run_started_at": "2026-10-25T06:13:16.275926Z",
       "forecast_availability": {
         "status": "failed",
         "upcoming_count": null,
@@ -741,7 +734,7 @@
       "model_freshness": {
         "status": "not_checked"
       },
-      "metadata_received_at": "2026-10-24T06:00:11.045695Z",
+      "metadata_received_at": "2026-10-25T06:15:16.651964Z",
       "provider_league_id": 79,
       "eligible_matches": 308,
       "missing_seasons": [
@@ -749,8 +742,8 @@
         2025
       ],
       "last_match_kickoff": "2025-05-27T18:30:00Z",
-      "observed_at": "2026-10-24T06:00:20.418785Z",
-      "data_observed_at": "2026-10-24T06:00:20.418785Z",
+      "observed_at": "2026-10-25T06:15:28.677606Z",
+      "data_observed_at": "2026-10-25T06:15:28.677606Z",
       "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
     },
     {
@@ -818,7 +811,7 @@
           },
           "fixtures": 310,
           "fetched_at": "2026-10-23T06:10:17.329567Z",
-          "received_at": "2026-10-24T06:00:32.239933Z",
+          "received_at": "2026-10-25T06:15:46.705390Z",
           "from_cache": true,
           "status_counts": {
             "FT": 310
@@ -832,7 +825,7 @@
       "return_advantage": "未经验证",
       "ev": "未量化",
       "time_semantics": "observed_wall_clock_v1",
-      "run_started_at": "2026-10-24T05:59:00.350724Z",
+      "run_started_at": "2026-10-25T06:13:16.275926Z",
       "forecast_availability": {
         "status": "failed",
         "upcoming_count": null,
@@ -843,7 +836,7 @@
       "model_freshness": {
         "status": "not_checked"
       },
-      "metadata_received_at": "2026-10-24T06:00:22.462656Z",
+      "metadata_received_at": "2026-10-25T06:15:34.679769Z",
       "provider_league_id": 62,
       "eligible_matches": 310,
       "missing_seasons": [
@@ -851,8 +844,8 @@
         2025
       ],
       "last_match_kickoff": "2025-05-25T15:00:00Z",
-      "observed_at": "2026-10-24T06:00:32.241686Z",
-      "data_observed_at": "2026-10-24T06:00:32.241686Z",
+      "observed_at": "2026-10-25T06:15:46.707233Z",
+      "data_observed_at": "2026-10-25T06:15:46.707233Z",
       "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
     },
     {
@@ -920,7 +913,7 @@
           },
           "fixtures": 279,
           "fetched_at": "2026-10-23T06:10:41.377302Z",
-          "received_at": "2026-10-24T06:00:43.014363Z",
+          "received_at": "2026-10-25T06:16:04.735233Z",
           "from_cache": true,
           "status_counts": {
             "FT": 269,
@@ -936,7 +929,7 @@
       "return_advantage": "未经验证",
       "ev": "未量化",
       "time_semantics": "observed_wall_clock_v1",
-      "run_started_at": "2026-10-24T05:59:00.350724Z",
+      "run_started_at": "2026-10-25T06:13:16.275926Z",
       "forecast_availability": {
         "status": "failed",
         "upcoming_count": null,
@@ -947,7 +940,7 @@
       "model_freshness": {
         "status": "not_checked"
       },
-      "metadata_received_at": "2026-10-24T06:00:34.321731Z",
+      "metadata_received_at": "2026-10-25T06:15:52.709089Z",
       "provider_league_id": 2,
       "eligible_matches": 279,
       "missing_seasons": [
@@ -955,8 +948,8 @@
         2025
       ],
       "last_match_kickoff": "2025-05-31T19:00:00Z",
-      "observed_at": "2026-10-24T06:00:43.015908Z",
-      "data_observed_at": "2026-10-24T06:00:43.015908Z",
+      "observed_at": "2026-10-25T06:16:04.736871Z",
+      "data_observed_at": "2026-10-25T06:16:04.736871Z",
       "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
     },
     {
@@ -1024,7 +1017,7 @@
           },
           "fixtures": 242,
           "fetched_at": "2026-10-23T06:11:05.398129Z",
-          "received_at": "2026-10-24T06:00:55.522861Z",
+          "received_at": "2026-10-25T06:16:22.763543Z",
           "from_cache": true,
           "status_counts": {
             "FT": 242
@@ -1038,7 +1031,7 @@
       "return_advantage": "未经验证",
       "ev": "未量化",
       "time_semantics": "observed_wall_clock_v1",
-      "run_started_at": "2026-10-24T05:59:00.350724Z",
+      "run_started_at": "2026-10-25T06:13:16.275926Z",
       "forecast_availability": {
         "status": "failed",
         "upcoming_count": null,
@@ -1049,7 +1042,7 @@
       "model_freshness": {
         "status": "not_checked"
       },
-      "metadata_received_at": "2026-10-24T06:00:45.109566Z",
+      "metadata_received_at": "2026-10-25T06:16:10.741137Z",
       "provider_league_id": 113,
       "eligible_matches": 242,
       "missing_seasons": [
@@ -1057,8 +1050,8 @@
         2025
       ],
       "last_match_kickoff": "2024-11-24T14:00:00Z",
-      "observed_at": "2026-10-24T06:00:55.524060Z",
-      "data_observed_at": "2026-10-24T06:00:55.524060Z",
+      "observed_at": "2026-10-25T06:16:22.764890Z",
+      "data_observed_at": "2026-10-25T06:16:22.764890Z",
       "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
     },
     {
@@ -1126,7 +1119,7 @@
           },
           "fixtures": 321,
           "fetched_at": "2026-10-23T06:11:29.446298Z",
-          "received_at": "2026-10-24T06:01:07.468532Z",
+          "received_at": "2026-10-25T06:16:40.799338Z",
           "from_cache": true,
           "status_counts": {
             "FT": 317,
@@ -1142,7 +1135,7 @@
       "return_advantage": "未经验证",
       "ev": "未量化",
       "time_semantics": "observed_wall_clock_v1",
-      "run_started_at": "2026-10-24T05:59:00.350724Z",
+      "run_started_at": "2026-10-25T06:13:16.275926Z",
       "forecast_availability": {
         "status": "failed",
         "upcoming_count": null,
@@ -1153,7 +1146,7 @@
       "model_freshness": {
         "status": "not_checked"
       },
-      "metadata_received_at": "2026-10-24T06:00:57.625160Z",
+      "metadata_received_at": "2026-10-25T06:16:28.763601Z",
       "provider_league_id": 88,
       "eligible_matches": 321,
       "missing_seasons": [
@@ -1161,8 +1154,8 @@
         2025
       ],
       "last_match_kickoff": "2025-06-01T16:00:00Z",
-      "observed_at": "2026-10-24T06:01:07.470158Z",
-      "data_observed_at": "2026-10-24T06:01:07.470158Z",
+      "observed_at": "2026-10-25T06:16:40.801044Z",
+      "data_observed_at": "2026-10-25T06:16:40.801044Z",
       "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
     },
     {
@@ -1230,7 +1223,7 @@
           },
           "fixtures": 308,
           "fetched_at": "2026-10-23T06:11:53.482652Z",
-          "received_at": "2026-10-24T06:01:19.135324Z",
+          "received_at": "2026-10-25T06:16:58.817053Z",
           "from_cache": true,
           "status_counts": {
             "FT": 308
@@ -1244,7 +1237,7 @@
       "return_advantage": "未经验证",
       "ev": "未量化",
       "time_semantics": "observed_wall_clock_v1",
-      "run_started_at": "2026-10-24T05:59:00.350724Z",
+      "run_started_at": "2026-10-25T06:13:16.275926Z",
       "forecast_availability": {
         "status": "failed",
         "upcoming_count": null,
@@ -1255,7 +1248,7 @@
       "model_freshness": {
         "status": "not_checked"
       },
-      "metadata_received_at": "2026-10-24T06:01:09.577591Z",
+      "metadata_received_at": "2026-10-25T06:16:46.799703Z",
       "provider_league_id": 94,
       "eligible_matches": 308,
       "missing_seasons": [
@@ -1263,8 +1256,8 @@
         2025
       ],
       "last_match_kickoff": "2025-06-01T18:45:00Z",
-      "observed_at": "2026-10-24T06:01:19.137021Z",
-      "data_observed_at": "2026-10-24T06:01:19.137021Z",
+      "observed_at": "2026-10-25T06:16:58.818762Z",
+      "data_observed_at": "2026-10-25T06:16:58.818762Z",
       "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
     },
     {
@@ -1332,7 +1325,7 @@
           },
           "fixtures": 380,
           "fetched_at": "2026-10-23T06:12:17.675829Z",
-          "received_at": "2026-10-24T06:01:31.180489Z",
+          "received_at": "2026-10-25T06:17:16.850532Z",
           "from_cache": true,
           "status_counts": {
             "FT": 380
@@ -1346,7 +1339,7 @@
       "return_advantage": "未经验证",
       "ev": "未量化",
       "time_semantics": "observed_wall_clock_v1",
-      "run_started_at": "2026-10-24T05:59:00.350724Z",
+      "run_started_at": "2026-10-25T06:13:16.275926Z",
       "forecast_availability": {
         "status": "failed",
         "upcoming_count": null,
@@ -1357,7 +1350,7 @@
       "model_freshness": {
         "status": "not_checked"
       },
-      "metadata_received_at": "2026-10-24T06:01:21.244011Z",
+      "metadata_received_at": "2026-10-25T06:17:04.830730Z",
       "provider_league_id": 71,
       "eligible_matches": 380,
       "missing_seasons": [
@@ -1365,8 +1358,8 @@
         2025
       ],
       "last_match_kickoff": "2024-12-08T19:00:00Z",
-      "observed_at": "2026-10-24T06:01:31.182618Z",
-      "data_observed_at": "2026-10-24T06:01:31.182618Z",
+      "observed_at": "2026-10-25T06:17:16.852564Z",
+      "data_observed_at": "2026-10-25T06:17:16.852564Z",
       "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
     },
     {
@@ -1442,7 +1435,7 @@
       "return_advantage": "未经验证",
       "ev": "未量化",
       "time_semantics": "observed_wall_clock_v1",
-      "run_started_at": "2026-10-24T05:59:00.350724Z",
+      "run_started_at": "2026-10-25T06:13:16.275926Z",
       "forecast_availability": {
         "status": "failed",
         "upcoming_count": null,
@@ -1453,7 +1446,7 @@
       "model_freshness": {
         "status": "not_checked"
       },
-      "metadata_received_at": "2026-10-24T06:01:33.322458Z",
+      "metadata_received_at": "2026-10-25T06:17:22.859835Z",
       "provider_league_id": 98,
       "eligible_matches": 0,
       "missing_seasons": [
@@ -1462,8 +1455,8 @@
         2025
       ],
       "last_match_kickoff": null,
-      "observed_at": "2026-10-24T06:01:49.793837Z",
-      "data_observed_at": "2026-10-24T06:01:49.793837Z",
+      "observed_at": "2026-10-25T06:17:40.889120Z",
+      "data_observed_at": "2026-10-25T06:17:40.889120Z",
       "detail": "这些已请求赛季未完整取得：[2027, 2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
     },
     {
@@ -1531,7 +1524,7 @@
           },
           "fixtures": 232,
           "fetched_at": "2026-10-23T06:13:05.606463Z",
-          "received_at": "2026-10-24T06:02:01.331833Z",
+          "received_at": "2026-10-25T06:17:58.925664Z",
           "from_cache": true,
           "status_counts": {
             "FT": 231,
@@ -1546,7 +1539,7 @@
       "return_advantage": "未经验证",
       "ev": "未量化",
       "time_semantics": "observed_wall_clock_v1",
-      "run_started_at": "2026-10-24T05:59:00.350724Z",
+      "run_started_at": "2026-10-25T06:13:16.275926Z",
       "forecast_availability": {
         "status": "failed",
         "upcoming_count": null,
@@ -1557,7 +1550,7 @@
       "model_freshness": {
         "status": "not_checked"
       },
-      "metadata_received_at": "2026-10-24T06:01:51.906229Z",
+      "metadata_received_at": "2026-10-25T06:17:46.904582Z",
       "provider_league_id": 292,
       "eligible_matches": 232,
       "missing_seasons": [
@@ -1565,8 +1558,8 @@
         2025
       ],
       "last_match_kickoff": "2024-12-08T05:25:00Z",
-      "observed_at": "2026-10-24T06:02:01.333002Z",
-      "data_observed_at": "2026-10-24T06:02:01.333002Z",
+      "observed_at": "2026-10-25T06:17:58.926967Z",
+      "data_observed_at": "2026-10-25T06:17:58.926967Z",
       "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
     },
     {
@@ -1634,7 +1627,7 @@
           },
           "fixtures": 526,
           "fetched_at": "2026-10-23T06:13:29.668228Z",
-          "received_at": "2026-10-24T06:02:13.171127Z",
+          "received_at": "2026-10-25T06:18:16.981305Z",
           "from_cache": true,
           "status_counts": {
             "CANC": 4,
@@ -1651,7 +1644,7 @@
       "return_advantage": "未经验证",
       "ev": "未量化",
       "time_semantics": "observed_wall_clock_v1",
-      "run_started_at": "2026-10-24T05:59:00.350724Z",
+      "run_started_at": "2026-10-25T06:13:16.275926Z",
       "forecast_availability": {
         "status": "failed",
         "upcoming_count": null,
@@ -1662,7 +1655,7 @@
       "model_freshness": {
         "status": "not_checked"
       },
-      "metadata_received_at": "2026-10-24T06:02:03.455257Z",
+      "metadata_received_at": "2026-10-25T06:18:04.927149Z",
       "provider_league_id": 253,
       "eligible_matches": 522,
       "missing_seasons": [
@@ -1670,8 +1663,8 @@
         2025
       ],
       "last_match_kickoff": "2024-12-07T21:00:00Z",
-      "observed_at": "2026-10-24T06:02:13.173985Z",
-      "data_observed_at": "2026-10-24T06:02:13.173985Z",
+      "observed_at": "2026-10-25T06:18:16.983975Z",
+      "data_observed_at": "2026-10-25T06:18:16.983975Z",
       "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
     },
     {
@@ -1719,7 +1712,7 @@
           },
           "fixtures": 337,
           "fetched_at": "2026-10-19T06:19:42.644472Z",
-          "received_at": "2026-10-24T06:02:19.247337Z",
+          "received_at": "2026-10-25T06:18:28.973891Z",
           "from_cache": true,
           "status_counts": {
             "FT": 336,
@@ -1746,7 +1739,7 @@
           },
           "fixtures": 340,
           "fetched_at": "2026-10-19T06:19:42.863101Z",
-          "received_at": "2026-10-24T06:02:19.254783Z",
+          "received_at": "2026-10-25T06:18:28.982164Z",
           "from_cache": true,
           "status_counts": {
             "FT": 338,
@@ -1761,7 +1754,7 @@
       "return_advantage": "未经验证",
       "ev": "未量化",
       "time_semantics": "observed_wall_clock_v1",
-      "run_started_at": "2026-10-24T05:59:00.350724Z",
+      "run_started_at": "2026-10-25T06:13:16.275926Z",
       "forecast_availability": {
         "status": "failed",
         "upcoming_count": null,
@@ -1772,15 +1765,15 @@
       "model_freshness": {
         "status": "not_checked"
       },
-      "metadata_received_at": "2026-10-24T06:02:15.307089Z",
+      "metadata_received_at": "2026-10-25T06:18:22.955539Z",
       "provider_league_id": 262,
       "eligible_matches": 677,
       "missing_seasons": [
         2026
       ],
       "last_match_kickoff": "2026-05-25T01:00:00Z",
-      "observed_at": "2026-10-24T06:02:19.258124Z",
-      "data_observed_at": "2026-10-24T06:02:19.258124Z",
+      "observed_at": "2026-10-25T06:18:28.985481Z",
+      "data_observed_at": "2026-10-25T06:18:28.985481Z",
       "detail": "这些已请求赛季未完整取得：[2026]。本次不训练；核对套餐或明确缩短训练窗口。"
     },
     {
@@ -1828,7 +1821,7 @@
           },
           "fixtures": 468,
           "fetched_at": "2026-10-19T06:19:47.138902Z",
-          "received_at": "2026-10-24T06:02:25.188457Z",
+          "received_at": "2026-10-25T06:18:40.999772Z",
           "from_cache": true,
           "status_counts": {
             "FT": 468
@@ -1854,7 +1847,7 @@
           },
           "fixtures": 468,
           "fetched_at": "2026-10-19T06:19:47.350460Z",
-          "received_at": "2026-10-24T06:02:25.199091Z",
+          "received_at": "2026-10-25T06:18:41.011387Z",
           "from_cache": true,
           "status_counts": {
             "FT": 467,
@@ -1869,7 +1862,7 @@
       "return_advantage": "未经验证",
       "ev": "未量化",
       "time_semantics": "observed_wall_clock_v1",
-      "run_started_at": "2026-10-24T05:59:00.350724Z",
+      "run_started_at": "2026-10-25T06:13:16.275926Z",
       "forecast_availability": {
         "status": "failed",
         "upcoming_count": null,
@@ -1880,15 +1873,15 @@
       "model_freshness": {
         "status": "not_checked"
       },
-      "metadata_received_at": "2026-10-24T06:02:21.409529Z",
+      "metadata_received_at": "2026-10-25T06:18:34.980911Z",
       "provider_league_id": 141,
       "eligible_matches": 936,
       "missing_seasons": [
         2026
       ],
       "last_match_kickoff": "2026-06-20T19:00:00Z",
-      "observed_at": "2026-10-24T06:02:25.203837Z",
-      "data_observed_at": "2026-10-24T06:02:25.203837Z",
+      "observed_at": "2026-10-25T06:18:41.015932Z",
+      "data_observed_at": "2026-10-25T06:18:41.015932Z",
       "detail": "这些已请求赛季未完整取得：[2026]。本次不训练；核对套餐或明确缩短训练窗口。"
     },
     {
@@ -1936,7 +1929,7 @@
           },
           "fixtures": 510,
           "fetched_at": "2026-10-19T06:19:51.678160Z",
-          "received_at": "2026-10-24T06:02:31.189384Z",
+          "received_at": "2026-10-25T06:18:53.023771Z",
           "from_cache": true,
           "status_counts": {
             "FT": 503,
@@ -1964,7 +1957,7 @@
           },
           "fixtures": 378,
           "fetched_at": "2026-10-19T06:19:51.876153Z",
-          "received_at": "2026-10-24T06:02:31.197415Z",
+          "received_at": "2026-10-25T06:18:53.033153Z",
           "from_cache": true,
           "status_counts": {
             "FT": 378
@@ -1978,7 +1971,7 @@
       "return_advantage": "未经验证",
       "ev": "未量化",
       "time_semantics": "observed_wall_clock_v1",
-      "run_started_at": "2026-10-24T05:59:00.350724Z",
+      "run_started_at": "2026-10-25T06:13:16.275926Z",
       "forecast_availability": {
         "status": "failed",
         "upcoming_count": null,
@@ -1989,42 +1982,42 @@
       "model_freshness": {
         "status": "not_checked"
       },
-      "metadata_received_at": "2026-10-24T06:02:27.379255Z",
+      "metadata_received_at": "2026-10-25T06:18:47.007292Z",
       "provider_league_id": 128,
       "eligible_matches": 888,
       "missing_seasons": [
         2026
       ],
       "last_match_kickoff": "2025-12-14T00:00:00Z",
-      "observed_at": "2026-10-24T06:02:31.202860Z",
-      "data_observed_at": "2026-10-24T06:02:31.202860Z",
+      "observed_at": "2026-10-25T06:18:53.037377Z",
+      "data_observed_at": "2026-10-25T06:18:53.037377Z",
       "detail": "这些已请求赛季未完整取得：[2026]。本次不训练；核对套餐或明确缩短训练窗口。"
     }
   ],
-  "api_requests": 36,
+  "api_requests": 57,
   "api_budget": {
     "configured_daily_limit": 7460,
     "provider_daily_limit": 100,
-    "provider_daily_used": 0,
-    "daily_remaining": 65,
-    "daily_remaining_reported": 100,
+    "provider_daily_used": 20,
+    "daily_remaining": 79,
+    "daily_remaining_reported": 80,
     "minute_limit": 10,
-    "minute_remaining": null,
+    "minute_remaining": 5,
     "max_requests_per_run": null,
-    "requests_made": 36,
+    "requests_made": 57,
     "min_interval_seconds": 6.01,
     "max_run_seconds": 3600,
-    "elapsed_seconds": 213.00062617499998,
-    "quota_observed_at": "2026-10-24T05:59:00.770843Z",
-    "quota_source": "status_and_response_headers",
+    "elapsed_seconds": 338.81761746,
+    "quota_observed_at": "2026-10-25T06:18:47.005417Z",
+    "quota_source": "response_headers",
     "daily_quota_status": "known"
   },
   "prospective_captures": [
     {
-      "run_id": "20261024T055900350724Z",
-      "checkpoint_id": "30f371e0c0fb8ae2bebc075ec48af2d032888e71afd2919669f6ee51ceb6f52b",
+      "run_id": "20261025T061316275926Z",
+      "checkpoint_id": "8e88347bd89f937a61ae7fadd79b1930d8642e105b8217f13ddec707435073b4",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "completed_at": "2026-10-24T05:59:14.636769Z",
+      "completed_at": "2026-10-25T06:13:36.550838Z",
       "competitions": [
         "epl"
       ],
@@ -2033,13 +2026,13 @@
       },
       "errors": [],
       "exit_code": 0,
-      "capture_run_id": "ff7c2637b687a907fe3ef811ce937f459466de91db4bb5c67c7eb85d52be95cd"
+      "capture_run_id": "a1ac2317e980fdf8516ae21805516ff176d362a79b0a0c8175abb3396ab26aea"
     },
     {
-      "run_id": "20261024T055900350724Z",
-      "checkpoint_id": "d4ff9b5a8f024b24b30ca48aeedc483c7a6cff9e994888118b045f827c4bcd95",
+      "run_id": "20261025T061316275926Z",
+      "checkpoint_id": "6a0beaa88754bd4f625959885197d2278586fd748270d31a558a2a9c1fd4470f",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "completed_at": "2026-10-24T05:59:20.637954Z",
+      "completed_at": "2026-10-25T06:14:00.820425Z",
       "competitions": [
         "championship"
       ],
@@ -2048,13 +2041,13 @@
       },
       "errors": [],
       "exit_code": 0,
-      "capture_run_id": "f3422b18802ec3db01e39b74ee1f91cf621cbbb2179e8a302415bf78e159d452"
+      "capture_run_id": "4dfbcf1dcd3ba17452e7ebe5f63c25fe7ea937e0ed07b7d2e4c25a0776e540e3"
     },
     {
-      "run_id": "20261024T055900350724Z",
-      "checkpoint_id": "9169c36970d95410838ef10efbb7ebb7ca539cef118d1cb8a1ed4c0acd7e063f",
+      "run_id": "20261025T061316275926Z",
+      "checkpoint_id": "3280550551cfccbf1d4b7f10744339665a6220c7a32a30ccd8b7dab670d5d43c",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "completed_at": "2026-10-24T05:59:32.655509Z",
+      "completed_at": "2026-10-25T06:14:18.607195Z",
       "competitions": [
         "laliga"
       ],
@@ -2063,13 +2056,13 @@
       },
       "errors": [],
       "exit_code": 0,
-      "capture_run_id": "07528da7eed009e44f34d28918f1326fccc4b4467de183e7f1395bcbf4b04144"
+      "capture_run_id": "96a5266d68d633ff6c38ca2842a680a85e63c7d0c3e3136ec62102c915d22115"
     },
     {
-      "run_id": "20261024T055900350724Z",
-      "checkpoint_id": "22453f7b789dbf20f0fb74213f9ef685a58b7df6468920f37ef461280af21f53",
+      "run_id": "20261025T061316275926Z",
+      "checkpoint_id": "522c2bdd3e16eb6199c2573f5f8fbce49acffa3b509a51b511a864491bf2b162",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "completed_at": "2026-10-24T05:59:44.686047Z",
+      "completed_at": "2026-10-25T06:14:36.777164Z",
       "competitions": [
         "bundesliga"
       ],
@@ -2078,13 +2071,13 @@
       },
       "errors": [],
       "exit_code": 0,
-      "capture_run_id": "4bc767c86c891db14220a837ed0bdeef2eaa945c0f74375c7b511a946dca5b86"
+      "capture_run_id": "9fadf256d5a9c8443f575c0446f84608edc16ccc8c24bedba9e4ab1f548cce7b"
     },
     {
-      "run_id": "20261024T055900350724Z",
-      "checkpoint_id": "8fe90af021de806907b933b2b3de835c3734a137ef8c41d70d189705a13a6990",
+      "run_id": "20261025T061316275926Z",
+      "checkpoint_id": "93ce28c14f42b744e1ed3b9e206000b6ee57bf0c5d52e472d0f2f73d9ccaaef6",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "completed_at": "2026-10-24T05:59:56.632373Z",
+      "completed_at": "2026-10-25T06:14:54.680796Z",
       "competitions": [
         "serie_a"
       ],
@@ -2093,13 +2086,13 @@
       },
       "errors": [],
       "exit_code": 0,
-      "capture_run_id": "de59f179750e8718bf5330e5acf1c0bf30afd8648b03cc076e09282de998a4a3"
+      "capture_run_id": "de6ecdd8dcb26c325e64272a4534f58094125220713cf5a1bd7a6572e11a55ae"
     },
     {
-      "run_id": "20261024T055900350724Z",
-      "checkpoint_id": "4bfdbaed112334851cc3bc289e052ca66d9e802d38bc9b11be982958e3deaeef",
+      "run_id": "20261025T061316275926Z",
+      "checkpoint_id": "02612b5c31965728a1e53f322ae2bb2b5079f00cf2a10b9e14a38ce554500cf6",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "completed_at": "2026-10-24T06:00:11.044380Z",
+      "completed_at": "2026-10-25T06:15:12.711062Z",
       "competitions": [
         "ligue_1"
       ],
@@ -2108,13 +2101,13 @@
       },
       "errors": [],
       "exit_code": 0,
-      "capture_run_id": "375dad3b404da574612f77b9e93e2371a8953eb5a9b25bbe7c278c954a31154c"
+      "capture_run_id": "65b231b9b770ea48fa6701e5a0c0eaefa89fb2b52df05b8d2d1ff2403930f9a8"
     },
     {
-      "run_id": "20261024T055900350724Z",
-      "checkpoint_id": "7cbadaee9f6dcbf293ebcc9034797725f308e47c3332915a9cf094706c48f570",
+      "run_id": "20261025T061316275926Z",
+      "checkpoint_id": "01662d4aa077aed39abb6f9a23a2b63753cd2b399ad9897a8f048624433e9ef9",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "completed_at": "2026-10-24T06:00:22.461300Z",
+      "completed_at": "2026-10-25T06:15:30.745914Z",
       "competitions": [
         "bundesliga_2"
       ],
@@ -2123,13 +2116,13 @@
       },
       "errors": [],
       "exit_code": 0,
-      "capture_run_id": "1dbb827a870567bee39ac2064df0a3517a332ed3a5a45027b3a872d7b7c9a66b"
+      "capture_run_id": "17c5ed10b2130983392eb9e3448ff0cb08d3e665fec27356ed2fe90e228f9c84"
     },
     {
-      "run_id": "20261024T055900350724Z",
-      "checkpoint_id": "0b2ed60022da03047474692d8fe9189f574c68a5aead698186774b94d556734d",
+      "run_id": "20261025T061316275926Z",
+      "checkpoint_id": "ac472c13753302476e35f61eebe086dfa650afae591b407436a42df3206b61f1",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "completed_at": "2026-10-24T06:00:34.320379Z",
+      "completed_at": "2026-10-25T06:15:48.777914Z",
       "competitions": [
         "ligue_2"
       ],
@@ -2138,13 +2131,13 @@
       },
       "errors": [],
       "exit_code": 0,
-      "capture_run_id": "c13634e641db27bcb0fe1d968540700146d8036e1799fa9ac143840efc1927bb"
+      "capture_run_id": "e5e71a94e731914864e07be31eb02f916be93aa0c96ec016b4f1c23d7fca6a41"
     },
     {
-      "run_id": "20261024T055900350724Z",
-      "checkpoint_id": "22016f7b1d7e137e3ad1b98c67495743d4743ffadcaca8486839c2121c6f91f4",
+      "run_id": "20261025T061316275926Z",
+      "checkpoint_id": "25383f0919f62cb6ecae553105bd01319c08e3fbd1a4f176f13b2a82b54a21dc",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "completed_at": "2026-10-24T06:00:45.108364Z",
+      "completed_at": "2026-10-25T06:16:06.803889Z",
       "competitions": [
         "ucl"
       ],
@@ -2153,13 +2146,13 @@
       },
       "errors": [],
       "exit_code": 0,
-      "capture_run_id": "0e148fc77de1aa24a72dcf9ad62d211b896d40987cf9c61ad45aac3da0897f4c"
+      "capture_run_id": "54ea038b3caaeeea350ece3035ca13a1e1e4a9dd74674d9b5976793116c1b4b8"
     },
     {
-      "run_id": "20261024T055900350724Z",
-      "checkpoint_id": "2f6c26abf9aa04f8740ff23e532abd9a267c78631b99ddbf144b0ff84886ad76",
+      "run_id": "20261025T061316275926Z",
+      "checkpoint_id": "6cb8865214d04ddf137898bfef84ef6fc06a22a4f4df5b9af2a9aea43c00fb0d",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "completed_at": "2026-10-24T06:00:57.623582Z",
+      "completed_at": "2026-10-25T06:16:24.813380Z",
       "competitions": [
         "allsvenskan"
       ],
@@ -2168,13 +2161,13 @@
       },
       "errors": [],
       "exit_code": 0,
-      "capture_run_id": "0c247d46df95cf90295d481ebd000a698b9b7fb33b6eaa4318b55df2d33f0ed0"
+      "capture_run_id": "d85fd982e21f4ae5aeb2aba01d8bd7be445e81f171ea8fff77fa3315455ef429"
     },
     {
-      "run_id": "20261024T055900350724Z",
-      "checkpoint_id": "0d1b21f1104261377829ff289f15209bf65dba4ac2a3c039c14df4d654d53e3c",
+      "run_id": "20261025T061316275926Z",
+      "checkpoint_id": "97da86af1acbcd8cb1bc9c11bf0b9483ba39ea9f83e7b41b561ef54949dbe3c9",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "completed_at": "2026-10-24T06:01:09.576312Z",
+      "completed_at": "2026-10-25T06:16:42.859528Z",
       "competitions": [
         "eredivisie"
       ],
@@ -2183,13 +2176,13 @@
       },
       "errors": [],
       "exit_code": 0,
-      "capture_run_id": "3228b780c5b678f57d5420355b9678ed8f25d460db88556c0f31e03b0b5e1f7b"
+      "capture_run_id": "2db2f45ca0d6b44a30bab226ff671e4d6ab56df4df33a780b87adadbed328dae"
     },
     {
-      "run_id": "20261024T055900350724Z",
-      "checkpoint_id": "b6a8ee92b3e20b56d8cdc5d5c6c4e4bff039a70111796307bbc7d91219889004",
+      "run_id": "20261025T061316275926Z",
+      "checkpoint_id": "5eff64acf37cd19cb06cb2407e4d1a3507d54e3222349aac9dd3f3897d95f2d0",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "completed_at": "2026-10-24T06:01:21.242605Z",
+      "completed_at": "2026-10-25T06:17:00.875832Z",
       "competitions": [
         "primeira"
       ],
@@ -2198,13 +2191,13 @@
       },
       "errors": [],
       "exit_code": 0,
-      "capture_run_id": "d87eabe27063c446994018bee061158888dfe3f54da47b1481f001bf3c67458f"
+      "capture_run_id": "d13ca7cefad4bb156fbab5e0cf4a5c44b9b79fc84712e96e60b7e7c032043792"
     },
     {
-      "run_id": "20261024T055900350724Z",
-      "checkpoint_id": "4d42ffae3e31ae2e74d45969e6eafb183f08b6c41cd3952b6249024b56877841",
+      "run_id": "20261025T061316275926Z",
+      "checkpoint_id": "c147b426614f4b898e3924511fcf5a58b3b23e9820428e47a2838278d0fecd85",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "completed_at": "2026-10-24T06:01:33.320928Z",
+      "completed_at": "2026-10-25T06:17:18.904417Z",
       "competitions": [
         "brazil_a"
       ],
@@ -2213,13 +2206,13 @@
       },
       "errors": [],
       "exit_code": 0,
-      "capture_run_id": "52f1ddcd97e2372f2ca291373163345a1f0955122c3b766b9f53e2d86478bf3e"
+      "capture_run_id": "78dfa407ebbca0d5b6327cef45985f7cc272e0d721bd6dcc1dab7be93143977d"
     },
     {
-      "run_id": "20261024T055900350724Z",
-      "checkpoint_id": "3bbb64af642e1b46ef250ca923ea0a7282f42e595844bb6cf2e7d629798d8a14",
+      "run_id": "20261025T061316275926Z",
+      "checkpoint_id": "2cc4632be01096e35fe2332fd8ae2e0b0179648619a8e070f95b6f0f1458cb7c",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "completed_at": "2026-10-24T06:01:51.904797Z",
+      "completed_at": "2026-10-25T06:17:43.062905Z",
       "competitions": [
         "j1"
       ],
@@ -2228,13 +2221,13 @@
       },
       "errors": [],
       "exit_code": 0,
-      "capture_run_id": "183824146b0d8c714261ea96f5f7691f88bb17b3322e1f584d4268e92b64903e"
+      "capture_run_id": "09dc918dbdf094c86732cb989672caee682a28b3bb4857756ebfd9b191a439a6"
     },
     {
-      "run_id": "20261024T055900350724Z",
-      "checkpoint_id": "1b5b8ad3e6bb707b9593c9a205580b810beb5243d4cbab3a0c01988295dccabc",
+      "run_id": "20261025T061316275926Z",
+      "checkpoint_id": "71f8a9216646e39ccbbd153099d93b525391a1e4a9d4bbef19d550235713da15",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "completed_at": "2026-10-24T06:02:03.453910Z",
+      "completed_at": "2026-10-25T06:18:00.978162Z",
       "competitions": [
         "k1"
       ],
@@ -2243,13 +2236,13 @@
       },
       "errors": [],
       "exit_code": 0,
-      "capture_run_id": "cf5e07751627786ed2ff336e7bed3632845a34786d1f7aded2c33e02dddc23f7"
+      "capture_run_id": "06b02ec675d72d750a1907e379f857605a993efc0191171f9823b521b92101a0"
     },
     {
-      "run_id": "20261024T055900350724Z",
-      "checkpoint_id": "8a4b5277473aa18b253810bb2fb9a359a4506dd79ce3e73391f0d511e0db71d5",
+      "run_id": "20261025T061316275926Z",
+      "checkpoint_id": "901905cb37313a4c1d51b9629e68e171d4b8da297bb5a417f4827d4f2bd700ee",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "completed_at": "2026-10-24T06:02:15.305735Z",
+      "completed_at": "2026-10-25T06:18:19.026022Z",
       "competitions": [
         "mls"
       ],
@@ -2258,13 +2251,13 @@
       },
       "errors": [],
       "exit_code": 0,
-      "capture_run_id": "30610573a415d851a1f34f40d992558a6677ca3081d6af6fa076d4fdfe99c160"
+      "capture_run_id": "9ab8becd778ef8cb4fc99a3b9006022990a5e784d0b9c10c53848ae877f0dcd0"
     },
     {
-      "run_id": "20261024T055900350724Z",
-      "checkpoint_id": "d57a951c739ac9e235f6d17a4d4e6fa2843779c37cebdea4d9d00ff932b73957",
+      "run_id": "20261025T061316275926Z",
+      "checkpoint_id": "128414ac4df5e48d63808fcc4f5a7002b2171545e06417bd8e01983d9a2ced5e",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "completed_at": "2026-10-24T06:02:21.408209Z",
+      "completed_at": "2026-10-25T06:18:31.038693Z",
       "competitions": [
         "liga_mx"
       ],
@@ -2273,13 +2266,13 @@
       },
       "errors": [],
       "exit_code": 0,
-      "capture_run_id": "81cc5610092cdf8f90f1dd929e0bf98966b0ae3b81f4b01bd0cd6af41b125e92"
+      "capture_run_id": "49d874f71d35ad3926b32b169cae67670149ba71335461efae437cef8961841a"
     },
     {
-      "run_id": "20261024T055900350724Z",
-      "checkpoint_id": "bc89ec90c5844d1d8af66c329ff16864be1bd78d0d03e1c37a890664c08057db",
+      "run_id": "20261025T061316275926Z",
+      "checkpoint_id": "ecba22115e8a8ddf06a495e7b04b5d64ef11fbe284ff79af4c280160dff73c93",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "completed_at": "2026-10-24T06:02:27.377954Z",
+      "completed_at": "2026-10-25T06:18:43.093511Z",
       "competitions": [
         "segunda"
       ],
@@ -2288,13 +2281,13 @@
       },
       "errors": [],
       "exit_code": 0,
-      "capture_run_id": "f7dc60b65a15288d74178d7d1af840de5a034c9d95e24a1356734cc57fb59563"
+      "capture_run_id": "d4ba28a1fd2a062ed910c4e3861677eeadc773d11382bcbd27e94658ace7262f"
     },
     {
-      "run_id": "20261024T055900350724Z",
-      "checkpoint_id": "f4cdd852de78b884525cdec033c0f1c671332bbc24b0a612490bd65c28a3404d",
+      "run_id": "20261025T061316275926Z",
+      "checkpoint_id": "c86445b4d4b12c466e65bf1da90f09e48ef92e3fe91a7206ce3c5cc2c7e7c309",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "completed_at": "2026-10-24T06:02:33.362942Z",
+      "completed_at": "2026-10-25T06:18:55.106066Z",
       "competitions": [
         "argentina_a"
       ],
@@ -2303,7 +2296,7 @@
       },
       "errors": [],
       "exit_code": 0,
-      "capture_run_id": "434798f9b1f7ee53ec988eb8d2a93a567b047fe39ba5f7332a5e61babaa08448"
+      "capture_run_id": "f15d6ee2a8602f971250dc215b5521328bf660d02cf11b0ffa67dda3a78e4093"
     }
   ],
   "exit_code": 1,
@@ -2319,16 +2312,16 @@
     "requested_competitions": 19,
     "unreported_competitions": []
   },
-  "generated_at": "2026-10-24T06:02:33.363897Z",
+  "generated_at": "2026-10-25T06:18:55.107297Z",
   "integration_index": {
     "status": "updated",
     "path": "runtime/integration/index.json"
   },
   "replay_recording": {
     "status": "recorded",
-    "path": "replay/bundles/01a2af996517d5c4cb91e156307ed8a118722e897a692e5913e9671a58a9bcef.json.gz",
-    "sha256": "01a2af996517d5c4cb91e156307ed8a118722e897a692e5913e9671a58a9bcef",
-    "events": 219,
+    "path": "replay/bundles/1472abd0bf1fee67835f957062f9d7902a72ab4c15937b71ee4f602eba0010af.json.gz",
+    "sha256": "1472abd0bf1fee67835f957062f9d7902a72ab4c15937b71ee4f602eba0010af",
+    "events": 218,
     "initial_state_files": 36
   }
 }
