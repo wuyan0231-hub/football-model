@@ -1,17 +1,17 @@
 {
-  "coverage_records": 2486,
+  "coverage_records": 2505,
   "coverage_status_counts": {
-    "no_current_prediction_file": 69,
+    "no_current_prediction_file": 88,
     "no_upcoming_matches": 2,
     "prospective": 2385,
     "rejected": 30
   },
   "current_protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-  "current_run_id": "20261025T061316275926Z",
+  "current_run_id": "20261026T062101734839Z",
   "errors": [],
   "exit_code": 0,
   "forecast_versions": 2394,
-  "generated_at": "2026-10-25T06:19:05.531855Z",
+  "generated_at": "2026-10-26T06:27:29.302286Z",
   "groups": [
     {
       "all_model_coverage": {
@@ -24,7 +24,7 @@
             },
             "metrics": {
               "brier_definition": "mean(sum_over_classes((p-y)^2))",
-              "brier_score": 0.4607887178299519,
+              "brier_score": 0.49558199766575933,
               "calibration": {
                 "loss": [
                   {
@@ -50,9 +50,9 @@
                   },
                   {
                     "lower": 0.3,
-                    "mean_predicted": 0.3724999952416476,
-                    "n": 1,
-                    "observed_rate": 1.0,
+                    "mean_predicted": 0.3465642292337566,
+                    "n": 2,
+                    "observed_rate": 0.5,
                     "upper": 0.4
                   },
                   {
@@ -71,9 +71,9 @@
                   },
                   {
                     "lower": 0.6,
-                    "mean_predicted": 0.6505837301839064,
-                    "n": 4,
-                    "observed_rate": 0.75,
+                    "mean_predicted": 0.6389688527081476,
+                    "n": 6,
+                    "observed_rate": 0.6666666666666666,
                     "upper": 0.7
                   },
                   {
@@ -85,9 +85,9 @@
                   },
                   {
                     "lower": 0.8,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.8185638435954019,
+                    "n": 1,
+                    "observed_rate": 0.0,
                     "upper": 0.9
                   },
                   {
@@ -108,9 +108,9 @@
                   },
                   {
                     "lower": 0.1,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.18143615640459787,
+                    "n": 1,
+                    "observed_rate": 1.0,
                     "upper": 0.2
                   },
                   {
@@ -122,9 +122,9 @@
                   },
                   {
                     "lower": 0.3,
-                    "mean_predicted": 0.3494162698160938,
-                    "n": 4,
-                    "observed_rate": 0.25,
+                    "mean_predicted": 0.36103114729185243,
+                    "n": 6,
+                    "observed_rate": 0.3333333333333333,
                     "upper": 0.4
                   },
                   {
@@ -143,9 +143,9 @@
                   },
                   {
                     "lower": 0.6,
-                    "mean_predicted": 0.6275000047583523,
-                    "n": 1,
-                    "observed_rate": 0.0,
+                    "mean_predicted": 0.6534357707662434,
+                    "n": 2,
+                    "observed_rate": 0.5,
                     "upper": 0.7
                   },
                   {
@@ -172,12 +172,12 @@
                 ]
               },
               "floor_affected_outcomes": 0,
-              "log_loss": 0.6538399417059205,
+              "log_loss": 0.6960808994821192,
               "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
               "log_loss_probability_floor": 1e-15,
-              "mathematical_log_loss": 0.6538399417059205,
+              "mathematical_log_loss": 0.6960808994821192,
               "mathematical_log_loss_status": "finite",
-              "n": 18,
+              "n": 22,
               "observed_zero_probability_outcomes": 0
             },
             "possible_states": [
@@ -198,7 +198,7 @@
             },
             "metrics": {
               "brier_definition": "mean(sum_over_classes((p-y)^2))",
-              "brier_score": 0.4607887178299519,
+              "brier_score": 0.49558199766575933,
               "calibration": {
                 "loss": [
                   {
@@ -210,9 +210,9 @@
                   },
                   {
                     "lower": 0.1,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.18143615640459787,
+                    "n": 1,
+                    "observed_rate": 1.0,
                     "upper": 0.2
                   },
                   {
@@ -224,9 +224,9 @@
                   },
                   {
                     "lower": 0.3,
-                    "mean_predicted": 0.3494162698160938,
-                    "n": 4,
-                    "observed_rate": 0.25,
+                    "mean_predicted": 0.36103114729185243,
+                    "n": 6,
+                    "observed_rate": 0.3333333333333333,
                     "upper": 0.4
                   },
                   {
@@ -245,9 +245,9 @@
                   },
                   {
                     "lower": 0.6,
-                    "mean_predicted": 0.6275000047583523,
-                    "n": 1,
-                    "observed_rate": 0.0,
+                    "mean_predicted": 0.6534357707662434,
+                    "n": 2,
+                    "observed_rate": 0.5,
                     "upper": 0.7
                   },
                   {
@@ -296,9 +296,9 @@
                   },
                   {
                     "lower": 0.3,
-                    "mean_predicted": 0.3724999952416476,
-                    "n": 1,
-                    "observed_rate": 1.0,
+                    "mean_predicted": 0.3465642292337566,
+                    "n": 2,
+                    "observed_rate": 0.5,
                     "upper": 0.4
                   },
                   {
@@ -317,9 +317,9 @@
                   },
                   {
                     "lower": 0.6,
-                    "mean_predicted": 0.6505837301839064,
-                    "n": 4,
-                    "observed_rate": 0.75,
+                    "mean_predicted": 0.6389688527081476,
+                    "n": 6,
+                    "observed_rate": 0.6666666666666666,
                     "upper": 0.7
                   },
                   {
@@ -331,9 +331,9 @@
                   },
                   {
                     "lower": 0.8,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.8185638435954019,
+                    "n": 1,
+                    "observed_rate": 0.0,
                     "upper": 0.9
                   },
                   {
@@ -346,12 +346,12 @@
                 ]
               },
               "floor_affected_outcomes": 0,
-              "log_loss": 0.6538399417059205,
+              "log_loss": 0.6960808994821192,
               "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
               "log_loss_probability_floor": 1e-15,
-              "mathematical_log_loss": 0.6538399417059205,
+              "mathematical_log_loss": 0.6960808994821192,
               "mathematical_log_loss_status": "finite",
-              "n": 18,
+              "n": 22,
               "observed_zero_probability_outcomes": 0
             },
             "possible_states": [
@@ -372,7 +372,7 @@
             },
             "metrics": {
               "brier_definition": "mean(sum_over_classes((p-y)^2))",
-              "brier_score": 0.10230810918831251,
+              "brier_score": 0.1413263195034423,
               "calibration": {
                 "loss": [
                   {
@@ -426,9 +426,9 @@
                   },
                   {
                     "lower": 0.7,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.7898389797171207,
+                    "n": 1,
+                    "observed_rate": 0.0,
                     "upper": 0.8
                   },
                   {
@@ -440,8 +440,8 @@
                   },
                   {
                     "lower": 0.9,
-                    "mean_predicted": 0.943265496497996,
-                    "n": 6,
+                    "mean_predicted": 0.9452701252146343,
+                    "n": 9,
                     "observed_rate": 1.0,
                     "upper": 1.0
                   }
@@ -449,8 +449,8 @@
                 "win": [
                   {
                     "lower": 0.0,
-                    "mean_predicted": 0.05673450350200412,
-                    "n": 6,
+                    "mean_predicted": 0.05472987478536587,
+                    "n": 9,
                     "observed_rate": 0.0,
                     "upper": 0.1
                   },
@@ -463,9 +463,9 @@
                   },
                   {
                     "lower": 0.2,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.21016102028287917,
+                    "n": 1,
+                    "observed_rate": 1.0,
                     "upper": 0.3
                   },
                   {
@@ -520,12 +520,12 @@
                 ]
               },
               "floor_affected_outcomes": 0,
-              "log_loss": 0.20566611220970998,
+              "log_loss": 0.24633091927874806,
               "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
               "log_loss_probability_floor": 1e-15,
-              "mathematical_log_loss": 0.20566611220970998,
+              "mathematical_log_loss": 0.24633091927874806,
               "mathematical_log_loss_status": "finite",
-              "n": 18,
+              "n": 22,
               "observed_zero_probability_outcomes": 0
             },
             "possible_states": [
@@ -546,7 +546,7 @@
             },
             "metrics": {
               "brier_definition": "mean(sum_over_classes((p-y)^2))",
-              "brier_score": 0.6423934342259394,
+              "brier_score": 0.6724366119799378,
               "calibration": {
                 "loss": [
                   {
@@ -572,9 +572,9 @@
                   },
                   {
                     "lower": 0.3,
-                    "mean_predicted": 0.3724999952416476,
-                    "n": 1,
-                    "observed_rate": 1.0,
+                    "mean_predicted": 0.3465642292337566,
+                    "n": 2,
+                    "observed_rate": 0.5,
                     "upper": 0.4
                   },
                   {
@@ -593,9 +593,9 @@
                   },
                   {
                     "lower": 0.6,
-                    "mean_predicted": 0.6505837301839064,
-                    "n": 4,
-                    "observed_rate": 0.75,
+                    "mean_predicted": 0.6389688527081476,
+                    "n": 6,
+                    "observed_rate": 0.6666666666666666,
                     "upper": 0.7
                   },
                   {
@@ -607,9 +607,9 @@
                   },
                   {
                     "lower": 0.8,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.8185638435954019,
+                    "n": 1,
+                    "observed_rate": 0.0,
                     "upper": 0.9
                   },
                   {
@@ -630,16 +630,16 @@
                   },
                   {
                     "lower": 0.1,
-                    "mean_predicted": 0.17924201396444017,
-                    "n": 2,
-                    "observed_rate": 0.0,
+                    "mean_predicted": 0.163863200157811,
+                    "n": 4,
+                    "observed_rate": 0.25,
                     "upper": 0.2
                   },
                   {
                     "lower": 0.2,
-                    "mean_predicted": 0.23580247405659488,
-                    "n": 15,
-                    "observed_rate": 0.26666666666666666,
+                    "mean_predicted": 0.23603581569444904,
+                    "n": 17,
+                    "observed_rate": 0.23529411764705882,
                     "upper": 0.3
                   },
                   {
@@ -695,23 +695,23 @@
                 "win": [
                   {
                     "lower": 0.0,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.06572275672044481,
+                    "n": 1,
+                    "observed_rate": 0.0,
                     "upper": 0.1
                   },
                   {
                     "lower": 0.1,
-                    "mean_predicted": 0.14393016632060296,
-                    "n": 4,
-                    "observed_rate": 0.25,
+                    "mean_predicted": 0.14777404356396157,
+                    "n": 5,
+                    "observed_rate": 0.2,
                     "upper": 0.2
                   },
                   {
                     "lower": 0.2,
-                    "mean_predicted": 0.2571614703710945,
-                    "n": 4,
-                    "observed_rate": 0.5,
+                    "mean_predicted": 0.24586505841921918,
+                    "n": 5,
+                    "observed_rate": 0.6,
                     "upper": 0.3
                   },
                   {
@@ -723,9 +723,9 @@
                   },
                   {
                     "lower": 0.4,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.4272372491368389,
+                    "n": 1,
+                    "observed_rate": 1.0,
                     "upper": 0.5
                   },
                   {
@@ -766,12 +766,12 @@
                 ]
               },
               "floor_affected_outcomes": 0,
-              "log_loss": 1.0727501632645788,
+              "log_loss": 1.1096055028265261,
               "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
               "log_loss_probability_floor": 1e-15,
-              "mathematical_log_loss": 1.0727501632645788,
+              "mathematical_log_loss": 1.1096055028265261,
               "mathematical_log_loss_status": "finite",
-              "n": 18,
+              "n": 22,
               "observed_zero_probability_outcomes": 0
             },
             "possible_states": [
@@ -792,7 +792,7 @@
             },
             "metrics": {
               "brier_definition": "mean(sum_over_classes((p-y)^2))",
-              "brier_score": 0.48339033169069157,
+              "brier_score": 0.4862200741687888,
               "calibration": {
                 "loss": [
                   {
@@ -832,9 +832,9 @@
                   },
                   {
                     "lower": 0.5,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.5727627508631611,
+                    "n": 1,
+                    "observed_rate": 0.0,
                     "upper": 0.6
                   },
                   {
@@ -846,46 +846,46 @@
                   },
                   {
                     "lower": 0.7,
-                    "mean_predicted": 0.7428385296289054,
-                    "n": 4,
-                    "observed_rate": 0.5,
+                    "mean_predicted": 0.7541349415807808,
+                    "n": 5,
+                    "observed_rate": 0.4,
                     "upper": 0.8
                   },
                   {
                     "lower": 0.8,
-                    "mean_predicted": 0.8560698336793972,
-                    "n": 4,
-                    "observed_rate": 0.75,
+                    "mean_predicted": 0.8522259564360386,
+                    "n": 5,
+                    "observed_rate": 0.8,
                     "upper": 0.9
                   },
                   {
                     "lower": 0.9,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.9342772432795551,
+                    "n": 1,
+                    "observed_rate": 1.0,
                     "upper": 1.0
                   }
                 ],
                 "win": [
                   {
                     "lower": 0.0,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.06572275672044481,
+                    "n": 1,
+                    "observed_rate": 0.0,
                     "upper": 0.1
                   },
                   {
                     "lower": 0.1,
-                    "mean_predicted": 0.14393016632060296,
-                    "n": 4,
-                    "observed_rate": 0.25,
+                    "mean_predicted": 0.14777404356396157,
+                    "n": 5,
+                    "observed_rate": 0.2,
                     "upper": 0.2
                   },
                   {
                     "lower": 0.2,
-                    "mean_predicted": 0.2571614703710945,
-                    "n": 4,
-                    "observed_rate": 0.5,
+                    "mean_predicted": 0.24586505841921918,
+                    "n": 5,
+                    "observed_rate": 0.6,
                     "upper": 0.3
                   },
                   {
@@ -897,9 +897,9 @@
                   },
                   {
                     "lower": 0.4,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.4272372491368389,
+                    "n": 1,
+                    "observed_rate": 1.0,
                     "upper": 0.5
                   },
                   {
@@ -940,12 +940,12 @@
                 ]
               },
               "floor_affected_outcomes": 0,
-              "log_loss": 0.6811966081946444,
+              "log_loss": 0.6801860598669133,
               "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
               "log_loss_probability_floor": 1e-15,
-              "mathematical_log_loss": 0.6811966081946444,
+              "mathematical_log_loss": 0.6801860598669133,
               "mathematical_log_loss_status": "finite",
-              "n": 18,
+              "n": 22,
               "observed_zero_probability_outcomes": 0
             },
             "possible_states": [
@@ -966,7 +966,7 @@
             },
             "metrics": {
               "brier_definition": "mean(sum_over_classes((p-y)^2))",
-              "brier_score": 0.6842878604591645,
+              "brier_score": 0.6018388683050928,
               "calibration": {
                 "half_loss": [
                   {
@@ -978,16 +978,16 @@
                   },
                   {
                     "lower": 0.1,
-                    "mean_predicted": 0.17989253504642233,
-                    "n": 1,
+                    "mean_predicted": 0.16381483615182243,
+                    "n": 3,
                     "observed_rate": 0.0,
                     "upper": 0.2
                   },
                   {
                     "lower": 0.2,
-                    "mean_predicted": 0.23791551321836396,
-                    "n": 17,
-                    "observed_rate": 0.11764705882352941,
+                    "mean_predicted": 0.23855113528636118,
+                    "n": 19,
+                    "observed_rate": 0.10526315789473684,
                     "upper": 0.3
                   },
                   {
@@ -1043,23 +1043,23 @@
                 "loss": [
                   {
                     "lower": 0.0,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.09498670015355325,
+                    "n": 1,
+                    "observed_rate": 0.0,
                     "upper": 0.1
                   },
                   {
                     "lower": 0.1,
-                    "mean_predicted": 0.1726106959360223,
-                    "n": 6,
-                    "observed_rate": 0.3333333333333333,
+                    "mean_predicted": 0.1633143079043493,
+                    "n": 7,
+                    "observed_rate": 0.2857142857142857,
                     "upper": 0.2
                   },
                   {
                     "lower": 0.2,
-                    "mean_predicted": 0.24388122981656368,
-                    "n": 9,
-                    "observed_rate": 0.6666666666666666,
+                    "mean_predicted": 0.24431483208968777,
+                    "n": 11,
+                    "observed_rate": 0.5454545454545454,
                     "upper": 0.3
                   },
                   {
@@ -1143,16 +1143,16 @@
                   },
                   {
                     "lower": 0.4,
-                    "mean_predicted": 0.45197320398484375,
-                    "n": 4,
-                    "observed_rate": 0.75,
+                    "mean_predicted": 0.46058464031708635,
+                    "n": 5,
+                    "observed_rate": 0.8,
                     "upper": 0.5
                   },
                   {
                     "lower": 0.5,
-                    "mean_predicted": 0.5419205259333603,
-                    "n": 9,
-                    "observed_rate": 0.1111111111111111,
+                    "mean_predicted": 0.5401814417388018,
+                    "n": 10,
+                    "observed_rate": 0.2,
                     "upper": 0.6
                   },
                   {
@@ -1164,9 +1164,9 @@
                   },
                   {
                     "lower": 0.7,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.7429626733615451,
+                    "n": 2,
+                    "observed_rate": 1.0,
                     "upper": 0.8
                   },
                   {
@@ -1186,12 +1186,12 @@
                 ]
               },
               "floor_affected_outcomes": 0,
-              "log_loss": 1.123998919584359,
+              "log_loss": 1.0079480288285898,
               "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
               "log_loss_probability_floor": 1e-15,
-              "mathematical_log_loss": 1.123998919584359,
+              "mathematical_log_loss": 1.0079480288285898,
               "mathematical_log_loss_status": "finite",
-              "n": 18,
+              "n": 22,
               "observed_zero_probability_outcomes": 0
             },
             "possible_states": [
@@ -1212,7 +1212,7 @@
             },
             "metrics": {
               "brier_definition": "mean(sum_over_classes((p-y)^2))",
-              "brier_score": 0.6178066821522853,
+              "brier_score": 0.6465652512393012,
               "calibration": {
                 "half_win": [
                   {
@@ -1224,16 +1224,16 @@
                   },
                   {
                     "lower": 0.1,
-                    "mean_predicted": 0.18369308752115215,
-                    "n": 1,
+                    "mean_predicted": 0.1906336596357551,
+                    "n": 2,
                     "observed_rate": 1.0,
                     "upper": 0.2
                   },
                   {
                     "lower": 0.2,
-                    "mean_predicted": 0.21975522738533756,
-                    "n": 17,
-                    "observed_rate": 0.11764705882352941,
+                    "mean_predicted": 0.21909047183227054,
+                    "n": 20,
+                    "observed_rate": 0.15,
                     "upper": 0.3
                   },
                   {
@@ -1303,9 +1303,9 @@
                   },
                   {
                     "lower": 0.2,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.2570373266384548,
+                    "n": 2,
+                    "observed_rate": 0.0,
                     "upper": 0.3
                   },
                   {
@@ -1317,16 +1317,16 @@
                   },
                   {
                     "lower": 0.4,
-                    "mean_predicted": 0.45807947406663974,
-                    "n": 9,
-                    "observed_rate": 0.8888888888888888,
+                    "mean_predicted": 0.45981855826119816,
+                    "n": 10,
+                    "observed_rate": 0.8,
                     "upper": 0.5
                   },
                   {
                     "lower": 0.5,
-                    "mean_predicted": 0.5480267960151564,
-                    "n": 4,
-                    "observed_rate": 0.25,
+                    "mean_predicted": 0.5394153596829138,
+                    "n": 5,
+                    "observed_rate": 0.2,
                     "upper": 0.6
                   },
                   {
@@ -1375,16 +1375,16 @@
                   },
                   {
                     "lower": 0.2,
-                    "mean_predicted": 0.265192964645607,
-                    "n": 8,
-                    "observed_rate": 0.25,
+                    "mean_predicted": 0.26636979529153854,
+                    "n": 9,
+                    "observed_rate": 0.3333333333333333,
                     "upper": 0.3
                   },
                   {
                     "lower": 0.3,
-                    "mean_predicted": 0.35976307665228274,
-                    "n": 8,
-                    "observed_rate": 0.375,
+                    "mean_predicted": 0.35339743402749046,
+                    "n": 9,
+                    "observed_rate": 0.3333333333333333,
                     "upper": 0.4
                   },
                   {
@@ -1396,9 +1396,9 @@
                   },
                   {
                     "lower": 0.5,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.5418419400118741,
+                    "n": 2,
+                    "observed_rate": 0.5,
                     "upper": 0.6
                   },
                   {
@@ -1432,12 +1432,12 @@
                 ]
               },
               "floor_affected_outcomes": 0,
-              "log_loss": 1.0205830378292837,
+              "log_loss": 1.0648763693398455,
               "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
               "log_loss_probability_floor": 1e-15,
-              "mathematical_log_loss": 1.0205830378292837,
+              "mathematical_log_loss": 1.0648763693398455,
               "mathematical_log_loss_status": "finite",
-              "n": 18,
+              "n": 22,
               "observed_zero_probability_outcomes": 0
             },
             "possible_states": [
@@ -1458,28 +1458,28 @@
             },
             "metrics": {
               "brier_definition": "mean(sum_over_classes((p-y)^2))",
-              "brier_score": 0.6423934342259394,
+              "brier_score": 0.6724366119799378,
               "calibration": {
                 "loss": [
                   {
                     "lower": 0.0,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.06572275672044481,
+                    "n": 1,
+                    "observed_rate": 0.0,
                     "upper": 0.1
                   },
                   {
                     "lower": 0.1,
-                    "mean_predicted": 0.14393016632060296,
-                    "n": 4,
-                    "observed_rate": 0.25,
+                    "mean_predicted": 0.14777404356396157,
+                    "n": 5,
+                    "observed_rate": 0.2,
                     "upper": 0.2
                   },
                   {
                     "lower": 0.2,
-                    "mean_predicted": 0.2571614703710945,
-                    "n": 4,
-                    "observed_rate": 0.5,
+                    "mean_predicted": 0.24586505841921918,
+                    "n": 5,
+                    "observed_rate": 0.6,
                     "upper": 0.3
                   },
                   {
@@ -1491,9 +1491,9 @@
                   },
                   {
                     "lower": 0.4,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.4272372491368389,
+                    "n": 1,
+                    "observed_rate": 1.0,
                     "upper": 0.5
                   },
                   {
@@ -1542,16 +1542,16 @@
                   },
                   {
                     "lower": 0.1,
-                    "mean_predicted": 0.17924201396444017,
-                    "n": 2,
-                    "observed_rate": 0.0,
+                    "mean_predicted": 0.163863200157811,
+                    "n": 4,
+                    "observed_rate": 0.25,
                     "upper": 0.2
                   },
                   {
                     "lower": 0.2,
-                    "mean_predicted": 0.23580247405659488,
-                    "n": 15,
-                    "observed_rate": 0.26666666666666666,
+                    "mean_predicted": 0.23603581569444904,
+                    "n": 17,
+                    "observed_rate": 0.23529411764705882,
                     "upper": 0.3
                   },
                   {
@@ -1628,9 +1628,9 @@
                   },
                   {
                     "lower": 0.3,
-                    "mean_predicted": 0.3724999952416476,
-                    "n": 1,
-                    "observed_rate": 1.0,
+                    "mean_predicted": 0.3465642292337566,
+                    "n": 2,
+                    "observed_rate": 0.5,
                     "upper": 0.4
                   },
                   {
@@ -1649,9 +1649,9 @@
                   },
                   {
                     "lower": 0.6,
-                    "mean_predicted": 0.6505837301839064,
-                    "n": 4,
-                    "observed_rate": 0.75,
+                    "mean_predicted": 0.6389688527081476,
+                    "n": 6,
+                    "observed_rate": 0.6666666666666666,
                     "upper": 0.7
                   },
                   {
@@ -1663,9 +1663,9 @@
                   },
                   {
                     "lower": 0.8,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.8185638435954019,
+                    "n": 1,
+                    "observed_rate": 0.0,
                     "upper": 0.9
                   },
                   {
@@ -1678,12 +1678,12 @@
                 ]
               },
               "floor_affected_outcomes": 0,
-              "log_loss": 1.0727501632645788,
+              "log_loss": 1.1096055028265261,
               "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
               "log_loss_probability_floor": 1e-15,
-              "mathematical_log_loss": 1.0727501632645788,
+              "mathematical_log_loss": 1.1096055028265261,
               "mathematical_log_loss_status": "finite",
-              "n": 18,
+              "n": 22,
               "observed_zero_probability_outcomes": 0
             },
             "possible_states": [
@@ -1704,28 +1704,28 @@
             },
             "metrics": {
               "brier_definition": "mean(sum_over_classes((p-y)^2))",
-              "brier_score": 0.48339033169069157,
+              "brier_score": 0.4862200741687888,
               "calibration": {
                 "loss": [
                   {
                     "lower": 0.0,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.06572275672044481,
+                    "n": 1,
+                    "observed_rate": 0.0,
                     "upper": 0.1
                   },
                   {
                     "lower": 0.1,
-                    "mean_predicted": 0.14393016632060296,
-                    "n": 4,
-                    "observed_rate": 0.25,
+                    "mean_predicted": 0.14777404356396157,
+                    "n": 5,
+                    "observed_rate": 0.2,
                     "upper": 0.2
                   },
                   {
                     "lower": 0.2,
-                    "mean_predicted": 0.2571614703710945,
-                    "n": 4,
-                    "observed_rate": 0.5,
+                    "mean_predicted": 0.24586505841921918,
+                    "n": 5,
+                    "observed_rate": 0.6,
                     "upper": 0.3
                   },
                   {
@@ -1737,9 +1737,9 @@
                   },
                   {
                     "lower": 0.4,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.4272372491368389,
+                    "n": 1,
+                    "observed_rate": 1.0,
                     "upper": 0.5
                   },
                   {
@@ -1816,9 +1816,9 @@
                   },
                   {
                     "lower": 0.5,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.5727627508631611,
+                    "n": 1,
+                    "observed_rate": 0.0,
                     "upper": 0.6
                   },
                   {
@@ -1830,34 +1830,34 @@
                   },
                   {
                     "lower": 0.7,
-                    "mean_predicted": 0.7428385296289054,
-                    "n": 4,
-                    "observed_rate": 0.5,
+                    "mean_predicted": 0.7541349415807808,
+                    "n": 5,
+                    "observed_rate": 0.4,
                     "upper": 0.8
                   },
                   {
                     "lower": 0.8,
-                    "mean_predicted": 0.8560698336793972,
-                    "n": 4,
-                    "observed_rate": 0.75,
+                    "mean_predicted": 0.8522259564360386,
+                    "n": 5,
+                    "observed_rate": 0.8,
                     "upper": 0.9
                   },
                   {
                     "lower": 0.9,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.9342772432795551,
+                    "n": 1,
+                    "observed_rate": 1.0,
                     "upper": 1.0
                   }
                 ]
               },
               "floor_affected_outcomes": 0,
-              "log_loss": 0.6811966081946444,
+              "log_loss": 0.6801860598669133,
               "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
               "log_loss_probability_floor": 1e-15,
-              "mathematical_log_loss": 0.6811966081946444,
+              "mathematical_log_loss": 0.6801860598669133,
               "mathematical_log_loss_status": "finite",
-              "n": 18,
+              "n": 22,
               "observed_zero_probability_outcomes": 0
             },
             "possible_states": [
@@ -1878,7 +1878,7 @@
             },
             "metrics": {
               "brier_definition": "mean(sum_over_classes((p-y)^2))",
-              "brier_score": 0.5341127792921032,
+              "brier_score": 0.49277393340903636,
               "calibration": {
                 "loss": [
                   {
@@ -1911,16 +1911,16 @@
                   },
                   {
                     "lower": 0.4,
-                    "mean_predicted": 0.45197320398484375,
-                    "n": 4,
-                    "observed_rate": 0.75,
+                    "mean_predicted": 0.46058464031708635,
+                    "n": 5,
+                    "observed_rate": 0.8,
                     "upper": 0.5
                   },
                   {
                     "lower": 0.5,
-                    "mean_predicted": 0.5419205259333603,
-                    "n": 9,
-                    "observed_rate": 0.1111111111111111,
+                    "mean_predicted": 0.5401814417388018,
+                    "n": 10,
+                    "observed_rate": 0.2,
                     "upper": 0.6
                   },
                   {
@@ -1932,9 +1932,9 @@
                   },
                   {
                     "lower": 0.7,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.7429626733615451,
+                    "n": 2,
+                    "observed_rate": 1.0,
                     "upper": 0.8
                   },
                   {
@@ -1969,9 +1969,9 @@
                   },
                   {
                     "lower": 0.2,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.2570373266384548,
+                    "n": 2,
+                    "observed_rate": 0.0,
                     "upper": 0.3
                   },
                   {
@@ -1983,16 +1983,16 @@
                   },
                   {
                     "lower": 0.4,
-                    "mean_predicted": 0.45807947406663974,
-                    "n": 9,
-                    "observed_rate": 0.8888888888888888,
+                    "mean_predicted": 0.45981855826119816,
+                    "n": 10,
+                    "observed_rate": 0.8,
                     "upper": 0.5
                   },
                   {
                     "lower": 0.5,
-                    "mean_predicted": 0.5480267960151564,
-                    "n": 4,
-                    "observed_rate": 0.25,
+                    "mean_predicted": 0.5394153596829138,
+                    "n": 5,
+                    "observed_rate": 0.2,
                     "upper": 0.6
                   },
                   {
@@ -2026,12 +2026,12 @@
                 ]
               },
               "floor_affected_outcomes": 0,
-              "log_loss": 0.7274921183008493,
+              "log_loss": 0.6835333732329908,
               "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
               "log_loss_probability_floor": 1e-15,
-              "mathematical_log_loss": 0.7274921183008493,
+              "mathematical_log_loss": 0.6835333732329908,
               "mathematical_log_loss_status": "finite",
-              "n": 18,
+              "n": 22,
               "observed_zero_probability_outcomes": 0
             },
             "possible_states": [
@@ -2052,7 +2052,7 @@
             },
             "metrics": {
               "brier_definition": "mean(sum_over_classes((p-y)^2))",
-              "brier_score": 0.2747579675128515,
+              "brier_score": 0.31555784084727195,
               "calibration": {
                 "loss": [
                   {
@@ -2078,9 +2078,9 @@
                   },
                   {
                     "lower": 0.3,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.36688472704703173,
+                    "n": 1,
+                    "observed_rate": 1.0,
                     "upper": 0.4
                   },
                   {
@@ -2092,16 +2092,16 @@
                   },
                   {
                     "lower": 0.5,
-                    "mean_predicted": 0.5423193097950594,
-                    "n": 1,
-                    "observed_rate": 0.0,
+                    "mean_predicted": 0.5658210794238556,
+                    "n": 2,
+                    "observed_rate": 0.5,
                     "upper": 0.6
                   },
                   {
                     "lower": 0.6,
-                    "mean_predicted": 0.6143672846436766,
-                    "n": 3,
-                    "observed_rate": 0.6666666666666666,
+                    "mean_predicted": 0.6208426947930265,
+                    "n": 4,
+                    "observed_rate": 0.5,
                     "upper": 0.7
                   },
                   {
@@ -2113,8 +2113,8 @@
                   },
                   {
                     "lower": 0.8,
-                    "mean_predicted": 0.8239675886236136,
-                    "n": 2,
+                    "mean_predicted": 0.836844071807238,
+                    "n": 3,
                     "observed_rate": 1.0,
                     "upper": 0.9
                   },
@@ -2136,8 +2136,8 @@
                   },
                   {
                     "lower": 0.1,
-                    "mean_predicted": 0.1760324113763863,
-                    "n": 2,
+                    "mean_predicted": 0.163155928192762,
+                    "n": 3,
                     "observed_rate": 0.0,
                     "upper": 0.2
                   },
@@ -2150,16 +2150,16 @@
                   },
                   {
                     "lower": 0.3,
-                    "mean_predicted": 0.38563271535632343,
-                    "n": 3,
-                    "observed_rate": 0.3333333333333333,
+                    "mean_predicted": 0.37915730520697355,
+                    "n": 4,
+                    "observed_rate": 0.5,
                     "upper": 0.4
                   },
                   {
                     "lower": 0.4,
-                    "mean_predicted": 0.4576806902049404,
-                    "n": 1,
-                    "observed_rate": 1.0,
+                    "mean_predicted": 0.4341789205761444,
+                    "n": 2,
+                    "observed_rate": 0.5,
                     "upper": 0.5
                   },
                   {
@@ -2171,9 +2171,9 @@
                   },
                   {
                     "lower": 0.6,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.6331152729529682,
+                    "n": 1,
+                    "observed_rate": 0.0,
                     "upper": 0.7
                   },
                   {
@@ -2200,12 +2200,12 @@
                 ]
               },
               "floor_affected_outcomes": 0,
-              "log_loss": 0.47793704912045026,
+              "log_loss": 0.513843715635239,
               "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
               "log_loss_probability_floor": 1e-15,
-              "mathematical_log_loss": 0.47793704912045026,
+              "mathematical_log_loss": 0.513843715635239,
               "mathematical_log_loss_status": "finite",
-              "n": 18,
+              "n": 22,
               "observed_zero_probability_outcomes": 0
             },
             "possible_states": [
@@ -2226,7 +2226,7 @@
             },
             "metrics": {
               "brier_definition": "mean(sum_over_classes((p-y)^2))",
-              "brier_score": 0.2747579675128515,
+              "brier_score": 0.31555784084727195,
               "calibration": {
                 "loss": [
                   {
@@ -2238,8 +2238,8 @@
                   },
                   {
                     "lower": 0.1,
-                    "mean_predicted": 0.1760324113763863,
-                    "n": 2,
+                    "mean_predicted": 0.163155928192762,
+                    "n": 3,
                     "observed_rate": 0.0,
                     "upper": 0.2
                   },
@@ -2252,16 +2252,16 @@
                   },
                   {
                     "lower": 0.3,
-                    "mean_predicted": 0.38563271535632343,
-                    "n": 3,
-                    "observed_rate": 0.3333333333333333,
+                    "mean_predicted": 0.37915730520697355,
+                    "n": 4,
+                    "observed_rate": 0.5,
                     "upper": 0.4
                   },
                   {
                     "lower": 0.4,
-                    "mean_predicted": 0.4576806902049404,
-                    "n": 1,
-                    "observed_rate": 1.0,
+                    "mean_predicted": 0.4341789205761444,
+                    "n": 2,
+                    "observed_rate": 0.5,
                     "upper": 0.5
                   },
                   {
@@ -2273,9 +2273,9 @@
                   },
                   {
                     "lower": 0.6,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.6331152729529682,
+                    "n": 1,
+                    "observed_rate": 0.0,
                     "upper": 0.7
                   },
                   {
@@ -2324,9 +2324,9 @@
                   },
                   {
                     "lower": 0.3,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.36688472704703173,
+                    "n": 1,
+                    "observed_rate": 1.0,
                     "upper": 0.4
                   },
                   {
@@ -2338,16 +2338,16 @@
                   },
                   {
                     "lower": 0.5,
-                    "mean_predicted": 0.5423193097950594,
-                    "n": 1,
-                    "observed_rate": 0.0,
+                    "mean_predicted": 0.5658210794238556,
+                    "n": 2,
+                    "observed_rate": 0.5,
                     "upper": 0.6
                   },
                   {
                     "lower": 0.6,
-                    "mean_predicted": 0.6143672846436766,
-                    "n": 3,
-                    "observed_rate": 0.6666666666666666,
+                    "mean_predicted": 0.6208426947930265,
+                    "n": 4,
+                    "observed_rate": 0.5,
                     "upper": 0.7
                   },
                   {
@@ -2359,8 +2359,8 @@
                   },
                   {
                     "lower": 0.8,
-                    "mean_predicted": 0.8239675886236136,
-                    "n": 2,
+                    "mean_predicted": 0.836844071807238,
+                    "n": 3,
                     "observed_rate": 1.0,
                     "upper": 0.9
                   },
@@ -2374,12 +2374,12 @@
                 ]
               },
               "floor_affected_outcomes": 0,
-              "log_loss": 0.47793704912045026,
+              "log_loss": 0.513843715635239,
               "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
               "log_loss_probability_floor": 1e-15,
-              "mathematical_log_loss": 0.47793704912045026,
+              "mathematical_log_loss": 0.513843715635239,
               "mathematical_log_loss_status": "finite",
-              "n": 18,
+              "n": 22,
               "observed_zero_probability_outcomes": 0
             },
             "possible_states": [
@@ -2400,7 +2400,7 @@
             },
             "metrics": {
               "brier_definition": "mean(sum_over_classes((p-y)^2))",
-              "brier_score": 0.6178066821522853,
+              "brier_score": 0.6465652512393012,
               "calibration": {
                 "half_loss": [
                   {
@@ -2412,16 +2412,16 @@
                   },
                   {
                     "lower": 0.1,
-                    "mean_predicted": 0.18369308752115215,
-                    "n": 1,
+                    "mean_predicted": 0.1906336596357551,
+                    "n": 2,
                     "observed_rate": 1.0,
                     "upper": 0.2
                   },
                   {
                     "lower": 0.2,
-                    "mean_predicted": 0.21975522738533756,
-                    "n": 17,
-                    "observed_rate": 0.11764705882352941,
+                    "mean_predicted": 0.21909047183227054,
+                    "n": 20,
+                    "observed_rate": 0.15,
                     "upper": 0.3
                   },
                   {
@@ -2491,16 +2491,16 @@
                   },
                   {
                     "lower": 0.2,
-                    "mean_predicted": 0.265192964645607,
-                    "n": 8,
-                    "observed_rate": 0.25,
+                    "mean_predicted": 0.26636979529153854,
+                    "n": 9,
+                    "observed_rate": 0.3333333333333333,
                     "upper": 0.3
                   },
                   {
                     "lower": 0.3,
-                    "mean_predicted": 0.35976307665228274,
-                    "n": 8,
-                    "observed_rate": 0.375,
+                    "mean_predicted": 0.35339743402749046,
+                    "n": 9,
+                    "observed_rate": 0.3333333333333333,
                     "upper": 0.4
                   },
                   {
@@ -2512,9 +2512,9 @@
                   },
                   {
                     "lower": 0.5,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.5418419400118741,
+                    "n": 2,
+                    "observed_rate": 0.5,
                     "upper": 0.6
                   },
                   {
@@ -2563,9 +2563,9 @@
                   },
                   {
                     "lower": 0.2,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.2570373266384548,
+                    "n": 2,
+                    "observed_rate": 0.0,
                     "upper": 0.3
                   },
                   {
@@ -2577,16 +2577,16 @@
                   },
                   {
                     "lower": 0.4,
-                    "mean_predicted": 0.45807947406663974,
-                    "n": 9,
-                    "observed_rate": 0.8888888888888888,
+                    "mean_predicted": 0.45981855826119816,
+                    "n": 10,
+                    "observed_rate": 0.8,
                     "upper": 0.5
                   },
                   {
                     "lower": 0.5,
-                    "mean_predicted": 0.5480267960151564,
-                    "n": 4,
-                    "observed_rate": 0.25,
+                    "mean_predicted": 0.5394153596829138,
+                    "n": 5,
+                    "observed_rate": 0.2,
                     "upper": 0.6
                   },
                   {
@@ -2620,12 +2620,12 @@
                 ]
               },
               "floor_affected_outcomes": 0,
-              "log_loss": 1.0205830378292837,
+              "log_loss": 1.0648763693398455,
               "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
               "log_loss_probability_floor": 1e-15,
-              "mathematical_log_loss": 1.0205830378292837,
+              "mathematical_log_loss": 1.0648763693398455,
               "mathematical_log_loss_status": "finite",
-              "n": 18,
+              "n": 22,
               "observed_zero_probability_outcomes": 0
             },
             "possible_states": [
@@ -2646,13 +2646,13 @@
             },
             "metrics": {
               "brier_definition": "mean(sum_over_classes((p-y)^2))",
-              "brier_score": 0.10230810918831251,
+              "brier_score": 0.1413263195034423,
               "calibration": {
                 "loss": [
                   {
                     "lower": 0.0,
-                    "mean_predicted": 0.05673450350200412,
-                    "n": 6,
+                    "mean_predicted": 0.05472987478536587,
+                    "n": 9,
                     "observed_rate": 0.0,
                     "upper": 0.1
                   },
@@ -2665,9 +2665,9 @@
                   },
                   {
                     "lower": 0.2,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.21016102028287917,
+                    "n": 1,
+                    "observed_rate": 1.0,
                     "upper": 0.3
                   },
                   {
@@ -2772,9 +2772,9 @@
                   },
                   {
                     "lower": 0.7,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.7898389797171207,
+                    "n": 1,
+                    "observed_rate": 0.0,
                     "upper": 0.8
                   },
                   {
@@ -2786,20 +2786,20 @@
                   },
                   {
                     "lower": 0.9,
-                    "mean_predicted": 0.943265496497996,
-                    "n": 6,
+                    "mean_predicted": 0.9452701252146343,
+                    "n": 9,
                     "observed_rate": 1.0,
                     "upper": 1.0
                   }
                 ]
               },
               "floor_affected_outcomes": 0,
-              "log_loss": 0.20566611220970998,
+              "log_loss": 0.24633091927874806,
               "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
               "log_loss_probability_floor": 1e-15,
-              "mathematical_log_loss": 0.20566611220970998,
+              "mathematical_log_loss": 0.24633091927874806,
               "mathematical_log_loss_status": "finite",
-              "n": 18,
+              "n": 22,
               "observed_zero_probability_outcomes": 0
             },
             "possible_states": [
@@ -2820,7 +2820,7 @@
             },
             "metrics": {
               "brier_definition": "mean(sum_over_classes((p-y)^2))",
-              "brier_score": 0.6842878604591645,
+              "brier_score": 0.6018388683050928,
               "calibration": {
                 "half_win": [
                   {
@@ -2832,16 +2832,16 @@
                   },
                   {
                     "lower": 0.1,
-                    "mean_predicted": 0.17989253504642233,
-                    "n": 1,
+                    "mean_predicted": 0.16381483615182243,
+                    "n": 3,
                     "observed_rate": 0.0,
                     "upper": 0.2
                   },
                   {
                     "lower": 0.2,
-                    "mean_predicted": 0.23791551321836396,
-                    "n": 17,
-                    "observed_rate": 0.11764705882352941,
+                    "mean_predicted": 0.23855113528636118,
+                    "n": 19,
+                    "observed_rate": 0.10526315789473684,
                     "upper": 0.3
                   },
                   {
@@ -2925,16 +2925,16 @@
                   },
                   {
                     "lower": 0.4,
-                    "mean_predicted": 0.45197320398484375,
-                    "n": 4,
-                    "observed_rate": 0.75,
+                    "mean_predicted": 0.46058464031708635,
+                    "n": 5,
+                    "observed_rate": 0.8,
                     "upper": 0.5
                   },
                   {
                     "lower": 0.5,
-                    "mean_predicted": 0.5419205259333603,
-                    "n": 9,
-                    "observed_rate": 0.1111111111111111,
+                    "mean_predicted": 0.5401814417388018,
+                    "n": 10,
+                    "observed_rate": 0.2,
                     "upper": 0.6
                   },
                   {
@@ -2946,9 +2946,9 @@
                   },
                   {
                     "lower": 0.7,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.7429626733615451,
+                    "n": 2,
+                    "observed_rate": 1.0,
                     "upper": 0.8
                   },
                   {
@@ -2969,23 +2969,23 @@
                 "win": [
                   {
                     "lower": 0.0,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.09498670015355325,
+                    "n": 1,
+                    "observed_rate": 0.0,
                     "upper": 0.1
                   },
                   {
                     "lower": 0.1,
-                    "mean_predicted": 0.1726106959360223,
-                    "n": 6,
-                    "observed_rate": 0.3333333333333333,
+                    "mean_predicted": 0.1633143079043493,
+                    "n": 7,
+                    "observed_rate": 0.2857142857142857,
                     "upper": 0.2
                   },
                   {
                     "lower": 0.2,
-                    "mean_predicted": 0.24388122981656368,
-                    "n": 9,
-                    "observed_rate": 0.6666666666666666,
+                    "mean_predicted": 0.24431483208968777,
+                    "n": 11,
+                    "observed_rate": 0.5454545454545454,
                     "upper": 0.3
                   },
                   {
@@ -3040,12 +3040,12 @@
                 ]
               },
               "floor_affected_outcomes": 0,
-              "log_loss": 1.123998919584359,
+              "log_loss": 1.0079480288285898,
               "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
               "log_loss_probability_floor": 1e-15,
-              "mathematical_log_loss": 1.123998919584359,
+              "mathematical_log_loss": 1.0079480288285898,
               "mathematical_log_loss_status": "finite",
-              "n": 18,
+              "n": 22,
               "observed_zero_probability_outcomes": 0
             },
             "possible_states": [
@@ -3066,7 +3066,7 @@
             },
             "metrics": {
               "brier_definition": "mean(sum_over_classes((p-y)^2))",
-              "brier_score": 0.5341127792921032,
+              "brier_score": 0.49277393340903636,
               "calibration": {
                 "loss": [
                   {
@@ -3085,9 +3085,9 @@
                   },
                   {
                     "lower": 0.2,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.2570373266384548,
+                    "n": 2,
+                    "observed_rate": 0.0,
                     "upper": 0.3
                   },
                   {
@@ -3099,16 +3099,16 @@
                   },
                   {
                     "lower": 0.4,
-                    "mean_predicted": 0.45807947406663974,
-                    "n": 9,
-                    "observed_rate": 0.8888888888888888,
+                    "mean_predicted": 0.45981855826119816,
+                    "n": 10,
+                    "observed_rate": 0.8,
                     "upper": 0.5
                   },
                   {
                     "lower": 0.5,
-                    "mean_predicted": 0.5480267960151564,
-                    "n": 4,
-                    "observed_rate": 0.25,
+                    "mean_predicted": 0.5394153596829138,
+                    "n": 5,
+                    "observed_rate": 0.2,
                     "upper": 0.6
                   },
                   {
@@ -3171,16 +3171,16 @@
                   },
                   {
                     "lower": 0.4,
-                    "mean_predicted": 0.45197320398484375,
-                    "n": 4,
-                    "observed_rate": 0.75,
+                    "mean_predicted": 0.46058464031708635,
+                    "n": 5,
+                    "observed_rate": 0.8,
                     "upper": 0.5
                   },
                   {
                     "lower": 0.5,
-                    "mean_predicted": 0.5419205259333603,
-                    "n": 9,
-                    "observed_rate": 0.1111111111111111,
+                    "mean_predicted": 0.5401814417388018,
+                    "n": 10,
+                    "observed_rate": 0.2,
                     "upper": 0.6
                   },
                   {
@@ -3192,9 +3192,9 @@
                   },
                   {
                     "lower": 0.7,
-                    "mean_predicted": null,
-                    "n": 0,
-                    "observed_rate": null,
+                    "mean_predicted": 0.7429626733615451,
+                    "n": 2,
+                    "observed_rate": 1.0,
                     "upper": 0.8
                   },
                   {
@@ -3214,12 +3214,12 @@
                 ]
               },
               "floor_affected_outcomes": 0,
-              "log_loss": 0.7274921183008493,
+              "log_loss": 0.6835333732329908,
               "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
               "log_loss_probability_floor": 1e-15,
-              "mathematical_log_loss": 0.7274921183008493,
+              "mathematical_log_loss": 0.6835333732329908,
               "mathematical_log_loss_status": "finite",
-              "n": 18,
+              "n": 22,
               "observed_zero_probability_outcomes": 0
             },
             "possible_states": [
@@ -3235,28 +3235,28 @@
         ],
         "one_x_two": {
           "brier_definition": "mean(sum_over_classes((p-y)^2))",
-          "brier_score": 0.6423934342259394,
+          "brier_score": 0.6724366119799379,
           "calibration": {
             "away_win": [
               {
                 "lower": 0.0,
-                "mean_predicted": null,
-                "n": 0,
-                "observed_rate": null,
+                "mean_predicted": 0.06572275672044478,
+                "n": 1,
+                "observed_rate": 0.0,
                 "upper": 0.1
               },
               {
                 "lower": 0.1,
-                "mean_predicted": 0.14393016632060296,
-                "n": 4,
-                "observed_rate": 0.25,
+                "mean_predicted": 0.14777404356396154,
+                "n": 5,
+                "observed_rate": 0.2,
                 "upper": 0.2
               },
               {
                 "lower": 0.2,
-                "mean_predicted": 0.2571614703710945,
-                "n": 4,
-                "observed_rate": 0.5,
+                "mean_predicted": 0.24586505841921918,
+                "n": 5,
+                "observed_rate": 0.6,
                 "upper": 0.3
               },
               {
@@ -3268,9 +3268,9 @@
               },
               {
                 "lower": 0.4,
-                "mean_predicted": null,
-                "n": 0,
-                "observed_rate": null,
+                "mean_predicted": 0.4272372491368389,
+                "n": 1,
+                "observed_rate": 1.0,
                 "upper": 0.5
               },
               {
@@ -3319,16 +3319,16 @@
               },
               {
                 "lower": 0.1,
-                "mean_predicted": 0.17924201396444017,
-                "n": 2,
-                "observed_rate": 0.0,
+                "mean_predicted": 0.163863200157811,
+                "n": 4,
+                "observed_rate": 0.25,
                 "upper": 0.2
               },
               {
                 "lower": 0.2,
-                "mean_predicted": 0.23580247405659488,
-                "n": 15,
-                "observed_rate": 0.26666666666666666,
+                "mean_predicted": 0.23603581569444904,
+                "n": 17,
+                "observed_rate": 0.23529411764705882,
                 "upper": 0.3
               },
               {
@@ -3405,9 +3405,9 @@
               },
               {
                 "lower": 0.3,
-                "mean_predicted": 0.3724999952416477,
-                "n": 1,
-                "observed_rate": 1.0,
+                "mean_predicted": 0.3465642292337566,
+                "n": 2,
+                "observed_rate": 0.5,
                 "upper": 0.4
               },
               {
@@ -3426,9 +3426,9 @@
               },
               {
                 "lower": 0.6,
-                "mean_predicted": 0.6505837301839064,
-                "n": 4,
-                "observed_rate": 0.75,
+                "mean_predicted": 0.6389688527081476,
+                "n": 6,
+                "observed_rate": 0.6666666666666666,
                 "upper": 0.7
               },
               {
@@ -3440,9 +3440,9 @@
               },
               {
                 "lower": 0.8,
-                "mean_predicted": null,
-                "n": 0,
-                "observed_rate": null,
+                "mean_predicted": 0.8185638435954021,
+                "n": 1,
+                "observed_rate": 0.0,
                 "upper": 0.9
               },
               {
@@ -3455,15 +3455,15 @@
             ]
           },
           "floor_affected_outcomes": 0,
-          "log_loss": 1.0727501632645788,
+          "log_loss": 1.1096055028265261,
           "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
           "log_loss_probability_floor": 1e-15,
-          "mathematical_log_loss": 1.0727501632645788,
+          "mathematical_log_loss": 1.1096055028265261,
           "mathematical_log_loss_status": "finite",
-          "n": 18,
+          "n": 22,
           "observed_zero_probability_outcomes": 0
         },
-        "unique_matches": 18
+        "unique_matches": 22
       },
       "baseline_missing": 0,
       "common_sample": {
@@ -3477,7 +3477,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.4627251258470044,
+                "brier_score": 0.458407771040031,
                 "calibration": {
                   "loss": [
                     {
@@ -3510,9 +3510,9 @@
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": 0.42844894050897625,
-                      "n": 18,
-                      "observed_rate": 0.3333333333333333,
+                      "mean_predicted": 0.42852313861040353,
+                      "n": 22,
+                      "observed_rate": 0.3181818181818182,
                       "upper": 0.5
                     },
                     {
@@ -3589,9 +3589,9 @@
                     },
                     {
                       "lower": 0.5,
-                      "mean_predicted": 0.5715510594910236,
-                      "n": 18,
-                      "observed_rate": 0.6666666666666666,
+                      "mean_predicted": 0.5714768613895964,
+                      "n": 22,
+                      "observed_rate": 0.6818181818181818,
                       "upper": 0.6
                     },
                     {
@@ -3625,12 +3625,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.6556527515997264,
+                "log_loss": 0.6513058342785095,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.6556527515997264,
+                "mathematical_log_loss": 0.6513058342785095,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -3651,7 +3651,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.4627251258470044,
+                "brier_score": 0.458407771040031,
                 "calibration": {
                   "loss": [
                     {
@@ -3691,9 +3691,9 @@
                     },
                     {
                       "lower": 0.5,
-                      "mean_predicted": 0.5715510594910236,
-                      "n": 18,
-                      "observed_rate": 0.6666666666666666,
+                      "mean_predicted": 0.5714768613895964,
+                      "n": 22,
+                      "observed_rate": 0.6818181818181818,
                       "upper": 0.6
                     },
                     {
@@ -3756,9 +3756,9 @@
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": 0.42844894050897625,
-                      "n": 18,
-                      "observed_rate": 0.3333333333333333,
+                      "mean_predicted": 0.42852313861040353,
+                      "n": 22,
+                      "observed_rate": 0.3181818181818182,
                       "upper": 0.5
                     },
                     {
@@ -3799,12 +3799,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.6556527515997264,
+                "log_loss": 0.6513058342785095,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.6556527515997264,
+                "mathematical_log_loss": 0.6513058342785095,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -3825,7 +3825,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.11976312308803297,
+                "brier_score": 0.1704759853314773,
                 "calibration": {
                   "loss": [
                     {
@@ -3886,9 +3886,9 @@
                     },
                     {
                       "lower": 0.8,
-                      "mean_predicted": 0.8585291516301388,
-                      "n": 18,
-                      "observed_rate": 0.9444444444444444,
+                      "mean_predicted": 0.858582150370585,
+                      "n": 22,
+                      "observed_rate": 0.9090909090909091,
                       "upper": 0.9
                     },
                     {
@@ -3909,9 +3909,9 @@
                     },
                     {
                       "lower": 0.1,
-                      "mean_predicted": 0.14147084836986118,
-                      "n": 18,
-                      "observed_rate": 0.05555555555555555,
+                      "mean_predicted": 0.1414178496294147,
+                      "n": 22,
+                      "observed_rate": 0.09090909090909091,
                       "upper": 0.2
                     },
                     {
@@ -3973,12 +3973,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.2528357343613967,
+                "log_loss": 0.3166069506739139,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.2528357343613967,
+                "mathematical_log_loss": 0.3166069506739139,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -3999,7 +3999,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.6665061509751279,
+                "brier_score": 0.6704512885380912,
                 "calibration": {
                   "loss": [
                     {
@@ -4032,9 +4032,9 @@
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": 0.42844894050897625,
-                      "n": 18,
-                      "observed_rate": 0.3333333333333333,
+                      "mean_predicted": 0.42852313861040353,
+                      "n": 22,
+                      "observed_rate": 0.3181818181818182,
                       "upper": 0.5
                     },
                     {
@@ -4090,9 +4090,9 @@
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.2477913102533382,
-                      "n": 18,
-                      "observed_rate": 0.2222222222222222,
+                      "mean_predicted": 0.2477939449227236,
+                      "n": 22,
+                      "observed_rate": 0.22727272727272727,
                       "upper": 0.3
                     },
                     {
@@ -4169,9 +4169,9 @@
                     },
                     {
                       "lower": 0.3,
-                      "mean_predicted": 0.3237597492376855,
-                      "n": 18,
-                      "observed_rate": 0.4444444444444444,
+                      "mean_predicted": 0.323682916466873,
+                      "n": 22,
+                      "observed_rate": 0.45454545454545453,
                       "upper": 0.4
                     },
                     {
@@ -4219,12 +4219,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 1.0941729774359354,
+                "log_loss": 1.0997715654405769,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 1.0941729774359354,
+                "mathematical_log_loss": 1.0997715654405769,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -4245,7 +4245,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.5232612546451142,
+                "brier_score": 0.5303809377487535,
                 "calibration": {
                   "loss": [
                     {
@@ -4292,9 +4292,9 @@
                     },
                     {
                       "lower": 0.6,
-                      "mean_predicted": 0.6762402507623145,
-                      "n": 18,
-                      "observed_rate": 0.5555555555555556,
+                      "mean_predicted": 0.676317083533127,
+                      "n": 22,
+                      "observed_rate": 0.5454545454545454,
                       "upper": 0.7
                     },
                     {
@@ -4343,9 +4343,9 @@
                     },
                     {
                       "lower": 0.3,
-                      "mean_predicted": 0.3237597492376855,
-                      "n": 18,
-                      "observed_rate": 0.4444444444444444,
+                      "mean_predicted": 0.323682916466873,
+                      "n": 22,
+                      "observed_rate": 0.45454545454545453,
                       "upper": 0.4
                     },
                     {
@@ -4393,12 +4393,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.718908850090997,
+                "log_loss": 0.7263474043874386,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.718908850090997,
+                "mathematical_log_loss": 0.7263474043874386,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -4419,7 +4419,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.6676568293853067,
+                "brier_score": 0.6028041015335103,
                 "calibration": {
                   "half_loss": [
                     {
@@ -4438,9 +4438,9 @@
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.23414731903276775,
-                      "n": 18,
-                      "observed_rate": 0.1111111111111111,
+                      "mean_predicted": 0.23415880245517925,
+                      "n": 22,
+                      "observed_rate": 0.09090909090909091,
                       "upper": 0.3
                     },
                     {
@@ -4510,9 +4510,9 @@
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.22089396333016767,
-                      "n": 18,
-                      "observed_rate": 0.4444444444444444,
+                      "mean_predicted": 0.22092059598141037,
+                      "n": 22,
+                      "observed_rate": 0.36363636363636365,
                       "upper": 0.3
                     },
                     {
@@ -4603,9 +4603,9 @@
                     },
                     {
                       "lower": 0.5,
-                      "mean_predicted": 0.5449587176370646,
-                      "n": 18,
-                      "observed_rate": 0.4444444444444444,
+                      "mean_predicted": 0.5449206015634104,
+                      "n": 22,
+                      "observed_rate": 0.5454545454545454,
                       "upper": 0.6
                     },
                     {
@@ -4639,12 +4639,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 1.102074974413451,
+                "log_loss": 1.0121395236867894,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 1.102074974413451,
+                "mathematical_log_loss": 1.0121395236867894,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -4665,7 +4665,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.6013976301976602,
+                "brier_score": 0.6403615031823465,
                 "calibration": {
                   "half_win": [
                     {
@@ -4684,9 +4684,9 @@
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.22329836419052704,
-                      "n": 18,
-                      "observed_rate": 0.16666666666666666,
+                      "mean_predicted": 0.2232966153791639,
+                      "n": 22,
+                      "observed_rate": 0.22727272727272727,
                       "upper": 0.3
                     },
                     {
@@ -4770,9 +4770,9 @@
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": 0.4550412823629354,
-                      "n": 18,
-                      "observed_rate": 0.5555555555555556,
+                      "mean_predicted": 0.4550793984365896,
+                      "n": 22,
+                      "observed_rate": 0.45454545454545453,
                       "upper": 0.5
                     },
                     {
@@ -4835,9 +4835,9 @@
                     },
                     {
                       "lower": 0.3,
-                      "mean_predicted": 0.32166035344653754,
-                      "n": 18,
-                      "observed_rate": 0.2777777777777778,
+                      "mean_predicted": 0.3216239861842466,
+                      "n": 22,
+                      "observed_rate": 0.3181818181818182,
                       "upper": 0.4
                     },
                     {
@@ -4885,12 +4885,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 1.0020266815477463,
+                "log_loss": 1.059310070681462,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 1.0020266815477463,
+                "mathematical_log_loss": 1.059310070681462,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -4911,7 +4911,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.666506150975128,
+                "brier_score": 0.6704512885380914,
                 "calibration": {
                   "loss": [
                     {
@@ -4937,9 +4937,9 @@
                     },
                     {
                       "lower": 0.3,
-                      "mean_predicted": 0.3237597492376855,
-                      "n": 18,
-                      "observed_rate": 0.4444444444444444,
+                      "mean_predicted": 0.323682916466873,
+                      "n": 22,
+                      "observed_rate": 0.45454545454545453,
                       "upper": 0.4
                     },
                     {
@@ -5002,9 +5002,9 @@
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.2477913102533382,
-                      "n": 18,
-                      "observed_rate": 0.2222222222222222,
+                      "mean_predicted": 0.2477939449227236,
+                      "n": 22,
+                      "observed_rate": 0.22727272727272727,
                       "upper": 0.3
                     },
                     {
@@ -5088,9 +5088,9 @@
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": 0.42844894050897625,
-                      "n": 18,
-                      "observed_rate": 0.3333333333333333,
+                      "mean_predicted": 0.42852313861040353,
+                      "n": 22,
+                      "observed_rate": 0.3181818181818182,
                       "upper": 0.5
                     },
                     {
@@ -5131,12 +5131,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 1.0941729774359354,
+                "log_loss": 1.0997715654405769,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 1.0941729774359354,
+                "mathematical_log_loss": 1.0997715654405769,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -5157,7 +5157,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.5232612546451142,
+                "brier_score": 0.5303809377487535,
                 "calibration": {
                   "loss": [
                     {
@@ -5183,9 +5183,9 @@
                     },
                     {
                       "lower": 0.3,
-                      "mean_predicted": 0.3237597492376855,
-                      "n": 18,
-                      "observed_rate": 0.4444444444444444,
+                      "mean_predicted": 0.323682916466873,
+                      "n": 22,
+                      "observed_rate": 0.45454545454545453,
                       "upper": 0.4
                     },
                     {
@@ -5276,9 +5276,9 @@
                     },
                     {
                       "lower": 0.6,
-                      "mean_predicted": 0.6762402507623145,
-                      "n": 18,
-                      "observed_rate": 0.5555555555555556,
+                      "mean_predicted": 0.676317083533127,
+                      "n": 22,
+                      "observed_rate": 0.5454545454545454,
                       "upper": 0.7
                     },
                     {
@@ -5305,12 +5305,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.718908850090997,
+                "log_loss": 0.7263474043874386,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.718908850090997,
+                "mathematical_log_loss": 0.7263474043874386,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -5331,7 +5331,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.5137951075892587,
+                "brier_score": 0.49574268834035423,
                 "calibration": {
                   "loss": [
                     {
@@ -5371,9 +5371,9 @@
                     },
                     {
                       "lower": 0.5,
-                      "mean_predicted": 0.5449587176370646,
-                      "n": 18,
-                      "observed_rate": 0.4444444444444444,
+                      "mean_predicted": 0.5449206015634104,
+                      "n": 22,
+                      "observed_rate": 0.5454545454545454,
                       "upper": 0.6
                     },
                     {
@@ -5436,9 +5436,9 @@
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": 0.4550412823629354,
-                      "n": 18,
-                      "observed_rate": 0.5555555555555556,
+                      "mean_predicted": 0.4550793984365896,
+                      "n": 22,
+                      "observed_rate": 0.45454545454545453,
                       "upper": 0.5
                     },
                     {
@@ -5479,12 +5479,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.7069838407091961,
+                "log_loss": 0.6888831415651265,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.7069838407091961,
+                "mathematical_log_loss": 0.6888831415651265,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -5505,7 +5505,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.2822839011264868,
+                "brier_score": 0.29961191531361037,
                 "calibration": {
                   "loss": [
                     {
@@ -5559,9 +5559,9 @@
                     },
                     {
                       "lower": 0.7,
-                      "mean_predicted": 0.7862471782865604,
-                      "n": 18,
-                      "observed_rate": 0.8333333333333334,
+                      "mean_predicted": 0.7861971579858725,
+                      "n": 22,
+                      "observed_rate": 0.8181818181818182,
                       "upper": 0.8
                     },
                     {
@@ -5596,9 +5596,9 @@
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.2137528217134396,
-                      "n": 18,
-                      "observed_rate": 0.16666666666666666,
+                      "mean_predicted": 0.21380284201412755,
+                      "n": 22,
+                      "observed_rate": 0.18181818181818182,
                       "upper": 0.3
                     },
                     {
@@ -5653,12 +5653,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.4576660044501315,
+                "log_loss": 0.4773699500130136,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.4576660044501315,
+                "mathematical_log_loss": 0.4773699500130136,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -5679,7 +5679,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.2822839011264868,
+                "brier_score": 0.29961191531361037,
                 "calibration": {
                   "loss": [
                     {
@@ -5698,9 +5698,9 @@
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.2137528217134396,
-                      "n": 18,
-                      "observed_rate": 0.16666666666666666,
+                      "mean_predicted": 0.21380284201412755,
+                      "n": 22,
+                      "observed_rate": 0.18181818181818182,
                       "upper": 0.3
                     },
                     {
@@ -5805,9 +5805,9 @@
                     },
                     {
                       "lower": 0.7,
-                      "mean_predicted": 0.7862471782865604,
-                      "n": 18,
-                      "observed_rate": 0.8333333333333334,
+                      "mean_predicted": 0.7861971579858725,
+                      "n": 22,
+                      "observed_rate": 0.8181818181818182,
                       "upper": 0.8
                     },
                     {
@@ -5827,12 +5827,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.4576660044501315,
+                "log_loss": 0.4773699500130136,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.4576660044501315,
+                "mathematical_log_loss": 0.4773699500130136,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -5853,7 +5853,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.6013976301976603,
+                "brier_score": 0.6403615031823466,
                 "calibration": {
                   "half_loss": [
                     {
@@ -5872,9 +5872,9 @@
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.22329836419052704,
-                      "n": 18,
-                      "observed_rate": 0.16666666666666666,
+                      "mean_predicted": 0.2232966153791639,
+                      "n": 22,
+                      "observed_rate": 0.22727272727272727,
                       "upper": 0.3
                     },
                     {
@@ -5951,9 +5951,9 @@
                     },
                     {
                       "lower": 0.3,
-                      "mean_predicted": 0.32166035344653754,
-                      "n": 18,
-                      "observed_rate": 0.2777777777777778,
+                      "mean_predicted": 0.3216239861842466,
+                      "n": 22,
+                      "observed_rate": 0.3181818181818182,
                       "upper": 0.4
                     },
                     {
@@ -6030,9 +6030,9 @@
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": 0.4550412823629354,
-                      "n": 18,
-                      "observed_rate": 0.5555555555555556,
+                      "mean_predicted": 0.4550793984365896,
+                      "n": 22,
+                      "observed_rate": 0.45454545454545453,
                       "upper": 0.5
                     },
                     {
@@ -6073,12 +6073,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 1.0020266815477463,
+                "log_loss": 1.059310070681462,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 1.0020266815477463,
+                "mathematical_log_loss": 1.059310070681462,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -6099,7 +6099,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.11976312308803297,
+                "brier_score": 0.1704759853314773,
                 "calibration": {
                   "loss": [
                     {
@@ -6111,9 +6111,9 @@
                     },
                     {
                       "lower": 0.1,
-                      "mean_predicted": 0.14147084836986118,
-                      "n": 18,
-                      "observed_rate": 0.05555555555555555,
+                      "mean_predicted": 0.1414178496294147,
+                      "n": 22,
+                      "observed_rate": 0.09090909090909091,
                       "upper": 0.2
                     },
                     {
@@ -6232,9 +6232,9 @@
                     },
                     {
                       "lower": 0.8,
-                      "mean_predicted": 0.8585291516301388,
-                      "n": 18,
-                      "observed_rate": 0.9444444444444444,
+                      "mean_predicted": 0.858582150370585,
+                      "n": 22,
+                      "observed_rate": 0.9090909090909091,
                       "upper": 0.9
                     },
                     {
@@ -6247,12 +6247,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.2528357343613967,
+                "log_loss": 0.3166069506739139,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.2528357343613967,
+                "mathematical_log_loss": 0.3166069506739139,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -6273,7 +6273,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.6676568293853067,
+                "brier_score": 0.6028041015335103,
                 "calibration": {
                   "half_win": [
                     {
@@ -6292,9 +6292,9 @@
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.23414731903276775,
-                      "n": 18,
-                      "observed_rate": 0.1111111111111111,
+                      "mean_predicted": 0.23415880245517925,
+                      "n": 22,
+                      "observed_rate": 0.09090909090909091,
                       "upper": 0.3
                     },
                     {
@@ -6385,9 +6385,9 @@
                     },
                     {
                       "lower": 0.5,
-                      "mean_predicted": 0.5449587176370646,
-                      "n": 18,
-                      "observed_rate": 0.4444444444444444,
+                      "mean_predicted": 0.5449206015634104,
+                      "n": 22,
+                      "observed_rate": 0.5454545454545454,
                       "upper": 0.6
                     },
                     {
@@ -6436,9 +6436,9 @@
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.22089396333016767,
-                      "n": 18,
-                      "observed_rate": 0.4444444444444444,
+                      "mean_predicted": 0.22092059598141037,
+                      "n": 22,
+                      "observed_rate": 0.36363636363636365,
                       "upper": 0.3
                     },
                     {
@@ -6493,12 +6493,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 1.102074974413451,
+                "log_loss": 1.0121395236867894,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 1.102074974413451,
+                "mathematical_log_loss": 1.0121395236867894,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -6519,7 +6519,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.5137951075892587,
+                "brier_score": 0.49574268834035423,
                 "calibration": {
                   "loss": [
                     {
@@ -6552,9 +6552,9 @@
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": 0.4550412823629354,
-                      "n": 18,
-                      "observed_rate": 0.5555555555555556,
+                      "mean_predicted": 0.4550793984365896,
+                      "n": 22,
+                      "observed_rate": 0.45454545454545453,
                       "upper": 0.5
                     },
                     {
@@ -6631,9 +6631,9 @@
                     },
                     {
                       "lower": 0.5,
-                      "mean_predicted": 0.5449587176370646,
-                      "n": 18,
-                      "observed_rate": 0.4444444444444444,
+                      "mean_predicted": 0.5449206015634104,
+                      "n": 22,
+                      "observed_rate": 0.5454545454545454,
                       "upper": 0.6
                     },
                     {
@@ -6667,12 +6667,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.7069838407091961,
+                "log_loss": 0.6888831415651265,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.7069838407091961,
+                "mathematical_log_loss": 0.6888831415651265,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -6688,7 +6688,7 @@
           ],
           "one_x_two": {
             "brier_definition": "mean(sum_over_classes((p-y)^2))",
-            "brier_score": 0.6665061509751278,
+            "brier_score": 0.6704512885380912,
             "calibration": {
               "away_win": [
                 {
@@ -6714,9 +6714,9 @@
                 },
                 {
                   "lower": 0.3,
-                  "mean_predicted": 0.32375974923768563,
-                  "n": 18,
-                  "observed_rate": 0.4444444444444444,
+                  "mean_predicted": 0.3236829164668731,
+                  "n": 22,
+                  "observed_rate": 0.45454545454545453,
                   "upper": 0.4
                 },
                 {
@@ -6779,9 +6779,9 @@
                 },
                 {
                   "lower": 0.2,
-                  "mean_predicted": 0.2477913102533382,
-                  "n": 18,
-                  "observed_rate": 0.2222222222222222,
+                  "mean_predicted": 0.2477939449227236,
+                  "n": 22,
+                  "observed_rate": 0.22727272727272727,
                   "upper": 0.3
                 },
                 {
@@ -6865,9 +6865,9 @@
                 },
                 {
                   "lower": 0.4,
-                  "mean_predicted": 0.4284489405089762,
-                  "n": 18,
-                  "observed_rate": 0.3333333333333333,
+                  "mean_predicted": 0.4285231386104034,
+                  "n": 22,
+                  "observed_rate": 0.3181818181818182,
                   "upper": 0.5
                 },
                 {
@@ -6908,15 +6908,15 @@
               ]
             },
             "floor_affected_outcomes": 0,
-            "log_loss": 1.0941729774359354,
+            "log_loss": 1.0997715654405769,
             "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
             "log_loss_probability_floor": 1e-15,
-            "mathematical_log_loss": 1.0941729774359354,
+            "mathematical_log_loss": 1.0997715654405769,
             "mathematical_log_loss_status": "finite",
-            "n": 18,
+            "n": 22,
             "observed_zero_probability_outcomes": 0
           },
-          "unique_matches": 18
+          "unique_matches": 22
         },
         "model": {
           "contracts": [
@@ -6928,7 +6928,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.4607887178299519,
+                "brier_score": 0.49558199766575933,
                 "calibration": {
                   "loss": [
                     {
@@ -6954,9 +6954,9 @@
                     },
                     {
                       "lower": 0.3,
-                      "mean_predicted": 0.3724999952416476,
-                      "n": 1,
-                      "observed_rate": 1.0,
+                      "mean_predicted": 0.3465642292337566,
+                      "n": 2,
+                      "observed_rate": 0.5,
                       "upper": 0.4
                     },
                     {
@@ -6975,9 +6975,9 @@
                     },
                     {
                       "lower": 0.6,
-                      "mean_predicted": 0.6505837301839064,
-                      "n": 4,
-                      "observed_rate": 0.75,
+                      "mean_predicted": 0.6389688527081476,
+                      "n": 6,
+                      "observed_rate": 0.6666666666666666,
                       "upper": 0.7
                     },
                     {
@@ -6989,9 +6989,9 @@
                     },
                     {
                       "lower": 0.8,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.8185638435954019,
+                      "n": 1,
+                      "observed_rate": 0.0,
                       "upper": 0.9
                     },
                     {
@@ -7012,9 +7012,9 @@
                     },
                     {
                       "lower": 0.1,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.18143615640459787,
+                      "n": 1,
+                      "observed_rate": 1.0,
                       "upper": 0.2
                     },
                     {
@@ -7026,9 +7026,9 @@
                     },
                     {
                       "lower": 0.3,
-                      "mean_predicted": 0.3494162698160938,
-                      "n": 4,
-                      "observed_rate": 0.25,
+                      "mean_predicted": 0.36103114729185243,
+                      "n": 6,
+                      "observed_rate": 0.3333333333333333,
                       "upper": 0.4
                     },
                     {
@@ -7047,9 +7047,9 @@
                     },
                     {
                       "lower": 0.6,
-                      "mean_predicted": 0.6275000047583523,
-                      "n": 1,
-                      "observed_rate": 0.0,
+                      "mean_predicted": 0.6534357707662434,
+                      "n": 2,
+                      "observed_rate": 0.5,
                       "upper": 0.7
                     },
                     {
@@ -7076,12 +7076,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.6538399417059205,
+                "log_loss": 0.6960808994821192,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.6538399417059205,
+                "mathematical_log_loss": 0.6960808994821192,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -7102,7 +7102,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.4607887178299519,
+                "brier_score": 0.49558199766575933,
                 "calibration": {
                   "loss": [
                     {
@@ -7114,9 +7114,9 @@
                     },
                     {
                       "lower": 0.1,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.18143615640459787,
+                      "n": 1,
+                      "observed_rate": 1.0,
                       "upper": 0.2
                     },
                     {
@@ -7128,9 +7128,9 @@
                     },
                     {
                       "lower": 0.3,
-                      "mean_predicted": 0.3494162698160938,
-                      "n": 4,
-                      "observed_rate": 0.25,
+                      "mean_predicted": 0.36103114729185243,
+                      "n": 6,
+                      "observed_rate": 0.3333333333333333,
                       "upper": 0.4
                     },
                     {
@@ -7149,9 +7149,9 @@
                     },
                     {
                       "lower": 0.6,
-                      "mean_predicted": 0.6275000047583523,
-                      "n": 1,
-                      "observed_rate": 0.0,
+                      "mean_predicted": 0.6534357707662434,
+                      "n": 2,
+                      "observed_rate": 0.5,
                       "upper": 0.7
                     },
                     {
@@ -7200,9 +7200,9 @@
                     },
                     {
                       "lower": 0.3,
-                      "mean_predicted": 0.3724999952416476,
-                      "n": 1,
-                      "observed_rate": 1.0,
+                      "mean_predicted": 0.3465642292337566,
+                      "n": 2,
+                      "observed_rate": 0.5,
                       "upper": 0.4
                     },
                     {
@@ -7221,9 +7221,9 @@
                     },
                     {
                       "lower": 0.6,
-                      "mean_predicted": 0.6505837301839064,
-                      "n": 4,
-                      "observed_rate": 0.75,
+                      "mean_predicted": 0.6389688527081476,
+                      "n": 6,
+                      "observed_rate": 0.6666666666666666,
                       "upper": 0.7
                     },
                     {
@@ -7235,9 +7235,9 @@
                     },
                     {
                       "lower": 0.8,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.8185638435954019,
+                      "n": 1,
+                      "observed_rate": 0.0,
                       "upper": 0.9
                     },
                     {
@@ -7250,12 +7250,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.6538399417059205,
+                "log_loss": 0.6960808994821192,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.6538399417059205,
+                "mathematical_log_loss": 0.6960808994821192,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -7276,7 +7276,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.10230810918831251,
+                "brier_score": 0.1413263195034423,
                 "calibration": {
                   "loss": [
                     {
@@ -7330,9 +7330,9 @@
                     },
                     {
                       "lower": 0.7,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.7898389797171207,
+                      "n": 1,
+                      "observed_rate": 0.0,
                       "upper": 0.8
                     },
                     {
@@ -7344,8 +7344,8 @@
                     },
                     {
                       "lower": 0.9,
-                      "mean_predicted": 0.943265496497996,
-                      "n": 6,
+                      "mean_predicted": 0.9452701252146343,
+                      "n": 9,
                       "observed_rate": 1.0,
                       "upper": 1.0
                     }
@@ -7353,8 +7353,8 @@
                   "win": [
                     {
                       "lower": 0.0,
-                      "mean_predicted": 0.05673450350200412,
-                      "n": 6,
+                      "mean_predicted": 0.05472987478536587,
+                      "n": 9,
                       "observed_rate": 0.0,
                       "upper": 0.1
                     },
@@ -7367,9 +7367,9 @@
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.21016102028287917,
+                      "n": 1,
+                      "observed_rate": 1.0,
                       "upper": 0.3
                     },
                     {
@@ -7424,12 +7424,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.20566611220970998,
+                "log_loss": 0.24633091927874806,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.20566611220970998,
+                "mathematical_log_loss": 0.24633091927874806,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -7450,7 +7450,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.6423934342259394,
+                "brier_score": 0.6724366119799378,
                 "calibration": {
                   "loss": [
                     {
@@ -7476,9 +7476,9 @@
                     },
                     {
                       "lower": 0.3,
-                      "mean_predicted": 0.3724999952416476,
-                      "n": 1,
-                      "observed_rate": 1.0,
+                      "mean_predicted": 0.3465642292337566,
+                      "n": 2,
+                      "observed_rate": 0.5,
                       "upper": 0.4
                     },
                     {
@@ -7497,9 +7497,9 @@
                     },
                     {
                       "lower": 0.6,
-                      "mean_predicted": 0.6505837301839064,
-                      "n": 4,
-                      "observed_rate": 0.75,
+                      "mean_predicted": 0.6389688527081476,
+                      "n": 6,
+                      "observed_rate": 0.6666666666666666,
                       "upper": 0.7
                     },
                     {
@@ -7511,9 +7511,9 @@
                     },
                     {
                       "lower": 0.8,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.8185638435954019,
+                      "n": 1,
+                      "observed_rate": 0.0,
                       "upper": 0.9
                     },
                     {
@@ -7534,16 +7534,16 @@
                     },
                     {
                       "lower": 0.1,
-                      "mean_predicted": 0.17924201396444017,
-                      "n": 2,
-                      "observed_rate": 0.0,
+                      "mean_predicted": 0.163863200157811,
+                      "n": 4,
+                      "observed_rate": 0.25,
                       "upper": 0.2
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.23580247405659488,
-                      "n": 15,
-                      "observed_rate": 0.26666666666666666,
+                      "mean_predicted": 0.23603581569444904,
+                      "n": 17,
+                      "observed_rate": 0.23529411764705882,
                       "upper": 0.3
                     },
                     {
@@ -7599,23 +7599,23 @@
                   "win": [
                     {
                       "lower": 0.0,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.06572275672044481,
+                      "n": 1,
+                      "observed_rate": 0.0,
                       "upper": 0.1
                     },
                     {
                       "lower": 0.1,
-                      "mean_predicted": 0.14393016632060296,
-                      "n": 4,
-                      "observed_rate": 0.25,
+                      "mean_predicted": 0.14777404356396157,
+                      "n": 5,
+                      "observed_rate": 0.2,
                       "upper": 0.2
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.2571614703710945,
-                      "n": 4,
-                      "observed_rate": 0.5,
+                      "mean_predicted": 0.24586505841921918,
+                      "n": 5,
+                      "observed_rate": 0.6,
                       "upper": 0.3
                     },
                     {
@@ -7627,9 +7627,9 @@
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.4272372491368389,
+                      "n": 1,
+                      "observed_rate": 1.0,
                       "upper": 0.5
                     },
                     {
@@ -7670,12 +7670,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 1.0727501632645788,
+                "log_loss": 1.1096055028265261,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 1.0727501632645788,
+                "mathematical_log_loss": 1.1096055028265261,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -7696,7 +7696,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.48339033169069157,
+                "brier_score": 0.4862200741687888,
                 "calibration": {
                   "loss": [
                     {
@@ -7736,9 +7736,9 @@
                     },
                     {
                       "lower": 0.5,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.5727627508631611,
+                      "n": 1,
+                      "observed_rate": 0.0,
                       "upper": 0.6
                     },
                     {
@@ -7750,46 +7750,46 @@
                     },
                     {
                       "lower": 0.7,
-                      "mean_predicted": 0.7428385296289054,
-                      "n": 4,
-                      "observed_rate": 0.5,
+                      "mean_predicted": 0.7541349415807808,
+                      "n": 5,
+                      "observed_rate": 0.4,
                       "upper": 0.8
                     },
                     {
                       "lower": 0.8,
-                      "mean_predicted": 0.8560698336793972,
-                      "n": 4,
-                      "observed_rate": 0.75,
+                      "mean_predicted": 0.8522259564360386,
+                      "n": 5,
+                      "observed_rate": 0.8,
                       "upper": 0.9
                     },
                     {
                       "lower": 0.9,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.9342772432795551,
+                      "n": 1,
+                      "observed_rate": 1.0,
                       "upper": 1.0
                     }
                   ],
                   "win": [
                     {
                       "lower": 0.0,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.06572275672044481,
+                      "n": 1,
+                      "observed_rate": 0.0,
                       "upper": 0.1
                     },
                     {
                       "lower": 0.1,
-                      "mean_predicted": 0.14393016632060296,
-                      "n": 4,
-                      "observed_rate": 0.25,
+                      "mean_predicted": 0.14777404356396157,
+                      "n": 5,
+                      "observed_rate": 0.2,
                       "upper": 0.2
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.2571614703710945,
-                      "n": 4,
-                      "observed_rate": 0.5,
+                      "mean_predicted": 0.24586505841921918,
+                      "n": 5,
+                      "observed_rate": 0.6,
                       "upper": 0.3
                     },
                     {
@@ -7801,9 +7801,9 @@
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.4272372491368389,
+                      "n": 1,
+                      "observed_rate": 1.0,
                       "upper": 0.5
                     },
                     {
@@ -7844,12 +7844,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.6811966081946444,
+                "log_loss": 0.6801860598669133,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.6811966081946444,
+                "mathematical_log_loss": 0.6801860598669133,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -7870,7 +7870,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.6842878604591645,
+                "brier_score": 0.6018388683050928,
                 "calibration": {
                   "half_loss": [
                     {
@@ -7882,16 +7882,16 @@
                     },
                     {
                       "lower": 0.1,
-                      "mean_predicted": 0.17989253504642233,
-                      "n": 1,
+                      "mean_predicted": 0.16381483615182243,
+                      "n": 3,
                       "observed_rate": 0.0,
                       "upper": 0.2
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.23791551321836396,
-                      "n": 17,
-                      "observed_rate": 0.11764705882352941,
+                      "mean_predicted": 0.23855113528636118,
+                      "n": 19,
+                      "observed_rate": 0.10526315789473684,
                       "upper": 0.3
                     },
                     {
@@ -7947,23 +7947,23 @@
                   "loss": [
                     {
                       "lower": 0.0,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.09498670015355325,
+                      "n": 1,
+                      "observed_rate": 0.0,
                       "upper": 0.1
                     },
                     {
                       "lower": 0.1,
-                      "mean_predicted": 0.1726106959360223,
-                      "n": 6,
-                      "observed_rate": 0.3333333333333333,
+                      "mean_predicted": 0.1633143079043493,
+                      "n": 7,
+                      "observed_rate": 0.2857142857142857,
                       "upper": 0.2
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.24388122981656368,
-                      "n": 9,
-                      "observed_rate": 0.6666666666666666,
+                      "mean_predicted": 0.24431483208968777,
+                      "n": 11,
+                      "observed_rate": 0.5454545454545454,
                       "upper": 0.3
                     },
                     {
@@ -8047,16 +8047,16 @@
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": 0.45197320398484375,
-                      "n": 4,
-                      "observed_rate": 0.75,
+                      "mean_predicted": 0.46058464031708635,
+                      "n": 5,
+                      "observed_rate": 0.8,
                       "upper": 0.5
                     },
                     {
                       "lower": 0.5,
-                      "mean_predicted": 0.5419205259333603,
-                      "n": 9,
-                      "observed_rate": 0.1111111111111111,
+                      "mean_predicted": 0.5401814417388018,
+                      "n": 10,
+                      "observed_rate": 0.2,
                       "upper": 0.6
                     },
                     {
@@ -8068,9 +8068,9 @@
                     },
                     {
                       "lower": 0.7,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.7429626733615451,
+                      "n": 2,
+                      "observed_rate": 1.0,
                       "upper": 0.8
                     },
                     {
@@ -8090,12 +8090,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 1.123998919584359,
+                "log_loss": 1.0079480288285898,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 1.123998919584359,
+                "mathematical_log_loss": 1.0079480288285898,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -8116,7 +8116,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.6178066821522853,
+                "brier_score": 0.6465652512393012,
                 "calibration": {
                   "half_win": [
                     {
@@ -8128,16 +8128,16 @@
                     },
                     {
                       "lower": 0.1,
-                      "mean_predicted": 0.18369308752115215,
-                      "n": 1,
+                      "mean_predicted": 0.1906336596357551,
+                      "n": 2,
                       "observed_rate": 1.0,
                       "upper": 0.2
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.21975522738533756,
-                      "n": 17,
-                      "observed_rate": 0.11764705882352941,
+                      "mean_predicted": 0.21909047183227054,
+                      "n": 20,
+                      "observed_rate": 0.15,
                       "upper": 0.3
                     },
                     {
@@ -8207,9 +8207,9 @@
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.2570373266384548,
+                      "n": 2,
+                      "observed_rate": 0.0,
                       "upper": 0.3
                     },
                     {
@@ -8221,16 +8221,16 @@
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": 0.45807947406663974,
-                      "n": 9,
-                      "observed_rate": 0.8888888888888888,
+                      "mean_predicted": 0.45981855826119816,
+                      "n": 10,
+                      "observed_rate": 0.8,
                       "upper": 0.5
                     },
                     {
                       "lower": 0.5,
-                      "mean_predicted": 0.5480267960151564,
-                      "n": 4,
-                      "observed_rate": 0.25,
+                      "mean_predicted": 0.5394153596829138,
+                      "n": 5,
+                      "observed_rate": 0.2,
                       "upper": 0.6
                     },
                     {
@@ -8279,16 +8279,16 @@
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.265192964645607,
-                      "n": 8,
-                      "observed_rate": 0.25,
+                      "mean_predicted": 0.26636979529153854,
+                      "n": 9,
+                      "observed_rate": 0.3333333333333333,
                       "upper": 0.3
                     },
                     {
                       "lower": 0.3,
-                      "mean_predicted": 0.35976307665228274,
-                      "n": 8,
-                      "observed_rate": 0.375,
+                      "mean_predicted": 0.35339743402749046,
+                      "n": 9,
+                      "observed_rate": 0.3333333333333333,
                       "upper": 0.4
                     },
                     {
@@ -8300,9 +8300,9 @@
                     },
                     {
                       "lower": 0.5,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.5418419400118741,
+                      "n": 2,
+                      "observed_rate": 0.5,
                       "upper": 0.6
                     },
                     {
@@ -8336,12 +8336,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 1.0205830378292837,
+                "log_loss": 1.0648763693398455,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 1.0205830378292837,
+                "mathematical_log_loss": 1.0648763693398455,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -8362,28 +8362,28 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.6423934342259394,
+                "brier_score": 0.6724366119799378,
                 "calibration": {
                   "loss": [
                     {
                       "lower": 0.0,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.06572275672044481,
+                      "n": 1,
+                      "observed_rate": 0.0,
                       "upper": 0.1
                     },
                     {
                       "lower": 0.1,
-                      "mean_predicted": 0.14393016632060296,
-                      "n": 4,
-                      "observed_rate": 0.25,
+                      "mean_predicted": 0.14777404356396157,
+                      "n": 5,
+                      "observed_rate": 0.2,
                       "upper": 0.2
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.2571614703710945,
-                      "n": 4,
-                      "observed_rate": 0.5,
+                      "mean_predicted": 0.24586505841921918,
+                      "n": 5,
+                      "observed_rate": 0.6,
                       "upper": 0.3
                     },
                     {
@@ -8395,9 +8395,9 @@
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.4272372491368389,
+                      "n": 1,
+                      "observed_rate": 1.0,
                       "upper": 0.5
                     },
                     {
@@ -8446,16 +8446,16 @@
                     },
                     {
                       "lower": 0.1,
-                      "mean_predicted": 0.17924201396444017,
-                      "n": 2,
-                      "observed_rate": 0.0,
+                      "mean_predicted": 0.163863200157811,
+                      "n": 4,
+                      "observed_rate": 0.25,
                       "upper": 0.2
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.23580247405659488,
-                      "n": 15,
-                      "observed_rate": 0.26666666666666666,
+                      "mean_predicted": 0.23603581569444904,
+                      "n": 17,
+                      "observed_rate": 0.23529411764705882,
                       "upper": 0.3
                     },
                     {
@@ -8532,9 +8532,9 @@
                     },
                     {
                       "lower": 0.3,
-                      "mean_predicted": 0.3724999952416476,
-                      "n": 1,
-                      "observed_rate": 1.0,
+                      "mean_predicted": 0.3465642292337566,
+                      "n": 2,
+                      "observed_rate": 0.5,
                       "upper": 0.4
                     },
                     {
@@ -8553,9 +8553,9 @@
                     },
                     {
                       "lower": 0.6,
-                      "mean_predicted": 0.6505837301839064,
-                      "n": 4,
-                      "observed_rate": 0.75,
+                      "mean_predicted": 0.6389688527081476,
+                      "n": 6,
+                      "observed_rate": 0.6666666666666666,
                       "upper": 0.7
                     },
                     {
@@ -8567,9 +8567,9 @@
                     },
                     {
                       "lower": 0.8,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.8185638435954019,
+                      "n": 1,
+                      "observed_rate": 0.0,
                       "upper": 0.9
                     },
                     {
@@ -8582,12 +8582,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 1.0727501632645788,
+                "log_loss": 1.1096055028265261,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 1.0727501632645788,
+                "mathematical_log_loss": 1.1096055028265261,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -8608,28 +8608,28 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.48339033169069157,
+                "brier_score": 0.4862200741687888,
                 "calibration": {
                   "loss": [
                     {
                       "lower": 0.0,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.06572275672044481,
+                      "n": 1,
+                      "observed_rate": 0.0,
                       "upper": 0.1
                     },
                     {
                       "lower": 0.1,
-                      "mean_predicted": 0.14393016632060296,
-                      "n": 4,
-                      "observed_rate": 0.25,
+                      "mean_predicted": 0.14777404356396157,
+                      "n": 5,
+                      "observed_rate": 0.2,
                       "upper": 0.2
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.2571614703710945,
-                      "n": 4,
-                      "observed_rate": 0.5,
+                      "mean_predicted": 0.24586505841921918,
+                      "n": 5,
+                      "observed_rate": 0.6,
                       "upper": 0.3
                     },
                     {
@@ -8641,9 +8641,9 @@
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.4272372491368389,
+                      "n": 1,
+                      "observed_rate": 1.0,
                       "upper": 0.5
                     },
                     {
@@ -8720,9 +8720,9 @@
                     },
                     {
                       "lower": 0.5,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.5727627508631611,
+                      "n": 1,
+                      "observed_rate": 0.0,
                       "upper": 0.6
                     },
                     {
@@ -8734,34 +8734,34 @@
                     },
                     {
                       "lower": 0.7,
-                      "mean_predicted": 0.7428385296289054,
-                      "n": 4,
-                      "observed_rate": 0.5,
+                      "mean_predicted": 0.7541349415807808,
+                      "n": 5,
+                      "observed_rate": 0.4,
                       "upper": 0.8
                     },
                     {
                       "lower": 0.8,
-                      "mean_predicted": 0.8560698336793972,
-                      "n": 4,
-                      "observed_rate": 0.75,
+                      "mean_predicted": 0.8522259564360386,
+                      "n": 5,
+                      "observed_rate": 0.8,
                       "upper": 0.9
                     },
                     {
                       "lower": 0.9,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.9342772432795551,
+                      "n": 1,
+                      "observed_rate": 1.0,
                       "upper": 1.0
                     }
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.6811966081946444,
+                "log_loss": 0.6801860598669133,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.6811966081946444,
+                "mathematical_log_loss": 0.6801860598669133,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -8782,7 +8782,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.5341127792921032,
+                "brier_score": 0.49277393340903636,
                 "calibration": {
                   "loss": [
                     {
@@ -8815,16 +8815,16 @@
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": 0.45197320398484375,
-                      "n": 4,
-                      "observed_rate": 0.75,
+                      "mean_predicted": 0.46058464031708635,
+                      "n": 5,
+                      "observed_rate": 0.8,
                       "upper": 0.5
                     },
                     {
                       "lower": 0.5,
-                      "mean_predicted": 0.5419205259333603,
-                      "n": 9,
-                      "observed_rate": 0.1111111111111111,
+                      "mean_predicted": 0.5401814417388018,
+                      "n": 10,
+                      "observed_rate": 0.2,
                       "upper": 0.6
                     },
                     {
@@ -8836,9 +8836,9 @@
                     },
                     {
                       "lower": 0.7,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.7429626733615451,
+                      "n": 2,
+                      "observed_rate": 1.0,
                       "upper": 0.8
                     },
                     {
@@ -8873,9 +8873,9 @@
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.2570373266384548,
+                      "n": 2,
+                      "observed_rate": 0.0,
                       "upper": 0.3
                     },
                     {
@@ -8887,16 +8887,16 @@
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": 0.45807947406663974,
-                      "n": 9,
-                      "observed_rate": 0.8888888888888888,
+                      "mean_predicted": 0.45981855826119816,
+                      "n": 10,
+                      "observed_rate": 0.8,
                       "upper": 0.5
                     },
                     {
                       "lower": 0.5,
-                      "mean_predicted": 0.5480267960151564,
-                      "n": 4,
-                      "observed_rate": 0.25,
+                      "mean_predicted": 0.5394153596829138,
+                      "n": 5,
+                      "observed_rate": 0.2,
                       "upper": 0.6
                     },
                     {
@@ -8930,12 +8930,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.7274921183008493,
+                "log_loss": 0.6835333732329908,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.7274921183008493,
+                "mathematical_log_loss": 0.6835333732329908,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -8956,7 +8956,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.2747579675128515,
+                "brier_score": 0.31555784084727195,
                 "calibration": {
                   "loss": [
                     {
@@ -8982,9 +8982,9 @@
                     },
                     {
                       "lower": 0.3,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.36688472704703173,
+                      "n": 1,
+                      "observed_rate": 1.0,
                       "upper": 0.4
                     },
                     {
@@ -8996,16 +8996,16 @@
                     },
                     {
                       "lower": 0.5,
-                      "mean_predicted": 0.5423193097950594,
-                      "n": 1,
-                      "observed_rate": 0.0,
+                      "mean_predicted": 0.5658210794238556,
+                      "n": 2,
+                      "observed_rate": 0.5,
                       "upper": 0.6
                     },
                     {
                       "lower": 0.6,
-                      "mean_predicted": 0.6143672846436766,
-                      "n": 3,
-                      "observed_rate": 0.6666666666666666,
+                      "mean_predicted": 0.6208426947930265,
+                      "n": 4,
+                      "observed_rate": 0.5,
                       "upper": 0.7
                     },
                     {
@@ -9017,8 +9017,8 @@
                     },
                     {
                       "lower": 0.8,
-                      "mean_predicted": 0.8239675886236136,
-                      "n": 2,
+                      "mean_predicted": 0.836844071807238,
+                      "n": 3,
                       "observed_rate": 1.0,
                       "upper": 0.9
                     },
@@ -9040,8 +9040,8 @@
                     },
                     {
                       "lower": 0.1,
-                      "mean_predicted": 0.1760324113763863,
-                      "n": 2,
+                      "mean_predicted": 0.163155928192762,
+                      "n": 3,
                       "observed_rate": 0.0,
                       "upper": 0.2
                     },
@@ -9054,16 +9054,16 @@
                     },
                     {
                       "lower": 0.3,
-                      "mean_predicted": 0.38563271535632343,
-                      "n": 3,
-                      "observed_rate": 0.3333333333333333,
+                      "mean_predicted": 0.37915730520697355,
+                      "n": 4,
+                      "observed_rate": 0.5,
                       "upper": 0.4
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": 0.4576806902049404,
-                      "n": 1,
-                      "observed_rate": 1.0,
+                      "mean_predicted": 0.4341789205761444,
+                      "n": 2,
+                      "observed_rate": 0.5,
                       "upper": 0.5
                     },
                     {
@@ -9075,9 +9075,9 @@
                     },
                     {
                       "lower": 0.6,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.6331152729529682,
+                      "n": 1,
+                      "observed_rate": 0.0,
                       "upper": 0.7
                     },
                     {
@@ -9104,12 +9104,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.47793704912045026,
+                "log_loss": 0.513843715635239,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.47793704912045026,
+                "mathematical_log_loss": 0.513843715635239,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -9130,7 +9130,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.2747579675128515,
+                "brier_score": 0.31555784084727195,
                 "calibration": {
                   "loss": [
                     {
@@ -9142,8 +9142,8 @@
                     },
                     {
                       "lower": 0.1,
-                      "mean_predicted": 0.1760324113763863,
-                      "n": 2,
+                      "mean_predicted": 0.163155928192762,
+                      "n": 3,
                       "observed_rate": 0.0,
                       "upper": 0.2
                     },
@@ -9156,16 +9156,16 @@
                     },
                     {
                       "lower": 0.3,
-                      "mean_predicted": 0.38563271535632343,
-                      "n": 3,
-                      "observed_rate": 0.3333333333333333,
+                      "mean_predicted": 0.37915730520697355,
+                      "n": 4,
+                      "observed_rate": 0.5,
                       "upper": 0.4
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": 0.4576806902049404,
-                      "n": 1,
-                      "observed_rate": 1.0,
+                      "mean_predicted": 0.4341789205761444,
+                      "n": 2,
+                      "observed_rate": 0.5,
                       "upper": 0.5
                     },
                     {
@@ -9177,9 +9177,9 @@
                     },
                     {
                       "lower": 0.6,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.6331152729529682,
+                      "n": 1,
+                      "observed_rate": 0.0,
                       "upper": 0.7
                     },
                     {
@@ -9228,9 +9228,9 @@
                     },
                     {
                       "lower": 0.3,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.36688472704703173,
+                      "n": 1,
+                      "observed_rate": 1.0,
                       "upper": 0.4
                     },
                     {
@@ -9242,16 +9242,16 @@
                     },
                     {
                       "lower": 0.5,
-                      "mean_predicted": 0.5423193097950594,
-                      "n": 1,
-                      "observed_rate": 0.0,
+                      "mean_predicted": 0.5658210794238556,
+                      "n": 2,
+                      "observed_rate": 0.5,
                       "upper": 0.6
                     },
                     {
                       "lower": 0.6,
-                      "mean_predicted": 0.6143672846436766,
-                      "n": 3,
-                      "observed_rate": 0.6666666666666666,
+                      "mean_predicted": 0.6208426947930265,
+                      "n": 4,
+                      "observed_rate": 0.5,
                       "upper": 0.7
                     },
                     {
@@ -9263,8 +9263,8 @@
                     },
                     {
                       "lower": 0.8,
-                      "mean_predicted": 0.8239675886236136,
-                      "n": 2,
+                      "mean_predicted": 0.836844071807238,
+                      "n": 3,
                       "observed_rate": 1.0,
                       "upper": 0.9
                     },
@@ -9278,12 +9278,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.47793704912045026,
+                "log_loss": 0.513843715635239,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.47793704912045026,
+                "mathematical_log_loss": 0.513843715635239,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -9304,7 +9304,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.6178066821522853,
+                "brier_score": 0.6465652512393012,
                 "calibration": {
                   "half_loss": [
                     {
@@ -9316,16 +9316,16 @@
                     },
                     {
                       "lower": 0.1,
-                      "mean_predicted": 0.18369308752115215,
-                      "n": 1,
+                      "mean_predicted": 0.1906336596357551,
+                      "n": 2,
                       "observed_rate": 1.0,
                       "upper": 0.2
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.21975522738533756,
-                      "n": 17,
-                      "observed_rate": 0.11764705882352941,
+                      "mean_predicted": 0.21909047183227054,
+                      "n": 20,
+                      "observed_rate": 0.15,
                       "upper": 0.3
                     },
                     {
@@ -9395,16 +9395,16 @@
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.265192964645607,
-                      "n": 8,
-                      "observed_rate": 0.25,
+                      "mean_predicted": 0.26636979529153854,
+                      "n": 9,
+                      "observed_rate": 0.3333333333333333,
                       "upper": 0.3
                     },
                     {
                       "lower": 0.3,
-                      "mean_predicted": 0.35976307665228274,
-                      "n": 8,
-                      "observed_rate": 0.375,
+                      "mean_predicted": 0.35339743402749046,
+                      "n": 9,
+                      "observed_rate": 0.3333333333333333,
                       "upper": 0.4
                     },
                     {
@@ -9416,9 +9416,9 @@
                     },
                     {
                       "lower": 0.5,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.5418419400118741,
+                      "n": 2,
+                      "observed_rate": 0.5,
                       "upper": 0.6
                     },
                     {
@@ -9467,9 +9467,9 @@
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.2570373266384548,
+                      "n": 2,
+                      "observed_rate": 0.0,
                       "upper": 0.3
                     },
                     {
@@ -9481,16 +9481,16 @@
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": 0.45807947406663974,
-                      "n": 9,
-                      "observed_rate": 0.8888888888888888,
+                      "mean_predicted": 0.45981855826119816,
+                      "n": 10,
+                      "observed_rate": 0.8,
                       "upper": 0.5
                     },
                     {
                       "lower": 0.5,
-                      "mean_predicted": 0.5480267960151564,
-                      "n": 4,
-                      "observed_rate": 0.25,
+                      "mean_predicted": 0.5394153596829138,
+                      "n": 5,
+                      "observed_rate": 0.2,
                       "upper": 0.6
                     },
                     {
@@ -9524,12 +9524,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 1.0205830378292837,
+                "log_loss": 1.0648763693398455,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 1.0205830378292837,
+                "mathematical_log_loss": 1.0648763693398455,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -9550,13 +9550,13 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.10230810918831251,
+                "brier_score": 0.1413263195034423,
                 "calibration": {
                   "loss": [
                     {
                       "lower": 0.0,
-                      "mean_predicted": 0.05673450350200412,
-                      "n": 6,
+                      "mean_predicted": 0.05472987478536587,
+                      "n": 9,
                       "observed_rate": 0.0,
                       "upper": 0.1
                     },
@@ -9569,9 +9569,9 @@
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.21016102028287917,
+                      "n": 1,
+                      "observed_rate": 1.0,
                       "upper": 0.3
                     },
                     {
@@ -9676,9 +9676,9 @@
                     },
                     {
                       "lower": 0.7,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.7898389797171207,
+                      "n": 1,
+                      "observed_rate": 0.0,
                       "upper": 0.8
                     },
                     {
@@ -9690,20 +9690,20 @@
                     },
                     {
                       "lower": 0.9,
-                      "mean_predicted": 0.943265496497996,
-                      "n": 6,
+                      "mean_predicted": 0.9452701252146343,
+                      "n": 9,
                       "observed_rate": 1.0,
                       "upper": 1.0
                     }
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.20566611220970998,
+                "log_loss": 0.24633091927874806,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.20566611220970998,
+                "mathematical_log_loss": 0.24633091927874806,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -9724,7 +9724,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.6842878604591645,
+                "brier_score": 0.6018388683050928,
                 "calibration": {
                   "half_win": [
                     {
@@ -9736,16 +9736,16 @@
                     },
                     {
                       "lower": 0.1,
-                      "mean_predicted": 0.17989253504642233,
-                      "n": 1,
+                      "mean_predicted": 0.16381483615182243,
+                      "n": 3,
                       "observed_rate": 0.0,
                       "upper": 0.2
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.23791551321836396,
-                      "n": 17,
-                      "observed_rate": 0.11764705882352941,
+                      "mean_predicted": 0.23855113528636118,
+                      "n": 19,
+                      "observed_rate": 0.10526315789473684,
                       "upper": 0.3
                     },
                     {
@@ -9829,16 +9829,16 @@
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": 0.45197320398484375,
-                      "n": 4,
-                      "observed_rate": 0.75,
+                      "mean_predicted": 0.46058464031708635,
+                      "n": 5,
+                      "observed_rate": 0.8,
                       "upper": 0.5
                     },
                     {
                       "lower": 0.5,
-                      "mean_predicted": 0.5419205259333603,
-                      "n": 9,
-                      "observed_rate": 0.1111111111111111,
+                      "mean_predicted": 0.5401814417388018,
+                      "n": 10,
+                      "observed_rate": 0.2,
                       "upper": 0.6
                     },
                     {
@@ -9850,9 +9850,9 @@
                     },
                     {
                       "lower": 0.7,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.7429626733615451,
+                      "n": 2,
+                      "observed_rate": 1.0,
                       "upper": 0.8
                     },
                     {
@@ -9873,23 +9873,23 @@
                   "win": [
                     {
                       "lower": 0.0,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.09498670015355325,
+                      "n": 1,
+                      "observed_rate": 0.0,
                       "upper": 0.1
                     },
                     {
                       "lower": 0.1,
-                      "mean_predicted": 0.1726106959360223,
-                      "n": 6,
-                      "observed_rate": 0.3333333333333333,
+                      "mean_predicted": 0.1633143079043493,
+                      "n": 7,
+                      "observed_rate": 0.2857142857142857,
                       "upper": 0.2
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": 0.24388122981656368,
-                      "n": 9,
-                      "observed_rate": 0.6666666666666666,
+                      "mean_predicted": 0.24431483208968777,
+                      "n": 11,
+                      "observed_rate": 0.5454545454545454,
                       "upper": 0.3
                     },
                     {
@@ -9944,12 +9944,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 1.123998919584359,
+                "log_loss": 1.0079480288285898,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 1.123998919584359,
+                "mathematical_log_loss": 1.0079480288285898,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -9970,7 +9970,7 @@
               },
               "metrics": {
                 "brier_definition": "mean(sum_over_classes((p-y)^2))",
-                "brier_score": 0.5341127792921032,
+                "brier_score": 0.49277393340903636,
                 "calibration": {
                   "loss": [
                     {
@@ -9989,9 +9989,9 @@
                     },
                     {
                       "lower": 0.2,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.2570373266384548,
+                      "n": 2,
+                      "observed_rate": 0.0,
                       "upper": 0.3
                     },
                     {
@@ -10003,16 +10003,16 @@
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": 0.45807947406663974,
-                      "n": 9,
-                      "observed_rate": 0.8888888888888888,
+                      "mean_predicted": 0.45981855826119816,
+                      "n": 10,
+                      "observed_rate": 0.8,
                       "upper": 0.5
                     },
                     {
                       "lower": 0.5,
-                      "mean_predicted": 0.5480267960151564,
-                      "n": 4,
-                      "observed_rate": 0.25,
+                      "mean_predicted": 0.5394153596829138,
+                      "n": 5,
+                      "observed_rate": 0.2,
                       "upper": 0.6
                     },
                     {
@@ -10075,16 +10075,16 @@
                     },
                     {
                       "lower": 0.4,
-                      "mean_predicted": 0.45197320398484375,
-                      "n": 4,
-                      "observed_rate": 0.75,
+                      "mean_predicted": 0.46058464031708635,
+                      "n": 5,
+                      "observed_rate": 0.8,
                       "upper": 0.5
                     },
                     {
                       "lower": 0.5,
-                      "mean_predicted": 0.5419205259333603,
-                      "n": 9,
-                      "observed_rate": 0.1111111111111111,
+                      "mean_predicted": 0.5401814417388018,
+                      "n": 10,
+                      "observed_rate": 0.2,
                       "upper": 0.6
                     },
                     {
@@ -10096,9 +10096,9 @@
                     },
                     {
                       "lower": 0.7,
-                      "mean_predicted": null,
-                      "n": 0,
-                      "observed_rate": null,
+                      "mean_predicted": 0.7429626733615451,
+                      "n": 2,
+                      "observed_rate": 1.0,
                       "upper": 0.8
                     },
                     {
@@ -10118,12 +10118,12 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.7274921183008493,
+                "log_loss": 0.6835333732329908,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.7274921183008493,
+                "mathematical_log_loss": 0.6835333732329908,
                 "mathematical_log_loss_status": "finite",
-                "n": 18,
+                "n": 22,
                 "observed_zero_probability_outcomes": 0
               },
               "possible_states": [
@@ -10139,28 +10139,28 @@
           ],
           "one_x_two": {
             "brier_definition": "mean(sum_over_classes((p-y)^2))",
-            "brier_score": 0.6423934342259394,
+            "brier_score": 0.6724366119799379,
             "calibration": {
               "away_win": [
                 {
                   "lower": 0.0,
-                  "mean_predicted": null,
-                  "n": 0,
-                  "observed_rate": null,
+                  "mean_predicted": 0.06572275672044478,
+                  "n": 1,
+                  "observed_rate": 0.0,
                   "upper": 0.1
                 },
                 {
                   "lower": 0.1,
-                  "mean_predicted": 0.14393016632060296,
-                  "n": 4,
-                  "observed_rate": 0.25,
+                  "mean_predicted": 0.14777404356396154,
+                  "n": 5,
+                  "observed_rate": 0.2,
                   "upper": 0.2
                 },
                 {
                   "lower": 0.2,
-                  "mean_predicted": 0.2571614703710945,
-                  "n": 4,
-                  "observed_rate": 0.5,
+                  "mean_predicted": 0.24586505841921918,
+                  "n": 5,
+                  "observed_rate": 0.6,
                   "upper": 0.3
                 },
                 {
@@ -10172,9 +10172,9 @@
                 },
                 {
                   "lower": 0.4,
-                  "mean_predicted": null,
-                  "n": 0,
-                  "observed_rate": null,
+                  "mean_predicted": 0.4272372491368389,
+                  "n": 1,
+                  "observed_rate": 1.0,
                   "upper": 0.5
                 },
                 {
@@ -10223,16 +10223,16 @@
                 },
                 {
                   "lower": 0.1,
-                  "mean_predicted": 0.17924201396444017,
-                  "n": 2,
-                  "observed_rate": 0.0,
+                  "mean_predicted": 0.163863200157811,
+                  "n": 4,
+                  "observed_rate": 0.25,
                   "upper": 0.2
                 },
                 {
                   "lower": 0.2,
-                  "mean_predicted": 0.23580247405659488,
-                  "n": 15,
-                  "observed_rate": 0.26666666666666666,
+                  "mean_predicted": 0.23603581569444904,
+                  "n": 17,
+                  "observed_rate": 0.23529411764705882,
                   "upper": 0.3
                 },
                 {
@@ -10309,9 +10309,9 @@
                 },
                 {
                   "lower": 0.3,
-                  "mean_predicted": 0.3724999952416477,
-                  "n": 1,
-                  "observed_rate": 1.0,
+                  "mean_predicted": 0.3465642292337566,
+                  "n": 2,
+                  "observed_rate": 0.5,
                   "upper": 0.4
                 },
                 {
@@ -10330,9 +10330,9 @@
                 },
                 {
                   "lower": 0.6,
-                  "mean_predicted": 0.6505837301839064,
-                  "n": 4,
-                  "observed_rate": 0.75,
+                  "mean_predicted": 0.6389688527081476,
+                  "n": 6,
+                  "observed_rate": 0.6666666666666666,
                   "upper": 0.7
                 },
                 {
@@ -10344,9 +10344,9 @@
                 },
                 {
                   "lower": 0.8,
-                  "mean_predicted": null,
-                  "n": 0,
-                  "observed_rate": null,
+                  "mean_predicted": 0.8185638435954021,
+                  "n": 1,
+                  "observed_rate": 0.0,
                   "upper": 0.9
                 },
                 {
@@ -10359,22 +10359,22 @@
               ]
             },
             "floor_affected_outcomes": 0,
-            "log_loss": 1.0727501632645788,
+            "log_loss": 1.1096055028265261,
             "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
             "log_loss_probability_floor": 1e-15,
-            "mathematical_log_loss": 1.0727501632645788,
+            "mathematical_log_loss": 1.1096055028265261,
             "mathematical_log_loss_status": "finite",
-            "n": 18,
+            "n": 22,
             "observed_zero_probability_outcomes": 0
           },
-          "unique_matches": 18
+          "unique_matches": 22
         },
-        "n": 18
+        "n": 22
       },
       "competition": "allsvenskan",
-      "pending": 7,
+      "pending": 3,
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "scored": 18,
+      "scored": 22,
       "unique_matches": 25,
       "unscorable_schedule_revision": 0
     },
@@ -35488,10 +35488,10 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.596718979078283,
+                "log_loss": 0.5967189790782831,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.596718979078283,
+                "mathematical_log_loss": 0.5967189790782831,
                 "mathematical_log_loss_status": "finite",
                 "n": 18,
                 "observed_zero_probability_outcomes": 0
@@ -36400,10 +36400,10 @@
                   ]
                 },
                 "floor_affected_outcomes": 0,
-                "log_loss": 0.596718979078283,
+                "log_loss": 0.5967189790782831,
                 "log_loss_definition": "mean(-log(max(1e-15,p_observed)))",
                 "log_loss_probability_floor": 1e-15,
-                "mathematical_log_loss": 0.596718979078283,
+                "mathematical_log_loss": 0.5967189790782831,
                 "mathematical_log_loss_status": "finite",
                 "n": 18,
                 "observed_zero_probability_outcomes": 0
@@ -197419,36 +197419,36 @@
       "match_id": 1494308,
       "primary_forecast_id": "440f97afa8f19f08fff7b451dc058a924bb08f58474cf629bc4c9f3ab55a436d",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "result_id": null,
+      "result_id": "d60d8f45a7f5e728ebed732d1c0ed1d9b479b8b4f8af63642cab7fbf2e8b3ae2",
       "schedule_revision_id": null,
-      "status": "pending"
+      "status": "scored"
     },
     {
       "competition": "allsvenskan",
       "match_id": 1494311,
       "primary_forecast_id": "d86a80136e10d96653b46a8a6a3c65bf9c265461bc7ce85e8fedec77f3e1aa28",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "result_id": null,
+      "result_id": "505e7da6061b40b133d555c76ff0975050a5b8e13d040b46fc8aa2950d7caeff",
       "schedule_revision_id": null,
-      "status": "pending"
+      "status": "scored"
     },
     {
       "competition": "allsvenskan",
       "match_id": 1494305,
       "primary_forecast_id": "68132076ab52a5228856b2dd373e60cd18bb56166005932067b4eb529056172c",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "result_id": null,
+      "result_id": "a605af52ba54b879ddae9a056abf69192b63adc0602b447370efc6c8e9515727",
       "schedule_revision_id": null,
-      "status": "pending"
+      "status": "scored"
     },
     {
       "competition": "allsvenskan",
       "match_id": 1494309,
       "primary_forecast_id": "9ba90a5237fca22eff6c1bc3a614bce699375cf5e8b40a15b45f66cbbcc7228e",
       "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
-      "result_id": null,
+      "result_id": "c3de8a8697e9465737178ad05c3252db22582c9bc1970ac12d7e81a8dc4ca6d6",
       "schedule_revision_id": null,
-      "status": "pending"
+      "status": "scored"
     },
     {
       "competition": "allsvenskan",
@@ -202711,7 +202711,7 @@
     "unique_match_protocols": 0,
     "unit_stakes": 0
   },
-  "result_versions": 751,
+  "result_versions": 755,
   "schedule_revision_versions": 18,
   "unique_primary_matches_by_protocol": 605,
   "unscorable_schedule_revision_matches": 3,
