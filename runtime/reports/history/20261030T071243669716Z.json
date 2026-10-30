@@ -1,0 +1,2309 @@
+{
+  "schema_version": 2,
+  "time_semantics": "observed_wall_clock_v1",
+  "run_started_at": "2026-10-30T07:12:43.669716Z",
+  "training_cutoff": "2026-10-30T07:12:43.669716Z",
+  "run_id": "20261030T071243669716Z",
+  "mode": "train",
+  "program_version": "0.1.0",
+  "source_commit": "a15f5f92f3b4c56a41e6aee98dfdb3868c94cc5a",
+  "requested_competitions": [
+    "epl",
+    "championship",
+    "laliga",
+    "bundesliga",
+    "serie_a",
+    "ligue_1",
+    "bundesliga_2",
+    "ligue_2",
+    "ucl",
+    "allsvenskan",
+    "eredivisie",
+    "primeira",
+    "brazil_a",
+    "j1",
+    "k1",
+    "mls",
+    "liga_mx",
+    "segunda",
+    "argentina_a"
+  ],
+  "competitions": [
+    {
+      "key": "epl",
+      "label": "英超",
+      "status": "未完成",
+      "seasons": [
+        {
+          "year": 2026,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": true
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2025,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2024,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "fixtures": 380,
+          "fetched_at": "2026-10-30T07:13:07.868905Z",
+          "received_at": "2026-10-30T07:13:07.879998Z",
+          "from_cache": false,
+          "status_counts": {
+            "FT": 380
+          }
+        }
+      ],
+      "configured": true,
+      "model_change": "未训练",
+      "lineup_model": "未实现",
+      "xg_model": "未实现",
+      "return_advantage": "未经验证",
+      "ev": "未量化",
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-30T07:12:43.669716Z",
+      "forecast_availability": {
+        "status": "failed",
+        "upcoming_count": null,
+        "supported_count": null,
+        "unsupported_count": null,
+        "unsupported_reasons": {}
+      },
+      "model_freshness": {
+        "status": "not_checked"
+      },
+      "metadata_received_at": "2026-10-30T07:12:49.816418Z",
+      "provider_league_id": 39,
+      "eligible_matches": 380,
+      "missing_seasons": [
+        2026,
+        2025
+      ],
+      "last_match_kickoff": "2025-05-25T15:00:00Z",
+      "observed_at": "2026-10-30T07:13:07.882541Z",
+      "data_observed_at": "2026-10-30T07:13:07.882541Z",
+      "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
+    },
+    {
+      "key": "championship",
+      "label": "英冠",
+      "status": "未完成",
+      "seasons": [
+        {
+          "year": 2026,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": true
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2025,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2024,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "fixtures": 557,
+          "fetched_at": "2026-10-25T06:13:58.565482Z",
+          "received_at": "2026-10-30T07:13:25.888037Z",
+          "from_cache": true,
+          "status_counts": {
+            "FT": 556,
+            "AET": 1
+          }
+        }
+      ],
+      "configured": true,
+      "model_change": "未训练",
+      "lineup_model": "未实现",
+      "xg_model": "未实现",
+      "return_advantage": "未经验证",
+      "ev": "未量化",
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-30T07:12:43.669716Z",
+      "forecast_availability": {
+        "status": "failed",
+        "upcoming_count": null,
+        "supported_count": null,
+        "unsupported_count": null,
+        "unsupported_reasons": {}
+      },
+      "model_freshness": {
+        "status": "not_checked"
+      },
+      "metadata_received_at": "2026-10-30T07:13:13.859494Z",
+      "provider_league_id": 40,
+      "eligible_matches": 557,
+      "missing_seasons": [
+        2026,
+        2025
+      ],
+      "last_match_kickoff": "2025-05-24T14:01:00Z",
+      "observed_at": "2026-10-30T07:13:25.891623Z",
+      "data_observed_at": "2026-10-30T07:13:25.891623Z",
+      "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
+    },
+    {
+      "key": "laliga",
+      "label": "西甲",
+      "status": "未完成",
+      "seasons": [
+        {
+          "year": 2026,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": true
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2025,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2024,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "fixtures": 380,
+          "fetched_at": "2026-10-30T07:13:49.947311Z",
+          "received_at": "2026-10-30T07:13:49.965693Z",
+          "from_cache": false,
+          "status_counts": {
+            "FT": 380
+          }
+        }
+      ],
+      "configured": true,
+      "model_change": "未训练",
+      "lineup_model": "未实现",
+      "xg_model": "未实现",
+      "return_advantage": "未经验证",
+      "ev": "未量化",
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-30T07:12:43.669716Z",
+      "forecast_availability": {
+        "status": "failed",
+        "upcoming_count": null,
+        "supported_count": null,
+        "unsupported_count": null,
+        "unsupported_reasons": {}
+      },
+      "model_freshness": {
+        "status": "not_checked"
+      },
+      "metadata_received_at": "2026-10-30T07:13:31.882486Z",
+      "provider_league_id": 140,
+      "eligible_matches": 380,
+      "missing_seasons": [
+        2026,
+        2025
+      ],
+      "last_match_kickoff": "2025-05-25T19:00:00Z",
+      "observed_at": "2026-10-30T07:13:49.968132Z",
+      "data_observed_at": "2026-10-30T07:13:49.968132Z",
+      "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
+    },
+    {
+      "key": "bundesliga",
+      "label": "德甲",
+      "status": "未完成",
+      "seasons": [
+        {
+          "year": 2026,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": true
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2025,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2024,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "fixtures": 308,
+          "fetched_at": "2026-10-30T07:14:13.979532Z",
+          "received_at": "2026-10-30T07:14:13.989050Z",
+          "from_cache": false,
+          "status_counts": {
+            "FT": 308
+          }
+        }
+      ],
+      "configured": true,
+      "model_change": "未训练",
+      "lineup_model": "未实现",
+      "xg_model": "未实现",
+      "return_advantage": "未经验证",
+      "ev": "未量化",
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-30T07:12:43.669716Z",
+      "forecast_availability": {
+        "status": "failed",
+        "upcoming_count": null,
+        "supported_count": null,
+        "unsupported_count": null,
+        "unsupported_reasons": {}
+      },
+      "model_freshness": {
+        "status": "not_checked"
+      },
+      "metadata_received_at": "2026-10-30T07:13:55.922538Z",
+      "provider_league_id": 78,
+      "eligible_matches": 308,
+      "missing_seasons": [
+        2026,
+        2025
+      ],
+      "last_match_kickoff": "2025-05-26T18:30:00Z",
+      "observed_at": "2026-10-30T07:14:13.991000Z",
+      "data_observed_at": "2026-10-30T07:14:13.991000Z",
+      "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
+    },
+    {
+      "key": "serie_a",
+      "label": "意甲",
+      "status": "未完成",
+      "seasons": [
+        {
+          "year": 2026,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": true
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2025,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2024,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "fixtures": 380,
+          "fetched_at": "2026-10-30T07:14:38.017680Z",
+          "received_at": "2026-10-30T07:14:38.029508Z",
+          "from_cache": false,
+          "status_counts": {
+            "FT": 380
+          }
+        }
+      ],
+      "configured": true,
+      "model_change": "未训练",
+      "lineup_model": "未实现",
+      "xg_model": "未实现",
+      "return_advantage": "未经验证",
+      "ev": "未量化",
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-30T07:12:43.669716Z",
+      "forecast_availability": {
+        "status": "failed",
+        "upcoming_count": null,
+        "supported_count": null,
+        "unsupported_count": null,
+        "unsupported_reasons": {}
+      },
+      "model_freshness": {
+        "status": "not_checked"
+      },
+      "metadata_received_at": "2026-10-30T07:14:20.168949Z",
+      "provider_league_id": 135,
+      "eligible_matches": 380,
+      "missing_seasons": [
+        2026,
+        2025
+      ],
+      "last_match_kickoff": "2025-05-25T18:45:00Z",
+      "observed_at": "2026-10-30T07:14:38.031872Z",
+      "data_observed_at": "2026-10-30T07:14:38.031872Z",
+      "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
+    },
+    {
+      "key": "ligue_1",
+      "label": "法甲",
+      "status": "未完成",
+      "seasons": [
+        {
+          "year": 2026,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": true
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2025,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2024,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "fixtures": 308,
+          "fetched_at": "2026-10-30T07:15:02.062698Z",
+          "received_at": "2026-10-30T07:15:02.072587Z",
+          "from_cache": false,
+          "status_counts": {
+            "FT": 307,
+            "AET": 1
+          }
+        }
+      ],
+      "configured": true,
+      "model_change": "未训练",
+      "lineup_model": "未实现",
+      "xg_model": "未实现",
+      "return_advantage": "未经验证",
+      "ev": "未量化",
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-30T07:12:43.669716Z",
+      "forecast_availability": {
+        "status": "failed",
+        "upcoming_count": null,
+        "supported_count": null,
+        "unsupported_count": null,
+        "unsupported_reasons": {}
+      },
+      "model_freshness": {
+        "status": "not_checked"
+      },
+      "metadata_received_at": "2026-10-30T07:14:44.010432Z",
+      "provider_league_id": 61,
+      "eligible_matches": 308,
+      "missing_seasons": [
+        2026,
+        2025
+      ],
+      "last_match_kickoff": "2025-05-29T18:30:00Z",
+      "observed_at": "2026-10-30T07:15:02.074542Z",
+      "data_observed_at": "2026-10-30T07:15:02.074542Z",
+      "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
+    },
+    {
+      "key": "bundesliga_2",
+      "label": "德乙",
+      "status": "未完成",
+      "seasons": [
+        {
+          "year": 2026,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": false,
+            "predictions": true,
+            "odds": true
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2025,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2024,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": false,
+            "predictions": true,
+            "odds": false
+          },
+          "fixtures": 308,
+          "fetched_at": "2026-10-30T07:15:26.100442Z",
+          "received_at": "2026-10-30T07:15:26.110028Z",
+          "from_cache": false,
+          "status_counts": {
+            "FT": 307,
+            "AET": 1
+          }
+        }
+      ],
+      "configured": true,
+      "model_change": "未训练",
+      "lineup_model": "未实现",
+      "xg_model": "未实现",
+      "return_advantage": "未经验证",
+      "ev": "未量化",
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-30T07:12:43.669716Z",
+      "forecast_availability": {
+        "status": "failed",
+        "upcoming_count": null,
+        "supported_count": null,
+        "unsupported_count": null,
+        "unsupported_reasons": {}
+      },
+      "model_freshness": {
+        "status": "not_checked"
+      },
+      "metadata_received_at": "2026-10-30T07:15:08.051501Z",
+      "provider_league_id": 79,
+      "eligible_matches": 308,
+      "missing_seasons": [
+        2026,
+        2025
+      ],
+      "last_match_kickoff": "2025-05-27T18:30:00Z",
+      "observed_at": "2026-10-30T07:15:26.111992Z",
+      "data_observed_at": "2026-10-30T07:15:26.111992Z",
+      "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
+    },
+    {
+      "key": "ligue_2",
+      "label": "法乙",
+      "status": "未完成",
+      "seasons": [
+        {
+          "year": 2026,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": false,
+            "predictions": true,
+            "odds": true
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2025,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2024,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": false,
+            "predictions": true,
+            "odds": false
+          },
+          "fixtures": 310,
+          "fetched_at": "2026-10-30T07:15:50.138664Z",
+          "received_at": "2026-10-30T07:15:50.148525Z",
+          "from_cache": false,
+          "status_counts": {
+            "FT": 310
+          }
+        }
+      ],
+      "configured": true,
+      "model_change": "未训练",
+      "lineup_model": "未实现",
+      "xg_model": "未实现",
+      "return_advantage": "未经验证",
+      "ev": "未量化",
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-30T07:12:43.669716Z",
+      "forecast_availability": {
+        "status": "failed",
+        "upcoming_count": null,
+        "supported_count": null,
+        "unsupported_count": null,
+        "unsupported_reasons": {}
+      },
+      "model_freshness": {
+        "status": "not_checked"
+      },
+      "metadata_received_at": "2026-10-30T07:15:32.091965Z",
+      "provider_league_id": 62,
+      "eligible_matches": 310,
+      "missing_seasons": [
+        2026,
+        2025
+      ],
+      "last_match_kickoff": "2025-05-25T15:00:00Z",
+      "observed_at": "2026-10-30T07:15:50.150459Z",
+      "data_observed_at": "2026-10-30T07:15:50.150459Z",
+      "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
+    },
+    {
+      "key": "ucl",
+      "label": "欧冠",
+      "status": "未完成",
+      "seasons": [
+        {
+          "year": 2026,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": true
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2025,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2024,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "fixtures": 279,
+          "fetched_at": "2026-10-30T07:16:14.176919Z",
+          "received_at": "2026-10-30T07:16:14.185914Z",
+          "from_cache": false,
+          "status_counts": {
+            "FT": 269,
+            "PEN": 5,
+            "AET": 5
+          }
+        }
+      ],
+      "configured": true,
+      "model_change": "未训练",
+      "lineup_model": "未实现",
+      "xg_model": "未实现",
+      "return_advantage": "未经验证",
+      "ev": "未量化",
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-30T07:12:43.669716Z",
+      "forecast_availability": {
+        "status": "failed",
+        "upcoming_count": null,
+        "supported_count": null,
+        "unsupported_count": null,
+        "unsupported_reasons": {}
+      },
+      "model_freshness": {
+        "status": "not_checked"
+      },
+      "metadata_received_at": "2026-10-30T07:15:56.326088Z",
+      "provider_league_id": 2,
+      "eligible_matches": 279,
+      "missing_seasons": [
+        2026,
+        2025
+      ],
+      "last_match_kickoff": "2025-05-31T19:00:00Z",
+      "observed_at": "2026-10-30T07:16:14.187694Z",
+      "data_observed_at": "2026-10-30T07:16:14.187694Z",
+      "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
+    },
+    {
+      "key": "allsvenskan",
+      "label": "瑞典超",
+      "status": "未完成",
+      "seasons": [
+        {
+          "year": 2026,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": true
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2025,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2024,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "fixtures": 242,
+          "fetched_at": "2026-10-30T07:16:38.223158Z",
+          "received_at": "2026-10-30T07:16:38.231088Z",
+          "from_cache": false,
+          "status_counts": {
+            "FT": 242
+          }
+        }
+      ],
+      "configured": true,
+      "model_change": "未训练",
+      "lineup_model": "未实现",
+      "xg_model": "未实现",
+      "return_advantage": "未经验证",
+      "ev": "未量化",
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-30T07:12:43.669716Z",
+      "forecast_availability": {
+        "status": "failed",
+        "upcoming_count": null,
+        "supported_count": null,
+        "unsupported_count": null,
+        "unsupported_reasons": {}
+      },
+      "model_freshness": {
+        "status": "not_checked"
+      },
+      "metadata_received_at": "2026-10-30T07:16:20.170030Z",
+      "provider_league_id": 113,
+      "eligible_matches": 242,
+      "missing_seasons": [
+        2026,
+        2025
+      ],
+      "last_match_kickoff": "2024-11-24T14:00:00Z",
+      "observed_at": "2026-10-30T07:16:38.232639Z",
+      "data_observed_at": "2026-10-30T07:16:38.232639Z",
+      "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
+    },
+    {
+      "key": "eredivisie",
+      "label": "荷甲",
+      "status": "未完成",
+      "seasons": [
+        {
+          "year": 2026,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": true
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2025,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2024,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "fixtures": 321,
+          "fetched_at": "2026-10-30T07:17:02.257626Z",
+          "received_at": "2026-10-30T07:17:02.267834Z",
+          "from_cache": false,
+          "status_counts": {
+            "FT": 317,
+            "AET": 3,
+            "PEN": 1
+          }
+        }
+      ],
+      "configured": true,
+      "model_change": "未训练",
+      "lineup_model": "未实现",
+      "xg_model": "未实现",
+      "return_advantage": "未经验证",
+      "ev": "未量化",
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-30T07:12:43.669716Z",
+      "forecast_availability": {
+        "status": "failed",
+        "upcoming_count": null,
+        "supported_count": null,
+        "unsupported_count": null,
+        "unsupported_reasons": {}
+      },
+      "model_freshness": {
+        "status": "not_checked"
+      },
+      "metadata_received_at": "2026-10-30T07:16:44.207778Z",
+      "provider_league_id": 88,
+      "eligible_matches": 321,
+      "missing_seasons": [
+        2026,
+        2025
+      ],
+      "last_match_kickoff": "2025-06-01T16:00:00Z",
+      "observed_at": "2026-10-30T07:17:02.269854Z",
+      "data_observed_at": "2026-10-30T07:17:02.269854Z",
+      "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
+    },
+    {
+      "key": "primeira",
+      "label": "葡超",
+      "status": "未完成",
+      "seasons": [
+        {
+          "year": 2026,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": false,
+            "predictions": true,
+            "odds": true
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2025,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2024,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": false,
+            "predictions": true,
+            "odds": false
+          },
+          "fixtures": 308,
+          "fetched_at": "2026-10-30T07:17:26.300709Z",
+          "received_at": "2026-10-30T07:17:26.310189Z",
+          "from_cache": false,
+          "status_counts": {
+            "FT": 308
+          }
+        }
+      ],
+      "configured": true,
+      "model_change": "未训练",
+      "lineup_model": "未实现",
+      "xg_model": "未实现",
+      "return_advantage": "未经验证",
+      "ev": "未量化",
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-30T07:12:43.669716Z",
+      "forecast_availability": {
+        "status": "failed",
+        "upcoming_count": null,
+        "supported_count": null,
+        "unsupported_count": null,
+        "unsupported_reasons": {}
+      },
+      "model_freshness": {
+        "status": "not_checked"
+      },
+      "metadata_received_at": "2026-10-30T07:17:08.249670Z",
+      "provider_league_id": 94,
+      "eligible_matches": 308,
+      "missing_seasons": [
+        2026,
+        2025
+      ],
+      "last_match_kickoff": "2025-06-01T18:45:00Z",
+      "observed_at": "2026-10-30T07:17:26.312111Z",
+      "data_observed_at": "2026-10-30T07:17:26.312111Z",
+      "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
+    },
+    {
+      "key": "brazil_a",
+      "label": "巴西甲",
+      "status": "未完成",
+      "seasons": [
+        {
+          "year": 2026,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": true
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2025,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2024,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "fixtures": 380,
+          "fetched_at": "2026-10-30T07:17:50.349079Z",
+          "received_at": "2026-10-30T07:17:50.361255Z",
+          "from_cache": false,
+          "status_counts": {
+            "FT": 380
+          }
+        }
+      ],
+      "configured": true,
+      "model_change": "未训练",
+      "lineup_model": "未实现",
+      "xg_model": "未实现",
+      "return_advantage": "未经验证",
+      "ev": "未量化",
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-30T07:12:43.669716Z",
+      "forecast_availability": {
+        "status": "failed",
+        "upcoming_count": null,
+        "supported_count": null,
+        "unsupported_count": null,
+        "unsupported_reasons": {}
+      },
+      "model_freshness": {
+        "status": "not_checked"
+      },
+      "metadata_received_at": "2026-10-30T07:17:32.290574Z",
+      "provider_league_id": 71,
+      "eligible_matches": 380,
+      "missing_seasons": [
+        2026,
+        2025
+      ],
+      "last_match_kickoff": "2024-12-08T19:00:00Z",
+      "observed_at": "2026-10-30T07:17:50.363645Z",
+      "data_observed_at": "2026-10-30T07:17:50.363645Z",
+      "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
+    },
+    {
+      "key": "j1",
+      "label": "日职联J1",
+      "status": "未完成",
+      "seasons": [
+        {
+          "year": 2027,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": false,
+            "predictions": true,
+            "odds": true
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2026,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": false,
+            "predictions": true,
+            "odds": false
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2025,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        }
+      ],
+      "configured": true,
+      "model_change": "未训练",
+      "lineup_model": "未实现",
+      "xg_model": "未实现",
+      "return_advantage": "未经验证",
+      "ev": "未量化",
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-30T07:12:43.669716Z",
+      "forecast_availability": {
+        "status": "failed",
+        "upcoming_count": null,
+        "supported_count": null,
+        "unsupported_count": null,
+        "unsupported_reasons": {}
+      },
+      "model_freshness": {
+        "status": "not_checked"
+      },
+      "metadata_received_at": "2026-10-30T07:17:56.327459Z",
+      "provider_league_id": 98,
+      "eligible_matches": 0,
+      "missing_seasons": [
+        2027,
+        2026,
+        2025
+      ],
+      "last_match_kickoff": null,
+      "observed_at": "2026-10-30T07:18:14.357024Z",
+      "data_observed_at": "2026-10-30T07:18:14.357024Z",
+      "detail": "这些已请求赛季未完整取得：[2027, 2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
+    },
+    {
+      "key": "k1",
+      "label": "韩国K1",
+      "status": "未完成",
+      "seasons": [
+        {
+          "year": 2026,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": false,
+            "predictions": true,
+            "odds": true
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2025,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2024,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": false,
+            "predictions": true,
+            "odds": false
+          },
+          "fixtures": 232,
+          "fetched_at": "2026-10-30T07:19:08.491297Z",
+          "received_at": "2026-10-30T07:19:08.498344Z",
+          "from_cache": false,
+          "status_counts": {
+            "FT": 231,
+            "AET": 1
+          }
+        }
+      ],
+      "configured": true,
+      "model_change": "未训练",
+      "lineup_model": "未实现",
+      "xg_model": "未实现",
+      "return_advantage": "未经验证",
+      "ev": "未量化",
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-30T07:12:43.669716Z",
+      "forecast_availability": {
+        "status": "failed",
+        "upcoming_count": null,
+        "supported_count": null,
+        "unsupported_count": null,
+        "unsupported_reasons": {}
+      },
+      "model_freshness": {
+        "status": "not_checked"
+      },
+      "metadata_received_at": "2026-10-30T07:18:20.369433Z",
+      "provider_league_id": 292,
+      "eligible_matches": 232,
+      "missing_seasons": [
+        2026,
+        2025
+      ],
+      "last_match_kickoff": "2024-12-08T05:25:00Z",
+      "observed_at": "2026-10-30T07:19:08.499792Z",
+      "data_observed_at": "2026-10-30T07:19:08.499792Z",
+      "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
+    },
+    {
+      "key": "mls",
+      "label": "美职联MLS",
+      "status": "未完成",
+      "seasons": [
+        {
+          "year": 2026,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": true
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2025,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2024,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "fixtures": 526,
+          "fetched_at": "2026-10-30T07:19:32.739837Z",
+          "received_at": "2026-10-30T07:19:32.756105Z",
+          "from_cache": false,
+          "status_counts": {
+            "CANC": 4,
+            "FT": 512,
+            "PEN": 9,
+            "AET": 1
+          }
+        }
+      ],
+      "configured": true,
+      "model_change": "未训练",
+      "lineup_model": "未实现",
+      "xg_model": "未实现",
+      "return_advantage": "未经验证",
+      "ev": "未量化",
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-30T07:12:43.669716Z",
+      "forecast_availability": {
+        "status": "failed",
+        "upcoming_count": null,
+        "supported_count": null,
+        "unsupported_count": null,
+        "unsupported_reasons": {}
+      },
+      "model_freshness": {
+        "status": "not_checked"
+      },
+      "metadata_received_at": "2026-10-30T07:19:14.482028Z",
+      "provider_league_id": 253,
+      "eligible_matches": 522,
+      "missing_seasons": [
+        2026,
+        2025
+      ],
+      "last_match_kickoff": "2024-12-07T21:00:00Z",
+      "observed_at": "2026-10-30T07:19:32.759339Z",
+      "data_observed_at": "2026-10-30T07:19:32.759339Z",
+      "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
+    },
+    {
+      "key": "liga_mx",
+      "label": "墨西超Liga MX",
+      "status": "未完成",
+      "seasons": [
+        {
+          "year": 2026,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": false,
+            "predictions": true,
+            "odds": true
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2025,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2024,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": false,
+            "predictions": true,
+            "odds": false
+          },
+          "fixtures": 340,
+          "fetched_at": "2026-10-26T06:26:20.556016Z",
+          "received_at": "2026-10-30T07:19:50.551509Z",
+          "from_cache": true,
+          "status_counts": {
+            "FT": 338,
+            "PEN": 2
+          }
+        }
+      ],
+      "configured": true,
+      "model_change": "未训练",
+      "lineup_model": "未实现",
+      "xg_model": "未实现",
+      "return_advantage": "未经验证",
+      "ev": "未量化",
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-30T07:12:43.669716Z",
+      "forecast_availability": {
+        "status": "failed",
+        "upcoming_count": null,
+        "supported_count": null,
+        "unsupported_count": null,
+        "unsupported_reasons": {}
+      },
+      "model_freshness": {
+        "status": "not_checked"
+      },
+      "metadata_received_at": "2026-10-30T07:19:38.522688Z",
+      "provider_league_id": 262,
+      "eligible_matches": 340,
+      "missing_seasons": [
+        2026,
+        2025
+      ],
+      "last_match_kickoff": "2025-05-26T01:00:00Z",
+      "observed_at": "2026-10-30T07:19:50.553691Z",
+      "data_observed_at": "2026-10-30T07:19:50.553691Z",
+      "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
+    },
+    {
+      "key": "segunda",
+      "label": "西乙",
+      "status": "未完成",
+      "seasons": [
+        {
+          "year": 2026,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": false,
+            "predictions": true,
+            "odds": true
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2025,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2024,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": false,
+            "predictions": true,
+            "odds": false
+          },
+          "fixtures": 468,
+          "fetched_at": "2026-10-26T06:26:44.589359Z",
+          "received_at": "2026-10-30T07:20:08.592264Z",
+          "from_cache": true,
+          "status_counts": {
+            "FT": 467,
+            "AET": 1
+          }
+        }
+      ],
+      "configured": true,
+      "model_change": "未训练",
+      "lineup_model": "未实现",
+      "xg_model": "未实现",
+      "return_advantage": "未经验证",
+      "ev": "未量化",
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-30T07:12:43.669716Z",
+      "forecast_availability": {
+        "status": "failed",
+        "upcoming_count": null,
+        "supported_count": null,
+        "unsupported_count": null,
+        "unsupported_reasons": {}
+      },
+      "model_freshness": {
+        "status": "not_checked"
+      },
+      "metadata_received_at": "2026-10-30T07:19:56.554991Z",
+      "provider_league_id": 141,
+      "eligible_matches": 468,
+      "missing_seasons": [
+        2026,
+        2025
+      ],
+      "last_match_kickoff": "2025-06-21T19:00:00Z",
+      "observed_at": "2026-10-30T07:20:08.595229Z",
+      "data_observed_at": "2026-10-30T07:20:08.595229Z",
+      "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
+    },
+    {
+      "key": "argentina_a",
+      "label": "阿根廷甲级联赛",
+      "status": "未完成",
+      "seasons": [
+        {
+          "year": 2026,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": false,
+            "predictions": true,
+            "odds": true
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2025,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": true,
+            "predictions": true,
+            "odds": false
+          },
+          "error": "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"plan\": \"Free plans do not have access to this season, try from 2022 to 2024.\"}"
+        },
+        {
+          "year": 2024,
+          "coverage_flags": {
+            "fixtures": {
+              "events": true,
+              "lineups": true,
+              "statistics_fixtures": true,
+              "statistics_players": true
+            },
+            "standings": true,
+            "players": true,
+            "top_scorers": true,
+            "top_assists": true,
+            "top_cards": true,
+            "injuries": false,
+            "predictions": true,
+            "odds": false
+          },
+          "fixtures": 378,
+          "fetched_at": "2026-10-26T06:27:08.641081Z",
+          "received_at": "2026-10-30T07:20:26.610393Z",
+          "from_cache": true,
+          "status_counts": {
+            "FT": 378
+          }
+        }
+      ],
+      "configured": true,
+      "model_change": "未训练",
+      "lineup_model": "未实现",
+      "xg_model": "未实现",
+      "return_advantage": "未经验证",
+      "ev": "未量化",
+      "time_semantics": "observed_wall_clock_v1",
+      "run_started_at": "2026-10-30T07:12:43.669716Z",
+      "forecast_availability": {
+        "status": "failed",
+        "upcoming_count": null,
+        "supported_count": null,
+        "unsupported_count": null,
+        "unsupported_reasons": {}
+      },
+      "model_freshness": {
+        "status": "not_checked"
+      },
+      "metadata_received_at": "2026-10-30T07:20:14.585908Z",
+      "provider_league_id": 128,
+      "eligible_matches": 378,
+      "missing_seasons": [
+        2026,
+        2025
+      ],
+      "last_match_kickoff": "2024-12-17T00:00:00Z",
+      "observed_at": "2026-10-30T07:20:26.612812Z",
+      "data_observed_at": "2026-10-30T07:20:26.612812Z",
+      "detail": "这些已请求赛季未完整取得：[2026, 2025]。本次不训练；核对套餐或明确缩短训练窗口。"
+    }
+  ],
+  "api_requests": 73,
+  "api_budget": {
+    "configured_daily_limit": 7460,
+    "provider_daily_limit": 100,
+    "provider_daily_used": 28,
+    "daily_remaining": 70,
+    "daily_remaining_reported": 72,
+    "minute_limit": 10,
+    "minute_remaining": 7,
+    "max_requests_per_run": null,
+    "requests_made": 73,
+    "min_interval_seconds": 6.01,
+    "max_run_seconds": 3600,
+    "elapsed_seconds": 465.57626020400005,
+    "quota_observed_at": "2026-10-30T07:20:14.584699Z",
+    "quota_source": "response_headers",
+    "daily_quota_status": "known"
+  },
+  "prospective_captures": [
+    {
+      "run_id": "20261030T071243669716Z",
+      "checkpoint_id": "d21f51a93dc3eb4122cadc861e503e1e0576cd521d89e9d108a41bb0a133b011",
+      "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
+      "completed_at": "2026-10-30T07:13:10.578813Z",
+      "competitions": [
+        "epl"
+      ],
+      "coverage_status_counts": {
+        "no_current_prediction_file": 1
+      },
+      "errors": [],
+      "exit_code": 0,
+      "capture_run_id": "23e46828c5f0a29b081ab098ec1db7f750645857ff332fa3bd7ccf76c7bc1a38"
+    },
+    {
+      "run_id": "20261030T071243669716Z",
+      "checkpoint_id": "57234a6995bc6530c8f41518a66952775c23e6ef4d0d833ba1f552ea12388d6c",
+      "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
+      "completed_at": "2026-10-30T07:13:28.505926Z",
+      "competitions": [
+        "championship"
+      ],
+      "coverage_status_counts": {
+        "no_current_prediction_file": 1
+      },
+      "errors": [],
+      "exit_code": 0,
+      "capture_run_id": "5ed079024b2973674ac6de76703ff397fcc2803ee1b7ccfb914d6adb6e5eb815"
+    },
+    {
+      "run_id": "20261030T071243669716Z",
+      "checkpoint_id": "546df491d34540a9db36b28ce605d3f6668b2374615b8f80518b49f691a16d4c",
+      "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
+      "completed_at": "2026-10-30T07:13:52.590656Z",
+      "competitions": [
+        "laliga"
+      ],
+      "coverage_status_counts": {
+        "no_current_prediction_file": 1
+      },
+      "errors": [],
+      "exit_code": 0,
+      "capture_run_id": "781162edbb8d5619b126278559d9079652682450581c6043708ff0a4518a425d"
+    },
+    {
+      "run_id": "20261030T071243669716Z",
+      "checkpoint_id": "c29215bce5169d87425fbec7136e605e6bdb139a80682f965e851730bcb9aec0",
+      "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
+      "completed_at": "2026-10-30T07:14:16.609296Z",
+      "competitions": [
+        "bundesliga"
+      ],
+      "coverage_status_counts": {
+        "no_current_prediction_file": 1
+      },
+      "errors": [],
+      "exit_code": 0,
+      "capture_run_id": "c340c8de7b988d910ddfb99c035ebcc8f73f7f2b047256a873e4274efd7657d0"
+    },
+    {
+      "run_id": "20261030T071243669716Z",
+      "checkpoint_id": "2d3a00fa8876407236e8ecb312084f00359b9a6270ca2de0e9d85237a7e5aedc",
+      "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
+      "completed_at": "2026-10-30T07:14:40.639789Z",
+      "competitions": [
+        "serie_a"
+      ],
+      "coverage_status_counts": {
+        "no_current_prediction_file": 1
+      },
+      "errors": [],
+      "exit_code": 0,
+      "capture_run_id": "d30a5a63d3485f56b4328624aa755900c6594d82eeaa9383a9a5a041209995a5"
+    },
+    {
+      "run_id": "20261030T071243669716Z",
+      "checkpoint_id": "76cede347ebaa1810943290357d4d035df530a199327fed97b3d45c3a02e86ed",
+      "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
+      "completed_at": "2026-10-30T07:15:04.686397Z",
+      "competitions": [
+        "ligue_1"
+      ],
+      "coverage_status_counts": {
+        "no_current_prediction_file": 1
+      },
+      "errors": [],
+      "exit_code": 0,
+      "capture_run_id": "6d53902954e137cd26be5f8bdc121b63e592c9ab65e4c284f24d3f3c2b70c756"
+    },
+    {
+      "run_id": "20261030T071243669716Z",
+      "checkpoint_id": "6959c8118746113546aa356d290c1af4a5758de54e9f0b1eb1fbc0720e1d4fd9",
+      "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
+      "completed_at": "2026-10-30T07:15:28.723918Z",
+      "competitions": [
+        "bundesliga_2"
+      ],
+      "coverage_status_counts": {
+        "no_current_prediction_file": 1
+      },
+      "errors": [],
+      "exit_code": 0,
+      "capture_run_id": "d4c128bc55fde01d91df1ffb56faff97adbf789bd9d5f109095770e19233a4e9"
+    },
+    {
+      "run_id": "20261030T071243669716Z",
+      "checkpoint_id": "be97db7b4606708fc5dbd472398a91f21226d9dc5227005a4c3f0f909c0649b5",
+      "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
+      "completed_at": "2026-10-30T07:15:52.785893Z",
+      "competitions": [
+        "ligue_2"
+      ],
+      "coverage_status_counts": {
+        "no_current_prediction_file": 1
+      },
+      "errors": [],
+      "exit_code": 0,
+      "capture_run_id": "73b0fc015c608f2650d8a61d97e2e97f80c09342956e974678664436a6bf0944"
+    },
+    {
+      "run_id": "20261030T071243669716Z",
+      "checkpoint_id": "ca788af20eccbabc407f25cca37f3261cfddd9d3514b11c7d3f5f8a56e0022f4",
+      "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
+      "completed_at": "2026-10-30T07:16:16.813739Z",
+      "competitions": [
+        "ucl"
+      ],
+      "coverage_status_counts": {
+        "no_current_prediction_file": 1
+      },
+      "errors": [],
+      "exit_code": 0,
+      "capture_run_id": "f96d610fbb3b263545954f797bb3b449f5b8a06f0e845c7bd25d340abfad28ba"
+    },
+    {
+      "run_id": "20261030T071243669716Z",
+      "checkpoint_id": "c035daa9ba6c7ab6ca6e8d8dd43ee2cc5f6432f6691382fb3c6a4c9a8a8c376a",
+      "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
+      "completed_at": "2026-10-30T07:16:40.850460Z",
+      "competitions": [
+        "allsvenskan"
+      ],
+      "coverage_status_counts": {
+        "no_current_prediction_file": 1
+      },
+      "errors": [],
+      "exit_code": 0,
+      "capture_run_id": "48f91e02c2bb7f98569ea4f74d3946dbbac58a2cc41331c02ccfaa3218f6f857"
+    },
+    {
+      "run_id": "20261030T071243669716Z",
+      "checkpoint_id": "1b94fbc932dee04fcfdb1a9d4a6d03f439132ad32c6d85848cff696a6eb5a078",
+      "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
+      "completed_at": "2026-10-30T07:17:04.890703Z",
+      "competitions": [
+        "eredivisie"
+      ],
+      "coverage_status_counts": {
+        "no_current_prediction_file": 1
+      },
+      "errors": [],
+      "exit_code": 0,
+      "capture_run_id": "08c628be2aac0d287eeec56df142da14138016bc8f17978bc66548231851fdac"
+    },
+    {
+      "run_id": "20261030T071243669716Z",
+      "checkpoint_id": "e04ffcc3ec43be93527ea8948e65a9d793cb083089fd2406d4e1f28c1898b818",
+      "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
+      "completed_at": "2026-10-30T07:17:28.925672Z",
+      "competitions": [
+        "primeira"
+      ],
+      "coverage_status_counts": {
+        "no_current_prediction_file": 1
+      },
+      "errors": [],
+      "exit_code": 0,
+      "capture_run_id": "6a55381f81b2f3d8630f58b319d58719a439b5230dfe6619b8fc7ae49521fa53"
+    },
+    {
+      "run_id": "20261030T071243669716Z",
+      "checkpoint_id": "0692bc19c3ae1b48f47813c5f74edf201800ee18e4ce6b6c3f1e32bf32850cac",
+      "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
+      "completed_at": "2026-10-30T07:17:53.013790Z",
+      "competitions": [
+        "brazil_a"
+      ],
+      "coverage_status_counts": {
+        "no_current_prediction_file": 1
+      },
+      "errors": [],
+      "exit_code": 0,
+      "capture_run_id": "26d05a9b4583f4dbc76e3f9e8cf9ebd924103a872eb090796c07e45eb3ace9db"
+    },
+    {
+      "run_id": "20261030T071243669716Z",
+      "checkpoint_id": "e2df4f5dd542b501d4845f2acf808108723c5f25ab605326a371e6f57ee2b86c",
+      "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
+      "completed_at": "2026-10-30T07:18:16.977974Z",
+      "competitions": [
+        "j1"
+      ],
+      "coverage_status_counts": {
+        "no_current_prediction_file": 1
+      },
+      "errors": [],
+      "exit_code": 0,
+      "capture_run_id": "81b190472be6cc519408928bcd3fa05576174881f3834bd6b6ad4aef74fee685"
+    },
+    {
+      "run_id": "20261030T071243669716Z",
+      "checkpoint_id": "1ea502f91b1e5443bc26cffcb0878d2b12e97c5545ded52bbed4ed099fa92ea1",
+      "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
+      "completed_at": "2026-10-30T07:19:11.124111Z",
+      "competitions": [
+        "k1"
+      ],
+      "coverage_status_counts": {
+        "no_current_prediction_file": 1
+      },
+      "errors": [],
+      "exit_code": 0,
+      "capture_run_id": "12c5b103b9fc64cbc68672a518cea90ff18bc02db7a1a5b58fa9d000578c070b"
+    },
+    {
+      "run_id": "20261030T071243669716Z",
+      "checkpoint_id": "6a4601fbdb73c591e026765c70b3ca07ca9d9eab951d62dd99acc603fa48f501",
+      "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
+      "completed_at": "2026-10-30T07:19:35.380922Z",
+      "competitions": [
+        "mls"
+      ],
+      "coverage_status_counts": {
+        "no_current_prediction_file": 1
+      },
+      "errors": [],
+      "exit_code": 0,
+      "capture_run_id": "5962254daf8717c8d529a520eec0e022a9e53ddcb1daf87f6bbd8ce93a94bd20"
+    },
+    {
+      "run_id": "20261030T071243669716Z",
+      "checkpoint_id": "5a20e3e1e903931f17dd1cd1eccaa8d01579eddc04e01db7d988c98e4acd45d8",
+      "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
+      "completed_at": "2026-10-30T07:19:53.202995Z",
+      "competitions": [
+        "liga_mx"
+      ],
+      "coverage_status_counts": {
+        "no_current_prediction_file": 1
+      },
+      "errors": [],
+      "exit_code": 0,
+      "capture_run_id": "6175b8315323b8f3035aea683c918fedb8ee19ff781dbf025f5ba48a212a4796"
+    },
+    {
+      "run_id": "20261030T071243669716Z",
+      "checkpoint_id": "7960d18a21097175361b3f68aac41d4324d35a74a7023e4b8a38801a93b9d9b4",
+      "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
+      "completed_at": "2026-10-30T07:20:11.233192Z",
+      "competitions": [
+        "segunda"
+      ],
+      "coverage_status_counts": {
+        "no_current_prediction_file": 1
+      },
+      "errors": [],
+      "exit_code": 0,
+      "capture_run_id": "7eb90d52e588e6f66f431fd1eb5114ff32f2046ad28d67adb0cfc0df73a67324"
+    },
+    {
+      "run_id": "20261030T071243669716Z",
+      "checkpoint_id": "2d541b960fb1fcb479dbb16a268cbdc04f37f061a6ec06c80213ad2b6b3f07c3",
+      "protocol_id": "ca504adf06b04a4e4d7d58bb97dbf767357c117fb7e5aeef4e32737ceff8d8eb",
+      "completed_at": "2026-10-30T07:20:29.250944Z",
+      "competitions": [
+        "argentina_a"
+      ],
+      "coverage_status_counts": {
+        "no_current_prediction_file": 1
+      },
+      "errors": [],
+      "exit_code": 0,
+      "capture_run_id": "3d54c2ec86f14c1c5faf5533c83eb1b3d9779aef18236bbec0f7e3c2e5a48101"
+    }
+  ],
+  "exit_code": 1,
+  "forecast_availability_summary": {
+    "competition_status_counts": {
+      "failed": 19
+    },
+    "upcoming_count": 0,
+    "supported_count": 0,
+    "unsupported_count": 0,
+    "unknown_coverage_competitions": 19,
+    "usage": "流程成功不代表存在可用预测；空窗、全部不支持与失败分别计数。",
+    "requested_competitions": 19,
+    "unreported_competitions": []
+  },
+  "generated_at": "2026-10-30T07:20:29.251959Z",
+  "integration_index": {
+    "status": "updated",
+    "path": "runtime/integration/index.json"
+  },
+  "replay_recording": {
+    "status": "recorded",
+    "path": "replay/bundles/457812d8322d9e9c4132951327ed11e964c1730f2620fb866478b35cded01f75.json.gz",
+    "sha256": "457812d8322d9e9c4132951327ed11e964c1730f2620fb866478b35cded01f75",
+    "events": 215,
+    "initial_state_files": 36
+  }
+}
