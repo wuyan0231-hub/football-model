@@ -1,6 +1,6 @@
 # 足球模型运行报告
 
-生成时间：2026-11-12T08:32:29.583073Z（UTC）
+生成时间：2026-11-13T08:09:50.167739Z（UTC）
 程序版本：0.1.0；运行模式：train。
 
 本程序生成探索性历史比分基线。没有球员/伤停、xG、战术、赛程特征，也没有经过验证的收益优势。
@@ -30,22 +30,22 @@
 
 预测可用性：available=全部已保存可用；partial=部分可用；unavailable=有赛程但全部不支持；no_upcoming=窗口内无待预测比赛；failed=处理失败。以上不表示准确性或收益验收。
 
-本次接口网络尝试次数：59（含状态查询与重试，不等于当日计费已用量）。
+本次接口网络尝试次数：54（含状态查询与重试，不等于当日计费已用量）。
 
 ## API额度与限速
 
 |项目|本次记录|
 |---|---|
 |配置的每日上限|7460|
-|供应商日上限／当日已用（最近观测）|100／15|
-|供应商最近回报余额|85|
-|当前有效日余额（保守估计）|83|
+|供应商日上限／当日已用（最近观测）|100／13|
+|供应商最近回报余额|87|
+|当前有效日余额（保守估计）|81|
 |日额证据状态|known|
 |每轮网络次数上限|不设额外次数上限|
-|供应商分钟上限／最近剩余|10／7|
+|供应商分钟上限／最近剩余|10／3|
 |当前请求最小间隔（秒）|6.01|
-|网络请求软截止／已运行（秒）|3600／352.622760346|
-|额度最近观测时间／来源|2026-11-12T08:32:13.711576Z／response_headers|
+|网络请求软截止／已运行（秒）|3600／339.663923265|
+|额度最近观测时间／来源|2026-11-13T08:09:11.333380Z／response_headers|
 
 每轮不设额外次数上限时，仍遵守已核实的当日额度、后续下载预留、分钟限速及软截止；不把每日上限当作每轮可重新使用的余额。未知额度不填零，也不以配置值冒充已核实余额。
 
@@ -66,7 +66,7 @@
 
 - 2026：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
 - 2025：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
-- 2024：返回380场，抓取时间2026-11-06T08:00:55.738974Z；接口返回成功；完整性尚需核验。
+- 2024：返回380场，抓取时间2026-11-13T08:04:28.775958Z；接口返回成功；完整性尚需核验。
 ## 英冠
 
 - 2026：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
@@ -76,57 +76,57 @@
 
 - 2026：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
 - 2025：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
-- 2024：返回380场，抓取时间2026-11-06T08:01:37.839004Z；接口返回成功；完整性尚需核验。
+- 2024：返回380场，抓取时间2026-11-13T08:04:58.809438Z；接口返回成功；完整性尚需核验。
 ## 德甲
 
 - 2026：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
 - 2025：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
-- 2024：返回308场，抓取时间2026-11-06T08:02:02.237868Z；接口返回成功；完整性尚需核验。
+- 2024：返回308场，抓取时间2026-11-13T08:05:16.859211Z；接口返回成功；完整性尚需核验。
 ## 意甲
 
 - 2026：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
 - 2025：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
-- 2024：返回380场，抓取时间2026-11-06T08:02:25.960444Z；接口返回成功；完整性尚需核验。
+- 2024：返回380场，抓取时间2026-11-13T08:05:34.868716Z；接口返回成功；完整性尚需核验。
 ## 法甲
 
 - 2026：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
 - 2025：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
-- 2024：返回308场，抓取时间2026-11-06T08:02:49.964934Z；接口返回成功；完整性尚需核验。
+- 2024：返回308场，抓取时间2026-11-13T08:05:52.889268Z；接口返回成功；完整性尚需核验。
 ## 德乙
 
 - 2026：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
 - 2025：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
-- 2024：返回308场，抓取时间2026-11-06T08:03:14.026566Z；接口返回成功；完整性尚需核验。
+- 2024：返回308场，抓取时间2026-11-13T08:06:10.930523Z；接口返回成功；完整性尚需核验。
 ## 法乙
 
 - 2026：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
 - 2025：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
-- 2024：返回310场，抓取时间2026-11-06T08:03:38.028415Z；接口返回成功；完整性尚需核验。
+- 2024：返回310场，抓取时间2026-11-13T08:06:28.977995Z；接口返回成功；完整性尚需核验。
 ## 欧冠
 
 - 2026：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
 - 2025：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
-- 2024：返回279场，抓取时间2026-11-06T08:04:02.068910Z；接口返回成功；完整性尚需核验。
+- 2024：返回279场，抓取时间2026-11-13T08:06:46.999520Z；接口返回成功；完整性尚需核验。
 ## 瑞典超
 
 - 2026：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
 - 2025：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
-- 2024：返回242场，抓取时间2026-11-06T08:04:26.086179Z；接口返回成功；完整性尚需核验。
+- 2024：返回242场，抓取时间2026-11-13T08:07:05.006334Z；接口返回成功；完整性尚需核验。
 ## 荷甲
 
 - 2026：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
 - 2025：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
-- 2024：返回321场，抓取时间2026-11-06T08:04:50.132390Z；接口返回成功；完整性尚需核验。
+- 2024：返回321场，抓取时间2026-11-13T08:07:23.037076Z；接口返回成功；完整性尚需核验。
 ## 葡超
 
 - 2026：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
 - 2025：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
-- 2024：返回308场，抓取时间2026-11-06T08:05:14.176979Z；接口返回成功；完整性尚需核验。
+- 2024：返回308场，抓取时间2026-11-13T08:07:41.094283Z；接口返回成功；完整性尚需核验。
 ## 巴西甲
 
 - 2026：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
 - 2025：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
-- 2024：返回380场，抓取时间2026-11-06T08:05:38.221107Z；接口返回成功；完整性尚需核验。
+- 2024：返回380场，抓取时间2026-11-13T08:07:59.108987Z；接口返回成功；完整性尚需核验。
 ## 日职联J1
 
 - 2027：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
@@ -136,12 +136,12 @@
 
 - 2026：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
 - 2025：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
-- 2024：返回232场，抓取时间2026-11-06T08:06:26.290123Z；接口返回成功；完整性尚需核验。
+- 2024：返回232场，抓取时间2026-11-13T08:08:35.158097Z；接口返回成功；完整性尚需核验。
 ## 美职联MLS
 
 - 2026：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
 - 2025：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
-- 2024：返回526场，抓取时间2026-11-06T08:06:50.345052Z；接口返回成功；完整性尚需核验。
+- 2024：返回526场，抓取时间2026-11-13T08:09:11.365793Z；接口返回成功；完整性尚需核验。
 ## 墨西超Liga MX
 
 - 2026：返回0场，抓取时间无；API-Football 返回错误（可能涉及套餐、赛季或额度）：{"plan": "Free plans do not have access to this season, try from 2022 to 2024."}。
