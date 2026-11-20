@@ -1,7 +1,7 @@
 {
   "schema": "independent_regulation_result_sync_v1",
-  "started_at": "2026-11-19T09:00:57.420135Z",
-  "run_started_at": "2026-11-19T09:00:57.420135Z",
+  "started_at": "2026-11-20T08:44:00.890920Z",
+  "run_started_at": "2026-11-20T08:44:00.890920Z",
   "source_commit": "a15f5f92f3b4c56a41e6aee98dfdb3868c94cc5a",
   "time_semantics": "observed_wall_clock_v1",
   "forecast_versions": 2394,
@@ -3018,53 +3018,46 @@
     {
       "competition": "laliga",
       "match_id": 1570410,
-      "target_ledgers": [
-        "prospective",
-        "shadow_models"
-      ],
-      "source_id": "40646be2082151c85a032eb2315a4b287c57e4b616704d9d25e26bb7d1f388f6",
-      "received_at": "2026-11-19T09:09:44.713807Z",
-      "from_cache": false,
-      "observed_at": "2026-11-19T09:09:44.712466Z",
-      "provider_status": "ABD",
-      "status": "pending_or_not_mature_at_observation"
+      "status": "client_unavailable"
     }
   ],
   "model_or_training_required": false,
   "changes_training_data": false,
-  "completed_at": "2026-11-19T09:09:54.102772Z",
+  "completed_at": "2026-11-20T08:50:03.154138Z",
   "status_counts": {
     "outside_revision_recheck_window": 582,
     "unscorable_schedule_revision": 13,
-    "pending_or_not_mature_at_observation": 1
+    "client_unavailable": 1
   },
-  "api_requests": 2,
-  "errors": [],
-  "exit_code": 0,
-  "collection_completed_at": "2026-11-19T09:09:44.727830Z",
+  "api_requests": 1,
+  "errors": [
+    "API-Football 返回错误（可能涉及套餐、赛季或额度）：{\"access\": \"Your account is suspended, check on https://dashboard.api-football.com.\"}"
+  ],
+  "exit_code": 1,
+  "collection_completed_at": "2026-11-20T08:49:57.982300Z",
   "counts": {
     "outside_revision_recheck_window": 582,
     "unscorable_schedule_revision": 13,
-    "pending_or_not_mature_at_observation": 1
+    "client_unavailable": 1
   },
   "api_budget": {
     "configured_daily_limit": 7460,
     "provider_daily_limit": 100,
-    "provider_daily_used": 21,
-    "daily_remaining": 79,
-    "daily_remaining_reported": 79,
+    "provider_daily_used": 1,
+    "daily_remaining": 99,
+    "daily_remaining_reported": 99,
     "minute_limit": 10,
-    "minute_remaining": 8,
+    "minute_remaining": 9,
     "max_requests_per_run": null,
-    "requests_made": 2,
+    "requests_made": 1,
     "min_interval_seconds": 6.01,
     "max_run_seconds": 300,
-    "elapsed_seconds": 6.161324473999912,
-    "quota_observed_at": "2026-11-19T09:09:44.710436Z",
+    "elapsed_seconds": 0.11923918900015451,
+    "quota_observed_at": "2026-11-20T08:49:57.981999Z",
     "quota_source": "response_headers",
     "daily_quota_status": "known"
   },
-  "score_summary_id": "5df9e112874025f6de83bb495c6f3415ee00abe414c8e9b555a43156181808bd",
-  "generated_at": "2026-11-19T09:09:54.102772Z",
-  "report_id": "90f032052abd8bd74b645a6be7c23d085da2dec3f7b5383696b34f4b53acb10d"
+  "score_summary_id": "0db2e4d63473872ac6bec21de03a9d47360bb656440275a57ab23e2c0a84e6d7",
+  "generated_at": "2026-11-20T08:50:03.154138Z",
+  "report_id": "5de93234ab497f5ac5e0239921e525ddcbe130cf2525674d618ee7a9a7f8799a"
 }
